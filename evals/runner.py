@@ -64,13 +64,17 @@ def _have_credentials(provider: str) -> bool:
     if provider == "anthropic":
         return bool(os.environ.get("ANTHROPIC_API_KEY"))
     if provider == "bedrock":
-        # Standard AWS credential chain: env keys, a named profile, or a
-        # shared credentials file. An instance role would also work but is
-        # not detectable cheaply; set FPA_ASSUME_AWS_CREDS=1 to force live.
+        # Standard AWS credential chain, in the order we expect it here:
+        # SSO profile (~/.aws/config after `aws sso login`), OIDC web
+        # identity (GitHub Actions federation), env keys, or a shared
+        # credentials file. An instance role is not detectable cheaply;
+        # set FPA_ASSUME_AWS_CREDS=1 to force a live run.
         return bool(
-            os.environ.get("AWS_ACCESS_KEY_ID")
-            or os.environ.get("AWS_PROFILE")
+            os.environ.get("AWS_PROFILE")
+            or os.environ.get("AWS_WEB_IDENTITY_TOKEN_FILE")
+            or os.environ.get("AWS_ACCESS_KEY_ID")
             or os.environ.get("FPA_ASSUME_AWS_CREDS")
+            or (Path.home() / ".aws" / "config").exists()
             or (Path.home() / ".aws" / "credentials").exists()
         )
     return provider == "mock"

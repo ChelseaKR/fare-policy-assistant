@@ -14,6 +14,12 @@ All model calls go through a small adapter (`Model.complete`) in
   as judge), pinned in config. Credentials resolve through the standard AWS
   chain; region comes from `AWS_REGION`. This matches the builder's prior
   production deployments and what government clients typically require.
+
+  Authentication is deliberately keyless: locally via IAM Identity Center
+  (`aws sso login` + `AWS_PROFILE`), in CI via GitHub OIDC federation
+  assuming an IAM role scoped to `bedrock:InvokeModel` on the pinned models.
+  No long-lived AWS keys exist in the repo, its secrets, or on developer
+  machines.
 - `anthropic`: the direct Anthropic API, behind `FPA_PROVIDER=anthropic`,
   with the unprefixed model IDs. Useful when an Anthropic key is easier to
   obtain than AWS access.

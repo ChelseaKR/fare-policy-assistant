@@ -62,14 +62,21 @@ uv run python -m evals.runner --offline    # full eval, deterministic checks onl
 uv run python -m assistant.cli --offline "What proof do I need for the veteran fare on MST?"
 ```
 
-Live runs use Claude on Amazon Bedrock by default. With AWS credentials
-configured (environment keys, a profile, or an instance role) and
-`AWS_REGION` set:
+Live runs use Claude on Amazon Bedrock by default, authenticated through the
+standard AWS credential chain. The recommended local setup is IAM Identity
+Center (SSO) — no long-lived keys on disk:
 
 ```sh
-uv run python -m evals.runner --full       # live run; regenerates EVALS.md
+aws configure sso                          # once; creates a profile
+aws sso login --profile my-profile
+AWS_PROFILE=my-profile AWS_REGION=us-west-2 uv run python -m evals.runner --full
 uv run python -m assistant.cli "¿Cuánto cuesta el pasaje reducido en Yolobus?"
 ```
+
+CI authenticates the same way in spirit: GitHub Actions assumes an IAM role
+via OIDC federation (`AWS_OIDC_ROLE_ARN` repository variable), so the repo
+holds no AWS secrets at all. Without credentials, eval runs fall back to
+offline mode automatically.
 
 To use the direct Anthropic API instead, set `FPA_PROVIDER=anthropic` and
 `ANTHROPIC_API_KEY`.
@@ -118,3 +125,6 @@ benefits-eligibility assistant.
 Reference implementation. No accounts, no persistence of user queries.
 Fare information shown is based on policies published as of the dates in
 `corpus/manifest.yaml`; confirm anything time-sensitive with the agency.
+
+MIT licensed (see LICENSE). Corpus snapshots remain the work of their
+respective transit agencies.

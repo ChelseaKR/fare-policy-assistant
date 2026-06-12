@@ -3,6 +3,9 @@ name = "fare-policy-assistant"
 version = "0.1.0"
 description = "Transit fare policy assistant with a public evaluation harness"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Chelsea Kelly-Reif" }]
 requires-python = ">=3.12"
 dependencies = [
     "anthropic[bedrock]>=0.100",
