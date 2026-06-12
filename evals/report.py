@@ -125,6 +125,14 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 "",
                 f"**Answer ({r['kind']}):** {r['answer']}",
                 "",
+            ]
+            if r.get("raw_model_answer"):
+                lines += [
+                    "**Model text the guard blocked (never shown to riders):** "
+                    + r["raw_model_answer"][:500],
+                    "",
+                ]
+            lines += [
                 "**Failed checks:**",
                 "",
             ]

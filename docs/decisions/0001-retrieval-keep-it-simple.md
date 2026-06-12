@@ -30,3 +30,22 @@ and the missing-citation output guard converts an ungrounded answer into a
 refusal. The refusal suite measures the combined behavior. If live runs show
 gaps, the next candidates are dense-score gating or a query-coverage check,
 and the eval deltas will decide.
+
+## Live-run findings (2026-06-12) and the dense-retrieval trigger
+
+The first live runs added two ranking findings:
+
+1. Fare-table chunks are number-dense with few word tokens, so BM25 ranks
+   them below prose even when they hold the asked-for price (cases
+   ground-001, ground-014, ml-002). Mitigations so far: top_k raised 6→8 and
+   a 1.2× same-language boost so translated documents don't crowd originals.
+2. Spanish questions about English-only agencies retrieve the one bilingual
+   page (SBMTD's fare-change notice) instead of the page with the answer,
+   because its Spanish prose out-matches a term-translation lexicon (case
+   ml-011, partially ml-002).
+
+The Spanish→English lexicon in `retrieve.py` is the cheap mitigation. If
+multilingual cases keep failing on ranking after lexicon tuning, the next
+step is the already-implemented dense path (`pip install .[dense]`,
+`FPA_DENSE=1`, multilingual MiniLM): run the full suite with and without it
+and let the deltas on ml-002/ml-011 justify making it the default.

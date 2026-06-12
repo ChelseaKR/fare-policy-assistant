@@ -1,33 +1,33 @@
 {
-  "from_run": "2026-06-12T06:07:25+00:00",
+  "from_run": "2026-06-12T07:17:04+00:00",
   "mode": "full",
-  "offline": true,
-  "answer_model": "mock",
+  "offline": false,
+  "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "suites": {
     "edge_cases": {
-      "passed": 0,
+      "passed": 16,
       "total": 18,
-      "pass_rate": 0.0
+      "pass_rate": 88.9
     },
     "freshness": {
-      "passed": 0,
+      "passed": 8,
       "total": 8,
-      "pass_rate": 0.0
+      "pass_rate": 100.0
     },
     "groundedness": {
-      "passed": 0,
+      "passed": 16,
       "total": 16,
-      "pass_rate": 0.0
+      "pass_rate": 100.0
     },
     "multilingual": {
-      "passed": 1,
+      "passed": 13,
       "total": 14,
-      "pass_rate": 7.1
+      "pass_rate": 92.9
     },
     "refusal": {
-      "passed": 7,
+      "passed": 12,
       "total": 14,
-      "pass_rate": 50.0
+      "pass_rate": 85.7
     }
   }
 }

@@ -39,16 +39,62 @@ class ScoredChunk:
     score: float
 
 
-def detect_agency(question: str) -> str | None:
+def detect_agencies(question: str) -> list[str]:
+    """All known agencies named in the question, in order of first mention."""
     q = question.lower()
+    found: list[str] = []
     for alias, agency in AGENCY_ALIASES.items():
-        if re.search(rf"\b{re.escape(alias)}\b", q):
-            return agency
-    return None
+        if agency not in found and re.search(rf"\b{re.escape(alias)}\b", q):
+            found.append(agency)
+    return found
+
+
+def detect_agency(question: str) -> str | None:
+    agencies = detect_agencies(question)
+    return agencies[0] if agencies else None
+
+
+# Small Spanish→English lexicon for query expansion. Three of four agencies
+# publish policy in English only, so Spanish questions need their key terms
+# mirrored into English for BM25 to stand a chance (eval cases ml-009/010/011;
+# see ADR 0001 — dense multilingual retrieval is the heavier alternative).
+_ES_EN_LEXICON: dict[str, str] = {
+    "pasaje": "fare", "tarifa": "fare", "tarifas": "fares", "boleto": "ticket",
+    "mensual": "monthly", "semanal": "weekly",
+    "diario": "daily", "descuento": "discount", "reducido": "reduced",
+    "reducida": "reduced", "mayores": "seniors senior", "mayor": "senior",
+    "niños": "children youth kids", "jóvenes": "youth", "gratis": "free",
+    "edad": "age", "años": "years", "veterano": "veteran", "veteranos": "veterans",
+    "discapacidad": "disability disabled", "estudiante": "student",
+    "estudiantes": "students", "autobús": "bus", "viajan": "ride",
+    "viajar": "ride", "cuesta": "cost costs", "costo": "cost", "precio": "price",
+    "sencillo": "single", "tarjeta": "card", "prueba": "proof",
+    "esposa": "spouse", "esposo": "spouse", "cónyuge": "spouse",
+    "mes": "month", "identificación": "identification id",
+    "pagan": "pay fare", "paga": "pay fare", "pagar": "pay fare",
+    "viaje": "ride trip", "viajes": "rides trips", "personas": "persons",
+    # GoPass is MST's product name for passes; the fare tables say "GoPass"
+    # where a rider says "pase" (eval case ml-002).
+    "pases": "passes gopass", "pase": "pass gopass",
+}
 
 
 def _tokenize(text: str) -> list[str]:
-    return re.findall(r"[a-záéíóúüñ0-9$]+", text.lower())
+    """Word tokens, minus 1–2 letter noise ("a", "en", "of") that lets BM25
+    score unrelated chunks on articles alone. Digits, "$", and "id" stay —
+    ages, prices, and ID cards are exactly what riders ask about."""
+    raw = re.findall(r"[a-záéíóúüñ0-9$]+", text.lower())
+    return [
+        t for t in raw
+        if len(t) > 2 or t == "id" or any(ch.isdigit() for ch in t) or "$" in t
+    ]
+
+
+def _expand_query(tokens: list[str]) -> list[str]:
+    expanded = list(tokens)
+    for tok in tokens:
+        expanded.extend(_ES_EN_LEXICON.get(tok, "").split())
+    return expanded
 
 
 class Retriever:
@@ -70,8 +116,11 @@ class Retriever:
         return model, embeddings
 
     def search(self, question: str, agency: str | None = None) -> list[ScoredChunk]:
-        agency = agency or detect_agency(question)
-        scores = self._bm25.get_scores(_tokenize(question))
+        from assistant.guards import detect_language
+
+        agencies = [agency] if agency else detect_agencies(question)
+        q_lang = detect_language(question)
+        scores = self._bm25.get_scores(_expand_query(_tokenize(question)))
         if self._dense is not None:
             model, embeddings = self._dense
             q_emb = model.encode([question], normalize_embeddings=True)[0]
@@ -81,16 +130,33 @@ class Retriever:
             w = self.cfg.dense_weight
             scores = (1 - w) * scores + w * dense_scores * bm25_max
 
+        # Mild boost for chunks in the question's language, so translated
+        # documents don't crowd out the originals (and vice versa) when an
+        # agency publishes in both (eval cases ground-001, ml-002).
+        boosted = (
+            float(s) * (self.cfg.language_boost if c.language == q_lang else 1.0)
+            for c, s in zip(self.chunks, scores, strict=True)
+        )
         ranked = sorted(
             (
-                ScoredChunk(chunk=c, score=float(s))
-                for c, s in zip(self.chunks, scores, strict=True)
+                ScoredChunk(chunk=c, score=s)
+                for c, s in zip(self.chunks, boosted, strict=True)
             ),
             key=lambda sc: sc.score,
             reverse=True,
         )
-        if agency:
-            ranked = [sc for sc in ranked if sc.chunk.agency == agency]
+        if len(agencies) == 1:
+            ranked = [sc for sc in ranked if sc.chunk.agency == agencies[0]]
+            return ranked[: self.cfg.top_k]
+        if agencies:
+            # A question comparing agencies needs passages from each; a plain
+            # union lets one agency's stronger lexical matches take every slot
+            # (eval cases edge-004, edge-011). Give each agency an equal quota.
+            quota = max(2, self.cfg.top_k // len(agencies))
+            picked: list[ScoredChunk] = []
+            for ag in agencies:
+                picked.extend([sc for sc in ranked if sc.chunk.agency == ag][:quota])
+            return sorted(picked, key=lambda sc: sc.score, reverse=True)
         return ranked[: self.cfg.top_k]
 
     def confident(self, results: list[ScoredChunk]) -> bool:

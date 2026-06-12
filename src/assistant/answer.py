@@ -32,6 +32,10 @@ class AnswerResult:
     guard_flags: list[str] = field(default_factory=list)
     model: str = ""
     as_of_date: str = ""
+    # When the output guard replaces an answer, the original model text is
+    # kept here so eval traces show what was actually blocked. Never shown
+    # to riders.
+    raw_model_answer: str = ""
 
 
 def _format_passages(results: list[ScoredChunk]) -> str:
@@ -141,6 +145,7 @@ def answer_question(
             guard_flags=post.flags,
             model=completion.model,
             as_of_date=as_of,
+            raw_model_answer=completion.text,
         )
     return AnswerResult(
         question=question,

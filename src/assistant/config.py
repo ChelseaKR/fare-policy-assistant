@@ -27,9 +27,13 @@ KNOWN_AGENCIES = ("MST", "SBMTD", "Yolobus", "SacRT")
 STATEWIDE_TRANSIT_INFO = "https://511.org (Bay Area) or the agency's own website"
 
 
-# Bedrock serves the same models under anthropic.-prefixed IDs.
+# Bedrock serves these models through cross-region inference profiles
+# (us.-prefixed IDs); direct anthropic.-prefixed IDs reject invocation.
 _DEFAULT_MODELS = {
-    "bedrock": ("anthropic.claude-haiku-4-5", "anthropic.claude-sonnet-4-6"),
+    "bedrock": (
+        "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "us.anthropic.claude-sonnet-4-6",
+    ),
     "anthropic": ("claude-haiku-4-5", "claude-sonnet-4-6"),
     "mock": ("mock", "mock"),
 }
@@ -54,7 +58,11 @@ class ModelConfig:
 
 @dataclass(frozen=True)
 class RetrievalConfig:
-    top_k: int = 6
+    # 8 rather than 6: fare-table chunks are number-heavy and rank low on
+    # BM25 even when they hold the answer (eval cases ground-001, ground-014).
+    top_k: int = 8
+    # Mild preference for chunks in the question's language.
+    language_boost: float = 1.2
     # Below this top BM25 score the assistant declines rather than guessing.
     min_confidence: float = 4.0
     use_dense: bool = os.environ.get("FPA_DENSE", "") == "1"

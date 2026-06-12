@@ -36,8 +36,9 @@ language and uncited answers, replacing them with a refusal that points to the
 agency.
 
 Models are pinned in `src/assistant/config.py`. Default backend is Claude on
-Amazon Bedrock (`anthropic.claude-haiku-4-5` for answers,
-`anthropic.claude-sonnet-4-6` as judge); the direct Anthropic API is
+Amazon Bedrock via cross-region inference profiles
+(`us.anthropic.claude-haiku-4-5-20251001-v1:0` for answers,
+`us.anthropic.claude-sonnet-4-6` as judge); the direct Anthropic API is
 available behind a config switch.
 
 ## Data

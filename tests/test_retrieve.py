@@ -1,9 +1,19 @@
-from assistant.retrieve import detect_agency
+from assistant.retrieve import _expand_query, detect_agencies, detect_agency
 
 
 class TestAgencyDetection:
     def test_acronym(self):
         assert detect_agency("How much is the MST senior fare?") == "MST"
+
+    def test_multiple_agencies(self):
+        found = detect_agencies("Is the senior discount age the same on MST and Yolobus?")
+        assert set(found) == {"MST", "Yolobus"}
+
+    def test_spanish_query_expansion(self):
+        expanded = _expand_query(["pasaje", "reducido", "yolobus"])
+        assert "fare" in expanded and "reduced" in expanded
+        # Original tokens are preserved so same-language matching still works.
+        assert "pasaje" in expanded
 
     def test_alias(self):
         assert detect_agency("senior discount in santa barbara") == "SBMTD"

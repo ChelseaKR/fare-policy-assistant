@@ -152,6 +152,7 @@ def run(
                 "answer": result.answer,
                 "kind": result.kind,
                 "guard_flags": result.guard_flags,
+                "raw_model_answer": result.raw_model_answer,
                 "citations": [asdict(c) for c in result.citations],
                 "passages": [
                     {"chunk_id": sc.chunk.chunk_id, "section": sc.chunk.section,

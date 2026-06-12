@@ -54,10 +54,11 @@ class AnthropicModel:
 class BedrockModel:
     """Claude on Amazon Bedrock, via the Anthropic SDK's Bedrock client.
 
-    Same Messages API shape as the direct API; model IDs carry the
-    `anthropic.` provider prefix (config handles that). Credentials resolve
-    through the standard AWS chain (env vars, profile, instance role); region
-    comes from AWS_REGION.
+    Same Messages API shape as the direct API. Model IDs are cross-region
+    inference profiles (`us.anthropic.…`, pinned in config) — Bedrock serves
+    these models through inference profiles, not direct model IDs.
+    Credentials resolve through the standard AWS chain (SSO profile, web
+    identity, env vars, instance role); region comes from AWS_REGION.
     """
 
     def __init__(self, model: str):
@@ -67,7 +68,7 @@ class BedrockModel:
 
         self.model = model
         # Default region matches the CI configuration; AWS_REGION overrides.
-        self._client = anthropic.AnthropicBedrockMantle(
+        self._client = anthropic.AnthropicBedrock(
             aws_region=os.environ.get("AWS_REGION", "us-west-2")
         )
 

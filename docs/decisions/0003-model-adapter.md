@@ -9,9 +9,14 @@ All model calls go through a small adapter (`Model.complete`) in
 `src/assistant/models.py` with three backends:
 
 - `bedrock` (default): Claude on Amazon Bedrock through the Anthropic SDK's
-  Bedrock client. Model IDs carry the `anthropic.` provider prefix
-  (`anthropic.claude-haiku-4-5` for answers, `anthropic.claude-sonnet-4-6`
-  as judge), pinned in config. Credentials resolve through the standard AWS
+  `AnthropicBedrock` client. Model IDs are cross-region inference profiles
+  (`us.anthropic.claude-haiku-4-5-20251001-v1:0` for answers,
+  `us.anthropic.claude-sonnet-4-6` as judge), pinned in config — Bedrock
+  serves these models only through inference profiles, and direct
+  `anthropic.`-prefixed IDs reject invocation. The SDK's newer
+  `AnthropicBedrockMantle` client (bare model IDs) was tried first and 404s
+  because the Bedrock-Mantle offering is not enabled on this account; switch
+  to it later if that changes. Credentials resolve through the standard AWS
   chain; region comes from `AWS_REGION`. This matches the builder's prior
   production deployments and what government clients typically require.
 

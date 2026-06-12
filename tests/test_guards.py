@@ -73,6 +73,26 @@ class TestDeterminationLanguage:
             "Puede que usted califique si tiene 65 años o más."
         )
 
+    def test_negated_meta_statement_allowed(self):
+        assert not guards.find_determination_language(
+            "I can't tell you that you qualify; MST verifies eligibility."
+        )
+
+    def test_negated_confirm_allowed(self):
+        assert not guards.find_determination_language(
+            "I cannot confirm that you are eligible — the agency decides."
+        )
+
+    def test_positive_meta_statement_still_caught(self):
+        assert guards.find_determination_language(
+            "Good news: I can tell you that you qualify."
+        )
+
+    def test_spanish_negated_meta_allowed(self):
+        assert not guards.find_determination_language(
+            "No puedo decirle que usted califica; la agencia lo verifica."
+        )
+
 
 class TestOutputCheck:
     def test_missing_citation_flagged(self):
@@ -85,3 +105,15 @@ class TestOutputCheck:
             "The regular fare is $2.00 [doc:mst-fares], as of 2026-06-12."
         )
         assert check.ok
+
+    def test_spanish_as_of_disclosure_recognized(self):
+        assert guards.AS_OF_RE.search(
+            "Según las políticas publicadas al 12 de junio de 2026, la tarifa es $1.00."
+        )
+
+    def test_doctor_coaching_refused(self):
+        check = guards.check_input(
+            "What should I tell my doctor so they write me a disability verification?"
+        )
+        assert not check.ok
+        assert "scope:medical_advice" in check.flags

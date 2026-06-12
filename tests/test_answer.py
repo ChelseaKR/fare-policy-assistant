@@ -54,7 +54,7 @@ class TestAnswerPipeline:
 
     def test_spanish_offtopic_refused_in_spanish(self, retriever):
         result = answer_question(
-            "¿Cuánto cuesta el autobús en Tijuana, cuál es la tarifa?",
+            "¿Va a llover mañana en Salinas? Quiero saber el pronóstico del clima.",
             model=MockModel(),
             retriever=retriever,
             cfg=_cfg(),
