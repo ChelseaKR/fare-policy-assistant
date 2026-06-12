@@ -1,0 +1,105 @@
+# Corpus manifest — every document the assistant may cite.
+# `python -m assistant.ingest fetch` snapshots each URL into corpus/raw/<id>.html
+# and stamps fetch_date. Snapshots are committed; the UI and report disclose
+# "based on policies published as of <fetch_date>".
+#
+# Robots/permissions notes (checked 2026-06-11):
+#   mst.org      robots.txt allows * with Crawl-delay 10; Cloudflare Content-Signal
+#                "search=yes, ai-train=no" (ai-input unspecified). We do not train on
+#                this content; it is retrieved and quoted with attribution. Fetched
+#                once, manually, with an identified user agent.
+#   sbmtd.gov    robots.txt allows all (wp-admin excluded).
+#   yolobus.com  robots.txt allows all; Crawl-delay 10 honored.
+#   sacrt.com    robots.txt allows all (wp internals excluded).
+#   unitrans.ucdavis.edu was in the original pilot list but its WAF returns 403 to
+#   non-browser clients; per the "polite fetching only" rule it was dropped and
+#   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
+
+user_agent: "fare-policy-assistant-research/0.1 (portfolio reference project; ckellyreif@gmail.com)"
+crawl_delay_seconds: 10
+
+documents:
+  # ── Monterey-Salinas Transit ──────────────────────────────────────────────
+  - id: mst-fares
+    agency: MST
+    agency_full: Monterey-Salinas Transit
+    title: "Fares"
+    url: https://mst.org/fares/
+    language: en
+    license_note: "Public agency fare information; Content-Signal search=yes, ai-train=no."
+  - id: mst-fares-benefits
+    agency: MST
+    agency_full: Monterey-Salinas Transit
+    title: "Benefits (Cal-ITP reduced fares)"
+    url: https://mst.org/fares/benefits/
+    language: en
+    license_note: "Public agency fare information; Content-Signal search=yes, ai-train=no."
+  # Note: MST's Courtesy Card page was retired; the program now appears on the
+  # main Fares page with PDF applications. PDF ingest is deferred (open question
+  # #3 in CLAUDE.md). The old /passes/military/ page 404s; veterans fare info
+  # lives at /mobility/veterans-resource/.
+  - id: mst-veterans-resource
+    agency: MST
+    agency_full: Monterey-Salinas Transit
+    title: "Veterans Resource"
+    url: https://mst.org/mobility/veterans-resource/
+    language: en
+    license_note: "Public agency fare information; Content-Signal search=yes, ai-train=no."
+  - id: mst-fares-es
+    agency: MST
+    agency_full: Monterey-Salinas Transit
+    title: "Tarifas (Spanish fares page)"
+    url: https://mst.org/es/fares/
+    language: es
+    license_note: "Public agency fare information; Content-Signal search=yes, ai-train=no."
+
+  # ── Santa Barbara MTD ─────────────────────────────────────────────────────
+  - id: sbmtd-fares-passes
+    agency: SBMTD
+    agency_full: Santa Barbara Metropolitan Transit District
+    title: "Fares & Passes"
+    url: https://sbmtd.gov/fares-passes/
+    language: en
+    license_note: "Public agency fare information."
+  # Note: https://sbmtd.gov/reduced/ looked like a reduced-fare page but is a
+  # stale 2022 temporary-service-reduction notice; excluded so it cannot pollute
+  # retrieval. SBMTD reduced-fare policy lives on the Fares & Passes page.
+  - id: sbmtd-farechange
+    agency: SBMTD
+    agency_full: Santa Barbara Metropolitan Transit District
+    title: "Fare Change"
+    url: https://sbmtd.gov/farechange/
+    language: en
+    license_note: "Public agency fare information."
+
+  # ── Yolobus (Yolo County Transportation District) ─────────────────────────
+  - id: yolobus-fares
+    agency: Yolobus
+    agency_full: Yolo County Transportation District
+    title: "Fares"
+    url: https://yolobus.com/fares/
+    language: en
+    license_note: "Public agency fare information."
+  - id: yolobus-reduced-fare-id
+    agency: Yolobus
+    agency_full: Yolo County Transportation District
+    title: "Reduced Fare ID"
+    url: https://yolobus.com/reducedfareid/
+    language: en
+    license_note: "Public agency fare information."
+  - id: yolobus-purchasing
+    agency: Yolobus
+    agency_full: Yolo County Transportation District
+    title: "Purchasing a Ticket or Pass"
+    url: https://yolobus.com/purchasing-a-ticket-or-pass/
+    language: en
+    license_note: "Public agency fare information."
+
+  # ── Sacramento Regional Transit ───────────────────────────────────────────
+  - id: sacrt-fares
+    agency: SacRT
+    agency_full: Sacramento Regional Transit District
+    title: "Fares"
+    url: https://www.sacrt.com/fares/
+    language: en
+    license_note: "Public agency fare information."

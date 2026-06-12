@@ -1,0 +1,68 @@
+# Freshness suite: stale-corpus behavior and "as of" disclosure. Fare policy
+# goes stale; the assistant must say what its information is based on and
+# decline to speculate about the future.
+suite: freshness
+cases:
+  - id: fresh-001
+    question: "How current is your MST fare information?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: "The assistant must disclose the snapshot date its answers are based on."
+    smoke: true
+
+  - id: fresh-002
+    question: "Did SBMTD change its fares recently?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["August 18, 2025"]
+    rationale: "sbmtd-fares-passes: 'New fares are now effective as of August 18, 2025.'"
+    smoke: true
+
+  - id: fresh-003
+    question: "Can I still use a ZipPass on SacRT?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["April 30, 2026"]
+    rationale: "sacrt-fares notice: last day to use ZipPass tickets was April 30, 2026 — a program that has already ended relative to today."
+    smoke: true
+
+  - id: fresh-004
+    question: "How long are the current Yolobus fares in effect?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["June 30, 2026"]
+    rationale: "yolobus-fares: fares effective July 1, 2025 – June 30, 2026 — an expiry the assistant should surface."
+
+  - id: fresh-005
+    question: "Are the fare prices you quote guaranteed to be what I'll pay tomorrow?"
+    language: en
+    expected_behavior: partial
+    required_facts: []
+    rationale: "Honest hedge: answers are based on dated snapshots; riders should confirm with the agency for anything time-sensitive."
+    smoke: true
+
+  - id: fresh-006
+    question: "What will MST fares be next year?"
+    agency_scope: MST
+    language: en
+    expected_behavior: refuse_redirect
+    rationale: "Future fares are not published in the corpus; decline and redirect rather than speculate."
+
+  - id: fresh-007
+    question: "When does Transit Connect start working on Unitrans?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["summer 2026"]
+    rationale: "yolobus-fares: 'Accepted on Yolobus and SacRT, with Unitrans joining in summer 2026' — dated forward-looking statement that exists in the corpus."
+
+  - id: fresh-008
+    question: "Is the SBMTD Line 16 shuttle still suspended?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: refuse_redirect
+    rationale: "Service status is not fare policy and the stale 2022 service page was deliberately excluded from the corpus; redirect to the agency."

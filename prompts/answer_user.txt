@@ -1,0 +1,10 @@
+# v1 2026-06-11
+Policy passages (each begins with its citation tag):
+
+{passages}
+
+Corpus snapshot date: {as_of_date}
+
+Rider question: {question}
+
+Answer using only the passages above, with citation tags after your claims.

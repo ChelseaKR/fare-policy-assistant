@@ -1,0 +1,153 @@
+# Edge-case suite: eligibility boundaries taken from the actual policy
+# documents — qualifying ages that differ by agency, Medicare vs. Medi-Cal,
+# document pathways, program stacking, expired programs. Every rationale
+# names the source passage.
+suite: edge_cases
+cases:
+  - id: edge-001
+    question: "I'm 62. Do I get the senior discount on MST?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    rationale: "MST's published senior threshold is 65+; 62 does not meet it. The answer must state the criterion without ruling on the person."
+    smoke: true
+
+  - id: edge-002
+    question: "I'm 62 — can I ride Yolobus at the senior rate?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    rationale: "yolobus-fares: Senior is 62+. Same age, different agency than edge-001: the boundary pair."
+
+  - id: edge-003
+    question: "What age counts as a senior on SacRT?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    rationale: "sacrt-fares: Senior (age 62+) discount."
+
+  - id: edge-004
+    question: "Is the senior discount age the same on MST and Yolobus?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "62"]
+    rationale: "Cross-agency comparison: MST 65+, Yolobus 62+. Both must be cited."
+    smoke: true
+
+  - id: edge-005
+    question: "I'm 75 — does SacRT have anything cheaper than the regular senior pass for me?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["75", "re:\\$\\s?40"]
+    rationale: "sacrt-fares: Super Senior Monthly Pass (age 75+) $40.00, below the $50 senior monthly."
+
+  - id: edge-006
+    question: "I have a Medi-Cal card. Does that get me the reduced fare on Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare"]
+    rationale: "yolobus-fares footnote: Medicare Card (NOT Medi-Cal). The distinction is the whole point of the case."
+    smoke: true
+
+  - id: edge-007
+    question: "I'm 50 but I have a Medicare card. Can I get the MST discount fare?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare"]
+    rationale: "mst-fares Discount Eligibility lists Medicare Card holders independently of age — the Medicare-vs-age pathway."
+
+  - id: edge-008
+    question: "What proof of service does MST accept for the veteran discount?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["DD Form 214"]
+    rationale: "mst-fares: veterans obtain a Courtesy Card with DD Form 214, DD 256N, VA ID, VFW ID, American Legion, DAV ID, or CA license with veteran designation."
+    smoke: true
+
+  - id: edge-009
+    question: "Does MST's veteran discount cover my wife too?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["spouse"]
+    rationale: "mst-fares Discount Eligibility: 'Veterans, Veteran's spouse/caregiver'."
+
+  - id: edge-010
+    question: "My son is 17. What does he pay to ride Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["free"]
+    rationale: "yolobus-fares: Youth ages 0-18 ride free."
+    smoke: true
+
+  - id: edge-011
+    question: "Is my 17-year-old free on MST like on Yolobus?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["18"]
+    rationale: "MST youth 18-and-under get the discount fare ($1.00 single), not free — agencies differ."
+
+  - id: edge-012
+    question: "Do small children ride free on Santa Barbara MTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["45 inches"]
+    rationale: "sbmtd-fares-passes: children under 45 inches tall ride free, limit three per adult."
+
+  - id: edge-013
+    question: "Can I get the senior price on a Yolobus monthly pass, and does it work on express routes?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?42"]
+    rationale: "yolobus-fares: Senior/Disabled monthly $42.00, valid on all routes including express — stacking question."
+
+  - id: edge-014
+    question: "Do UCSB students ride SBMTD buses for free?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["student ID"]
+    rationale: "sbmtd-fares-passes: UCSB & SBCC students use valid student ID as a bus pass; not valid on Downtown-Waterfront Shuttle."
+
+  - id: edge-015
+    question: "Is the bus free for Hartnell College students?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["free"]
+    rationale: "mst-fares College Students: Hartnell students ride free with valid photo student ID during Fall and Spring semesters."
+
+  - id: edge-016
+    question: "I have a disabled rider ID from another transit agency. Will MST honor it?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: []
+    rationale: "mst-fares: 'MST also honors discount courtesy cards issued by other transit systems.'"
+
+  - id: edge-017
+    question: "How do I get a reduced-fare photo ID for Yolobus and what does it require?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["Woodland"]
+    rationale: "yolobus-reduced-fare-id: obtain at Yolo Transportation District office in Woodland or SacRT sales center; Medicare card, CA license/ID, or other agencies' disabled ID qualify."
+
+  - id: edge-018
+    question: "What happens if I lose my SBMTD reduced fare photo ID card?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5"]
+    rationale: "sbmtd-fares-passes Mobility Pass: replacement fee of $5.00 for a lost photo ID card."

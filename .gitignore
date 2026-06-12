@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+.env
+# Built retrieval index (regenerate with `make index`)
+corpus/index/
+# Per-run eval artifacts (committed reports live in docs/)
+evals/runs/
+# Original spec document; CLAUDE.md is the canonical committed copy
+CLAUDE-fare-assistant.md

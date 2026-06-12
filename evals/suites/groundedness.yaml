@@ -1,0 +1,137 @@
+# Groundedness suite: questions with answers verifiable against specific
+# corpus passages. required_facts entries are literal substrings unless
+# prefixed "re:" (regex). Every case's rationale names its source passage.
+suite: groundedness
+cases:
+  - id: ground-001
+    question: "How much is a single ride on an MST bus if I pay cash?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "mst-fares 'Cash / GoPass / GoCard': Regular Fixed Route single ride $2.00."
+    smoke: true
+
+  - id: ground-002
+    question: "What does a discounted monthly GoPass cost on MST?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?35"]
+    rationale: "mst-fares fare table: Discount Fixed Route monthly $35.00."
+
+  - id: ground-003
+    question: "Does MST cap how much I can be charged per day with contactless payment?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6"]
+    rationale: "mst-fares overview: fare capping at $6/day, $20/week, $70/month with the same contactless card."
+    smoke: true
+
+  - id: ground-004
+    question: "How does the MST GoCard bonus work when I reload it?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["10%"]
+    rationale: "mst-fares GoCard section: 10% extra value on each reload, $10 minimum."
+
+  - id: ground-005
+    question: "What is the regular one-way fare on Santa Barbara MTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.50"]
+    rationale: "sbmtd-fares-passes FARES: Regular one-way $2.50."
+
+  - id: ground-006
+    question: "How much do seniors pay per ride on SBMTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.25", "65"]
+    rationale: "sbmtd-fares-passes FARES: Seniors (age 65+) $1.25."
+    smoke: true
+
+  - id: ground-007
+    question: "What does a 30-day adult pass cost on Santa Barbara MTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?80"]
+    rationale: "sbmtd-fares-passes PASSES: 30-DAY PASS Adult $80.00."
+
+  - id: ground-008
+    question: "How long is a transfer valid on SBMTD if I need a second bus?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["60 minutes"]
+    rationale: "sbmtd-fares-passes TRANSFERS: free, valid up to 60 minutes on the second bus."
+
+  - id: ground-009
+    question: "What's the local single-ride fare for adults on Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "yolobus-fares table: Local Fare regular adult $2.00."
+    smoke: true
+
+  - id: ground-010
+    question: "How much is an express bus ride on Yolobus for a regular adult?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.25"]
+    rationale: "yolobus-fares table: Express regular adult $3.25."
+
+  - id: ground-011
+    question: "What does a monthly pass for local Yolobus routes cost?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?84"]
+    rationale: "yolobus-fares table: Monthly Local Routes $84.00."
+
+  - id: ground-012
+    question: "Is a Yolobus daily pass also good on SacRT?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: []
+    rationale: "yolobus-fares: Daily Pass SacRT + Yolobus $7.00; valid until 1:30am next day on both."
+
+  - id: ground-013
+    question: "How much is a basic single ride on SacRT?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.50"]
+    rationale: "sacrt-fares: Age 19-61 Basic single ride $2.50."
+    smoke: true
+
+  - id: ground-014
+    question: "What does a SacRT daily pass cost for a regular adult?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?7"]
+    rationale: "sacrt-fares: Basic Daily Pass $7.00."
+
+  - id: ground-015
+    question: "How long is a SacRT light rail single ride ticket valid?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["90 minutes"]
+    rationale: "sacrt-fares Light Rail: single ride valid 90 minutes from validation."
+
+  - id: ground-016
+    question: "Where can I buy MST GoPasses in Salinas?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["Salinas Transit Center"]
+    rationale: "mst-fares Pass Outlets: Salinas Costco and Salinas Transit Center, 110 Salinas Street."

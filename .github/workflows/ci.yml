@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 9 * * *"  # nightly full suite
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Lint
+        run: uv run ruff check src tests evals
+      - name: Typecheck
+        run: uv run mypy src
+      - name: Tests
+        run: uv run pytest -q
+
+  smoke-evals:
+    # 25-case smoke suite on every PR. Without AWS credentials (e.g. forks) it
+    # runs offline: deterministic checks only, judges recorded as skipped.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Run smoke suite
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
+        run: uv run python -m evals.runner --smoke
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-run
+          path: evals/runs/
+
+  full-evals-nightly:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Full eval run
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
+        run: uv run python -m evals.runner --full
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: |
+            EVALS.md
+            docs/eval-report.html
+            evals/runs/

@@ -1,0 +1,51 @@
+[project]
+name = "fare-policy-assistant"
+version = "0.1.0"
+description = "Transit fare policy assistant with a public evaluation harness"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic[bedrock]>=0.100",
+    "beautifulsoup4>=4.12",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "rank-bm25>=0.2.2",
+]
+
+[project.optional-dependencies]
+dense = [
+    "sentence-transformers>=3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "types-pyyaml",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# evals/ is a repo-root package (it is the product, not a library to install).
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

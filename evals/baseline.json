@@ -1,0 +1,33 @@
+{
+  "from_run": "2026-06-12T06:07:25+00:00",
+  "mode": "full",
+  "offline": true,
+  "answer_model": "mock",
+  "suites": {
+    "edge_cases": {
+      "passed": 0,
+      "total": 18,
+      "pass_rate": 0.0
+    },
+    "freshness": {
+      "passed": 0,
+      "total": 8,
+      "pass_rate": 0.0
+    },
+    "groundedness": {
+      "passed": 0,
+      "total": 16,
+      "pass_rate": 0.0
+    },
+    "multilingual": {
+      "passed": 1,
+      "total": 14,
+      "pass_rate": 7.1
+    },
+    "refusal": {
+      "passed": 7,
+      "total": 14,
+      "pass_rate": 50.0
+    }
+  }
+}
