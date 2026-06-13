@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transit Fare Policy Assistant — reference implementation</title>
+<style>
+  :root {
+    --ink: #1a1f24;
+    --muted: #4d5860;
+    --paper: #fafaf7;
+    --card: #ffffff;
+    --line: #d6d3cb;
+    --accent: #14532d;
+    --accent-ink: #ffffff;
+    --notice: #fff8e6;
+    --notice-line: #d9c27a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.55;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  .banner {
+    background: var(--notice);
+    border: 1px solid var(--notice-line);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+  }
+  h1 { font-size: 1.5rem; margin: 1.2rem 0 0.3rem; }
+  .sub { color: var(--muted); margin: 0 0 1rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  ul { margin: 0.3rem 0 0.3rem 1.2rem; padding: 0; }
+  label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+  textarea {
+    width: 100%;
+    min-height: 4.5rem;
+    font: inherit;
+    padding: 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 2px;
+  }
+  .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-top: 0.7rem; }
+  button {
+    font: inherit;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.55rem 1.1rem;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button[disabled] { opacity: 0.6; cursor: wait; }
+  .examples { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  .examples button { font-size: 0.9rem; padding: 0.35rem 0.7rem; }
+  #status { color: var(--muted); min-height: 1.4rem; margin-top: 0.6rem; }
+  #answer { white-space: normal; }
+  #answer p { margin: 0.5rem 0; }
+  .sources { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.6rem; font-size: 0.95rem; }
+  .asof { color: var(--muted); font-size: 0.9rem; }
+  .error { color: #991b1b; }
+  footer {
+    border-top: 1px solid var(--line);
+    margin-top: 2rem;
+    padding-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  footer a, .sources a { color: #1d4ed8; }
+  @media (max-width: 480px) {
+    h1 { font-size: 1.3rem; }
+    .row { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="banner" role="note">
+    <strong>Reference implementation.</strong> This is a portfolio demonstration of how to test
+    an AI assistant, not an official service of any transit agency. Verify anything important
+    with the agency directly.
+  </div>
+
+  <h1>Transit Fare Policy Assistant</h1>
+  <p class="sub">
+    Answers questions about published fare and reduced-fare policies for four California
+    transit agencies: Monterey-Salinas Transit (MST), Santa Barbara MTD, Yolobus, and SacRT.
+    Based on policies published as of June 12, 2026. You can ask in English or Spanish.
+  </p>
+
+  <section class="card" aria-labelledby="wnd">
+    <h2 id="wnd">What it will not do</h2>
+    <ul>
+      <li>It does not decide whether you qualify for a discount. It explains the published
+          criteria and how to apply.</li>
+      <li>It does not give medical, legal, or immigration advice.</li>
+      <li>It does not collect personal information. Please leave ID numbers and birth dates
+          out of your question.</li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="ask">
+    <h2 id="ask">Ask a question</h2>
+    <form id="form">
+      <label for="q">Your question</label>
+      <textarea id="q" name="question" maxlength="500" required
+        placeholder="Example: What proof do I need for the veteran fare on MST?"></textarea>
+      <div class="row">
+        <button type="submit" class="primary" id="submit">Ask</button>
+        <span class="asof">Answers cite their sources.</span>
+      </div>
+    </form>
+    <div class="examples" aria-label="Example questions">
+      <button type="button" data-q="Am I eligible for a senior discount on SBMTD?">Senior discount, SBMTD</button>
+      <button type="button" data-q="¿Cuánto cuesta el pasaje reducido en Yolobus?">Pasaje reducido, Yolobus</button>
+      <button type="button" data-q="Does MST cap how much I pay per day?">Daily fare cap, MST</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card" id="result" hidden aria-labelledby="result-h">
+    <h2 id="result-h">Answer</h2>
+    <div id="answer"></div>
+    <div class="sources" id="sources" hidden>
+      <strong>Sources</strong>
+      <ul id="source-list"></ul>
+    </div>
+    <p class="asof" id="asof"></p>
+  </section>
+
+  <footer>
+    <p>Nothing you type is stored. Questions are answered and then discarded.</p>
+    <p>
+      <a href="https://github.com/ChelseaKR/fare-policy-assistant">Source code</a> ·
+      <a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/EVALS.md">How it is tested</a> ·
+      <a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/model-card.md">Model card</a>
+    </p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("form");
+  var input = document.getElementById("q");
+  var submit = document.getElementById("submit");
+  var status = document.getElementById("status");
+  var result = document.getElementById("result");
+  var answerEl = document.getElementById("answer");
+  var sources = document.getElementById("sources");
+  var sourceList = document.getElementById("source-list");
+  var asof = document.getElementById("asof");
+
+  document.querySelectorAll(".examples button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      input.value = btn.getAttribute("data-q");
+      input.focus();
+    });
+  });
+
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Answers are plain text with [doc:id] markers, **bold**, and "- " bullets.
+  function render(text) {
+    var cleaned = text.replace(/\s*\[doc:[a-z0-9-]+\]/g, "");
+    var lines = cleaned.split(/\n/);
+    var html = "";
+    var inList = false;
+    lines.forEach(function (line) {
+      var t = line.trim();
+      var item = /^[-•]\s+/.test(t);
+      if (item && !inList) { html += "<ul>"; inList = true; }
+      if (!item && inList) { html += "</ul>"; inList = false; }
+      if (!t) { return; }
+      var body = esc(t.replace(/^[-•]\s+/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      html += item ? "<li>" + body + "</li>" : "<p>" + body + "</p>";
+    });
+    if (inList) { html += "</ul>"; }
+    return html;
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var question = input.value.trim();
+    if (!question) { return; }
+    submit.disabled = true;
+    status.textContent = "Looking through the published policies…";
+    status.className = "";
+    result.hidden = true;
+
+    fetch("/api/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question: question })
+    }).then(function (resp) {
+      return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
+    }).then(function (r) {
+      submit.disabled = false;
+      if (!r.ok) {
+        status.textContent = r.data.error || "Something went wrong. Please try again.";
+        status.className = "error";
+        return;
+      }
+      status.textContent = "";
+      answerEl.innerHTML = render(r.data.answer);
+      answerEl.setAttribute("lang", r.data.language || "en");
+      sourceList.innerHTML = "";
+      (r.data.citations || []).forEach(function (c) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = c.url;
+        a.rel = "noopener";
+        a.textContent = c.agency + ": " + c.title;
+        li.appendChild(a);
+        li.appendChild(document.createTextNode(" (fetched " + c.fetch_date + ")"));
+        sourceList.appendChild(li);
+      });
+      sources.hidden = sourceList.children.length === 0;
+      asof.textContent = r.data.as_of_date
+        ? "Based on policies published as of " + r.data.as_of_date + "."
+        : "";
+      result.hidden = false;
+      result.focus && result.setAttribute("tabindex", "-1");
+      result.focus();
+    }).catch(function () {
+      submit.disabled = false;
+      status.textContent = "Could not reach the service. Please try again.";
+      status.className = "error";
+    });
+  });
+})();
+</script>
+<noscript><p style="max-width:44rem;margin:1rem auto;padding:0 1rem;">
+  This demo needs JavaScript to send your question. The project, including every answer the
+  evaluation suite produced, can be read without JavaScript in the
+  <a href="https://github.com/ChelseaKR/fare-policy-assistant">source repository</a>.
+</p></noscript>
+</body>
+</html>

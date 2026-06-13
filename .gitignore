@@ -10,5 +10,7 @@ __pycache__/
 corpus/index/
 # Per-run eval artifacts (committed reports live in docs/)
 evals/runs/
+# Lambda bundle staging (infra/deploy.sh)
+infra/build/
 # Original spec document; CLAUDE.md is the canonical committed copy
 CLAUDE-fare-assistant.md

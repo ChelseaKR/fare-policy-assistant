@@ -22,9 +22,9 @@ test:
 	uv run pytest -q
 
 lint:
-	uv run ruff check src tests evals
+	uv run ruff check src tests evals web
 
 typecheck:
-	uv run mypy src
+	uv run mypy src web
 
 check: lint typecheck test
