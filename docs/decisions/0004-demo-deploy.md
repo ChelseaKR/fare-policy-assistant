@@ -1,6 +1,7 @@
 # 0004 — Demo deploy: one Lambda behind a Function URL
 
-Date: 2026-06-12. Status: accepted.
+Date: 2026-06-12. Status: amended 2026-06-12 (see bottom): the public
+endpoint is an HTTP API, not a Function URL.
 
 ## Decision
 
@@ -52,7 +53,9 @@ CLAUDE.md and is stated in the UI footer.
 ## Rejected alternatives
 
 - **API Gateway + S3 static hosting.** More pieces, IAM glue, and cache
-  configuration to explain; no benefit at this traffic level.
+  configuration to explain; no benefit at this traffic level. *(Half
+  reversed by the amendment below: API Gateway turned out to be required,
+  though S3 still is not.)*
 - **Streaming responses.** Nicer perceived latency, but the output guard
   must see the complete text before anything reaches a rider, so streaming
   would only stream after the check anyway.
@@ -60,3 +63,28 @@ CLAUDE.md and is stated in the UI footer.
   starts persisting request metadata keyed by IP, which works against the
   no-persistence rule. The concurrency and budget caps bound spend without
   identifying anyone.
+
+## Amendment (2026-06-12): HTTP API instead of a Function URL
+
+The first deploy answered 403 to every request, anonymous or signed, with a
+correct auth-NONE URL config and resource policy. The deployment account
+denies anonymous `lambda:InvokeFunctionUrl` at the policy layer (an
+org-level public-access control), which no function-level configuration can
+override. Rather than weaken the account's posture, the public endpoint is
+now an API Gateway HTTP API in front of the same function.
+
+What changed and what did not:
+
+- The handler is untouched. HTTP APIs send the same payload-v2 event shape
+  as Function URLs; only the hostname differs.
+- API Gateway invokes the function as a service principal scoped to this
+  API's ARN, so no anonymous-invoke policy is needed on the function.
+- The gateway adds a stage-level throttle (2 requests/second, burst 5)
+  ahead of the handler's per-container budget, which strengthens the
+  cost-guard story from "Why this shape."
+- Cost at portfolio traffic stays effectively zero (HTTP APIs bill about a
+  dollar per million requests).
+
+The lesson recorded for adapters of this harness: in managed AWS accounts,
+prefer the HTTP API path from the start; auth-NONE Function URLs are
+commonly blocked by organization policy.

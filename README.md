@@ -51,6 +51,15 @@ that fails to parse counts as an error rather than a pass.
 A 25-case smoke suite runs in CI on every pull request. The full suite runs
 nightly. A drop of more than 2 points on any suite fails the build.
 
+## Live demo
+
+Try it at <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>. The page
+states what the assistant will not do, answers in English or Spanish, and
+cites the policy snapshot behind every answer. Questions are answered and
+discarded; nothing you type is stored. The serving path is one Lambda behind
+an HTTP API with layered cost guards (ADR 0004), deployed by
+`infra/deploy.sh`.
+
 ## Quick start
 
 Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are
