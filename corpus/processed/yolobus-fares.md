@@ -41,9 +41,7 @@ ADA Paratransit Local Fare | $4.00
 ADA Paratransit Intercity Fare | $4.50
 ADA Paratransit Premium Fare* | $6.00
 * Premium service is available to medical facilities only in portions of Sacramento and Vacaville that are beyond ¾ miles of Yolobus fixed routes. Destinations within ¾ mile of a Yolobus fixed route are charged the Local or Intercity fare, whichever is applicable
-
-## How to purchase a ticket or a pass
-
+How to purchase a ticket or a pass
 More information on how to purchase a ticket or a pass is available here
 
 ## How to Pay
@@ -61,26 +59,16 @@ The Transit Connect mobile fare app allows you to pre-purchase, store and activa
 ## Cash
 
 All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required as our bus operators don’t carry change or provide refunds. Passes on Connect Card can be purchased with cash at the Yolobus Customer Service Center .
-
-## In-Person Ticket and Pass Sales
-
+In-Person Ticket and Pass Sales
 The Yolobus Customer Service Center in Woodland offers transit fare sales and Connect Card services:
-
-## Business Hours
-
+Business Hours
 Monday through Thursday, excluding holidays 9am – 12pm; 1pm – 4pm
-
-## Connect Card Services Offered
-
+Connect Card Services Offered
 Issue New or Replacement Connect Cards for all riders, including eligible Discount Riders (Seniors, Persons with Disabilities)
 Load Cash Value, Tickets and/or Passes onto Connect Cards
-
-## Alternative ticket and pass sales location in Sacramento
-
+Alternative ticket and pass sales location in Sacramento
 Tickets, passes and Connect Card services are also available in Sacramento at the Sacramento Regional Transit District (SacRT) Customer Service and Sales Center, 1225 R St., Sacramento (916) 321-2877
-
-## Single Ride
-
+Single Ride
 Tickets are for a one-way trip. A ticket can be purchased individually on Yolobus or by using Connect Card or Transit Connect.
 
 ## Daily Pass

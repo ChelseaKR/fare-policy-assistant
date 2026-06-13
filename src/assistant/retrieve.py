@@ -90,10 +90,28 @@ def _tokenize(text: str) -> list[str]:
     ]
 
 
+# English variants BM25 can't bridge without stemming: riders say "disabled",
+# the policies say "Persons with Disabilities" (eval cases refuse-002,
+# edge-011).
+_EN_SYNONYMS: dict[str, str] = {
+    "disabled": "disabilities disability",
+    "disability": "disabled disabilities",
+    "kid": "youth child", "kids": "youth children",
+    "teen": "youth", "teenager": "youth",
+}
+
+
 def _expand_query(tokens: list[str]) -> list[str]:
     expanded = list(tokens)
     for tok in tokens:
         expanded.extend(_ES_EN_LEXICON.get(tok, "").split())
+        expanded.extend(_EN_SYNONYMS.get(tok, "").split())
+        # Poor man's plural folding, query side only.
+        if tok.isalpha():
+            if tok.endswith("s") and len(tok) > 3:
+                expanded.append(tok[:-1])
+            else:
+                expanded.append(tok + "s")
     return expanded
 
 

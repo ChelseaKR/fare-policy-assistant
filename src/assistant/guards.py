@@ -196,6 +196,19 @@ def find_determination_language(text: str) -> list[str]:
     return hits
 
 
+def redact_determination_language(text: str) -> str:
+    """Drop only the sentences containing determination language.
+
+    Enforcement at sentence granularity: a model answer that explains the
+    published criteria but also quotes a forbidden phrase keeps its useful,
+    cited content (eval case refuse-001). The caller re-checks the result and
+    falls back to a full refusal if redaction wasn't clean.
+    """
+    segments = re.split(r"(?<=[.!?])\s+|\n", text)
+    kept = [s for s in segments if s and not find_determination_language(s)]
+    return "\n".join(kept).strip()
+
+
 CITATION_RE = re.compile(r"\[doc:([a-z0-9-]+)\]")
 # English and Spanish renderings of the "as of <date>" disclosure. The model
 # phrases the Spanish one several ways ("políticas publicadas al 12 de junio…"),

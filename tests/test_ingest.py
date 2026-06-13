@@ -27,7 +27,6 @@ def test_sections_split_on_headings():
     sections = sections_from_html(HTML)
     headings = [h for h, _ in sections]
     assert "Discount Eligibility" in headings
-    assert "Fare Table" in headings
 
 
 def test_nav_and_script_stripped():
@@ -41,10 +40,14 @@ def test_boilerplate_headings_dropped():
     assert "Follow us" not in headings
 
 
-def test_table_rows_linearized():
+def test_tiny_table_section_merged_into_parent_with_heading():
+    # The fare table is under 200 chars, so it folds into the preceding
+    # section; its heading and linearized rows must survive the merge.
     by_heading = dict(sections_from_html(HTML))
-    assert "Regular | $2.00" in by_heading["Fare Table"]
-    assert "Discount | $1.00" in by_heading["Fare Table"]
+    body = by_heading["Discount Eligibility"]
+    assert "Fare Table" in body
+    assert "Regular | $2.00" in body
+    assert "Discount | $1.00" in body
 
 
 def test_list_items_kept():

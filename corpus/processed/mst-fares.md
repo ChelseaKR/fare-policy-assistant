@@ -23,9 +23,7 @@ $ 1.00
 $ 3.00
 $ 10.00
 $ 35.00
-
-## — Contactless Payment
-
+— Contactless Payment
 Single Ride 2 hours
 Daily valid until 2:00 AM
 Weekly (7 Days)
@@ -66,9 +64,7 @@ GoPasses and GoCards can be purchased directly from MST, online, by phone or in 
 ## Contactless Payment Methods
 
 MST now accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets. At this time, accepted mobile wallets include: Apple Pay , Google Pay, Samsung Pay , and Fitbit Pay . For more information, visit our Contactless Fare Payment Fast Facts and FAQs .
-
-## Cash
-
+Cash
 Cash is inserted into the farebox. Exact fare is not required. If you do not have exact fare the farebox will issue credit for use on future MST trips.
 
 ## GoPasses

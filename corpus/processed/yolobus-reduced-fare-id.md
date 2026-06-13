@@ -5,9 +5,7 @@ Source: https://yolobus.com/reducedfareid/ (fetched 2026-06-12)
 
 Our senior (62+) and disabled riders can take advantage of Yolobus’ reduced fares. To qualify for reduced fares, riders must show proper identification when purchasing fares and to bus operators when boarding.
 Qualifying riders may obtain a reduced fare photo ID by visiting the Yolo Transportation District office or SacRT Customer Service & Sales Center:
-
-## Yolo Transportation District
-
+Yolo Transportation District
 350 Industrial Way, Woodland, CA 95776 (Mon-Thu, 9:00 AM-Noon, 1:00-4:00 PM)
 (530) 661-0816
 

@@ -62,16 +62,31 @@ class TestAnswerPipeline:
         assert result.kind == "refused_no_support"
         assert "agencia" in result.answer
 
-    def test_determination_language_blocked_by_guard(self, retriever):
+    def test_determination_sentence_redacted_content_kept(self, retriever):
         result = answer_question(
             "Do I qualify for the Yolobus senior fare discount?",
-            model=ScriptedModel("Yes, you qualify for the discount. [doc:yolobus-fares]"),
+            model=ScriptedModel(
+                "Yes, you qualify for the discount. "
+                "The published criteria are 62 and older [doc:yolobus-fares]."
+            ),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "answered"
+        assert "you qualify" not in result.answer
+        assert "62 and older" in result.answer
+        assert any(f.startswith("redacted_determination") for f in result.guard_flags)
+        assert "you qualify" in result.raw_model_answer
+
+    def test_fully_offending_answer_blocked_by_guard(self, retriever):
+        result = answer_question(
+            "Do I qualify for the Yolobus senior fare discount?",
+            model=ScriptedModel("Yes, you qualify for the discount, trust me."),
             retriever=retriever,
             cfg=_cfg(),
         )
         assert result.kind == "answered_guarded"
         assert "you qualify" not in result.answer
-        assert any(f.startswith("determination_language") for f in result.guard_flags)
 
     def test_uncited_answer_blocked_by_guard(self, retriever):
         result = answer_question(

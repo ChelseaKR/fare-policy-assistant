@@ -94,6 +94,22 @@ class TestDeterminationLanguage:
         )
 
 
+class TestRedaction:
+    def test_offending_sentence_dropped_content_kept(self):
+        text = (
+            'I can\'t do that. My rules say I never tell anyone "you qualify". '
+            "The published criteria are age 65 and older [doc:mst-fares], "
+            "as of 2026-06-12."
+        )
+        redacted = guards.redact_determination_language(text)
+        assert "you qualify" not in redacted
+        assert "65 and older" in redacted
+        assert guards.check_output(redacted).ok
+
+    def test_fully_offending_text_redacts_to_empty(self):
+        assert guards.redact_determination_language("You qualify. You are eligible.") == ""
+
+
 class TestOutputCheck:
     def test_missing_citation_flagged(self):
         check = guards.check_output("The fare is $2.00 as of June 2026.")

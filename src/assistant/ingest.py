@@ -149,7 +149,7 @@ def sections_from_html(html: str) -> list[tuple[str, str]]:
             if text:
                 sections[-1][1].append(text)
 
-    out = []
+    out: list[tuple[str, str]] = []
     for heading, parts in sections:
         if _BOILERPLATE_HEADINGS.search(heading):
             continue
@@ -161,7 +161,16 @@ def sections_from_html(html: str) -> list[tuple[str, str]]:
                 seen.add(p)
                 lines.append(p)
         body = "\n".join(lines).strip()
-        if len(body) >= 40:
+        if len(body) < 40:
+            continue
+        # Tiny sections are usually address blocks or table fragments split
+        # off from the policy text they belong to; standalone they carry too
+        # few word tokens to ever be retrieved (eval case edge-017). Fold
+        # them into the preceding section, keeping their heading inline.
+        if len(body) < 200 and out:
+            prev_heading, prev_body = out[-1]
+            out[-1] = (prev_heading, f"{prev_body}\n{heading}\n{body}")
+        else:
             out.append((heading, body))
     return out
 

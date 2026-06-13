@@ -1,4 +1,4 @@
-# v1 2026-06-11
+# v2 2026-06-12 (v1 2026-06-11; v2 adds the unstated-details reminder — eval cases ml-005, ml-011)
 Policy passages (each begins with its citation tag):
 
 {passages}
@@ -8,3 +8,7 @@ Corpus snapshot date: {as_of_date}
 Rider question: {question}
 
 Answer using only the passages above, with citation tags after your claims.
+If the passages do not state a detail (how something is proven, who a process
+applies to, which price covers which rider), say the published policy does
+not specify it — do not extend a statement about one group or product to
+another.

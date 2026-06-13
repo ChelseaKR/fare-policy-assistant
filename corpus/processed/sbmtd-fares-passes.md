@@ -4,33 +4,19 @@ Source: https://sbmtd.gov/fares-passes/ (fetched 2026-06-12)
 ## (page top)
 
 New fares are now effective as of August 18, 2025. For more information click here .
-
-## UCSB CAMPUS STORE
-
+UCSB CAMPUS STORE
 1 UCEN Road Santa Barbara, CA 93106 805.893.3819
-
-## EASTSIDE LIBRARY
-
+EASTSIDE LIBRARY
 1102 East Montecito Street Santa Barbara, CA 93103 Vending Machine
-
-## MTD TRANSIT CENTER
-
+MTD TRANSIT CENTER
 1020 Chapala Street Santa Barbara, CA 93101 805. 963.3366
-
-## MTD BUSINESS OFFICE
-
+MTD BUSINESS OFFICE
 550 Olive Street Santa Barbara, CA 93101 805. 963.3364 MTD accepts cash, a local imprinted check, or a money order (payable to “MTD”) as payment for passes.
-
-## ALBERTSON’S CARPINTERIA
-
+ALBERTSON’S CARPINTERIA
 1018 Casitas Pass Road Carpinteria, CA 93013 Vending Machine
-
-## GOLETA VALLEY COMMUNITY CENTER
-
+GOLETA VALLEY COMMUNITY CENTER
 5679 Hollister Avenue Goleta, CA 93117 Vending Machine -Credit/Debit Card Only
-
-## BY MAIL
-
+BY MAIL
 You can order your passes through the mail by filling out & sending in an order form.
 
 ## FARES
@@ -69,18 +55,14 @@ Passengers with disabilities may be eligible for the Mobility Pass, a reduced fa
 To obtain a reduced fare MTD photo ID card, passengers must have an application completed by a qualified physician or an MTD-certified social service agency. You may download an application here , or get one at the MTD Transit Center, or call 805.963.3366 for more information.
 Passengers may also present a disabled photo ID card from another transit agency, a valid Medicare ID card, or a valid California DMV Disabled Placard Receipt to obtain a reduced fare MTD photo ID card.
 If the photo ID card is lost, a replacement fee of $5.00 will be charged.
-
-## UCSB & SBCC STUDENTS RIDE FREE
-
+UCSB & SBCC STUDENTS RIDE FREE
 UCSB & SBCC students may use their valid student ID as a bus pass by tapping it on the farebox upon boarding.
 
 ## Valid Dates
 
 UCSB – First day of the quarter until 2 weeks into the next quarter. SBCC – 7 calendar days before the first day of classes until the last day of final exams, except Fall semester stickers are valid until 7 calendar days before Spring classes begin.
 UCSB & SBCC cards are not valid on the Downtown-Waterfront Shuttle.
-
-## 2025-2026 Valid Dates for Student Registration Stickers as Prepaid Bus Fare
-
+2025-2026 Valid Dates for Student Registration Stickers as Prepaid Bus Fare
 SBCC
 Fall | Aug 18 – Jan 19
 Spring | Jan 19 – May 23
@@ -99,9 +81,7 @@ Transfers are valid to complete your one-way trip. Transfers are not valid for r
 It is MTD policy that drivers may wait up to 3 minutes beyond their scheduled departure times for transferring passengers. If you are concerned about catching your connecting bus, request that your driver call ahead to ask your next driver to wait for you.
 During peak-hour times when there is more frequent bus service, Lines 1, 2, 6 & 11 will not wait. There will be another bus in 10 minutes.
 MTD transfers are not valid on the Downtown and Waterfront Shuttles.
-
-## Other Transfers
-
+Other Transfers
 With a valid transfer slip from VCTC, you pay only $1.00 to ride MTD!
 
 ## Pacific Surfliner’s Transit Transfer Program

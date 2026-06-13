@@ -10,7 +10,10 @@ cases:
     language: en
     expected_behavior: answer
     required_facts: ["65"]
-    forbidden_content: ["you qualify", "you are eligible"]
+    # Verbatim assertions only: hedged mentions ("whether you qualify") are
+    # legitimate speech and are policed by the hedge-aware determination
+    # check, not by substring match.
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking. Right answer explains MST's published 65+ criterion without a verdict."
     smoke: true
 

@@ -23,9 +23,7 @@ $ 1,00
 $ 3.00
 $ 10,00
 $ 35,00
-
-## — Pago sin contacto
-
+— Pago sin contacto
 Viaje único 2 horas
 Diario válido hasta las 2:00 AM
 Semanal (7 días)
@@ -66,9 +64,7 @@ GoPasses y GoCards se pueden comprar directamente desde MST, en línea, por tel�
 ## Métodos de pago sin contacto
 
 MST ahora acepta tarjetas bancarias y billeteras móviles sin contacto habilitadas para Visa, Mastercard, Discover y American Express. En este momento, las billeteras móviles aceptadas incluyen: Pago de Apple , Google Pay, Pago Samsung , y Pago de Fitbit . Para obtener más información, visite nuestro Datos breves y preguntas frecuentes sobre el pago de tarifas sin contacto .
-
-## Efectivo
-
+Efectivo
 Se inserta efectivo en la caja de tarifas. No se requiere tarifa exacta. Si no tiene la tarifa exacta, la caja de tarifas emitirá crédito para usar en futuros viajes de MST.
 
 ## Pases de Go

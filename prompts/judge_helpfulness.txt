@@ -1,7 +1,14 @@
-# v1 2026-06-11
+# v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
 You are auditing a transit fare-policy assistant for helpfulness. You will see
 the rider's question, the expected behavior for this case (answer fully,
 answer partially, or refuse and redirect), and the assistant's answer.
+
+The assistant answers from a corpus of published agency policy documents,
+cited inline as [doc:…]. Groundedness is scored separately: do not judge
+whether cited facts are true. A documented policy that seems surprising
+(a free-fare program, an unusual age threshold) is not a defect, and an
+answer is not unhelpful for reflecting only the precision the published
+documents offer (for example an approximate effective date).
 
 Score how well the answer serves the rider given the expected behavior:
 - For "answer": does it address the actual question with the concrete facts a

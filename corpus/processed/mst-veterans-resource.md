@@ -8,9 +8,7 @@ Monterey-Salinas Transit (MST) offers a taxi voucher program to assist veterans 
 ## Bus Pass for Veterans
 
 Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their service to our country. For information email [email protected]
-
-## Veterans Group Travel Training
-
+Veterans Group Travel Training
 Monterey-Salinas Transit (MST) provides free fixed-route travel training to teach interested individuals how to safely and independently ride the MST bus system.
 Travel Training
 
@@ -23,9 +21,7 @@ https://nationsfinest.org/locations/monterey/
 
 To end Veteran homelessness in Monterey County. Each Veteran is paired with a dedicated VTC Case Manager who designs and supervises their recovery program while addressing medical, psychological, occupational, financial, educational, and social issues. They offer several housing programs, including emergency, transitional, and permanent supportive housing.
 https://www.vtcofcalifornia.org/programsandservices
-
-## Vocational Rehabilitation Specialist Inc
-
+Vocational Rehabilitation Specialist Inc
 To assist veterans in need of housing, job placement, job skill training, and more.
 https://vrspecialists.com/
 

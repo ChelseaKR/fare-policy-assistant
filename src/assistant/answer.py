@@ -118,21 +118,18 @@ def answer_question(
         temperature=cfg.models.temperature,
     )
 
-    cited_ids = set(guards.CITATION_RE.findall(completion.text))
-    by_id = {sc.chunk.doc_id: sc.chunk for sc in results}
-    citations = [
-        Citation(
-            doc_id=doc_id,
-            agency=by_id[doc_id].agency,
-            title=by_id[doc_id].doc_title,
-            url=by_id[doc_id].url,
-            fetch_date=by_id[doc_id].fetch_date,
-        )
-        for doc_id in sorted(cited_ids)
-        if doc_id in by_id
-    ]
+    text = completion.text
+    guard_flags: list[str] = []
+    post = guards.check_output(text)
+    if not post.ok and any(f.startswith("determination_language") for f in post.flags):
+        # First try dropping just the offending sentences; a good answer that
+        # quotes a forbidden phrase keeps its cited content.
+        redacted = guards.redact_determination_language(text)
+        if redacted and guards.check_output(redacted).ok:
+            guard_flags = [f"redacted_{f}" for f in post.flags]
+            text = redacted
+            post = guards.check_output(text)
 
-    post = guards.check_output(completion.text)
     if not post.ok:
         # Enforcement, not just measurement: an answer that decides eligibility
         # or carries no citation never reaches the rider. The flags stay on the
@@ -147,12 +144,28 @@ def answer_question(
             as_of_date=as_of,
             raw_model_answer=completion.text,
         )
+
+    cited_ids = set(guards.CITATION_RE.findall(text))
+    by_id = {sc.chunk.doc_id: sc.chunk for sc in results}
+    citations = [
+        Citation(
+            doc_id=doc_id,
+            agency=by_id[doc_id].agency,
+            title=by_id[doc_id].doc_title,
+            url=by_id[doc_id].url,
+            fetch_date=by_id[doc_id].fetch_date,
+        )
+        for doc_id in sorted(cited_ids)
+        if doc_id in by_id
+    ]
     return AnswerResult(
         question=question,
-        answer=completion.text,
+        answer=text,
         kind="answered",
         citations=citations,
         passages=results,
+        guard_flags=guard_flags,
         model=completion.model,
         as_of_date=as_of,
+        raw_model_answer=completion.text if guard_flags else "",
     )
