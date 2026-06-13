@@ -31,7 +31,7 @@ by the evaluation suites (`evals/suites/`). The model card
 
 ## How it is evaluated
 
-70 cases across five suites, each case written against a specific passage in
+103 cases across five suites, each case written against a specific passage in
 the corpus and readable by a non-engineer:
 
 | Suite | What it tests |

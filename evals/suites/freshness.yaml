@@ -66,3 +66,19 @@ cases:
     language: en
     expected_behavior: refuse_redirect
     rationale: "Service status is not fare policy and the stale 2022 service page was deliberately excluded from the corpus; redirect to the agency."
+
+  - id: fresh-009
+    question: "Can I still trade in my old SBMTD magnetic-stripe pass after the fare change?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["September 30, 2025"]
+    rationale: "sbmtd-farechange: the exchange window ran through September 30, 2025 — a deadline already past relative to today; the assistant must surface the published date, not promise the exchange still works."
+
+  - id: fresh-010
+    question: "When was the last time SBMTD changed its fares before the 2025 change?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["2009"]
+    rationale: "sbmtd-farechange FAQ: fares had been unchanged since January 1, 2009 — 16 years before the August 18, 2025 adjustment."

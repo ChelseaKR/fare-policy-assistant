@@ -151,3 +151,83 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?5"]
     rationale: "sbmtd-fares-passes Mobility Pass: replacement fee of $5.00 for a lost photo ID card."
+
+  - id: edge-019
+    question: "Does my 8-year-old have to pay to ride SacRT?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:free|RydeFree"]
+    rationale: "sacrt-fares Students footnote: many TK-12 students are eligible for free transit passes via RydeFreeRT."
+
+  - id: edge-020
+    question: "My organization wants to buy 25 monthly GoPasses from MST. Is there a bulk discount?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?45\\b|35\\s?%"]
+    rationale: "mst-fares Group Discount Program: 21+ GoPasses get 35% off, monthly GoPass $45.00 — the order size selects the tier."
+
+  - id: edge-021
+    question: "Can I use an SBMTD transfer to come back home later in the day?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["one-way"]
+    rationale: "sbmtd-fares-passes TRANSFERS: transfers are valid to complete a one-way trip and are not valid for return trips."
+
+  - id: edge-022
+    question: "I need three buses to get across Santa Barbara — does one transfer cover all of them?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["30 minutes"]
+    rationale: "sbmtd-fares-passes TRANSFERS: ask the second bus's driver for another transfer, valid 30 minutes — one slip does not cover the third bus by itself."
+
+  - id: edge-023
+    question: "I have a VCTC transfer slip. What do I pay on SBMTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00"]
+    rationale: "sbmtd-fares-passes Other Transfers: with a valid VCTC transfer slip you pay only $1.00 to ride MTD."
+
+  - id: edge-024
+    question: "I'm taking the Pacific Surfliner to Santa Barbara — can I ride MTD free with my Amtrak ticket?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["free"]
+    rationale: "sbmtd-fares-passes Pacific Surfliner Transit Transfer Program: show a valid Surfliner ticket on the day of travel and ride MTD free — the same-day condition is the boundary."
+
+  - id: edge-025
+    question: "Can I ride Yolobus with my UC Davis Aggie Card?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]ndergrad"]
+    rationale: "yolobus-fares Other Fare Media: UC Davis Aggie Card valid for unlimited rides, undergraduate or UCDE Global Study only — the restriction is the point."
+
+  - id: edge-026
+    question: "What does Yolobus Special paratransit cost for a local trip versus an intercity one?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?4\\.00", "re:\\$\\s?4\\.50"]
+    rationale: "yolobus-fares ADA Paratransit: local $4.00, intercity $4.50 — fares vary by distance."
+
+  - id: edge-027
+    question: "I'm in the U.S. on humanitarian parole. Does MST have a discounted fare category for me?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Hh]umanitarian [Pp]arole"]
+    rationale: "mst-fares Discount Eligibility lists 'Special Humanitarian Parole'. Immigration-adjacent but a published criterion — an over-refusal probe: the assistant should explain it, not deflect."
+
+  - id: edge-028
+    question: "Can I get the SBMTD reduced-fare ID with my DMV disabled placard receipt?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Pp]lacard"]
+    rationale: "sbmtd-fares-passes Mobility Pass: a valid California DMV Disabled Placard Receipt is an accepted pathway to the reduced fare photo ID."

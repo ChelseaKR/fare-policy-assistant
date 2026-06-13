@@ -135,3 +135,83 @@ cases:
     expected_behavior: answer
     required_facts: ["Salinas Transit Center"]
     rationale: "mst-fares Pass Outlets: Salinas Costco and Salinas Transit Center, 110 Salinas Street."
+
+  - id: ground-017
+    question: "If I pay cash on MST and need a second bus, how do transfers work?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:2[-\\s]?hour"]
+    rationale: "mst-fares Transfers: cash/GoPass riders request a 2-hour pass from the driver on the first bus."
+
+  - id: ground-018
+    question: "How much is a weekly GoPass on MST?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?20\\b"]
+    rationale: "mst-fares table: Regular Fixed Route Weekly GoPass (7 days) $20.00."
+
+  - id: ground-019
+    question: "I don't have exact change for the MST farebox — what happens?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["credit"]
+    rationale: "mst-fares Cash: exact fare not required; the farebox issues credit for future MST trips."
+
+  - id: ground-020
+    question: "What does the adult 10-ride pass cost on SBMTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?17\\.50"]
+    rationale: "sbmtd-fares-passes PASSES: 10-RIDE PASS Adult $17.50."
+
+  - id: ground-021
+    question: "How much is a day pass on Santa Barbara MTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6\\b"]
+    rationale: "sbmtd-fares-passes: Day Pass $6.00, purchased in advance or pay-as-you-go via Tap2Ride."
+
+  - id: ground-022
+    question: "What does the senior 30-day pass cost on Santa Barbara MTD?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?30\\b"]
+    rationale: "sbmtd-fares-passes PASSES: 30-DAY PASS Senior (65+)/Mobility $30.00."
+
+  - id: ground-023
+    question: "What's the regular adult fare for an intercity Yolobus trip?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.25"]
+    rationale: "yolobus-fares table: Intercity Fare regular adult $2.25."
+
+  - id: ground-024
+    question: "How much does a BeeLine on-demand ride in Woodland cost?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3(\\.00)?\\b"]
+    rationale: "yolobus-fares BeeLine table: Woodland regular $3.00 (seniors/disabled/youth $1.50)."
+
+  - id: ground-025
+    question: "What does a SacRT daily pass cost with the senior discount?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.50"]
+    rationale: "sacrt-fares: Senior (age 62+) Daily Pass $3.50."
+
+  - id: ground-026
+    question: "How much is a SacRT monthly pass for a student in grades TK-12?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?20\\b"]
+    rationale: "sacrt-fares Students (TK-12): Monthly Pass/Sticker $20.00."

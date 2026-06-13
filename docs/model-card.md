@@ -50,7 +50,7 @@ in the system.
 
 ## Evaluation
 
-70 cases across groundedness, refusal, edge-case, multilingual, and freshness
+103 cases across groundedness, refusal, edge-case, multilingual, and freshness
 suites; method and current scores in [EVALS.md](../EVALS.md). Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Judge
 disagreement is spot-checked by hand on a 10% sample and human-judge agreement
