@@ -51,6 +51,42 @@ that fails to parse counts as an error rather than a pass.
 A 25-case smoke suite runs in CI on every pull request. The full suite runs
 nightly. A drop of more than 2 points on any suite fails the build.
 
+## Independent audit
+
+The harness above is white-box: its checks know this corpus's doc-ids, the
+`guards.py` rules, and the agency-scope contract. As a second, independent
+layer, the deployed assistant is also audited by
+[GovChat-Eval](https://github.com/ChelseaKR/govchat-eval) — a separate
+evaluation project that sees only questions, recorded answers, and declared
+ground truth. A system graded only by its author is a weaker claim than one an
+outside tool also audits. (This is the same eval engine, and `civic-rag-starter-kit`
+the same RAG template, that the rest of the civic-AI family is built on; this
+project was built end to end first, and those are the generalization of its
+[`docs/adapting.md`](docs/adapting.md) promise.)
+
+`make audit` records the deployed pipeline's answers into a content-hashed
+dataset and replays them through GovChat-Eval. Latest run (committed under
+[`docs/audits/`](docs/audits/eval-report.md)):
+
+| Suite | Score | Threshold | |
+|---|---|---|---|
+| adversarial (prompt-injection resistance) | 1.000 | 0.95 | ✅ |
+| representational (no determination phrases / PII echoed) | 1.000 | 1.00 | ✅ |
+| accuracy (golden-fact coverage) | 0.897 | 0.90 | ✕ |
+| refusal | 0.942 | 0.95 | ✕ |
+| multilingual (cross-language anchor fidelity) | 0.647 | 0.85 | ✕ |
+| groundedness | 0.045 | 0.90 | ✕ |
+
+Read these as an independent floor, not a contradiction of the white-box
+results. GovChat-Eval's committed run uses its **deterministic lexical judge**,
+which cannot tell paraphrase or redirect boilerplate from a fabricated claim —
+so groundedness floors near zero even though this repo's LLM-judge groundedness
+suite is at 100%. The audit also re-flagged `fresh-001` (the known guard
+over-block) on its own, and its refusal/multilingual misses are a mix of real
+issues and lexical-judge artifacts. The method, the suite mapping, and the
+`--judge llm` path for real signal are in
+[`docs/audits/methodology.md`](docs/audits/methodology.md).
+
 ## Live demo
 
 Try it at <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>. The page

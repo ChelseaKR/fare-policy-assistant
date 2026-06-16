@@ -1,0 +1,26 @@
+# GovChat-Eval run configuration for the independent audit of this repo's
+# deployed assistant. `make audit` records evals/govchat/golden.jsonl from the
+# pipeline, then runs this. CLI flags override these values.
+#
+# The dataset replays recorded answers (target = "scripted"), so the audit is
+# byte-reproducible and runs offline. The default judge is GovChat-Eval's
+# deterministic lexical baseline — useful as a reproducible floor, not a real
+# benchmark. For real groundedness/multilingual signal, run with `--judge llm`
+# (Anthropic; a different model family than this repo's Bedrock answer model,
+# so the judge stays independent of the system under test). See
+# docs/audits/methodology.md.
+[run]
+dataset = "evals/govchat/golden.jsonl"
+target = "scripted"
+# Suites this dataset exercises. a11y (chat-transcript HTML) and bias (declared
+# segments) are intentionally omitted — this domain dataset carries neither, and
+# GovChat-Eval fails a selected-but-inapplicable suite closed. UI accessibility
+# is checked separately; see docs/audits/methodology.md.
+suite = "groundedness,accuracy,refusal,multilingual,adversarial,representational"
+judge = "deterministic"
+seed = 1729
+out = "docs/audits"
+format = "json,md,html"
+# Baseline is passed as an absolute path by `make audit` (a path in this file
+# would only resolve from one working directory). Create it after the first
+# run: `govchat-eval baseline --from docs/audits/eval-report.json`.

@@ -1,6 +1,9 @@
 # All targets run through uv; `uv sync` happens implicitly via `uv run`.
 
-.PHONY: fetch index ingest eval smoke report test lint typecheck check
+# Path to a local govchat-eval clone for the independent audit (make audit).
+EVAL_HARNESS ?= ../govchat-eval
+
+.PHONY: fetch index ingest eval smoke report audit test lint typecheck check
 
 fetch:        ## Snapshot corpus documents listed in corpus/manifest.yaml
 	uv run python -m assistant.ingest fetch
@@ -17,6 +20,16 @@ eval:         ## Full eval run; writes evals/runs/<timestamp>/ and regenerates E
 
 report:       ## Regenerate EVALS.md + HTML from the latest run
 	uv run python -m evals.report
+
+audit:        ## Independent GovChat-Eval audit: record answers, then run the external harness
+	@test -d "$(EVAL_HARNESS)" || { echo "govchat-eval not found at $(EVAL_HARNESS); set EVAL_HARNESS=<path>"; exit 2; }
+	uv run python -m evals.govchat_export
+	cd "$(EVAL_HARNESS)" && uv run govchat-eval validate --dataset "$(CURDIR)/evals/govchat/golden.jsonl"
+	cd "$(EVAL_HARNESS)" && uv run govchat-eval run \
+		--config "$(CURDIR)/evals/govchat/govchat-eval.toml" \
+		--dataset "$(CURDIR)/evals/govchat/golden.jsonl" \
+		--baseline "$(CURDIR)/evals/govchat/baseline.json" \
+		--out "$(CURDIR)/docs/audits"
 
 test:
 	uv run pytest -q
