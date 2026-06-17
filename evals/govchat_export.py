@@ -186,6 +186,11 @@ def build_dataset(*, offline: bool = False) -> list[dict]:
     cases_by_id: dict[str, dict] = {}
     for s in suites:
         for case in s["cases"]:
+            # The GovChat-Eval dataset schema is single-turn (one question, one
+            # recorded answer); multi-turn conversation cases are exercised by
+            # this repo's own runner, not exported to the black-box audit.
+            if "question" not in case:
+                continue
             result = answer_question(case["question"], model=model, retriever=retriever, cfg=cfg)
             items[case["id"]] = _item_for(case, result)
             cases_by_id[case["id"]] = case

@@ -23,3 +23,19 @@ def test_calibrate_matches_against_run_records():
     out = calibrate(records, labels)
     assert out["n_matched"] == 2
     assert out["agreement"] == 1.0  # human agrees: 001 grounded, 024 contradicted
+
+
+def test_validate_accepts_multiturn_and_rejects_too_short():
+    import pytest
+
+    from evals.runner import validate_cases
+    ok = [{"cases": [{"id": "c1", "turns": ["a?", "b?"],
+                      "expected_behavior": "answer", "rationale": "x"}]}]
+    validate_cases(ok)  # no raise
+    bad = [{"cases": [{"id": "c2", "turns": ["only one?"],
+                       "expected_behavior": "answer", "rationale": "x"}]}]
+    with pytest.raises(SystemExit):
+        validate_cases(bad)
+    missing = [{"cases": [{"id": "c3", "expected_behavior": "answer", "rationale": "x"}]}]
+    with pytest.raises(SystemExit):
+        validate_cases(missing)

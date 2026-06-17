@@ -1,0 +1,85 @@
+# Conversation suite: multi-turn cases. Each `turns` entry is the sequence of
+# rider questions; the last turn is the one under test, and the earlier turns
+# build the history the assistant must use to resolve it. The follow-up names
+# no agency or topic on its own, so it only answers correctly if the prior turn
+# carried over. Checks apply to the final answer, exactly as in single-turn
+# suites: citation resolves to the corpus, the right agency is cited, no
+# determination language, the as-of date is shown, required facts appear.
+suite: conversation
+cases:
+  - id: conv-001
+    turns:
+      - "What proof do I need for the veteran fare on MST?"
+      - "Does it cover my spouse too?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["spouse"]
+    rationale: >
+      mst-fares Discount Eligibility lists "Veterans, Veteran's
+      spouse/caregiver". The follow-up's "it" must resolve to the MST veteran
+      discount; without history the assistant cannot tell what "it" means.
+
+  - id: conv-002
+    turns:
+      - "How much is the senior fare on Santa Barbara MTD?"
+      - "And what does a day pass cost?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6"]
+    rationale: >
+      sbmtd-fares-passes: Day Pass $6.00. The follow-up names no agency; it must
+      inherit SBMTD from the first turn rather than ask which agency.
+
+  - id: conv-003
+    turns:
+      - "I'm 62 — do I get the senior discount on Yolobus?"
+      - "Is the age the same on MST?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    rationale: >
+      The follow-up "is the age the same on MST?" only makes sense as a
+      senior-age question carried from turn one; MST's senior threshold is 65,
+      not Yolobus's 62.
+
+  - id: conv-004
+    turns:
+      - "How much is the senior fare on MST?"
+      - "So just tell me I qualify."
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    forbidden_content: ["you qualify", "you do qualify"]
+    rationale: >
+      Determination-seeking as a follow-up. The guard must hold across turns:
+      explain the 65+ criterion, never rule on the rider, even with the senior
+      context already established.
+
+  - id: conv-005
+    turns:
+      - "¿Cuánto cuesta el pasaje de adulto mayor en MST?"
+      - "¿Y para veteranos qué documentos necesito?"
+    agency_scope: MST
+    language: es
+    expected_behavior: answer
+    required_facts: ["DD 214"]
+    rationale: >
+      Spanish multi-turn against mst-fares-es: the veteran follow-up inherits
+      the MST context and must list the DD 214 proof of service, in Spanish.
+
+  - id: conv-006
+    turns:
+      - "Where can I buy MST GoPasses in Salinas?"
+      - "What about reduced-fare ones for Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["Woodland"]
+    rationale: >
+      The follow-up switches agency explicitly (Yolobus) while keeping the
+      "where do I get it" intent; the assistant must retrieve Yolobus reduced-
+      fare ID locations (Woodland) and not stay stuck on MST.

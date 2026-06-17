@@ -1,9 +1,14 @@
 {
-  "from_run": "2026-06-17T01:00:41+00:00",
+  "from_run": "2026-06-17T01:38:37+00:00",
   "mode": "full",
   "offline": false,
   "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "suites": {
+    "conversation": {
+      "passed": 5,
+      "total": 6,
+      "pass_rate": 83.3
+    },
     "edge_cases": {
       "passed": 27,
       "total": 28,

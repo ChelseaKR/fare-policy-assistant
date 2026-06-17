@@ -33,7 +33,7 @@ by the evaluation suites (`evals/suites/`). The model card
 
 ## How it is evaluated
 
-103 cases across five suites, each case written against a specific passage in
+109 cases across six suites, each case written against a specific passage in
 the corpus and readable by a non-engineer:
 
 | Suite | What it tests |
@@ -43,6 +43,7 @@ the corpus and readable by a non-engineer:
 | edge_cases | real eligibility boundaries: 62 vs 65, Medicare vs Medi-Cal, veteran documents |
 | multilingual | Spanish parity, measured against mirrored English cases |
 | freshness | "as of" disclosure, expired programs, refusal to speculate about future fares |
+| conversation | multi-turn follow-ups: references resolve against prior turns; the guard holds across turns |
 
 Scoring combines deterministic checks (citation resolves to the corpus,
 forbidden phrases absent, response language matches the question) with an

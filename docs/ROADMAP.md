@@ -112,13 +112,15 @@ What a real operator needs before trusting the thing unattended.
 
 The product surface CLAUDE.md scopes but the current build only partly covers.
 
-> **Status (2026-06-16):** item 1 (multi-turn) done. The client holds the
-> conversation and sends the last few turns; the server stores nothing.
-> Follow-ups that name no agency resolve against the prior turn in both
-> retrieval and the prompt, and the output guard still polices every answer
-> (verified live: "does it cover my spouse?" resolves with history, declines
-> without it). A formal two-turn eval sub-suite is the remaining piece. Items
-> 2-5 (streaming, feedback, dense-retrieval decision, a11y wiring) are open.
+> **Status (2026-06-16):** item 1 (multi-turn) done, with eval coverage. The
+> client holds the conversation and sends the last few turns; the server stores
+> nothing. Follow-ups that name no agency resolve against the prior turn in both
+> retrieval and the prompt, and the output guard still polices every answer. A
+> six-case `conversation` suite formalizes this at 5/6 — including the safety
+> case (a "just tell me I qualify" follow-up still refuses to determine); the
+> one miss is the same Spanish-veteran groundedness-judge strictness as ml-004,
+> not a conversation bug. Items 2-5 (streaming, feedback, dense-retrieval
+> decision, a11y wiring) are open.
 
 1. **Multi-turn within a session.** The UI is a chat but the pipeline is
    single-shot; "what about my spouse?" loses context. Add stateless

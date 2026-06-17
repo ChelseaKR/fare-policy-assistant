@@ -50,8 +50,9 @@ in the system.
 
 ## Evaluation
 
-103 cases across groundedness, refusal, edge-case, multilingual, and freshness
-suites; method and current scores in [EVALS.md](../EVALS.md). Deterministic
+109 cases across groundedness, refusal, edge-case, multilingual, freshness, and
+multi-turn conversation suites; method and current scores in
+[EVALS.md](../EVALS.md). Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
 also records its exact token usage and an estimated cost, and checks the LLM
 judge against a hand-labeled sample (`evals/calibration/judge_labels.jsonl`):

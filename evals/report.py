@@ -154,11 +154,16 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         failures = [r for r in records if r["suite"] == suite and not r["passed"]]
         for r in failures[:FAILURES_PER_SUITE]:
             any_failures = True
+            lines += [f"### {r['case_id']} ({suite})", ""]
+            if r.get("turns"):
+                lines.append("**Conversation:**")
+                lines.append("")
+                for i, turn in enumerate(r["turns"], 1):
+                    lines.append(f"{i}. {turn}")
+                lines.append("")
+            else:
+                lines += [f"**Question:** {r['question']}", ""]
             lines += [
-                f"### {r['case_id']} ({suite})",
-                "",
-                f"**Question:** {r['question']}",
-                "",
                 f"**Why this case exists:** {r['rationale']}",
                 "",
                 "**Retrieved passages:**",

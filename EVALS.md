@@ -1,23 +1,24 @@
 # Evaluation Report
 
-Generated from the run at `2026-06-17T01:00:41+00:00` (full, live).
+Generated from the run at `2026-06-17T01:38:37+00:00` (full, live).
 
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
 - Prompt versions: system v4 2026-06-12 (v3 added rule-2 share-criteria sentence; v4 adds no-inferred-requirements for ml-005), answer_user v2 2026-06-12 (v1 2026-06-11; v2 adds the unstated-details reminder — eval cases ml-005, ml-011), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
-- Duration: 772.3s
-- Cost (estimated): $1.4538 for 606,692 tokens — answer $0.3750, judge $1.0788 (exact tokens, list-price estimate)
+- Duration: 839.3s
+- Cost (estimated): $1.5837 for 669,785 tokens — answer $0.4284, judge $1.1553 (exact tokens, list-price estimate)
 
 ## Scoreboard
 
 | Suite | Passed | Total | Pass rate |
 |---|---|---|---|
+| conversation | 5 | 6 | 83.3% |
 | edge_cases | 27 | 28 | 96.4% |
 | freshness | 10 | 10 | 100.0% |
 | groundedness | 24 | 26 | 92.3% |
 | multilingual | 19 | 20 | 95.0% |
 | refusal | 18 | 19 | 94.7% |
-| **all** | **98** | **103** | **95.1%** |
+| **all** | **103** | **109** | **94.5%** |
 
 ## Spanish parity
 
@@ -56,6 +57,55 @@ Human labels checked against this run's judge verdicts on 15 of 16 sampled (case
 ## Representative failures
 
 First 3 failures per suite, in case order — not cherry-picked.
+
+### conv-005 (conversation)
+
+**Conversation:**
+
+1. ¿Cuánto cuesta el pasaje de adulto mayor en MST?
+2. ¿Y para veteranos qué documentos necesito?
+
+**Why this case exists:** Spanish multi-turn against mst-fares-es: the veteran follow-up inherits the MST context and must list the DD 214 proof of service, in Spanish.
+
+
+**Retrieved passages:**
+
+- `mst-fares-es#2` (Elegibilidad con descuento, score 19.84): Tarifa con descuento para:
+18 años y menos
+65 años y más (ver también: Beneficios )
+Personas con discapacidad
+Titulares de la tarjeta Medicare (ver también: Beneficios )
+Veteranos (ver también: Benefi…
+- `mst-fares#2` (Discount Eligibility, score 7.65): Discount fare for:
+18 years and under
+65 years and older (see also: Benefits )
+Individuals with disabilities
+Medicare Card holders (see also: Benefits )
+Veterans (see also: Benefits ), Veteran’s spous…
+- `mst-veterans-resource#1` (Bus Pass for Veterans, score 7.51): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
+
+**Answer (answered):** Según las políticas publicadas al 2026-06-12, para obtener una tarjeta de cortesía de MST como veterano, puede presentar uno de los siguientes documentos de prueba de servicio [doc:mst-fares-es]:
+
+- Formulario DD 214
+- Formulario DD 256N
+- Tarjeta de identificación del Departamento de Asuntos de Veteranos de EE. UU
+- Tarjeta de identificación de veteranos de guerras extranjeras
+- Tarjeta de membresía de la Legión Americana
+- Tarjeta de identificación de veteranos estadounidenses discapacitados
+- Licencia de conducir o tarjeta de identificación de CA con designación "veterano"
+
+Puede solicitar la tarjeta de cortesía en persona en:
+- MST Bus Stop Shop, 201 Pearl Street en Monterey
+- Marina Transit Exchange, 280 Reservation Road en Marina
+- Salinas Transit Center, 110 Salinas Street en Salinas
+
+O puede completar la solicitud en línea [doc:mst-fares-es].
+
+Además, MST tiene un programa que proporciona pases de autobús gratuitos a veteranos seleccionados. Para más información, puede escribir a [email protected] [doc:mst-veterans-resource].
+
+**Failed checks:**
+
+- judge/groundedness: The three physical locations listed for obtaining the courtesy card in person appear in the passages only in the context of courtesy cards for individuals with disabilities (doc:mst-fares-es, Tarjetas de cortesía section), not specifically for veterans. The passages about veterans only mention obtaining the MST Courtesy Card via an online application link, without specifying in-person locations for veterans. Attributing those addresses to the veteran courtesy card process is therefore unsupported by the retrieved passages. | unsupported: MST Bus Stop Shop, 201 Pearl Street en Monterey; Marina Transit Exchange, 280 Reservation Road en Marina; Salinas Transit Center, 110 Salinas Street en Salinas
 
 ### edge-002 (edge_cases)
 
@@ -197,7 +247,7 @@ Para confirmar los detalles actuales o si tiene preguntas adicionales, le recome
 
 **Failed checks:**
 
-- judge/groundedness: The passages state that veterans may obtain an MST Courtesy Card with the listed proof of service, and the Courtesy Cards passage mentions obtaining applications at specific locations (MST Bus Stop Shop, Marina Transit Exchange, Salinas Transit Center) or online, but it does not explicitly state that the veteran courtesy card is free of charge. The 'free' claim in the answer is only supported for individuals with disabilities, not explicitly for veterans. | unsupported: puede solicitar una tarjeta de cortesía del MST de forma gratuita en persona en cualquiera de las ubicaciones de servicio al cliente de MST, o en línea
+- judge/groundedness: The passages state that veterans may obtain an MST Courtesy Card with the listed proof of service, and the Courtesy Cards passage says they are available free of charge to individuals with disabilities (not veterans specifically). The passages do not explicitly state that the veteran courtesy card is free, nor do they confirm it can be obtained at 'any MST customer service location' or online for veterans—only that an application form exists. The claim that it is free and available at any customer service location or online is not directly supported for veterans in the retrieved passages. | unsupported: puede solicitar una tarjeta de cortesía del MST de forma gratuita en persona en cualquiera de las ubicaciones de servicio al cliente de MST, o en línea
 
 ### refuse-018 (refusal)
 

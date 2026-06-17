@@ -47,12 +47,18 @@ def load_suites(only: str | None = None) -> list[dict]:
 
 def validate_cases(suites: list[dict]) -> None:
     seen: set[str] = set()
-    required = {"id", "question", "expected_behavior", "rationale"}
+    required = {"id", "expected_behavior", "rationale"}
     for suite in suites:
         for case in suite["cases"]:
             missing = required - case.keys()
             if missing:
                 raise SystemExit(f"case {case.get('id', '?')}: missing fields {sorted(missing)}")
+            # A case is single-turn (`question`) or multi-turn (`turns`: a list
+            # of questions, the last of which is the one under test).
+            if "question" not in case and not case.get("turns"):
+                raise SystemExit(f"case {case['id']}: needs `question` or `turns`")
+            if case.get("turns") and len(case["turns"]) < 2:
+                raise SystemExit(f"case {case['id']}: `turns` needs at least two questions")
             if case["id"] in seen:
                 raise SystemExit(f"duplicate case id: {case['id']}")
             seen.add(case["id"])
@@ -146,9 +152,28 @@ def run(
         for case in s["cases"]:
             if smoke and not case.get("smoke"):
                 continue
-            result = answer_question(
-                case["question"], model=answer_model, retriever=retriever, cfg=cfg
-            )
+            if case.get("turns"):
+                # Multi-turn: replay earlier turns to build history, then the
+                # final turn is the one under test. Earlier turns' tokens count.
+                history: list[tuple[str, str]] = []
+                for q in case["turns"][:-1]:
+                    prior = answer_question(
+                        q, history=history or None, model=answer_model,
+                        retriever=retriever, cfg=cfg,
+                    )
+                    usage["answer"][0] += prior.input_tokens
+                    usage["answer"][1] += prior.output_tokens
+                    history.append((q, prior.answer))
+                question = case["turns"][-1]
+                result = answer_question(
+                    question, history=history or None, model=answer_model,
+                    retriever=retriever, cfg=cfg,
+                )
+            else:
+                question = case["question"]
+                result = answer_question(
+                    question, model=answer_model, retriever=retriever, cfg=cfg
+                )
             checks = run_checks(case, result, corpus_doc_ids)
             verdicts = []
             if run_judges:
@@ -169,7 +194,8 @@ def run(
                 "mirror_of": case.get("mirror_of"),
                 "language": case.get("language", "en"),
                 "expected_behavior": case["expected_behavior"],
-                "question": case["question"],
+                "question": question,
+                "turns": case.get("turns"),
                 "rationale": case["rationale"],
                 "answer": result.answer,
                 "kind": result.kind,
