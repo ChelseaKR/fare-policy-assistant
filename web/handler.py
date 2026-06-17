@@ -18,7 +18,7 @@ import json
 import os
 import sys
 import time
-from collections import deque
+from collections import OrderedDict, deque
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent  # bundle root mirrors the repo root
@@ -31,9 +31,29 @@ from assistant.retrieve import default_retriever  # noqa: E402
 
 MAX_QUESTION_CHARS = 500
 REQUESTS_PER_MINUTE = 8  # per container; reserved concurrency bounds containers
+ANSWER_CACHE_SIZE = 256  # per container; answers are deterministic (temperature 0)
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 _RECENT: deque[float] = deque()
+# Per-container answer cache: identical questions return the recorded payload
+# without a model call, since the corpus is fixed and the model runs at
+# temperature 0. Stores only the response payload (no rider content beyond the
+# question key, which lives in memory and dies with the container). Bounded LRU.
+_ANSWER_CACHE: OrderedDict[str, dict] = OrderedDict()
+
+
+def _cache_get(key: str) -> dict | None:
+    payload = _ANSWER_CACHE.get(key)
+    if payload is not None:
+        _ANSWER_CACHE.move_to_end(key)
+    return payload
+
+
+def _cache_put(key: str, payload: dict) -> None:
+    _ANSWER_CACHE[key] = payload
+    _ANSWER_CACHE.move_to_end(key)
+    while len(_ANSWER_CACHE) > ANSWER_CACHE_SIZE:
+        _ANSWER_CACHE.popitem(last=False)
 
 # Build the BM25 index once per container, not per request.
 default_retriever()
@@ -82,9 +102,6 @@ def _over_budget(now: float) -> bool:
 
 
 def _ask(event: dict) -> dict:
-    if _over_budget(time.monotonic()):
-        return _json(429, {"error": "Too many requests right now. Please try again in a minute."})
-
     try:
         body = event.get("body") or ""
         if event.get("isBase64Encoded"):
@@ -102,6 +119,18 @@ def _ask(event: dict) -> dict:
             400, {"error": f"Please keep questions under {MAX_QUESTION_CHARS} characters."}
         )
 
+    # Cache hits cost no model call, so they bypass the per-minute budget (which
+    # exists to bound Bedrock spend) but are still logged.
+    key = question.casefold()
+    cached = _cache_get(key)
+    if cached is not None:
+        print(json.dumps({"kind": cached["kind"], "language": cached["language"],
+                          "question_chars": len(question), "cache": "hit"}))
+        return _json(200, cached)
+
+    if _over_budget(time.monotonic()):
+        return _json(429, {"error": "Too many requests right now. Please try again in a minute."})
+
     cfg = _make_cfg()
     started = time.monotonic()
     result = answer_question(
@@ -109,35 +138,30 @@ def _ask(event: dict) -> dict:
         model=get_model(cfg.models.provider, cfg.models.answer_model),
         cfg=cfg,
     )
+    payload = {
+        "answer": result.answer,
+        "kind": result.kind,
+        "language": guards.detect_language(result.answer),
+        "as_of_date": result.as_of_date,
+        "citations": [
+            {"agency": c.agency, "title": c.title, "url": c.url, "fetch_date": c.fetch_date}
+            for c in result.citations
+        ],
+    }
+    _cache_put(key, payload)
     # Operational log only: no question text, no answer text (ADR 0004).
     print(
         json.dumps(
             {
                 "kind": result.kind,
-                "language": guards.detect_language(result.answer),
+                "language": payload["language"],
                 "question_chars": len(question),
                 "duration_ms": round(1000 * (time.monotonic() - started)),
+                "cache": "miss",
             }
         )
     )
-    return _json(
-        200,
-        {
-            "answer": result.answer,
-            "kind": result.kind,
-            "language": guards.detect_language(result.answer),
-            "as_of_date": result.as_of_date,
-            "citations": [
-                {
-                    "agency": c.agency,
-                    "title": c.title,
-                    "url": c.url,
-                    "fetch_date": c.fetch_date,
-                }
-                for c in result.citations
-            ],
-        },
-    )
+    return _json(200, payload)
 
 
 def handler(event: dict, context: object = None) -> dict:

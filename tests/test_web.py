@@ -17,6 +17,7 @@ from web import handler as web_handler
 def offline(monkeypatch):
     monkeypatch.setenv("FPA_PROVIDER", "mock")
     web_handler._RECENT.clear()
+    web_handler._ANSWER_CACHE.clear()
 
 
 def _event(method: str = "POST", path: str = "/api/ask", body: dict | None = None) -> dict:
@@ -97,12 +98,40 @@ class TestAnswers:
 
 class TestBudget:
     def test_request_budget_returns_429(self):
-        for _ in range(web_handler.REQUESTS_PER_MINUTE):
-            assert _post("Do youth ride free on Yolobus?")["statusCode"] == 200
-        resp = _post("Do youth ride free on Yolobus?")
+        # Distinct questions so each is a cache miss that counts against budget.
+        for i in range(web_handler.REQUESTS_PER_MINUTE):
+            assert _post(f"What is fare number {i} on MST?")["statusCode"] == 200
+        resp = _post("One more distinct fare question on MST?")
         assert resp["statusCode"] == 429
 
     def test_budget_does_not_count_page_loads(self):
         for _ in range(web_handler.REQUESTS_PER_MINUTE * 2):
             web_handler.handler(_event(method="GET", path="/"))
         assert _post("Do youth ride free on Yolobus?")["statusCode"] == 200
+
+
+class TestCache:
+    def test_repeated_question_is_cached_and_bypasses_budget(self):
+        first = _post("Do youth ride free on Yolobus?")
+        assert first["statusCode"] == 200
+        # Exhaust the budget with distinct questions ...
+        for i in range(web_handler.REQUESTS_PER_MINUTE):
+            _post(f"distinct budget filler {i}?")
+        # ... a brand-new question is now throttled ...
+        assert _post("a fresh uncached question?")["statusCode"] == 429
+        # ... but the already-cached one still answers, free.
+        again = _post("Do youth ride free on Yolobus?")
+        assert again["statusCode"] == 200
+        assert again["body"] == first["body"]
+
+    def test_cache_is_case_insensitive(self):
+        a = _post("How much is the senior fare on SBMTD?")
+        b = _post("how much is the SENIOR fare on sbmtd?")
+        assert a["body"] == b["body"]
+        assert len(web_handler._ANSWER_CACHE) == 1
+
+    def test_cache_evicts_past_bound(self, monkeypatch):
+        monkeypatch.setattr(web_handler, "ANSWER_CACHE_SIZE", 3)
+        for i in range(5):
+            _post(f"unique question {i}?")
+        assert len(web_handler._ANSWER_CACHE) <= 3

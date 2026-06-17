@@ -1,5 +1,7 @@
 # Transit Fare Policy Assistant + Evaluation Harness
 
+[![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
+
 A small retrieval-augmented assistant that answers rider questions about fare
 and reduced-fare policies for four California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness

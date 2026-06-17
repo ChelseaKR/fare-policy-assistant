@@ -1,0 +1,58 @@
+name: Corpus freshness
+
+# Fare policy goes stale. Once a week (and on demand) re-snapshot the manifest
+# URLs, re-process, and — if anything changed — open a PR with the corpus diff.
+# The PR's normal CI runs the smoke evals, so a corpus change arrives as a
+# reviewable change with its eval impact attached, not as a silent drift or a
+# human polling task. This never commits to main directly.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Mondays 08:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Re-snapshot and re-process the corpus
+        run: |
+          uv run python -m assistant.ingest fetch
+          uv run python -m assistant.ingest process
+
+      - name: Detect corpus changes
+        id: diff
+        run: |
+          if git diff --quiet -- corpus/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Corpus unchanged since the last snapshot."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "## Corpus changed" >> "$GITHUB_STEP_SUMMARY"
+            git diff --stat -- corpus/ >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Open a refresh PR
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: corpus-refresh
+          commit-message: "Corpus refresh: re-snapshot manifest URLs"
+          title: "Corpus refresh: published fare pages changed"
+          body: |
+            Automated weekly re-snapshot found changes in one or more agency
+            fare pages. Review the corpus diff, then let CI run the smoke evals
+            on this PR to see the impact before merging.
+
+            If figures or programs changed, also check whether any eval case in
+            `evals/suites/` now asserts a stale fact.
+          labels: corpus, automated
+          add-paths: |
+            corpus/
