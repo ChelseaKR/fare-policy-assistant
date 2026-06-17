@@ -76,6 +76,13 @@
   #status { color: var(--muted); min-height: 1.4rem; margin-top: 0.6rem; }
   #answer { white-space: normal; }
   #answer p { margin: 0.5rem 0; }
+  .result-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .result-head h2 { margin: 0; }
+  #reset { font-size: 0.85rem; padding: 0.3rem 0.7rem; }
+  .turn { border-top: 1px solid var(--line); padding-top: 0.8rem; margin-top: 0.8rem; }
+  .turn:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  .turn .q { font-weight: 600; margin: 0 0 0.4rem; }
+  .turn .q::before { content: "You: "; color: var(--muted); font-weight: 400; }
   .sources { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.6rem; font-size: 0.95rem; }
   .asof { color: var(--muted); font-size: 0.9rem; }
   .error { color: #991b1b; }
@@ -139,13 +146,11 @@
   </section>
 
   <section class="card" id="result" hidden aria-labelledby="result-h">
-    <h2 id="result-h">Answer</h2>
-    <div id="answer"></div>
-    <div class="sources" id="sources" hidden>
-      <strong>Sources</strong>
-      <ul id="source-list"></ul>
+    <div class="result-head">
+      <h2 id="result-h">Conversation</h2>
+      <button type="button" id="reset" hidden>Start over</button>
     </div>
-    <p class="asof" id="asof"></p>
+    <div id="transcript"></div>
   </section>
 
   <footer>
@@ -166,16 +171,27 @@
   var submit = document.getElementById("submit");
   var status = document.getElementById("status");
   var result = document.getElementById("result");
-  var answerEl = document.getElementById("answer");
-  var sources = document.getElementById("sources");
-  var sourceList = document.getElementById("source-list");
-  var asof = document.getElementById("asof");
+  var transcript = document.getElementById("transcript");
+  var reset = document.getElementById("reset");
+
+  // The client holds the conversation; the server stores nothing. We send the
+  // last few turns with each follow-up so references resolve.
+  var MAX_TURNS = 3;
+  var conversation = [];
 
   document.querySelectorAll(".examples button").forEach(function (btn) {
     btn.addEventListener("click", function () {
       input.value = btn.getAttribute("data-q");
       input.focus();
     });
+  });
+
+  reset.addEventListener("click", function () {
+    conversation = [];
+    transcript.innerHTML = "";
+    result.hidden = true;
+    reset.hidden = true;
+    input.focus();
   });
 
   function esc(s) {
@@ -211,19 +227,69 @@
     return html;
   }
 
+  function appendTurn(question, data) {
+    var turn = document.createElement("div");
+    turn.className = "turn";
+
+    var q = document.createElement("p");
+    q.className = "q";
+    q.textContent = question;
+    turn.appendChild(q);
+
+    var ans = document.createElement("div");
+    ans.innerHTML = render(data.answer);
+    ans.setAttribute("lang", data.language || "en");
+    turn.appendChild(ans);
+
+    if ((data.citations || []).length) {
+      var src = document.createElement("div");
+      src.className = "sources";
+      var label = document.createElement("strong");
+      label.textContent = "Sources";
+      src.appendChild(label);
+      var ul = document.createElement("ul");
+      data.citations.forEach(function (c) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = c.url;
+        a.rel = "noopener";
+        a.textContent = c.agency + ": " + c.title;
+        li.appendChild(a);
+        li.appendChild(document.createTextNode(" (fetched " + c.fetch_date + ")"));
+        ul.appendChild(li);
+      });
+      src.appendChild(ul);
+      turn.appendChild(src);
+    }
+
+    if (data.as_of_date) {
+      var asof = document.createElement("p");
+      asof.className = "asof";
+      asof.textContent = "Based on policies published as of " + data.as_of_date + "." +
+        relativeAge(data.as_of_date);
+      turn.appendChild(asof);
+    }
+
+    transcript.appendChild(turn);
+    result.hidden = false;
+    reset.hidden = false;
+    turn.setAttribute("tabindex", "-1");
+    turn.focus();
+  }
+
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     var question = input.value.trim();
     if (!question) { return; }
     submit.disabled = true;
-    status.textContent = "Looking through the published policies…";
+    status.textContent = conversation.length
+      ? "Following up…" : "Looking through the published policies…";
     status.className = "";
-    result.hidden = true;
 
     fetch("/api/ask", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ question: question })
+      body: JSON.stringify({ question: question, history: conversation.slice(-MAX_TURNS) })
     }).then(function (resp) {
       return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
     }).then(function (r) {
@@ -234,26 +300,9 @@
         return;
       }
       status.textContent = "";
-      answerEl.innerHTML = render(r.data.answer);
-      answerEl.setAttribute("lang", r.data.language || "en");
-      sourceList.innerHTML = "";
-      (r.data.citations || []).forEach(function (c) {
-        var li = document.createElement("li");
-        var a = document.createElement("a");
-        a.href = c.url;
-        a.rel = "noopener";
-        a.textContent = c.agency + ": " + c.title;
-        li.appendChild(a);
-        li.appendChild(document.createTextNode(" (fetched " + c.fetch_date + ")"));
-        sourceList.appendChild(li);
-      });
-      sources.hidden = sourceList.children.length === 0;
-      asof.textContent = r.data.as_of_date
-        ? "Based on policies published as of " + r.data.as_of_date + "." + relativeAge(r.data.as_of_date)
-        : "";
-      result.hidden = false;
-      result.focus && result.setAttribute("tabindex", "-1");
-      result.focus();
+      appendTurn(question, r.data);
+      conversation.push({ q: question, a: r.data.answer });
+      input.value = "";
     }).catch(function () {
       submit.disabled = false;
       status.textContent = "Could not reach the service. Please try again.";

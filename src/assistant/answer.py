@@ -76,9 +76,35 @@ def _no_support_message(agency_hint: str | None, lang: str = "en") -> str:
     )
 
 
+def _retrieval_query(question: str, history: list[tuple[str, str]] | None) -> str:
+    """Carry the prior user turn into retrieval so a follow-up that names no
+    agency ("what about my spouse?") inherits the earlier turn's context."""
+    if not history:
+        return question
+    prev_user = history[-1][0]
+    return f"{prev_user} {question}"
+
+
+def _history_block(history: list[tuple[str, str]] | None) -> str:
+    """Render prior turns as context prepended to the answer prompt. Empty when
+    there is no history, so single-shot questions are unchanged."""
+    if not history:
+        return ""
+    turns = []
+    for user_q, assistant_a in history:
+        turns.append(f"Rider: {user_q}\nYou answered: {assistant_a}")
+    joined = "\n\n".join(turns)
+    return (
+        "Earlier in this conversation (context only — re-ground every claim in "
+        "the passages below, and resolve references like \"it\" or \"my spouse\" "
+        f"against these turns):\n\n{joined}\n\n"
+    )
+
+
 def answer_question(
     question: str,
     *,
+    history: list[tuple[str, str]] | None = None,
     model: Model | None = None,
     retriever: Retriever | None = None,
     cfg: config.Config | None = None,
@@ -96,7 +122,7 @@ def answer_question(
         )
 
     lang = guards.detect_language(question)
-    results = retriever.search(question)
+    results = retriever.search(_retrieval_query(question, history))
     as_of = max((sc.chunk.fetch_date for sc in results), default="")
     if not retriever.confident(results):
         from assistant.retrieve import detect_agency
@@ -111,7 +137,7 @@ def answer_question(
 
     model = model or get_model(cfg.models.provider, cfg.models.answer_model)
     system = config.load_prompt("system")
-    user = config.load_prompt("answer_user").format(
+    user = _history_block(history) + config.load_prompt("answer_user").format(
         passages=_format_passages(results),
         as_of_date=as_of,
         question=question,

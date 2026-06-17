@@ -32,6 +32,8 @@ from assistant.retrieve import default_retriever  # noqa: E402
 MAX_QUESTION_CHARS = 500
 REQUESTS_PER_MINUTE = 8  # per container; reserved concurrency bounds containers
 ANSWER_CACHE_SIZE = 256  # per container; answers are deterministic (temperature 0)
+MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
+MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 _RECENT: deque[float] = deque()
@@ -101,6 +103,26 @@ def _over_budget(now: float) -> bool:
     return False
 
 
+def _parse_history(raw: object) -> list[tuple[str, str]]:
+    """Validate and bound client-supplied prior turns.
+
+    The client holds the conversation; the server keeps nothing. Each turn is a
+    {"q", "a"} pair of strings. We keep only the last MAX_HISTORY_TURNS, truncate
+    each field, and drop anything malformed — context, not a trust boundary (the
+    output guard still polices every new answer regardless of history).
+    """
+    if not isinstance(raw, list):
+        return []
+    turns: list[tuple[str, str]] = []
+    for item in raw[-MAX_HISTORY_TURNS:]:
+        if not isinstance(item, dict):
+            continue
+        q, a = item.get("q"), item.get("a")
+        if isinstance(q, str) and isinstance(a, str) and q.strip() and a.strip():
+            turns.append((q.strip()[:MAX_QUESTION_CHARS], a.strip()[:MAX_HISTORY_ANSWER_CHARS]))
+    return turns
+
+
 def _ask(event: dict) -> dict:
     try:
         body = event.get("body") or ""
@@ -108,9 +130,10 @@ def _ask(event: dict) -> dict:
             import base64
 
             body = base64.b64decode(body).decode("utf-8")
-        question = json.loads(body).get("question")
+        data = json.loads(body)
+        question = data.get("question")
     except (ValueError, AttributeError):
-        question = None
+        question, data = None, {}
     if not isinstance(question, str) or not question.strip():
         return _json(400, {"error": "Send JSON like {\"question\": \"...\"}."})
     question = question.strip()
@@ -118,14 +141,16 @@ def _ask(event: dict) -> dict:
         return _json(
             400, {"error": f"Please keep questions under {MAX_QUESTION_CHARS} characters."}
         )
+    history = _parse_history(data.get("history"))
 
     # Cache hits cost no model call, so they bypass the per-minute budget (which
-    # exists to bound Bedrock spend) but are still logged.
-    key = question.casefold()
+    # exists to bound Bedrock spend) but are still logged. The key includes the
+    # history, since a follow-up's answer depends on the turns before it.
+    key = question.casefold() + "".join(f"|{q}>{a}" for q, a in history)
     cached = _cache_get(key)
     if cached is not None:
         print(json.dumps({"kind": cached["kind"], "language": cached["language"],
-                          "question_chars": len(question), "cache": "hit"}))
+                          "question_chars": len(question), "turns": len(history), "cache": "hit"}))
         return _json(200, cached)
 
     if _over_budget(time.monotonic()):
@@ -135,6 +160,7 @@ def _ask(event: dict) -> dict:
     started = time.monotonic()
     result = answer_question(
         question,
+        history=history or None,
         model=get_model(cfg.models.provider, cfg.models.answer_model),
         cfg=cfg,
     )
@@ -156,6 +182,7 @@ def _ask(event: dict) -> dict:
                 "kind": result.kind,
                 "language": payload["language"],
                 "question_chars": len(question),
+                "turns": len(history),
                 "duration_ms": round(1000 * (time.monotonic() - started)),
                 "cache": "miss",
             }

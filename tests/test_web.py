@@ -135,3 +135,24 @@ class TestCache:
         for i in range(5):
             _post(f"unique question {i}?")
         assert len(web_handler._ANSWER_CACHE) <= 3
+
+
+class TestMultiTurn:
+    def test_history_parsed_and_capped(self):
+        raw = [{"q": f"q{i}", "a": f"a{i}"} for i in range(5)]
+        out = web_handler._parse_history(raw)
+        assert len(out) == web_handler.MAX_HISTORY_TURNS
+        assert out[-1] == ("q4", "a4")
+
+    def test_history_ignores_malformed(self):
+        assert web_handler._parse_history("nope") == []
+        assert web_handler._parse_history([{"q": "only q"}, {"q": 1, "a": 2}]) == []
+
+    def test_history_distinguishes_cache_entries(self):
+        web_handler.handler(_event(body={"question": "What is the fare?", "history": []}))
+        web_handler.handler(_event(body={
+            "question": "What is the fare?",
+            "history": [{"q": "on MST?", "a": "yes"}],
+        }))
+        # Same question, different history → two distinct cache entries.
+        assert len(web_handler._ANSWER_CACHE) == 2

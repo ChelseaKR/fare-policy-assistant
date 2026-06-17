@@ -21,11 +21,17 @@ API shape:
 
 ```
 POST /api/ask
-{"question": "What proof do I need for the veteran fare on MST?"}
+{"question": "Does it cover my spouse too?",
+ "history": [{"q": "<prior question>", "a": "<prior answer>"}]}
 
 200 → {"answer": "...", "kind": "answered", "language": "en",
        "as_of_date": "2026-06-12", "citations": [{"agency": "MST", ...}]}
 ```
+
+`history` is optional (omit it for a one-shot question). The client holds the
+conversation; the server stores nothing. Up to the last three turns are used to
+resolve follow-up references, and answers are deterministically cached per
+container keyed on the question and its history.
 
 `kind` is the same trace field the eval harness records: `answered`,
 `refused_input`, `refused_no_support`, or `answered_guarded`.
