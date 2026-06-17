@@ -133,3 +133,19 @@ class TestOutputCheck:
         )
         assert not check.ok
         assert "scope:medical_advice" in check.flags
+
+
+class TestCombinedCitations:
+    def test_combined_citation_resolves_all_ids(self):
+        # A single bracket listing several docs (eval case fresh-001) must
+        # yield every id, not zero.
+        ids = guards.CITATION_RE.findall(
+            "From [doc:mst-fares, doc:mst-fares-benefits, doc:mst-veterans-resource]."
+        )
+        assert ids == ["mst-fares", "mst-fares-benefits", "mst-veterans-resource"]
+
+    def test_combined_citation_passes_output_guard(self):
+        check = guards.check_output(
+            "MST info comes from those documents [doc:mst-fares, doc:mst-fares-benefits]."
+        )
+        assert check.ok

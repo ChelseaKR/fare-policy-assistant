@@ -32,6 +32,11 @@ class AnswerResult:
     guard_flags: list[str] = field(default_factory=list)
     model: str = ""
     as_of_date: str = ""
+    # Token usage of the answer model call (0 when no model was called, e.g.
+    # an input-guard refusal or a low-confidence decline). Eval runs aggregate
+    # these into a per-run cost estimate.
+    input_tokens: int = 0
+    output_tokens: int = 0
     # When the output guard replaces an answer, the original model text is
     # kept here so eval traces show what was actually blocked. Never shown
     # to riders.
@@ -142,6 +147,8 @@ def answer_question(
             guard_flags=post.flags,
             model=completion.model,
             as_of_date=as_of,
+            input_tokens=completion.input_tokens,
+            output_tokens=completion.output_tokens,
             raw_model_answer=completion.text,
         )
 
@@ -167,5 +174,7 @@ def answer_question(
         guard_flags=guard_flags,
         model=completion.model,
         as_of_date=as_of,
+        input_tokens=completion.input_tokens,
+        output_tokens=completion.output_tokens,
         raw_model_answer=completion.text if guard_flags else "",
     )

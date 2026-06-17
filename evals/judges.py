@@ -25,6 +25,8 @@ class JudgeVerdict:
     passed: bool | None  # None → judge errored or was skipped
     detail: str
     raw: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 def _parse_json(text: str) -> dict | None:
@@ -55,14 +57,15 @@ def judge_groundedness(model: Model, result: AnswerResult, cfg: config.Config) -
         max_tokens=512,
         temperature=0.0,
     )
+    tok = {"input_tokens": completion.input_tokens, "output_tokens": completion.output_tokens}
     data = _parse_json(completion.text)
     if data is None or "grounded" not in data:
         return JudgeVerdict("groundedness", None, "judge returned unparseable output",
-                            raw=completion.text)
+                            raw=completion.text, **tok)
     detail = data.get("reasoning", "")
     if data.get("unsupported_claims"):
         detail += " | unsupported: " + "; ".join(data["unsupported_claims"])
-    return JudgeVerdict("groundedness", bool(data["grounded"]), detail, raw=completion.text)
+    return JudgeVerdict("groundedness", bool(data["grounded"]), detail, raw=completion.text, **tok)
 
 
 def judge_helpfulness(
@@ -79,9 +82,10 @@ def judge_helpfulness(
         max_tokens=512,
         temperature=0.0,
     )
+    tok = {"input_tokens": completion.input_tokens, "output_tokens": completion.output_tokens}
     data = _parse_json(completion.text)
     if data is None or "helpful" not in data:
         return JudgeVerdict("helpfulness", None, "judge returned unparseable output",
-                            raw=completion.text)
+                            raw=completion.text, **tok)
     detail = f"score={data.get('score')} — {data.get('reasoning', '')}"
-    return JudgeVerdict("helpfulness", bool(data["helpful"]), detail, raw=completion.text)
+    return JudgeVerdict("helpfulness", bool(data["helpful"]), detail, raw=completion.text, **tok)

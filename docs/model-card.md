@@ -52,9 +52,12 @@ in the system.
 
 103 cases across groundedness, refusal, edge-case, multilingual, and freshness
 suites; method and current scores in [EVALS.md](../EVALS.md). Deterministic
-checks run on every case; LLM-judge scores apply to live runs. Judge
-disagreement is spot-checked by hand on a 10% sample and human-judge agreement
-is recorded in the report (protocol in `evals/judges.py`).
+checks run on every case; LLM-judge scores apply to live runs. Each live run
+also records its exact token usage and an estimated cost, and checks the LLM
+judge against a hand-labeled sample (`evals/calibration/judge_labels.jsonl`):
+the report prints judge-vs-human agreement and Cohen's κ over that sample
+(harness in `evals/calibration.py`). An independent black-box audit by the
+external GovChat-Eval harness is in [docs/audits/](audits/methodology.md).
 
 Known limits found by the harness so far:
 

@@ -80,6 +80,20 @@ def _have_credentials(provider: str) -> bool:
     return provider == "mock"
 
 
+def _cost_block(cfg: config.Config, usage: dict[str, list[int]]) -> dict:
+    """Exact token totals per model plus an estimated USD cost at list rates."""
+    a_in, a_out = usage["answer"]
+    j_in, j_out = usage["judge"]
+    a_usd = config.estimate_cost_usd(cfg.models.answer_model, a_in, a_out)
+    j_usd = config.estimate_cost_usd(cfg.models.judge_model, j_in, j_out)
+    return {
+        "answer_model": {"input_tokens": a_in, "output_tokens": a_out, "est_usd": round(a_usd, 4)},
+        "judge_model": {"input_tokens": j_in, "output_tokens": j_out, "est_usd": round(j_usd, 4)},
+        "total_tokens": a_in + a_out + j_in + j_out,
+        "total_est_usd": round(a_usd + j_usd, 4),
+    }
+
+
 def run(
     *,
     smoke: bool = False,
@@ -122,6 +136,9 @@ def run(
     results_path = run_dir / "results.jsonl"
 
     totals: dict[str, dict[str, int]] = {}
+    # Exact token usage, split by model (answer vs judge) since they price
+    # differently. Aggregated into an estimated per-run cost in the summary.
+    usage = {"answer": [0, 0], "judge": [0, 0]}  # [input_tokens, output_tokens]
     records = []
     started = time.monotonic()
 
@@ -141,6 +158,11 @@ def run(
                     judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
                 )
             passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
+            usage["answer"][0] += result.input_tokens
+            usage["answer"][1] += result.output_tokens
+            for v in verdicts:
+                usage["judge"][0] += v.input_tokens
+                usage["judge"][1] += v.output_tokens
             record = {
                 "case_id": case["id"],
                 "suite": case["suite"],
@@ -152,6 +174,8 @@ def run(
                 "answer": result.answer,
                 "kind": result.kind,
                 "guard_flags": result.guard_flags,
+                "input_tokens": result.input_tokens,
+                "output_tokens": result.output_tokens,
                 "raw_model_answer": result.raw_model_answer,
                 "citations": [asdict(c) for c in result.citations],
                 "passages": [
@@ -186,6 +210,7 @@ def run(
             for name in ("system", "answer_user", "judge_groundedness", "judge_helpfulness")
         },
         "duration_seconds": round(time.monotonic() - started, 1),
+        "cost": _cost_block(cfg, usage),
         "suites": {
             name: {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
             for name, t in sorted(totals.items())

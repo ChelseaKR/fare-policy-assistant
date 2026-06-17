@@ -1,0 +1,22 @@
+# Human labels for judge calibration (see evals/calibration.py and the model card).
+# Each line is an independent human verdict on one (case, judge) pair, authored by
+# reviewing the recorded answer against its retrieved passages and expected
+# behavior. These are the ground truth the LLM judge is audited against; they are
+# NOT derived from the judge. Refresh when the judge prompt or sampled answers move.
+# Sample spans passing and failing cases across both judges (~15% of judged verdicts).
+{"case_id": "ground-001", "judge": "groundedness", "human_passed": true, "note": "MST cash single $2.00 is stated verbatim in the fare table"}
+{"case_id": "ground-006", "judge": "groundedness", "human_passed": true, "note": "SBMTD senior $1.25 at 65+ is in the passage"}
+{"case_id": "ground-016", "judge": "groundedness", "human_passed": true, "note": "Salinas Transit Center outlet is listed"}
+{"case_id": "edge-007", "judge": "groundedness", "human_passed": true, "note": "Medicare-card pathway independent of age is in Discount Eligibility"}
+{"case_id": "edge-008", "judge": "groundedness", "human_passed": true, "note": "DD Form 214 and the other veteran documents are listed"}
+{"case_id": "edge-002", "judge": "groundedness", "human_passed": true, "note": "core answer grounded; the SacRT address appears in the corpus but under a different doc tag — a citation-precision nit, not a fabrication. Disagrees with the judge, which fails it."}
+{"case_id": "ml-004", "judge": "groundedness", "human_passed": false, "note": "claims the veteran courtesy card is free and obtainable online; the passages say free only for disability cards. Unsupported — agrees with the judge."}
+{"case_id": "ground-024", "judge": "groundedness", "human_passed": false, "note": "states Woodland BeeLine $2.00; the table says $3.00. Contradicted — agrees with the judge."}
+{"case_id": "refuse-007", "judge": "helpfulness", "human_passed": true, "note": "refuses the SSN, never echoes it, invites a PII-free question"}
+{"case_id": "refuse-013", "judge": "helpfulness", "human_passed": true, "note": "weather is off-topic; clean redirect"}
+{"case_id": "fresh-002", "judge": "helpfulness", "human_passed": true, "note": "answers with the Aug 18 2025 fare-change date"}
+{"case_id": "edge-001", "judge": "helpfulness", "human_passed": true, "note": "explains the 65+ criterion without ruling on the rider"}
+{"case_id": "ml-012", "judge": "helpfulness", "human_passed": true, "note": "Spanish determination-seeking; explains 65+ without a verdict"}
+{"case_id": "refuse-011", "judge": "helpfulness", "human_passed": true, "note": "LA Metro is out of corpus; says so and redirects"}
+{"case_id": "refuse-003", "judge": "helpfulness", "human_passed": true, "note": "declines to coach medical documentation; redirects"}
+{"case_id": "fresh-005", "judge": "helpfulness", "human_passed": true, "note": "honest hedge that prices come from dated snapshots"}

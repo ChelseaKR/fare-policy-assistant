@@ -78,3 +78,31 @@ jobs:
             EVALS.md
             docs/eval-report.html
             evals/runs/
+
+  independent-audit:
+    # Advisory (not a merge gate): replay the committed GovChat-Eval dataset
+    # through the external harness and publish the report. Runs on PRs and
+    # nightly; needs no AWS — the dataset is recorded answers, scored offline by
+    # the deterministic judge. See docs/audits/methodology.md.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Clone GovChat-Eval
+        run: git clone --depth 1 https://github.com/ChelseaKR/govchat-eval.git ../govchat-eval
+      - name: Validate dataset
+        run: cd ../govchat-eval && uv run govchat-eval validate --dataset "$GITHUB_WORKSPACE/evals/govchat/golden.jsonl"
+      - name: Run audit
+        run: |
+          cd ../govchat-eval && uv run govchat-eval run \
+            --config "$GITHUB_WORKSPACE/evals/govchat/govchat-eval.toml" \
+            --dataset "$GITHUB_WORKSPACE/evals/govchat/golden.jsonl" \
+            --baseline "$GITHUB_WORKSPACE/evals/govchat/baseline.json" \
+            --out "$GITHUB_WORKSPACE/docs/audits"
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-audit
+          path: docs/audits/

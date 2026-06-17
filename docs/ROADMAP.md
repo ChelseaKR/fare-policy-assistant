@@ -31,6 +31,12 @@ These come first because the project's whole claim is "here is how I test it,
 honestly." A published doc that overstates the harness is the worst possible
 bug for this repo specifically.
 
+> **Status (2026-06-16):** done. Per-run cost and judge-vs-human calibration
+> now render in `EVALS.md` (the two model-card claims are real). `fresh-001` is
+> fixed (combined-citation parsing). A prompt attempt at `ground-026` and
+> `refuse-018` regressed other cases and was reverted; both stay documented.
+> The GovChat-Eval audit runs in CI as an advisory job. Net: 97 → 98/103.
+
 1. **Close the model-card claims.** `docs/model-card.md` states per-run cost is
    documented and that judge agreement is spot-checked on a 10% human-labeled
    sample and recorded in the report. Neither exists in `evals/`. Either build

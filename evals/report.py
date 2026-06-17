@@ -65,6 +65,47 @@ def _spanish_parity(records: list[dict]) -> str | None:
     return "\n".join(rows)
 
 
+def _cost_line(summary: dict) -> str:
+    """One-line cost summary; token counts are exact, USD is an estimate."""
+    cost = summary.get("cost")
+    if not cost:
+        return "- Cost: not recorded for this run"
+    return (
+        f"- Cost (estimated): ${cost['total_est_usd']:.4f} for "
+        f"{cost['total_tokens']:,} tokens — "
+        f"answer ${cost['answer_model']['est_usd']:.4f}, "
+        f"judge ${cost['judge_model']['est_usd']:.4f} "
+        "(exact tokens, list-price estimate)"
+    )
+
+
+def _calibration_section(summary: dict, records: list[dict]) -> str | None:
+    """Judge-vs-human agreement on the committed label sample. Live runs only;
+    offline runs have no judge verdicts to compare against."""
+    if not summary.get("judges_ran"):
+        return None
+    from evals.calibration import calibrate
+
+    try:
+        c = calibrate(records)
+    except FileNotFoundError:
+        return None
+    if not c["n_matched"]:
+        return None
+    kappa = "n/a" if c["cohen_kappa"] is None else f"{c['cohen_kappa']:.3f}"
+    lines = [
+        f"Human labels checked against this run's judge verdicts on "
+        f"{c['n_matched']} of {c['n_labels']} sampled (case, judge) pairs.",
+        "",
+        f"- Raw agreement: **{c['agreement']:.1%}**",
+        f"- Cohen's κ: **{kappa}**",
+        f"- Note: {c['note']}.",
+    ]
+    if c["unmatched"]:
+        lines.append(f"- Unmatched (no judge verdict in this run): {', '.join(c['unmatched'])}")
+    return "\n".join(lines)
+
+
 def generate_markdown(summary: dict, records: list[dict]) -> str:
     total = summary["total"]
     lines = [
@@ -81,6 +122,7 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         "- Prompt versions: "
         + ", ".join(f"{k} {v}" for k, v in summary["prompt_versions"].items()),
         f"- Duration: {summary['duration_seconds']}s",
+        _cost_line(summary),
         "",
         "## Scoreboard",
         "",
@@ -95,6 +137,10 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
     parity = _spanish_parity(records)
     if parity:
         lines += ["", "## Spanish parity", "", parity]
+
+    cal = _calibration_section(summary, records)
+    if cal:
+        lines += ["", "## Judge calibration", "", cal]
 
     lines += [
         "",

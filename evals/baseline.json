@@ -1,5 +1,5 @@
 {
-  "from_run": "2026-06-17T00:04:04+00:00",
+  "from_run": "2026-06-17T01:00:41+00:00",
   "mode": "full",
   "offline": false,
   "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -10,9 +10,9 @@
       "pass_rate": 96.4
     },
     "freshness": {
-      "passed": 9,
+      "passed": 10,
       "total": 10,
-      "pass_rate": 90.0
+      "pass_rate": 100.0
     },
     "groundedness": {
       "passed": 24,

@@ -209,7 +209,12 @@ def redact_determination_language(text: str) -> str:
     return "\n".join(kept).strip()
 
 
-CITATION_RE = re.compile(r"\[doc:([a-z0-9-]+)\]")
+# Matches each doc-id in both single ``[doc:mst-fares]`` and combined
+# ``[doc:mst-fares, doc:mst-fares-benefits]`` citation tags — the model writes
+# the combined form when one claim draws on several passages, and the earlier
+# single-id-only pattern saw zero citations there and tripped the missing-
+# citation guard on a perfectly grounded answer (eval case fresh-001).
+CITATION_RE = re.compile(r"doc:([a-z0-9-]+)")
 # English and Spanish renderings of the "as of <date>" disclosure. The model
 # phrases the Spanish one several ways ("políticas publicadas al 12 de junio…"),
 # all anchored on "publicado/publicadas" (eval cases ml-003…ml-012).

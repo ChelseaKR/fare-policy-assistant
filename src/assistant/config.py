@@ -77,6 +77,25 @@ class Config:
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
 
 
+# Estimated list prices, USD per 1M tokens (input, output), for the models the
+# eval harness calls. Token counts in the report are exact (from the API); the
+# dollar figure is an estimate at these rates — update from the provider's
+# pricing page when it moves. Unknown models fall back to (0, 0) and contribute
+# nothing rather than a wrong number.
+MODEL_PRICES: dict[str, tuple[float, float]] = {
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0": (1.00, 5.00),
+    "claude-haiku-4-5": (1.00, 5.00),
+    "us.anthropic.claude-sonnet-4-6": (3.00, 15.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+}
+
+
+def estimate_cost_usd(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Estimated USD cost for a token count at the list rates above (0 if unknown)."""
+    rate_in, rate_out = MODEL_PRICES.get(model, (0.0, 0.0))
+    return (input_tokens * rate_in + output_tokens * rate_out) / 1_000_000
+
+
 def load_prompt(name: str) -> str:
     """Read a versioned prompt file from prompts/ (e.g. 'system')."""
     return (PROMPTS_DIR / f"{name}.txt").read_text(encoding="utf-8")
