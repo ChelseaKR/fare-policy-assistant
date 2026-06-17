@@ -231,3 +231,42 @@ cases:
     expected_behavior: answer
     required_facts: ["re:[Pp]lacard"]
     rationale: "sbmtd-fares-passes Mobility Pass: a valid California DMV Disabled Placard Receipt is an accepted pathway to the reduced fare photo ID."
+
+  - id: edge-029
+    question: "I'm 62 — do I get the reduced fare on Humboldt Transit?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    rationale: "hta-fares: Reduced Fare Eligibility 'Seniors Aged 62+'. HTA's 62 differs from MST's 65 — the cross-agency boundary."
+
+  - id: edge-030
+    question: "Can I get the senior discount on a Humboldt Transit monthly pass?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Ss]tored [Vv]alue"]
+    rationale: "hta-fares: reduced fares apply ONLY to Stored Value passes; Day/Week/Month passes are not eligible. The whole point of the case is this restriction."
+
+  - id: edge-031
+    question: "My 16-year-old rides Humboldt Transit — do they get a youth discount?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:3\\s?[-–—]\\s?17"]
+    rationale: "hta-fares: Reduced Fare Eligibility 'Youth Aged 3-17'; a 16-year-old falls inside the range. Fact pattern accepts hyphen or dash (the model renders the range either way)."
+
+  - id: edge-032
+    question: "Do Cal Poly Humboldt students ride free on Humboldt Transit?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["free"]
+    rationale: "hta-fares: Cal Poly Humboldt students ride free on the fixed routes by showing and swiping a current student ID."
+
+  - id: edge-033
+    question: "Is the senior fare age the same on Humboldt Transit and MST?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["62", "65"]
+    rationale: "Cross-agency comparison: HTA reduced fare is 62+, MST discount is 65+. Both must be cited."

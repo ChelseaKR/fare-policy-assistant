@@ -87,6 +87,8 @@
   .turn .q::before { content: "You: "; color: var(--muted); font-weight: 400; }
   .sources { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.6rem; font-size: 0.95rem; }
   .asof { color: var(--muted); font-size: 0.9rem; }
+  .feedback { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--muted); margin-top: 0.6rem; }
+  .feedback button { font-size: 0.85rem; padding: 0.3rem 0.8rem; min-height: 1.75rem; }
   .error { color: #991b1b; }
   footer {
     border-top: 1px solid var(--line);
@@ -112,8 +114,9 @@
 
   <h1>Transit Fare Policy Assistant</h1>
   <p class="sub">
-    Answers questions about published fare and reduced-fare policies for four California
-    transit agencies: Monterey-Salinas Transit (MST), Santa Barbara MTD, Yolobus, and SacRT.
+    Answers questions about published fare and reduced-fare policies for five California
+    transit agencies: Monterey-Salinas Transit (MST), Santa Barbara MTD, Yolobus, SacRT,
+    and Humboldt Transit.
     Based on policies published as of June 12, 2026. You can ask in English or Spanish.
   </p>
 
@@ -229,6 +232,32 @@
     return html;
   }
 
+  // Privacy-safe feedback: sends only the verdict, the response kind, and the
+  // language. Never the question or the answer.
+  function feedbackRow(data) {
+    var row = document.createElement("p");
+    row.className = "feedback";
+    var label = document.createElement("span");
+    label.textContent = "Was this helpful?";
+    row.appendChild(label);
+    ["up", "down"].forEach(function (verdict) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = verdict === "up" ? "Yes" : "No";
+      b.setAttribute("aria-label", verdict === "up" ? "Yes, helpful" : "No, not helpful");
+      b.addEventListener("click", function () {
+        fetch("/api/feedback", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ verdict: verdict, kind: data.kind, language: data.language })
+        }).catch(function () {});
+        row.textContent = "Thanks for the feedback.";
+      });
+      row.appendChild(b);
+    });
+    return row;
+  }
+
   function appendTurn(question, data) {
     var turn = document.createElement("div");
     turn.className = "turn";
@@ -272,6 +301,7 @@
       turn.appendChild(asof);
     }
 
+    turn.appendChild(feedbackRow(data));
     transcript.appendChild(turn);
     result.hidden = false;
     reset.hidden = false;

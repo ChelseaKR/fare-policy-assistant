@@ -156,3 +156,34 @@ class TestMultiTurn:
         }))
         # Same question, different history → two distinct cache entries.
         assert len(web_handler._ANSWER_CACHE) == 2
+
+
+class TestFeedback:
+    def _fb(self, body):
+        return web_handler.handler({
+            "requestContext": {"http": {"method": "POST"}},
+            "rawPath": "/api/feedback",
+            "body": json.dumps(body) if body is not None else None,
+        })
+
+    def test_valid_feedback_accepted(self):
+        resp = self._fb({"verdict": "up", "kind": "answered", "language": "en"})
+        assert resp["statusCode"] == 200
+
+    def test_invalid_verdict_rejected(self):
+        assert self._fb({"verdict": "maybe"})["statusCode"] == 400
+        assert self._fb({})["statusCode"] == 400
+
+    def test_feedback_logs_no_content(self, capsys):
+        # Even if a client sends question/answer text, the handler must not log it.
+        self._fb({"verdict": "down", "kind": "answered", "language": "es",
+                  "question": "SECRET-Q", "answer": "SECRET-A"})
+        out = capsys.readouterr().out
+        assert "SECRET-Q" not in out and "SECRET-A" not in out
+        assert '"feedback": "down"' in out
+
+    def test_feedback_get_405(self):
+        resp = web_handler.handler({
+            "requestContext": {"http": {"method": "GET"}}, "rawPath": "/api/feedback", "body": None,
+        })
+        assert resp["statusCode"] == 405

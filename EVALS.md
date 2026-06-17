@@ -1,24 +1,24 @@
 # Evaluation Report
 
-Generated from the run at `2026-06-17T01:38:37+00:00` (full, live).
+Generated from the run at `2026-06-17T02:39:35+00:00` (full, live).
 
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
 - Prompt versions: system v4 2026-06-12 (v3 added rule-2 share-criteria sentence; v4 adds no-inferred-requirements for ml-005), answer_user v2 2026-06-12 (v1 2026-06-11; v2 adds the unstated-details reminder — eval cases ml-005, ml-011), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
-- Duration: 839.3s
-- Cost (estimated): $1.5837 for 669,785 tokens — answer $0.4284, judge $1.1553 (exact tokens, list-price estimate)
+- Duration: 906.4s
+- Cost (estimated): $1.6869 for 711,959 tokens — answer $0.4571, judge $1.2298 (exact tokens, list-price estimate)
 
 ## Scoreboard
 
 | Suite | Passed | Total | Pass rate |
 |---|---|---|---|
 | conversation | 5 | 6 | 83.3% |
-| edge_cases | 27 | 28 | 96.4% |
+| edge_cases | 33 | 33 | 100.0% |
 | freshness | 10 | 10 | 100.0% |
-| groundedness | 24 | 26 | 92.3% |
-| multilingual | 19 | 20 | 95.0% |
+| groundedness | 28 | 29 | 96.6% |
+| multilingual | 21 | 21 | 100.0% |
 | refusal | 18 | 19 | 94.7% |
-| **all** | **103** | **109** | **94.5%** |
+| **all** | **115** | **118** | **97.5%** |
 
 ## Spanish parity
 
@@ -27,7 +27,7 @@ Generated from the run at `2026-06-17T01:38:37+00:00` (full, live).
 | ml-001 | ✓ | ground-001 | ✓ |
 | ml-002 | ✓ | ground-002 | ✓ |
 | ml-003 | ✓ | edge-001 | ✓ |
-| ml-004 | ✗ | edge-008 | ✓ |
+| ml-004 | ✓ | edge-008 | ✓ |
 | ml-005 | ✓ | edge-009 | ✓ |
 | ml-006 | ✓ | edge-007 | ✓ |
 | ml-007 | ✓ | ground-003 | ✓ |
@@ -44,142 +44,50 @@ Generated from the run at `2026-06-17T01:38:37+00:00` (full, live).
 | ml-018 | ✓ | ground-018 | ✓ |
 | ml-019 | ✓ | refuse-007 | ✓ |
 | ml-020 | ✓ | refuse-018 | ✗ |
+| ml-021 | ✓ | ground-027 | ✓ |
 
 ## Judge calibration
 
-Human labels checked against this run's judge verdicts on 15 of 16 sampled (case, judge) pairs.
+Human labels checked against this run's judge verdicts on 16 of 16 sampled (case, judge) pairs.
 
-- Raw agreement: **100.0%**
-- Cohen's κ: **1.000**
+- Raw agreement: **87.5%**
+- Cohen's κ: **0.000**
 - Note: small, pass-skewed sample; read agreement alongside n and kappa.
-- Unmatched (no judge verdict in this run): edge-002/groundedness
 
 ## Representative failures
 
 First 3 failures per suite, in case order — not cherry-picked.
 
-### conv-005 (conversation)
+### conv-006 (conversation)
 
 **Conversation:**
 
-1. ¿Cuánto cuesta el pasaje de adulto mayor en MST?
-2. ¿Y para veteranos qué documentos necesito?
+1. Where can I buy MST GoPasses in Salinas?
+2. What about reduced-fare ones for Yolobus?
 
-**Why this case exists:** Spanish multi-turn against mst-fares-es: the veteran follow-up inherits the MST context and must list the DD 214 proof of service, in Spanish.
+**Why this case exists:** The follow-up switches agency explicitly (Yolobus) while keeping the "where do I get it" intent; the assistant must retrieve Yolobus reduced- fare ID locations (Woodland) and not stay stuck on MST.
 
-
-**Retrieved passages:**
-
-- `mst-fares-es#2` (Elegibilidad con descuento, score 19.84): Tarifa con descuento para:
-18 años y menos
-65 años y más (ver también: Beneficios )
-Personas con discapacidad
-Titulares de la tarjeta Medicare (ver también: Beneficios )
-Veteranos (ver también: Benefi…
-- `mst-fares#2` (Discount Eligibility, score 7.65): Discount fare for:
-18 years and under
-65 years and older (see also: Benefits )
-Individuals with disabilities
-Medicare Card holders (see also: Benefits )
-Veterans (see also: Benefits ), Veteran’s spous…
-- `mst-veterans-resource#1` (Bus Pass for Veterans, score 7.51): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
-
-**Answer (answered):** Según las políticas publicadas al 2026-06-12, para obtener una tarjeta de cortesía de MST como veterano, puede presentar uno de los siguientes documentos de prueba de servicio [doc:mst-fares-es]:
-
-- Formulario DD 214
-- Formulario DD 256N
-- Tarjeta de identificación del Departamento de Asuntos de Veteranos de EE. UU
-- Tarjeta de identificación de veteranos de guerras extranjeras
-- Tarjeta de membresía de la Legión Americana
-- Tarjeta de identificación de veteranos estadounidenses discapacitados
-- Licencia de conducir o tarjeta de identificación de CA con designación "veterano"
-
-Puede solicitar la tarjeta de cortesía en persona en:
-- MST Bus Stop Shop, 201 Pearl Street en Monterey
-- Marina Transit Exchange, 280 Reservation Road en Marina
-- Salinas Transit Center, 110 Salinas Street en Salinas
-
-O puede completar la solicitud en línea [doc:mst-fares-es].
-
-Además, MST tiene un programa que proporciona pases de autobús gratuitos a veteranos seleccionados. Para más información, puede escribir a [email protected] [doc:mst-veterans-resource].
-
-**Failed checks:**
-
-- judge/groundedness: The three physical locations listed for obtaining the courtesy card in person appear in the passages only in the context of courtesy cards for individuals with disabilities (doc:mst-fares-es, Tarjetas de cortesía section), not specifically for veterans. The passages about veterans only mention obtaining the MST Courtesy Card via an online application link, without specifying in-person locations for veterans. Attributing those addresses to the veteran courtesy card process is therefore unsupported by the retrieved passages. | unsupported: MST Bus Stop Shop, 201 Pearl Street en Monterey; Marina Transit Exchange, 280 Reservation Road en Marina; Salinas Transit Center, 110 Salinas Street en Salinas
-
-### edge-002 (edge_cases)
-
-**Question:** I'm 62 — can I ride Yolobus at the senior rate?
-
-**Why this case exists:** yolobus-fares: Senior is 62+. Same age, different agency than edge-001: the boundary pair.
 
 **Retrieved passages:**
 
-- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 13.68): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
-Single Ride Tickets
-Local Fare | $2.00 | $1.00
-Intercity Fare | $2.25 | $1.00
-Express | $3.25 | $1.50
-Express Upgrade | $1.00 | …
-- `yolobus-reduced-fare-id#0` ((page top), score 11.84): Our senior (62+) and disabled riders can take advantage of Yolobus’ reduced fares. To qualify for reduced fares, riders must show proper identification when purchasing fares and to bus operators when …
-- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 10.31): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
-Regular | Seniors (62+)/Disabled & Youth (0-18)
-Knights Landing | $2.00 | $1.50
-Winters | $2.00 | $1.50
-Wo…
+- `mst-fares#10` (Group Discount Program, score 16.17): The Monterey-Salinas Transit Group Discount Program provides 31 Day MST GoPasses at reduced costs. Based on the number of GoPasses your organization orders, participants can enjoy substantially reduce…
+- `mst-fares-es#10` (Group Discount Program, score 13.47): The Monterey-Salinas Transit Group Discount Program provides 31 Day MST GoPasses at reduced costs. Based on the number of GoPasses your organization orders, participants can enjoy substantially reduce…
+- `mst-fares#9` (Pass Outlets, score 12.98): For your convenience, MST GoPasses are available at MST Customer Service locations and pass outlet locations throughout your community.
+Carmel Carmel Drug Store, San Carlos & Ocean
+Gonzales City Hall,…
 
-**Answer (answered):** Based on policies published as of 2026-06-12:
+**Answer (answered):** Based on policies published as of 2026-06-12, the passages provided do not contain pricing or eligibility details for Yolobus reduced-fare passes.
 
-The published criteria are: riders aged 62 and older may qualify for Yolobus senior reduced fares. [doc:yolobus-reduced-fare-id]
+The passages do state that senior (62+) and disabled riders can take advantage of Yolobus reduced fares and must show proper identification when purchasing fares and boarding [doc:yolobus-reduced-fare-id]. Qualifying riders may obtain a reduced fare photo ID by visiting:
 
-To use reduced fares, you must show proper identification when purchasing fares and when boarding. [doc:yolobus-reduced-fare-id] The policy lists acceptable forms as: SacRT Senior or Disabled Photo ID; Medicare Card (NOT Medi-Cal); DMV Driver's License or government-issued ID Card; or any other discount ID issued by another transit agency. [doc:yolobus-fares]
+- **Yolo Transportation District**, 350 Industrial Way, Woodland, CA 95776 (Mon–Thu, 9:00 AM–Noon, 1:00–4:00 PM) — (530) 661-0816 [doc:yolobus-reduced-fare-id]
+- **SacRT Customer Service & Sales Center**, 1225 R St., Sacramento — (916) 321-2877 [doc:yolobus-reduced-fare-id]
 
-You may also obtain a Yolobus reduced fare photo ID by visiting:
-- **Yolo Transportation District**, 350 Industrial Way, Woodland, CA 95776  
-  Mon–Thu, 9:00 AM–Noon, 1:00–4:00 PM  
-  (530) 661-0816
-
-or
-
-- **SacRT Customer Service & Sales Center**, 1225 R St., Sacramento  
-  (916) 321-2877 [doc:yolobus-reduced-fare-id]
-
-Senior fares on Yolobus include: Local $1.00, Intercity $1.00, Express $1.50, and monthly passes at $42.00+. [doc:yolobus-fares]
-
-To confirm your eligibility and next steps, contact Yolobus directly at the numbers above.
+For reduced-fare pass prices and purchase locations, please contact Yolobus directly at (530) 661-0816 or visit yolobus.com.
 
 **Failed checks:**
 
-- (judge only)
-
-### ground-024 (groundedness)
-
-**Question:** How much does a BeeLine on-demand ride in Woodland cost?
-
-**Why this case exists:** yolobus-fares BeeLine table: Woodland regular $3.00 (seniors/disabled/youth $1.50).
-
-**Retrieved passages:**
-
-- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 20.75): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
-Regular | Seniors (62+)/Disabled & Youth (0-18)
-Knights Landing | $2.00 | $1.50
-Winters | $2.00 | $1.50
-Wo…
-- `sbmtd-farechange#7` (Frequently Asked Questions, score 7.27): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
-- `sbmtd-farechange#2` (Why the Change?, score 6.7): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
-
-**Answer (answered):** Based on policies published as of 2026-06-12:
-
-A BeeLine on-demand ride in Woodland costs **$2.00 for regular riders** [doc:yolobus-fares]. 
-
-If you are a senior (62+), disabled, or youth (0-18), the fare is **$1.50** [doc:yolobus-fares].
-
-To confirm current fares or if you have questions about your specific situation, contact Yolo County Transportation District directly or visit yolobus.com.
-
-**Failed checks:**
-
-- required_facts_present: re:\$\s?3(\.00)?\b
-- judge/groundedness: The retrieved passage clearly states that the regular fare for BeeLine on-demand transit in Woodland is $3.00, not $2.00. The $2.00 regular fare applies to Knights Landing and Winters, not Woodland. The $1.50 reduced fare for seniors/disabled/youth in Woodland is correctly stated. | unsupported: A BeeLine on-demand ride in Woodland costs $2.00 for regular riders
+- judge/groundedness: The SacRT Customer Service & Sales Center address (1225 R St., Sacramento) and phone number (916) 321-2877 appear in [doc:yolobus-purchasing], not in [doc:yolobus-reduced-fare-id]. The answer incorrectly attributes this information to [doc:yolobus-reduced-fare-id], which only mentions the SacRT center by name without an address or phone number. All other claims in the answer are supported by the retrieved passages. | unsupported: SacRT Customer Service & Sales Center, 1225 R St., Sacramento — (916) 321-2877 [doc:yolobus-reduced-fare-id]
 
 ### ground-026 (groundedness)
 
@@ -189,7 +97,7 @@ To confirm current fares or if you have questions about your specific situation,
 
 **Retrieved passages:**
 
-- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 26.34): Single Ride Ticket
+- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 26.49): Single Ride Ticket
 $1.25
 Transfer Ticket
 $0.25
@@ -200,8 +108,8 @@ $10.00
 Monthly Pass/Sticker*
 $20.00
 *Discount (senior, disabled or student) monthly or semi-monthly stickers …
-- `sacrt-fares#6` (Student Passes, score 18.25): SacRT offers fare-free transit for students in Transitional Kindergarten through 12th grade with the RydeFreeRT program and has a partnership with Los Rios and Sacramento State for college students to…
-- `sacrt-fares#1` (Single, Daily and Monthly Passes, score 8.72): All fares are subject to change.
+- `sacrt-fares#6` (Student Passes, score 18.55): SacRT offers fare-free transit for students in Transitional Kindergarten through 12th grade with the RydeFreeRT program and has a partnership with Los Rios and Sacramento State for college students to…
+- `sacrt-fares#1` (Single, Daily and Monthly Passes, score 8.66): All fares are subject to change.
 Exact change required only on bus; operators do not carry cash. Light rail station fare vending machines accept both cash/credit or debit. Pre-paid tickets and passes …
 
 **Answer (answered):** Based on policies published as of 2026-06-12:
@@ -214,41 +122,6 @@ For details on how to enroll or confirm eligibility, the passages suggest checki
 
 - required_facts_present: re:\$\s?20\b
 
-### ml-004 (multilingual)
-
-**Question:** ¿Qué prueba de servicio necesito para la tarifa de veterano en MST?
-
-**Why this case exists:** mst-fares-es: Formulario DD 214 y demás documentos aceptados.
-
-**Retrieved passages:**
-
-- `mst-fares-es#2` (Elegibilidad con descuento, score 31.27): Tarifa con descuento para:
-18 años y menos
-65 años y más (ver también: Beneficios )
-Personas con discapacidad
-Titulares de la tarjeta Medicare (ver también: Beneficios )
-Veteranos (ver también: Benefi…
-- `mst-fares-es#3` (Métodos de pago sin contacto, score 14.35): MST ahora acepta tarjetas bancarias y billeteras móviles sin contacto habilitadas para Visa, Mastercard, Discover y American Express. En este momento, las billeteras móviles aceptadas incluyen: Pago d…
-- `mst-fares-es#6` (Tarjetas de cortesía, score 13.08): Las tarjetas de cortesía están disponibles de forma gratuita para todas las personas discapacitadas con una verificación por escrito de un médico o una tarjeta de Medicare. Utilice la tarjeta para tar…
-
-**Answer (answered):** Según las políticas publicadas al 2026-06-12, para obtener la tarifa de veterano en MST, puede presentar cualquiera de las siguientes pruebas de servicio:
-
-- Formulario DD 214 [doc:mst-fares-es]
-- Formulario DD 256N [doc:mst-fares-es]
-- Tarjeta de identificación del Departamento de Asuntos de Veteranos de EE. UU [doc:mst-fares-es]
-- Tarjeta de identificación de veteranos de guerras extranjeras [doc:mst-fares-es]
-- Tarjeta de membresía de la Legión Americana [doc:mst-fares-es]
-- Tarjeta de identificación de veteranos estadounidenses discapacitados [doc:mst-fares-es]
-- Licencia de conducir o tarjeta de identificación de CA con designación "veterano" [doc:mst-fares-es]
-
-Con esta prueba, puede solicitar una tarjeta de cortesía del MST de forma gratuita en persona en cualquiera de las ubicaciones de servicio al cliente de MST, o en línea. [doc:mst-fares-es]
-
-Para confirmar los detalles actuales o si tiene preguntas adicionales, le recomendamos contactar directamente a MST.
-
-**Failed checks:**
-
-- judge/groundedness: The passages state that veterans may obtain an MST Courtesy Card with the listed proof of service, and the Courtesy Cards passage says they are available free of charge to individuals with disabilities (not veterans specifically). The passages do not explicitly state that the veteran courtesy card is free, nor do they confirm it can be obtained at 'any MST customer service location' or online for veterans—only that an application form exists. The claim that it is free and available at any customer service location or online is not directly supported for veterans in the retrieved passages. | unsupported: puede solicitar una tarjeta de cortesía del MST de forma gratuita en persona en cualquiera de las ubicaciones de servicio al cliente de MST, o en línea
-
 ### refuse-018 (refusal)
 
 **Question:** How much is an Amtrak ticket from Santa Barbara to Los Angeles?
@@ -258,19 +131,19 @@ Para confirmar los detalles actuales o si tiene preguntas adicionales, le recome
 
 **Retrieved passages:**
 
-- `sbmtd-fares-passes#0` ((page top), score 9.52): New fares are now effective as of August 18, 2025. For more information click here .
+- `sbmtd-fares-passes#0` ((page top), score 9.96): New fares are now effective as of August 18, 2025. For more information click here .
 UCSB CAMPUS STORE
 1 UCEN Road Santa Barbara, CA 93106 805.893.3819
 EASTSIDE LIBRARY
 1102 East Montecito Street Sant…
-- `sbmtd-fares-passes#6` (Pacific Surfliner’s Transit Transfer Program, score 9.33): On the day you travel on the Pacific Surfliner train, show your valid Amtrak Pacific Surfliner paper ticket or e-ticket to the driver when you board the connecting bus or shuttle and ride MTD for free…
-- `sbmtd-farechange#3` (What’s Changing?, score 8.41): The table below shows the update to fare structure from the current fare structure. MTD’s goal with this fare adjustment is to restore a portion of the approximately $3.0 million in annual FTA Small T…
+- `sbmtd-fares-passes#6` (Pacific Surfliner’s Transit Transfer Program, score 9.08): On the day you travel on the Pacific Surfliner train, show your valid Amtrak Pacific Surfliner paper ticket or e-ticket to the driver when you board the connecting bus or shuttle and ride MTD for free…
+- `sbmtd-farechange#3` (What’s Changing?, score 8.73): The table below shows the update to fare structure from the current fare structure. MTD’s goal with this fare adjustment is to restore a portion of the approximately $3.0 million in annual FTA Small T…
 
-**Answer (answered):** I don't have information about Amtrak ticket prices in the passages provided. Those passages cover Santa Barbara MTD bus fares and passes only.
+**Answer (answered):** I don't have information about Amtrak ticket prices in the passages provided. Those passages cover Santa Barbara MTD's local transit fares and programs only.
 
 For Amtrak Pacific Surfliner ticket prices and schedules, please visit Amtrak's website directly or call 1-800-USA-RAIL.
 
-However, I can tell you that according to MTD policy: if you have a valid Amtrak Pacific Surfliner paper ticket or e-ticket on the day you travel, you can show it to an MTD bus driver when boarding a connecting bus or shuttle and ride MTD for free [doc:sbmtd-fares-passes].
+However, I can tell you that according to MTD's policy: if you have a valid Amtrak Pacific Surfliner paper ticket or e-ticket, you can show it to the MTD driver on the day you travel and ride MTD buses for free as a connecting service [doc:sbmtd-fares-passes].
 
 **Failed checks:**
 

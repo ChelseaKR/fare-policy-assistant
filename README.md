@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for four California transit agencies, wrapped in a
+and reduced-fare policies for five California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -33,7 +33,7 @@ by the evaluation suites (`evals/suites/`). The model card
 
 ## How it is evaluated
 
-109 cases across six suites, each case written against a specific passage in
+118 cases across six suites, each case written against a specific passage in
 the corpus and readable by a non-engineer:
 
 | Suite | What it tests |
@@ -140,8 +140,8 @@ make fetch && make ingest
 ## Corpus
 
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
-(SBMTD), Yolobus, and Sacramento Regional Transit (SacRT), snapshotted with
-fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
+(SBMTD), Yolobus, Sacramento Regional Transit (SacRT), and Humboldt Transit
+Authority (HTA), snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one. MST and SBMTD are the two agencies live
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility

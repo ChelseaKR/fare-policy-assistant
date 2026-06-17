@@ -21,7 +21,7 @@ PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"
 
-KNOWN_AGENCIES = ("MST", "SBMTD", "Yolobus", "SacRT")
+KNOWN_AGENCIES = ("MST", "SBMTD", "Yolobus", "SacRT", "HTA")
 
 # Riders asking about agencies we do not cover get pointed here.
 STATEWIDE_TRANSIT_INFO = "https://511.org (Bay Area) or the agency's own website"

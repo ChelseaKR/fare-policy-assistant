@@ -147,6 +147,13 @@ aws logs put-metric-filter --region "$REGION" \
   --filter-pattern '{ $.cache = "miss" }' \
   --metric-transformations \
     "metricName=BedrockAnswerCalls,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
+# Thumbs-down feedback (verdict only, no content) as a quality signal.
+aws logs put-metric-filter --region "$REGION" \
+  --log-group-name "/aws/lambda/$FN" \
+  --filter-name "$FN-feedback-down" \
+  --filter-pattern '{ $.feedback = "down" }' \
+  --metric-transformations \
+    "metricName=FeedbackDown,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
 
 _alarm() {  # name, namespace, metric, statistic, period, threshold, dimensions...
   aws cloudwatch put-metric-alarm --region "$REGION" \

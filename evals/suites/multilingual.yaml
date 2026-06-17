@@ -185,3 +185,12 @@ cases:
     required_facts: ["Amtrak"]
     mirror_of: refuse-018
     rationale: "Spanish mirror of the Amtrak near-miss trap: decline the train price and point to Amtrak; the groundedness judge polices any guessed fare."
+
+  - id: ml-021
+    question: "¿Cuánto cuesta un viaje sencillo en Humboldt Transit?"
+    agency_scope: HTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-027
+    rationale: "Cross-lingual: hta-fares (English only) Single Ride $2.00."

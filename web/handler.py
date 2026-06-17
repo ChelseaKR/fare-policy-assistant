@@ -191,6 +191,31 @@ def _ask(event: dict) -> dict:
     return _json(200, payload)
 
 
+def _feedback(event: dict) -> dict:
+    """Record a thumbs up/down. Logs only the verdict, the response kind, and the
+    language — never the question or answer. Nothing identifies the rider; the
+    aggregate is queryable in CloudWatch without storing any content."""
+    try:
+        data = json.loads(event.get("body") or "")
+        verdict = data.get("verdict")
+    except (ValueError, AttributeError):
+        verdict = None
+    if verdict not in ("up", "down"):
+        return _json(400, {"error": 'Send {"verdict": "up" | "down"}.'})
+    kind = data.get("kind")
+    language = data.get("language")
+    print(
+        json.dumps(
+            {
+                "feedback": verdict,
+                "kind": kind if isinstance(kind, str) else None,
+                "language": language if isinstance(language, str) else None,
+            }
+        )
+    )
+    return _json(200, {"ok": True})
+
+
 def handler(event: dict, context: object = None) -> dict:
     http = event.get("requestContext", {}).get("http", {})
     method = http.get("method", "GET")
@@ -198,11 +223,11 @@ def handler(event: dict, context: object = None) -> dict:
 
     if path == "/" and method == "GET":
         return _response(200, _INDEX_HTML, "text/html; charset=utf-8")
-    if path == "/api/ask":
+    if path in ("/api/ask", "/api/feedback"):
         if method != "POST":
             return _json(405, {"error": "Use POST."})
         try:
-            return _ask(event)
+            return _ask(event) if path == "/api/ask" else _feedback(event)
         except Exception as exc:  # never leak internals; never log content
             print(json.dumps({"error": type(exc).__name__}))
             return _json(500, {"error": "Something went wrong on our side. Please try again."})

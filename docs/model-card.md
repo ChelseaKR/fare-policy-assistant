@@ -5,9 +5,10 @@ Reference implementation, not a product. Last updated 2026-06-12.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-four California transit agencies: Monterey-Salinas Transit (MST), Santa
-Barbara MTD (SBMTD), Yolobus, and Sacramento Regional Transit (SacRT). It
-explains published policy. It does not decide anything about any person.
+five California transit agencies: Monterey-Salinas Transit (MST), Santa
+Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), and
+Humboldt Transit Authority (HTA). It explains published policy. It does not
+decide anything about any person.
 
 ## Intended users and uses
 
@@ -43,14 +44,15 @@ available behind a config switch.
 
 ## Data
 
-Eleven public web pages fetched 2026-06-12 with an identified user agent,
+Twelve public web pages fetched 2026-06-12 (HTA added 2026-06-16) with an
+identified user agent,
 honoring robots.txt and crawl delays; URLs, dates, and license notes in
 `corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
 in the system.
 
 ## Evaluation
 
-109 cases across groundedness, refusal, edge-case, multilingual, freshness, and
+118 cases across groundedness, refusal, edge-case, multilingual, freshness, and
 multi-turn conversation suites; method and current scores in
 [EVALS.md](../EVALS.md). Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run

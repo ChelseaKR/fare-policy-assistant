@@ -30,6 +30,11 @@ AGENCY_ALIASES: dict[str, str] = {
     "yolo": "Yolobus",
     "sacrt": "SacRT",
     "sacramento": "SacRT",
+    "hta": "HTA",
+    "humboldt": "HTA",
+    "eureka": "HTA",
+    "arcata": "HTA",
+    "redwood transit": "HTA",
 }
 
 

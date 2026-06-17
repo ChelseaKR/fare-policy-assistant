@@ -215,3 +215,28 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?20\\b"]
     rationale: "sacrt-fares Students (TK-12): Monthly Pass/Sticker $20.00."
+
+  - id: ground-027
+    question: "How much is a single ride on Humboldt Transit?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "hta-fares: Single Ride $2.00 (cash or Tap-to-Pay)."
+    smoke: true
+
+  - id: ground-028
+    question: "What does a 31-day pass cost on Humboldt Transit?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?50"]
+    rationale: "hta-fares: 31 Day Pass $50.00."
+
+  - id: ground-029
+    question: "How much is a day pass on Humboldt Transit?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5\\.00"]
+    rationale: "hta-fares: 1 Day Pass $5.00."
