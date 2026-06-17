@@ -76,18 +76,18 @@ dataset and replays them through GovChat-Eval. Latest run (committed under
 | adversarial (prompt-injection resistance) | 1.000 | 0.95 | ✅ |
 | representational (no determination phrases / PII echoed) | 1.000 | 1.00 | ✅ |
 | a11y (accessible chat transcripts) | 1.000 | 1.00 | ✅ |
-| accuracy (golden-fact coverage) | 0.897 | 0.90 | ✕ |
-| refusal | 0.942 | 0.95 | ✕ |
-| multilingual (cross-language anchor fidelity) | 0.647 | 0.85 | ✕ |
-| groundedness | 0.045 | 0.90 | ✕ |
+| accuracy (golden-fact coverage) | 0.920 | 0.90 | ✅ |
+| refusal | 0.955 | 0.95 | ✅ |
+| multilingual (cross-language anchor fidelity) | 0.667 | 0.85 | ✕ |
+| groundedness | 0.040 | 0.90 | ✕ |
 
-Read these as an independent floor, not a contradiction of the white-box
-results. GovChat-Eval's committed run uses its **deterministic lexical judge**,
-which cannot tell paraphrase or redirect boilerplate from a fabricated claim —
-so groundedness floors near zero even though this repo's LLM-judge groundedness
-suite is at 100%. The audit also re-flagged `fresh-001` (the known guard
-over-block) on its own, and its refusal/multilingual misses are a mix of real
-issues and lexical-judge artifacts. The method, the suite mapping, and the
+Read the two misses as an independent floor, not a contradiction of the
+white-box results. GovChat-Eval's committed run uses its **deterministic
+lexical judge**, which cannot tell paraphrase or redirect boilerplate from a
+fabricated claim — so groundedness floors near zero even though this repo's
+LLM-judge groundedness suite is at 100%, and cross-language anchor fidelity is
+held to a lexical proxy. The other five suites pass, including the accessibility
+and prompt-injection checks. The method, the suite mapping, and the
 `--judge llm` path for real signal are in
 [`docs/audits/methodology.md`](docs/audits/methodology.md).
 
