@@ -1,22 +1,22 @@
 # Evaluation Report
 
-Generated from the run at `2026-06-13T00:50:43+00:00` (full, live).
+Generated from the run at `2026-06-17T00:04:04+00:00` (full, live).
 
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
 - Prompt versions: system v4 2026-06-12 (v3 added rule-2 share-criteria sentence; v4 adds no-inferred-requirements for ml-005), answer_user v2 2026-06-12 (v1 2026-06-11; v2 adds the unstated-details reminder — eval cases ml-005, ml-011), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
-- Duration: 723.0s
+- Duration: 797.5s
 
 ## Scoreboard
 
 | Suite | Passed | Total | Pass rate |
 |---|---|---|---|
-| edge_cases | 26 | 28 | 92.9% |
+| edge_cases | 27 | 28 | 96.4% |
 | freshness | 9 | 10 | 90.0% |
 | groundedness | 24 | 26 | 92.3% |
 | multilingual | 19 | 20 | 95.0% |
 | refusal | 18 | 19 | 94.7% |
-| **all** | **96** | **103** | **93.2%** |
+| **all** | **97** | **103** | **94.2%** |
 
 ## Spanish parity
 
@@ -55,14 +55,14 @@ First 3 failures per suite, in case order — not cherry-picked.
 
 **Retrieved passages:**
 
-- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 13.63): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
+- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 13.68): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
 Single Ride Tickets
 Local Fare | $2.00 | $1.00
 Intercity Fare | $2.25 | $1.00
 Express | $3.25 | $1.50
 Express Upgrade | $1.00 | …
-- `yolobus-reduced-fare-id#0` ((page top), score 11.8): Our senior (62+) and disabled riders can take advantage of Yolobus’ reduced fares. To qualify for reduced fares, riders must show proper identification when purchasing fares and to bus operators when …
-- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 10.28): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
+- `yolobus-reduced-fare-id#0` ((page top), score 11.84): Our senior (62+) and disabled riders can take advantage of Yolobus’ reduced fares. To qualify for reduced fares, riders must show proper identification when purchasing fares and to bus operators when …
+- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 10.31): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
 Regular | Seniors (62+)/Disabled & Youth (0-18)
 Knights Landing | $2.00 | $1.50
 Winters | $2.00 | $1.50
@@ -90,30 +90,7 @@ To confirm your eligibility and next steps, contact Yolobus directly at the numb
 
 **Failed checks:**
 
-- judge/groundedness: Nearly all claims are supported by the retrieved passages. However, the SacRT Customer Service & Sales Center address (1225 R St., Sacramento) and phone number (916) 321-2877 are attributed to doc:yolobus-reduced-fare-id, but that passage only mentions the SacRT Customer Service & Sales Center without providing an address or phone number. Those specific details appear in doc:yolobus-fares, but the answer's citation is misleading and the address/phone are not found in the reduced-fare-id passage where they are attributed. | unsupported: SacRT Customer Service & Sales Center, 1225 R St., Sacramento (916) 321-2877 [doc:yolobus-reduced-fare-id]
-
-### edge-025 (edge_cases)
-
-**Question:** Can I ride Yolobus with my UC Davis Aggie Card?
-
-**Why this case exists:** yolobus-fares Other Fare Media: UC Davis Aggie Card valid for unlimited rides, undergraduate or UCDE Global Study only — the restriction is the point.
-
-**Retrieved passages:**
-
-- `yolobus-purchasing#8` (Other Fare Media, score 17.21): The following passes are good for unlimited rides on Yolobus, including Express routes.
-UC Davis Aggie Card | UC Davis Extension International Program ID | Sacramento State Student ID | Los Rios Stude…
-- `yolobus-fares#11` (Other Fare Media, score 16.83): The following passes are good for unlimited rides on Yolobus, including Express routes.
-All fares are effective July 1, 2025 – June 30, 2026.
-UC Davis Aggie Card | UC Davis Zip Pass | UC Davis Extensi…
-- `yolobus-fares#7` (Cash, score 9.71): All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required as our bus operators don’t carry change or provide refunds. Passes on Connect Card can be purchased with cash at t…
-
-**Answer (answered):** Yes, you can ride Yolobus with your UC Davis Aggie Card. The UC Davis Aggie Card is good for unlimited rides on Yolobus, including Express routes, provided it is for an Undergraduate or UCDE Global Study participant and has a valid expiration date. [doc:yolobus-fares]
-
-Based on policies published as of 2026-06-12, I recommend confirming the current validity requirements with Yolobus directly at yolobus.com or by contacting their Customer Service Center in Woodland (Monday–Thursday, 9am–12pm and 1pm–4pm, excluding holidays).
-
-**Failed checks:**
-
-- judge/groundedness: The passages indicate the UC Davis Aggie Card is valid for 'Undergraduate or UCDE Global Study Only' and separately note 'with valid student ID' as the condition for the UC Davis Aggie Card in [doc:yolobus-fares]. The answer conflates the eligibility restriction with a 'valid expiration date' requirement, but the 'valid expiration date' condition in the passages applies to the UC Davis Extension International Program ID, not the Aggie Card. The correct condition for the Aggie Card per [doc:yolobus-fares] is 'with valid student ID,' not 'valid expiration date.' | unsupported: provided it is for an Undergraduate or UCDE Global Study participant and has a valid expiration date
+- judge/groundedness: Nearly all claims are supported by the retrieved passages. However, the SacRT Customer Service & Sales Center address (1225 R St., Sacramento) and phone number (916) 321-2877 are attributed to doc:yolobus-reduced-fare-id, but that passage only mentions the SacRT Customer Service & Sales Center without providing an address or phone number. Those specific details appear in doc:yolobus-fares, but the answer cites them under the reduced-fare-id section as if they are part of the reduced fare ID location information, slightly misattributing the source. More critically, the SacRT location details are presented as a place to obtain a Yolobus reduced fare photo ID, but doc:yolobus-reduced-fare-id only mentions the Yolo Transportation District office and the SacRT Customer Service & Sales Center without the specific address/phone, while doc:yolobus-fares lists the SacRT location only as an alternative ticket/pass sales location, not explicitly as a place to obtain a reduced fare photo ID. | unsupported: SacRT Customer Service & Sales Center, 1225 R St., Sacramento (916) 321-2877 [doc:yolobus-reduced-fare-id]
 
 ### fresh-001 (freshness)
 
@@ -123,9 +100,9 @@ Based on policies published as of 2026-06-12, I recommend confirming the current
 
 **Retrieved passages:**
 
-- `mst-fares#0` (Fares Overview, score 8.66): MST accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets onboard all buses – and with fare capping, you will never be charged more than $6 per day…
-- `mst-veterans-resource#1` (Bus Pass for Veterans, score 8.11): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
-- `mst-fares-benefits#0` (Get Your Discount when You Pay Your Fare with a Contactless Card, score 6.65): MST has partnered with Cal-ITP —the California Integrated Travel Project, an initiative of the State of California—to offer a way to quickly verify your eligibility for a discount and then link that d…
+- `mst-fares#0` (Fares Overview, score 8.69): MST accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets onboard all buses – and with fare capping, you will never be charged more than $6 per day…
+- `mst-veterans-resource#1` (Bus Pass for Veterans, score 8.13): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
+- `mst-fares-benefits#0` (Get Your Discount when You Pay Your Fare with a Contactless Card, score 6.68): MST has partnered with Cal-ITP —the California Integrated Travel Project, an initiative of the State of California—to offer a way to quickly verify your eligibility for a discount and then link that d…
 
 **Answer (answered_guarded):** I don't have a published policy document that answers that, and I won't guess about fares or eligibility. Please check your transit agency directly, or https://511.org (Bay Area) or the agency's own website for current information.
 
@@ -138,7 +115,7 @@ For anything time-sensitive—such as current pass prices, outlet locations, or 
 - citation_present_and_resolvable: kind=answered_guarded, cited=none
 - as_of_disclosure: failed
 - required_facts_present: re:20\d\d
-- judge/helpfulness: score=2 — The question asks about the currency/freshness of the assistant's MST fare information—a meta-question the assistant could and should answer by stating what corpus or document dates it has access to. Instead, it deflects entirely as if it were a fare question it can't answer, which doesn't serve the rider. A partial answer acknowledging what it knows about its own knowledge cutoff or document dates would have been more helpful, though the redirect to the agency is at least useful.
+- judge/helpfulness: score=2 — The question asks about the currency/freshness of the assistant's MST fare information—a meta-question the assistant could answer by stating its knowledge cutoff or document corpus date. Instead, it deflects entirely as if it were a fare question, which misses the point. It does provide a useful redirect, but fails to address what was actually asked.
 
 ### ground-024 (groundedness)
 
@@ -148,13 +125,13 @@ For anything time-sensitive—such as current pass prices, outlet locations, or 
 
 **Retrieved passages:**
 
-- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 20.71): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
+- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 20.75): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
 Regular | Seniors (62+)/Disabled & Youth (0-18)
 Knights Landing | $2.00 | $1.50
 Winters | $2.00 | $1.50
 Wo…
-- `sbmtd-farechange#7` (Frequently Asked Questions, score 7.22): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
-- `sbmtd-farechange#2` (Why the Change?, score 6.65): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+- `sbmtd-farechange#7` (Frequently Asked Questions, score 7.27): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+- `sbmtd-farechange#2` (Why the Change?, score 6.7): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
 
 **Answer (answered):** Based on policies published as of 2026-06-12:
 
@@ -177,7 +154,7 @@ To confirm current fares or if you have questions about your specific situation,
 
 **Retrieved passages:**
 
-- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 26.23): Single Ride Ticket
+- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 26.34): Single Ride Ticket
 $1.25
 Transfer Ticket
 $0.25
@@ -188,8 +165,8 @@ $10.00
 Monthly Pass/Sticker*
 $20.00
 *Discount (senior, disabled or student) monthly or semi-monthly stickers …
-- `sacrt-fares#6` (Student Passes, score 18.2): SacRT offers fare-free transit for students in Transitional Kindergarten through 12th grade with the RydeFreeRT program and has a partnership with Los Rios and Sacramento State for college students to…
-- `sacrt-fares#1` (Single, Daily and Monthly Passes, score 8.69): All fares are subject to change.
+- `sacrt-fares#6` (Student Passes, score 18.25): SacRT offers fare-free transit for students in Transitional Kindergarten through 12th grade with the RydeFreeRT program and has a partnership with Los Rios and Sacramento State for college students to…
+- `sacrt-fares#1` (Single, Daily and Monthly Passes, score 8.72): All fares are subject to change.
 Exact change required only on bus; operators do not carry cash. Light rail station fare vending machines accept both cash/credit or debit. Pre-paid tickets and passes …
 
 **Answer (answered):** Based on policies published as of 2026-06-12:
@@ -210,14 +187,14 @@ For details on how to enroll or confirm eligibility, the passages suggest checki
 
 **Retrieved passages:**
 
-- `mst-fares-es#2` (Elegibilidad con descuento, score 31.14): Tarifa con descuento para:
+- `mst-fares-es#2` (Elegibilidad con descuento, score 31.27): Tarifa con descuento para:
 18 años y menos
 65 años y más (ver también: Beneficios )
 Personas con discapacidad
 Titulares de la tarjeta Medicare (ver también: Beneficios )
 Veteranos (ver también: Benefi…
-- `mst-fares-es#3` (Métodos de pago sin contacto, score 14.32): MST ahora acepta tarjetas bancarias y billeteras móviles sin contacto habilitadas para Visa, Mastercard, Discover y American Express. En este momento, las billeteras móviles aceptadas incluyen: Pago d…
-- `mst-fares-es#6` (Tarjetas de cortesía, score 13.04): Las tarjetas de cortesía están disponibles de forma gratuita para todas las personas discapacitadas con una verificación por escrito de un médico o una tarjeta de Medicare. Utilice la tarjeta para tar…
+- `mst-fares-es#3` (Métodos de pago sin contacto, score 14.35): MST ahora acepta tarjetas bancarias y billeteras móviles sin contacto habilitadas para Visa, Mastercard, Discover y American Express. En este momento, las billeteras móviles aceptadas incluyen: Pago d…
+- `mst-fares-es#6` (Tarjetas de cortesía, score 13.08): Las tarjetas de cortesía están disponibles de forma gratuita para todas las personas discapacitadas con una verificación por escrito de un médico o una tarjeta de Medicare. Utilice la tarjeta para tar…
 
 **Answer (answered):** Según las políticas publicadas al 2026-06-12, para obtener la tarifa de veterano en MST, puede presentar cualquiera de las siguientes pruebas de servicio:
 
@@ -235,7 +212,7 @@ Para confirmar los detalles actuales o si tiene preguntas adicionales, le recome
 
 **Failed checks:**
 
-- judge/groundedness: The passages state that veterans may obtain an MST Courtesy Card with the listed proof of service, and the Courtesy Cards passage says they are available free of charge to individuals with disabilities (not veterans specifically). The passages do not explicitly state that the veteran courtesy card is free, nor do they confirm that veterans can apply online or at any customer service location (the specific pickup locations listed in the passages are for disability courtesy cards). The seven proof-of-service documents are fully supported. | unsupported: puede solicitar una tarjeta de cortesía del MST de forma gratuita en persona en cualquiera de las ubicaciones de servicio al cliente de MST, o en línea
+- judge/groundedness: The passages state that veterans may obtain an MST Courtesy Card with the listed proof of service, and the Courtesy Cards passage says they are available free of charge to individuals with disabilities (not veterans specifically). The passages do not explicitly state that the veteran courtesy card is free, nor do they confirm it can be obtained at 'any MST customer service location' or online for veterans—only that an application form exists. The claim that it is free and available at any customer service location or online is not directly supported for veterans in the retrieved passages. | unsupported: puede solicitar una tarjeta de cortesía del MST de forma gratuita en persona en cualquiera de las ubicaciones de servicio al cliente de MST, o en línea
 
 ### refuse-018 (refusal)
 
@@ -246,13 +223,13 @@ Para confirmar los detalles actuales o si tiene preguntas adicionales, le recome
 
 **Retrieved passages:**
 
-- `sbmtd-fares-passes#0` ((page top), score 9.5): New fares are now effective as of August 18, 2025. For more information click here .
+- `sbmtd-fares-passes#0` ((page top), score 9.52): New fares are now effective as of August 18, 2025. For more information click here .
 UCSB CAMPUS STORE
 1 UCEN Road Santa Barbara, CA 93106 805.893.3819
 EASTSIDE LIBRARY
 1102 East Montecito Street Sant…
-- `sbmtd-fares-passes#6` (Pacific Surfliner’s Transit Transfer Program, score 9.31): On the day you travel on the Pacific Surfliner train, show your valid Amtrak Pacific Surfliner paper ticket or e-ticket to the driver when you board the connecting bus or shuttle and ride MTD for free…
-- `sbmtd-farechange#3` (What’s Changing?, score 8.38): The table below shows the update to fare structure from the current fare structure. MTD’s goal with this fare adjustment is to restore a portion of the approximately $3.0 million in annual FTA Small T…
+- `sbmtd-fares-passes#6` (Pacific Surfliner’s Transit Transfer Program, score 9.33): On the day you travel on the Pacific Surfliner train, show your valid Amtrak Pacific Surfliner paper ticket or e-ticket to the driver when you board the connecting bus or shuttle and ride MTD for free…
+- `sbmtd-farechange#3` (What’s Changing?, score 8.41): The table below shows the update to fare structure from the current fare structure. MTD’s goal with this fare adjustment is to restore a portion of the approximately $3.0 million in annual FTA Small T…
 
 **Answer (answered):** I don't have information about Amtrak ticket prices in the passages provided. Those passages cover Santa Barbara MTD bus fares and passes only.
 

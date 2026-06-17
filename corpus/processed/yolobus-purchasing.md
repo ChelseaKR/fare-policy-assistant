@@ -48,3 +48,9 @@ If you are planning to connect with another Yolobus route to complete your trip,
 The following passes are good for unlimited rides on Yolobus, including Express routes.
 UC Davis Aggie Card | UC Davis Extension International Program ID | Sacramento State Student ID | Los Rios Student Access Card | South Natomas TMA Pass | Sacramento County DHA Pass
 Undergraduate or UCDE Global Study Only | with valid expiration date | with valid commuter sleeve | with valid sticker | with valid expiration date | with valid sticker
+UC Davis Aggie Card: Undergraduate or UCDE Global Study Only
+UC Davis Extension International Program ID: with valid expiration date
+Sacramento State Student ID: with valid commuter sleeve
+Los Rios Student Access Card: with valid sticker
+South Natomas TMA Pass: with valid expiration date
+Sacramento County DHA Pass: with valid sticker

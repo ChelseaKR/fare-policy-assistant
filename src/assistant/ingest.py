@@ -122,6 +122,43 @@ def _node_text(node) -> str:
     return re.sub(r"\s+", " ", text)
 
 
+def _looks_transposed(a: str, b: str) -> bool:
+    """True when two adjacent pipe rows are a transposed label/value table.
+
+    A transposed table stores parallel labels and their values as two
+    equal-width rows aligned only by column index (e.g. a row of pass names
+    over a row of their conditions). Fare *data* rows are excluded: they carry
+    figures (digits), and a header row rarely matches a data row's width.
+    """
+    fa = [x.strip() for x in a.split("|")]
+    fb = [x.strip() for x in b.split("|")]
+    if len(fa) != len(fb) or len(fa) < 3:
+        return False
+    if not all(fa) or not all(fb):
+        return False
+    return not any(ch.isdigit() for ch in a + b)
+
+
+def normalize_tables(body: str) -> str:
+    """Append explicit ``label: value`` lines for transposed pipe tables.
+
+    A transposed table aligns labels and values by column index only, which the
+    model mis-reads (eval case edge-025: the UC Davis pass conditions). The
+    original lines are kept so retrieval tokens are unchanged; the appended
+    aligned pairs give the model a form it can read directly. Fires only on
+    genuinely transposed, digit-free tables (see `_looks_transposed`), so normal
+    fare tables are left untouched.
+    """
+    lines = body.split("\n")
+    extra: list[str] = []
+    for a, b in zip(lines, lines[1:], strict=False):
+        if "|" in a and "|" in b and _looks_transposed(a, b):
+            fa = [x.strip() for x in a.split("|")]
+            fb = [x.strip() for x in b.split("|")]
+            extra.extend(f"{x}: {y}" for x, y in zip(fa, fb, strict=False))
+    return body + "\n" + "\n".join(extra) if extra else body
+
+
 def sections_from_html(html: str) -> list[tuple[str, str]]:
     """Split a page into (heading, text) sections, one per policy section.
 
@@ -160,7 +197,7 @@ def sections_from_html(html: str) -> list[tuple[str, str]]:
             if p not in seen:
                 seen.add(p)
                 lines.append(p)
-        body = "\n".join(lines).strip()
+        body = normalize_tables("\n".join(lines).strip())
         if len(body) < 40:
             continue
         # Tiny sections are usually address blocks or table fragments split

@@ -1,4 +1,4 @@
-from assistant.ingest import sections_from_html
+from assistant.ingest import normalize_tables, sections_from_html
 
 HTML = """
 <html><head><script>tracker()</script></head><body>
@@ -53,3 +53,30 @@ def test_tiny_table_section_merged_into_parent_with_heading():
 def test_list_items_kept():
     by_heading = dict(sections_from_html(HTML))
     assert "Medicare Card accepted" in by_heading["Discount Eligibility"]
+
+
+def test_transposed_table_normalized_to_aligned_pairs():
+    body = (
+        "The following passes are good for unlimited rides.\n"
+        "Aggie Card | Zip Pass | Extension ID\n"
+        "Undergraduate only | with valid student ID | with valid expiration date"
+    )
+    out = normalize_tables(body)
+    # Original rows are preserved (retrieval tokens unchanged) ...
+    assert "Aggie Card | Zip Pass | Extension ID" in out
+    # ... and explicit aligned pairs are appended, by column index.
+    assert "Aggie Card: Undergraduate only" in out
+    assert "Zip Pass: with valid student ID" in out
+    assert "Extension ID: with valid expiration date" in out
+
+
+def test_fare_data_rows_not_treated_as_transposed():
+    # Two adjacent fare rows share a width but carry figures; they must not be
+    # paired into nonsense like "Local Fare: Intercity Fare".
+    body = "Local Fare | $2.00 | $1.00\nIntercity Fare | $2.25 | $1.00"
+    assert normalize_tables(body) == body
+
+
+def test_header_plus_data_row_left_untouched():
+    body = "Type | Price\nRegular | $2.00"  # unequal width, has digits
+    assert normalize_tables(body) == body

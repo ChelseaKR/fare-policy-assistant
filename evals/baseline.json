@@ -1,13 +1,13 @@
 {
-  "from_run": "2026-06-13T00:50:43+00:00",
+  "from_run": "2026-06-17T00:04:04+00:00",
   "mode": "full",
   "offline": false,
   "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "suites": {
     "edge_cases": {
-      "passed": 26,
+      "passed": 27,
       "total": 28,
-      "pass_rate": 92.9
+      "pass_rate": 96.4
     },
     "freshness": {
       "passed": 9,

@@ -2,7 +2,7 @@
   "fingerprint": {
     "harness_version": "0.2.0",
     "seed": 1729,
-    "dataset_hash": "4b0b52ca3b850a49fd44cbe70d4f7f70c1bb7134e12bad425acfd8e618898369",
+    "dataset_hash": "10733a0439c619651b311ff33fd35355a9201b4ed471ee731e8c6ac4a801d107",
     "judge_config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
     "target": "scripted",
     "suite_names": [
@@ -28,7 +28,7 @@
       "threshold": 0.9,
       "verdict": "fail",
       "n_items": 66,
-      "dataset_version": "sha256:4b0b52ca3b85",
+      "dataset_version": "sha256:10733a0439c6",
       "judge_config": {
         "config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
         "method": "deterministic-lexical",
@@ -80,8 +80,8 @@
         {
           "item_id": "edge-006",
           "passed": false,
-          "score": 0.6666666666666666,
-          "detail": "4/6 claims grounded; issues: unsupported",
+          "score": 0.5714285714285714,
+          "detail": "4/7 claims grounded; issues: unsupported",
           "segment": null
         },
         {
@@ -101,8 +101,8 @@
         {
           "item_id": "edge-010",
           "passed": false,
-          "score": 0.0,
-          "detail": "0/4 claims grounded; issues: unsupported",
+          "score": 0.25,
+          "detail": "1/4 claims grounded; issues: unsupported",
           "segment": null
         },
         {
@@ -123,7 +123,7 @@
           "item_id": "edge-013",
           "passed": false,
           "score": 0.5,
-          "detail": "6/12 claims grounded; issues: contradicted (negation mismatch), unsupported",
+          "detail": "3/6 claims grounded; issues: contradicted (negation mismatch), unsupported",
           "segment": null
         },
         {
@@ -150,8 +150,8 @@
         {
           "item_id": "edge-017",
           "passed": false,
-          "score": 0.7058823529411765,
-          "detail": "12/17 claims grounded; issues: unsupported",
+          "score": 0.6842105263157895,
+          "detail": "13/19 claims grounded; issues: contradicted (negation mismatch), unsupported",
           "segment": null
         },
         {
@@ -197,7 +197,7 @@
       "threshold": 0.9,
       "verdict": "fail",
       "n_items": 78,
-      "dataset_version": "sha256:4b0b52ca3b85",
+      "dataset_version": "sha256:10733a0439c6",
       "judge_config": {
         "config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
         "method": "deterministic-lexical",
@@ -282,7 +282,7 @@
       "threshold": 0.95,
       "verdict": "fail",
       "n_items": 103,
-      "dataset_version": "sha256:4b0b52ca3b85",
+      "dataset_version": "sha256:10733a0439c6",
       "judge_config": {
         "config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
         "method": "deterministic-lexical",
@@ -353,7 +353,7 @@
       "threshold": 0.85,
       "verdict": "fail",
       "n_items": 17,
-      "dataset_version": "sha256:4b0b52ca3b85",
+      "dataset_version": "sha256:10733a0439c6",
       "judge_config": {
         "config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
         "method": "deterministic-lexical",
@@ -424,7 +424,7 @@
       "threshold": 0.95,
       "verdict": "pass",
       "n_items": 3,
-      "dataset_version": "sha256:4b0b52ca3b85",
+      "dataset_version": "sha256:10733a0439c6",
       "judge_config": {
         "config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
         "method": "deterministic-lexical",
@@ -459,7 +459,7 @@
       "threshold": 1.0,
       "verdict": "pass",
       "n_items": 12,
-      "dataset_version": "sha256:4b0b52ca3b85",
+      "dataset_version": "sha256:10733a0439c6",
       "judge_config": {
         "config_hash": "814b9c926c81115bf8a48a5a9b7b5d3e4f76e161a12cbd613a4c64037d9ab223",
         "method": "deterministic-lexical",
