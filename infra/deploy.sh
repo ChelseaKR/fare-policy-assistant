@@ -126,4 +126,52 @@ aws logs create-log-group --log-group-name "/aws/lambda/$FN" --region "$REGION" 
 aws logs put-retention-policy --log-group-name "/aws/lambda/$FN" \
   --retention-in-days 14 --region "$REGION"
 
+# ── observability: alarms on errors, throttles, latency, and Bedrock calls ───
+# Alarms publish to an SNS topic; subscribe an email once to be paged:
+#   aws sns subscribe --topic-arn <arn> --protocol email --notification-endpoint you@example.com
+TOPIC_ARN="$(aws sns create-topic --name "$FN-alerts" --region "$REGION" \
+  --query TopicArn --output text)"
+
+# A metric filter turns the handler's structured error log into a metric. The
+# handler logs {"error": "<Type>"} only on a 500 (never rider content).
+aws logs put-metric-filter --region "$REGION" \
+  --log-group-name "/aws/lambda/$FN" \
+  --filter-name "$FN-handler-errors" \
+  --filter-pattern '{ $.error = * }' \
+  --metric-transformations \
+    "metricName=HandlerErrors,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
+# A second filter counts answer-model calls (cache misses) as a spend proxy.
+aws logs put-metric-filter --region "$REGION" \
+  --log-group-name "/aws/lambda/$FN" \
+  --filter-name "$FN-bedrock-calls" \
+  --filter-pattern '{ $.cache = "miss" }' \
+  --metric-transformations \
+    "metricName=BedrockAnswerCalls,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
+
+_alarm() {  # name, namespace, metric, statistic, period, threshold, dimensions...
+  aws cloudwatch put-metric-alarm --region "$REGION" \
+    --alarm-name "$FN-$1" --namespace "$2" --metric-name "$3" \
+    --statistic "$4" --period "$5" --threshold "$6" --evaluation-periods 1 \
+    --comparison-operator GreaterThanThreshold --treat-missing-data notBreaching \
+    --alarm-actions "$TOPIC_ARN" "${@:7}" >/dev/null
+}
+LAMBDA_DIM="Name=FunctionName,Value=$FN"
+_alarm handler-errors "$FN" HandlerErrors Sum 300 0
+_alarm lambda-errors AWS/Lambda Errors Sum 300 0 --dimensions "$LAMBDA_DIM"
+_alarm lambda-throttles AWS/Lambda Throttles Sum 300 0 --dimensions "$LAMBDA_DIM"
+# p99 latency over 20s (the function timeout is 25s); Duration is in ms.
+aws cloudwatch put-metric-alarm --region "$REGION" \
+  --alarm-name "$FN-latency-p99" --namespace AWS/Lambda --metric-name Duration \
+  --extended-statistic p99 --period 300 --threshold 20000 --evaluation-periods 1 \
+  --comparison-operator GreaterThanThreshold --treat-missing-data notBreaching \
+  --dimensions "$LAMBDA_DIM" --alarm-actions "$TOPIC_ARN" >/dev/null
+# Cost backstop: more than 500 answer-model calls in 5 minutes is well beyond
+# demo traffic and trips before spend runs away (concurrency caps it anyway).
+_alarm bedrock-surge "$FN" BedrockAnswerCalls Sum 300 500
+
+# An account-level AWS Budget is the spend backstop beneath these; it needs
+# billing permissions this role may lack, so it stays a one-time manual step:
+#   aws budgets create-budget --account-id <id> --budget '{...}'  (see infra/README.md)
+
 echo "deployed: https://$API_ID.execute-api.$REGION.amazonaws.com/"
+echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
