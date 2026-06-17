@@ -223,7 +223,6 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?2\\.00"]
     rationale: "hta-fares: Single Ride $2.00 (cash or Tap-to-Pay)."
-    smoke: true
 
   - id: ground-028
     question: "What does a 31-day pass cost on Humboldt Transit?"

@@ -59,7 +59,7 @@ def detect_agency(question: str) -> str | None:
     return agencies[0] if agencies else None
 
 
-# Small Spanish→English lexicon for query expansion. Three of four agencies
+# Small Spanish→English lexicon for query expansion. Four of five agencies
 # publish policy in English only, so Spanish questions need their key terms
 # mirrored into English for BM25 to stand a chance (eval cases ml-009/010/011;
 # see ADR 0001 — dense multilingual retrieval is the heavier alternative).

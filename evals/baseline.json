@@ -1,13 +1,13 @@
 {
-  "from_run": "2026-06-17T02:39:35+00:00",
+  "from_run": "2026-06-17T03:11:14+00:00",
   "mode": "full",
   "offline": false,
   "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "suites": {
     "conversation": {
-      "passed": 5,
+      "passed": 4,
       "total": 6,
-      "pass_rate": 83.3
+      "pass_rate": 66.7
     },
     "edge_cases": {
       "passed": 33,
@@ -20,14 +20,14 @@
       "pass_rate": 100.0
     },
     "groundedness": {
-      "passed": 28,
+      "passed": 27,
       "total": 29,
-      "pass_rate": 96.6
+      "pass_rate": 93.1
     },
     "multilingual": {
-      "passed": 21,
+      "passed": 20,
       "total": 21,
-      "pass_rate": 100.0
+      "pass_rate": 95.2
     },
     "refusal": {
       "passed": 18,

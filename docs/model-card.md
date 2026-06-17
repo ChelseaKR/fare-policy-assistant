@@ -29,7 +29,7 @@ which is the main artifact of this repository.
 ## System description
 
 Retrieval-augmented generation over committed snapshots of public fare pages.
-BM25 retrieval (optional dense retrieval behind a flag), top-6 passages with
+BM25 retrieval (optional dense retrieval behind a flag), top-8 passages with
 an agency filter when the question names one. The answer model writes from
 retrieved passages only and cites them inline. Input guards run before
 retrieval (PII, scope, injection patterns); output guards block determination
@@ -72,6 +72,13 @@ Known limits found by the harness so far:
   page. For the other agencies Spanish answers depend on cross-lingual
   retrieval over English documents, and the parity table in EVALS.md shows
   where that falls short.
+- The overall pass count moves by a couple of cases run to run. A handful of
+  cases sit at the LLM judge's groundedness/helpfulness decision boundary (and
+  the answer model is not perfectly deterministic at temperature 0 on Bedrock),
+  so the headline is a band (~113 of 118) rather than a fixed number. The
+  deterministic safety checks — no determination language, citation present,
+  PII not echoed — do not vary. The regression gate ignores single-case suite
+  moves for this reason and trips only on a drop of two cases or more.
 
 ## Escalation
 

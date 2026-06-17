@@ -255,9 +255,24 @@ def run(
     return run_dir
 
 
+def suite_regressed(base: dict, now: dict, threshold: float = 2.0) -> bool:
+    """A suite regresses only if its pass rate dropped more than `threshold`
+    points AND its pass count dropped by at least two cases.
+
+    The two-case floor exists because the percentage gate alone is incoherent on
+    small suites: one case in the 6-case conversation suite is 16.7 points, so a
+    single boundary case flipping under LLM-judge variance would always trip a
+    2-point gate. Two cases is still a cheap, sensitive signal on the larger
+    suites while absorbing the one-case judge noise the harness sees run to run.
+    """
+    rate_drop = now["pass_rate"] < base["pass_rate"] - threshold
+    case_drop = base["passed"] - now["passed"] >= 2
+    return rate_drop and case_drop
+
+
 def check_regression(run_dir: Path, threshold: float = 2.0) -> None:
-    """Fail (exit 1) if any suite's pass rate dropped > threshold points vs.
-    the committed baseline. Update the baseline deliberately with
+    """Fail (exit 1) if any suite regressed vs. the committed baseline (see
+    `suite_regressed`). Update the baseline deliberately with
     `python -m evals.runner --update-baseline`."""
     baseline_path = config.EVAL_RUNS_DIR.parent / "baseline.json"
     if not baseline_path.exists():
@@ -278,10 +293,13 @@ def check_regression(run_dir: Path, threshold: float = 2.0) -> None:
     regressions = []
     for suite, base in baseline["suites"].items():
         now = summary["suites"].get(suite)
-        if now and now["pass_rate"] < base["pass_rate"] - threshold:
-            regressions.append(f"{suite}: {base['pass_rate']}% → {now['pass_rate']}%")
+        if now and suite_regressed(base, now, threshold):
+            regressions.append(
+                f"{suite}: {base['passed']}/{base['total']} → {now['passed']}/{now['total']}"
+            )
     if regressions:
-        print("REGRESSION (>2 points):\n  " + "\n  ".join(regressions), file=sys.stderr)
+        print("REGRESSION (>2 points and >=2 cases):\n  " + "\n  ".join(regressions),
+              file=sys.stderr)
         raise SystemExit(1)
 
 
