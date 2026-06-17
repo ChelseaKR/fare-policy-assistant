@@ -65,6 +65,8 @@
     border: 1px solid var(--line);
     border-radius: 6px;
     padding: 0.55rem 1.1rem;
+    /* WCAG 2.2 AA 2.5.8 Target Size (Minimum): every control is at least 24px. */
+    min-height: 2.5rem;
     background: #fff;
     color: var(--ink);
     cursor: pointer;
@@ -72,13 +74,13 @@
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   button[disabled] { opacity: 0.6; cursor: wait; }
   .examples { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
-  .examples button { font-size: 0.9rem; padding: 0.35rem 0.7rem; }
+  .examples button { font-size: 0.9rem; padding: 0.35rem 0.7rem; min-height: 1.75rem; }
   #status { color: var(--muted); min-height: 1.4rem; margin-top: 0.6rem; }
   #answer { white-space: normal; }
   #answer p { margin: 0.5rem 0; }
   .result-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
   .result-head h2 { margin: 0; }
-  #reset { font-size: 0.85rem; padding: 0.3rem 0.7rem; }
+  #reset { font-size: 0.85rem; padding: 0.3rem 0.7rem; min-height: 1.75rem; }
   .turn { border-top: 1px solid var(--line); padding-top: 0.8rem; margin-top: 0.8rem; }
   .turn:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
   .turn .q { font-weight: 600; margin: 0 0 0.4rem; }

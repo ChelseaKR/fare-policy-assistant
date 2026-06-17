@@ -83,3 +83,15 @@ guess.
 Fare policy changes. Every answer carries the snapshot date of its sources,
 and the corpus manifest records fetch dates per document. Snapshots should be
 refreshed (and evals re-run) before any renewed use.
+
+## Accessibility
+
+The demo page targets WCAG 2.2 AA. A pure-Python structural gate
+(`web/a11y.py`) runs in CI on every change — page language, labeled controls,
+heading order, link text, zoom not disabled, 24px-minimum target size — and an
+advisory pa11y/axe pass cross-checks computed contrast and ARIA semantics. What
+neither can verify is the lived experience: a manual screen-reader and
+keyboard-only walkthrough is the human step the automation explicitly does not
+replace, and it should be done and recorded here before the demo is presented
+as production-ready. As of this writing the automated gates pass; the manual
+pass is pending.

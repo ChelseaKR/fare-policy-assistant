@@ -139,7 +139,7 @@ credibility move; do not cherry-pick.
 - Tune prompts/retrieval against eval failures only (no vibes-driven changes; every prompt
   change cites the failing cases it targets).
 - Spanish suite to parity. Remaining 40+ cases. Model card written.
-- Minimal accessible web UI (WCAG 2.1 AA, works on a phone) deployed behind a real URL with a
+- Minimal accessible web UI (WCAG 2.2 AA, works on a phone) deployed behind a real URL with a
   visible "reference implementation" banner and the will-not-do list.
 
 ### Phase 4 — Publication polish

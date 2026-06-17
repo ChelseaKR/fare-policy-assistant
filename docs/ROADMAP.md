@@ -147,11 +147,12 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
    place, especially for Spanish questions over English-only docs. Run the
    suite both ways, record the delta, and either enable it or document why not
    (extends ADR 0001). Done = the choice is evidence-backed, not deferred.
-5. **Wire the a11y audit, not just structure.** The page targets WCAG 2.1 AA by
-   construction but nothing checks it in CI. Render answer transcripts to HTML,
-   feed them to GovChat-Eval's a11y suite (`transcript_html`), and add an
-   advisory axe/pa11y pass. Done = an accessibility regression fails a check;
-   a manual screen-reader walkthrough is recorded in the model card.
+5. **Wire the a11y audit, not just structure.** *(Largely done.)* The page now
+   targets WCAG 2.2 AA, a pure-Python structural gate (`web/a11y.py`) runs in CI
+   and as `make a11y`, and an advisory pa11y/axe pass cross-checks contrast and
+   ARIA. Remaining: feed rendered transcripts to GovChat-Eval's a11y suite
+   (`transcript_html`) so the independent audit covers a11y too, and do and
+   record the manual screen-reader walkthrough (model card notes it pending).
 
 ## P3 — Breadth and scale
 

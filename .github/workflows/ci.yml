@@ -23,6 +23,22 @@ jobs:
         run: uv run mypy src web
       - name: Tests
         run: uv run pytest -q
+      - name: Accessibility (structural gate)
+        run: uv run python -m web.a11y
+
+  a11y-advisory:
+    # Advisory axe/pa11y pass over the served page — the cross-check the
+    # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
+    # Non-blocking: the structural gate in `checks` is the merge gate.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run pa11y on the static page (WCAG2AA)
+        run: npx --yes pa11y@8 --standard WCAG2AA --runner axe ./web/index.html
 
   smoke-evals:
     # 25-case smoke suite on every PR. AWS access comes from GitHub OIDC
