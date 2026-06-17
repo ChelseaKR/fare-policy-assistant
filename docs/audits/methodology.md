@@ -84,6 +84,14 @@ reproducible without credentials.
   are real golden facts), but the specific behavior this repo cares about —
   disclosing the snapshot date and declining to speculate about the future —
   is only fully exercised by this repo's own freshness suite.
+- **a11y** now runs: every item carries an accessible HTML transcript of its
+  turn (`govchat_export.render_transcript`), which GovChat-Eval's structural
+  checker verifies (declared language, heading order, no uncaptioned images or
+  controls, inline contrast). It is a transcript-structure check, complementary
+  to this repo's own `web/a11y.py` gate on the live page; neither replaces a
+  manual screen-reader pass.
+- **bias** stays omitted: this domain dataset declares no fairness segments,
+  and a selected-but-inapplicable suite fails closed.
 - **Accuracy overlap.** GovChat-Eval's accuracy suite is lexical
   fact-containment, close in spirit to this repo's `required_facts` check, so
   it is not a strongly independent signal. The independence lives in the

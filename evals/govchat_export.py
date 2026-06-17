@@ -89,6 +89,29 @@ def _literal_facts(required_facts: list[str], answer: str) -> list[str]:
     return facts
 
 
+def _esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def render_transcript(question: str, answer: str, source_labels: list[str], lang: str) -> str:
+    """An accessible HTML rendering of one Q&A turn for GovChat-Eval's a11y suite.
+
+    Declares language, uses a non-skipping heading order (h2 -> h3), plain text
+    and lists only — no images, controls, or inline colors — so the structural
+    checker has a clean transcript to verify.
+    """
+    body = answer.replace("[doc:", "[").replace("]", "]")
+    paras = "".join(f"<p>{_esc(p.strip())}</p>" for p in body.split("\n") if p.strip())
+    sources = ""
+    if source_labels:
+        items = "".join(f"<li>{_esc(s)}</li>" for s in source_labels)
+        sources = f"<h3>Sources</h3><ul>{items}</ul>"
+    return (
+        f'<section lang="{lang}"><h2>Rider question</h2><p>{_esc(question)}</p>'
+        f"<h3>Answer</h3>{paras}{sources}</section>"
+    )
+
+
 def _provenance(result) -> dict[str, str]:
     agency = result.citations[0].agency if result.citations else (
         result.passages[0].chunk.agency_full if result.passages else "fare-policy-assistant corpus"
@@ -119,6 +142,13 @@ def _item_for(case: dict, result) -> dict:
         # refuse_redirect is the only behavior that should refuse; answer and
         # partial should both produce an answer (over-refusal is a failure).
         "should_refuse": case["expected_behavior"] == "refuse_redirect",
+        # An accessible rendering of this turn for the a11y suite.
+        "transcript_html": render_transcript(
+            case["question"],
+            result.answer,
+            [f"{c.agency}: {c.title}" for c in result.citations],
+            lang,
+        ),
     }
 
     # Groundedness only for English answered cases: the deterministic judge is

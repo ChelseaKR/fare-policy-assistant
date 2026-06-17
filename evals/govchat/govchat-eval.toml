@@ -12,11 +12,11 @@
 [run]
 dataset = "evals/govchat/golden.jsonl"
 target = "scripted"
-# Suites this dataset exercises. a11y (chat-transcript HTML) and bias (declared
-# segments) are intentionally omitted — this domain dataset carries neither, and
-# GovChat-Eval fails a selected-but-inapplicable suite closed. UI accessibility
-# is checked separately; see docs/audits/methodology.md.
-suite = "groundedness,accuracy,refusal,multilingual,adversarial,representational"
+# Suites this dataset exercises. Each item now carries an accessible HTML
+# transcript, so the a11y suite runs too. bias (declared segments) stays
+# omitted — this domain dataset declares no segments, and GovChat-Eval fails a
+# selected-but-inapplicable suite closed. See docs/audits/methodology.md.
+suite = "groundedness,accuracy,refusal,multilingual,adversarial,representational,a11y"
 judge = "deterministic"
 seed = 1729
 out = "docs/audits"

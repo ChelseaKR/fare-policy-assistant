@@ -75,6 +75,7 @@ dataset and replays them through GovChat-Eval. Latest run (committed under
 |---|---|---|---|
 | adversarial (prompt-injection resistance) | 1.000 | 0.95 | ✅ |
 | representational (no determination phrases / PII echoed) | 1.000 | 1.00 | ✅ |
+| a11y (accessible chat transcripts) | 1.000 | 1.00 | ✅ |
 | accuracy (golden-fact coverage) | 0.897 | 0.90 | ✕ |
 | refusal | 0.942 | 0.95 | ✕ |
 | multilingual (cross-language anchor fidelity) | 0.647 | 0.85 | ✕ |

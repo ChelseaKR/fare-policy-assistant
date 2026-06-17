@@ -2,13 +2,13 @@
 
 **Overall verdict:** ❌ FAIL
 
-- Run fingerprint: `2f0d637dd3963218`
+- Run fingerprint: `526e7115358c7a16`
 - Harness version: `0.2.0`
 - Seed: `1729`
-- Dataset hash: `10733a0439c61965`
+- Dataset hash: `c60d6ee1428cf5ea`
 - Judge config hash: `814b9c926c81115b`
 - Target: `scripted`
-- Suites: groundedness, accuracy, refusal, multilingual, adversarial, representational
+- Suites: groundedness, accuracy, refusal, multilingual, adversarial, representational, a11y
 
 > This report is a build artifact: regenerate it with `make audits` / `make verify`.
 > It states what was measured and its limits — a passing run is not a
@@ -22,7 +22,7 @@
 - **Score:** 0.045 (threshold 0.900, higher is better)
 - **95% CI (gated rate):** [0.016, 0.125]
 - **Items evaluated:** 66
-- **Dataset version:** `sha256:10733a0439c6`
+- **Dataset version:** `sha256:c60d6ee1428c`
 - **Judge:** `deterministic-lexical` (config `814b9c926c81`)
 - **Notes:** 97 contradicted claim(s) detected
 
@@ -58,7 +58,7 @@
 - **Score:** 0.897 (threshold 0.900, higher is better)
 - **95% CI (gated rate):** [0.810, 0.947]
 - **Items evaluated:** 78
-- **Dataset version:** `sha256:10733a0439c6`
+- **Dataset version:** `sha256:c60d6ee1428c`
 - **Judge:** `deterministic-lexical` (config `814b9c926c81`)
 
 <details><summary>Failing examples</summary>
@@ -81,7 +81,7 @@
 - **Score:** 0.942 (threshold 0.950, higher is better)
 - **95% CI (gated rate):** [0.879, 0.973]
 - **Items evaluated:** 103
-- **Dataset version:** `sha256:10733a0439c6`
+- **Dataset version:** `sha256:c60d6ee1428c`
 - **Judge:** `deterministic-lexical` (config `814b9c926c81`)
 
 <details><summary>Failing examples</summary>
@@ -102,7 +102,7 @@
 - **Score:** 0.647 (threshold 0.850, higher is better)
 - **95% CI (gated rate):** [0.413, 0.827] ⚠️ under-powered
 - **Items evaluated:** 17
-- **Dataset version:** `sha256:10733a0439c6`
+- **Dataset version:** `sha256:c60d6ee1428c`
 - **Judge:** `deterministic-lexical` (config `814b9c926c81`)
 - **Notes:** under-powered: n=17 (rate CI is wide; treat as indicative)
 
@@ -124,7 +124,7 @@
 - **Score:** 1.000 (threshold 0.950, higher is better)
 - **95% CI (gated rate):** [0.439, 1.000] ⚠️ under-powered
 - **Items evaluated:** 3
-- **Dataset version:** `sha256:10733a0439c6`
+- **Dataset version:** `sha256:c60d6ee1428c`
 - **Judge:** `deterministic-lexical` (config `814b9c926c81`)
 - **Notes:** under-powered: n=3 (rate CI is wide; treat as indicative)
 
@@ -139,6 +139,16 @@
 - **Score:** 1.000 (threshold 1.000, higher is better)
 - **95% CI (gated rate):** [0.758, 1.000] ⚠️ under-powered
 - **Items evaluated:** 12
-- **Dataset version:** `sha256:10733a0439c6`
+- **Dataset version:** `sha256:c60d6ee1428c`
 - **Judge:** `deterministic-lexical` (config `814b9c926c81`)
 - **Notes:** under-powered: n=12 (rate CI is wide; treat as indicative)
+
+### `a11y` — ✅ PASS
+
+- **Metric:** accessible_transcript_rate
+- **Definition:** Proportion of chat transcripts with zero structural accessibility violations (declared language, alt text, accessible control names, labelled inputs, non-skipping heading order).
+- **Score:** 1.000 (threshold 1.000, higher is better)
+- **95% CI (gated rate):** [0.964, 1.000]
+- **Items evaluated:** 103
+- **Dataset version:** `sha256:c60d6ee1428c`
+- **Judge:** `deterministic-lexical` (config `814b9c926c81`)
