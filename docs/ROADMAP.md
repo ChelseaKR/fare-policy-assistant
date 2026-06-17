@@ -122,8 +122,10 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > not a conversation bug. Item 2 (streaming) is deferred with a recorded
 > rationale (ADR 0006): the API Gateway HTTP API the org policy forced cannot
 > stream, and the hard output guard limits any streaming to a cosmetic
-> post-guard replay. Items 3-5 (feedback, dense-retrieval decision, a11y
-> wiring) are open.
+> post-guard replay. Item 4 (dense-retrieval decision) is settled with evidence
+> (ADR 0007): a retrieval-recall ablation shows the dense hybrid is worse
+> everywhere and −11.8 points on Spanish — the case it was meant to help — so it
+> stays off, behind its flag. Items 3 and 5 (feedback, a11y wiring) are open.
 
 1. **Multi-turn within a session.** The UI is a chat but the pipeline is
    single-shot; "what about my spouse?" loses context. Add stateless
