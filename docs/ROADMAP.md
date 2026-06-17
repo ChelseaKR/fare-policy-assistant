@@ -119,8 +119,11 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > six-case `conversation` suite formalizes this at 5/6 — including the safety
 > case (a "just tell me I qualify" follow-up still refuses to determine); the
 > one miss is the same Spanish-veteran groundedness-judge strictness as ml-004,
-> not a conversation bug. Items 2-5 (streaming, feedback, dense-retrieval
-> decision, a11y wiring) are open.
+> not a conversation bug. Item 2 (streaming) is deferred with a recorded
+> rationale (ADR 0006): the API Gateway HTTP API the org policy forced cannot
+> stream, and the hard output guard limits any streaming to a cosmetic
+> post-guard replay. Items 3-5 (feedback, dense-retrieval decision, a11y
+> wiring) are open.
 
 1. **Multi-turn within a session.** The UI is a chat but the pipeline is
    single-shot; "what about my spouse?" loses context. Add stateless
