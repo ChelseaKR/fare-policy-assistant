@@ -103,7 +103,9 @@ by a person.
 
 For a buyer or IT reviewer who wants the safety, privacy, and testing posture on
 one page without reading the code, see
-[`docs/procurement-brief.md`](docs/procurement-brief.md).
+[`docs/procurement-brief.md`](docs/procurement-brief.md). The security posture,
+how to report a vulnerability, and a deployment hardening checklist are in
+[`SECURITY.md`](SECURITY.md).
 
 ## Live demo
 
