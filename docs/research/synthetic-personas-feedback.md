@@ -403,17 +403,31 @@ Executed this pass:
   before the scary 0.04 line so a screenshot cannot mislead (P20). Committing a
   live `--judge llm` audit run still needs Bedrock credentials.
 
+- **R0-5 done.** The six current eval failures are filed as tracked issues
+  (#1–#6) against the repo, each with its case id, the failing check, the root
+  cause, a proposed remediation, and the note that validation needs a live judge.
+
+Prepared but not live-validated (the environment has no Bedrock or Anthropic
+credentials, so no judge can run here):
+
+- **R0-1 (faithfulness fixes).** The answer and system prompts are updated to
+  stop the over-hedge that drives `conv-004`, `ground-026`, and `ml-010` (saying
+  "not specified" when a passage does specify), to attribute contacts only to the
+  program a passage supports (`conv-005`), to state an asked-for figure even when
+  a free option exists (`ground-026`), and to keep the "as of" line on partial
+  answers (`refuse-018`). System prompt v6 and answer_user v3 carry a loud
+  NOT-YET-LIVE-VALIDATED header. All offline gates pass (ruff, mypy, 109 tests,
+  clean offline eval run), which proves no plumbing or deterministic-safety
+  breakage, but the LLM-judge groundedness and helpfulness checks that these
+  cases actually fail on can only be confirmed by `make eval` (full, live) with a
+  green regression gate. Do that before merging the prompt change to main; the
+  ROADMAP records that a prior blind attempt at `ground-026` regressed other
+  cases and was reverted, so the live gate is the real acceptance test.
+
 Deliberately not executed here, with the reason:
 
-- **R0-1 (faithfulness fixes).** These are the highest-value items, but they are
-  prompt changes that can only be validated by re-running the live LLM judge, and
-  the ROADMAP records that a prior blind attempt at `ground-026` regressed other
-  cases and was reverted. Editing the prompt without a live eval would repeat that
-  mistake. Hold for an environment with Bedrock credentials.
 - **R1a-1 (manual screen-reader walkthrough).** Needs a human with NVDA or
   VoiceOver. Automation cannot stand in for it; that is the point of the item.
-- **R0-5 (file issues) and any PR.** Outward actions on the repo, left for an
-  explicit go-ahead.
 
 ## Remediations and expansions backlog
 
