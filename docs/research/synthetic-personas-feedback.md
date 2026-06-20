@@ -520,6 +520,20 @@ Dropped after checking the evidence (honest non-action):
   automation can write future entries on drift. Tests in `tests/test_corpus.py`
   and `tests/test_web.py`.
 
+### Seventh pass (2026-06-20): generalize behind a domain profile
+
+- **R3-3 done.** The transit-specific coupling is isolated in one object,
+  `DomainProfile` in `src/assistant/domain.py`: the scopes (agencies), the
+  aliases users type, the adjacent topics to redirect, and the fallback contact.
+  `config`, `retrieve`, and `guards` now read the active profile instead of
+  hardcoding those values, so the refactor is behavior-preserving (all 130 prior
+  tests still pass, the transit profile reproduces the old constants exactly) and
+  a new domain forks one file rather than editing the pipeline. The PII,
+  injection, and determination detectors stay out of the profile on purpose: they
+  are cross-domain safety, not domain content, and bind everywhere. A test builds
+  a housing-voucher profile and runs detection through it with no code change;
+  `docs/adapting.md` now centers on the profile as the thing to change.
+
 ### Full backlog disposition
 
 Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
@@ -552,7 +566,7 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R2-6 | Done (corpus version id, `/version` pin check, `diff_corpus`, seeded changelog) |
 | R3-1 | Partly doable: adversarial-faithfulness eval *cases* can be added (deterministic parts validate offline; judge parts need creds) |
 | R3-2 | Feature (cross-agency trip handling) |
-| R3-3 | Feature (isolate transit coupling; new-domain scaffold) |
+| R3-3 | Done (transit coupling isolated in a `DomainProfile`; new domain forks one file) |
 | R3-4 | Done (contributor scaffolding) |
 | R3-5 | Done (PDF text-layer ingest + OCR-fallback hook, ADR 0008) |
 

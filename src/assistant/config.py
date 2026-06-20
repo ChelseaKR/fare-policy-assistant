@@ -10,6 +10,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from assistant import domain
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CORPUS_DIR = REPO_ROOT / "corpus"
 MANIFEST_PATH = CORPUS_DIR / "manifest.yaml"
@@ -21,10 +23,13 @@ PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"
 
-KNOWN_AGENCIES = ("MST", "SBMTD", "Yolobus", "SacRT", "HTA")
+# Sourced from the active domain profile (src/assistant/domain.py) so the
+# transit-specific knobs live in one place; re-exported here for the call sites
+# that already import them from config.
+KNOWN_AGENCIES = domain.get_profile().scopes
 
 # Riders asking about agencies we do not cover get pointed here.
-STATEWIDE_TRANSIT_INFO = "https://511.org (Bay Area) or the agency's own website"
+STATEWIDE_TRANSIT_INFO = domain.get_profile().fallback_contact
 
 
 # Bedrock serves these models through cross-region inference profiles

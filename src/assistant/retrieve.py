@@ -14,28 +14,12 @@ from functools import lru_cache
 
 from rank_bm25 import BM25Okapi
 
-from assistant import config
+from assistant import config, domain
 from assistant.ingest import Chunk, load_chunks
 
-# Aliases riders actually use, mapped to manifest agency keys.
-AGENCY_ALIASES: dict[str, str] = {
-    "mst": "MST",
-    "monterey": "MST",
-    "monterey-salinas": "MST",
-    "salinas": "MST",
-    "sbmtd": "SBMTD",
-    "santa barbara": "SBMTD",
-    "mtd": "SBMTD",
-    "yolobus": "Yolobus",
-    "yolo": "Yolobus",
-    "sacrt": "SacRT",
-    "sacramento": "SacRT",
-    "hta": "HTA",
-    "humboldt": "HTA",
-    "eureka": "HTA",
-    "arcata": "HTA",
-    "redwood transit": "HTA",
-}
+# Aliases users actually type, mapped to scope keys. Sourced from the active
+# domain profile (src/assistant/domain.py).
+AGENCY_ALIASES: dict[str, str] = domain.get_profile().aliases
 
 
 @dataclass
@@ -44,11 +28,13 @@ class ScoredChunk:
     score: float
 
 
-def detect_agencies(question: str) -> list[str]:
-    """All known agencies named in the question, in order of first mention."""
+def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> list[str]:
+    """All known scopes named in the question, in order of first mention. The
+    alias map defaults to the active profile's but can be injected (a different
+    domain, or a test) without touching this logic."""
     q = question.lower()
     found: list[str] = []
-    for alias, agency in AGENCY_ALIASES.items():
+    for alias, agency in (aliases or AGENCY_ALIASES).items():
         if agency not in found and re.search(rf"\b{re.escape(alias)}\b", q):
             found.append(agency)
     return found
