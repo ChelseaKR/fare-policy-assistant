@@ -91,11 +91,26 @@ _EN_SYNONYMS: dict[str, str] = {
     "teen": "youth", "teenager": "youth",
 }
 
+# Stretch language: Tagalog, a high-demand California language that, unlike
+# Chinese, is space-delimited Latin script, so the existing tokenizer handles it
+# and only a fare-vocabulary lexicon is needed to bridge a Tagalog query to the
+# English-only corpus. This is the retrieval half of stretch-language support
+# (R2-3); answering *in* Tagalog and a parity suite need a live model and a
+# detect_language extension, and are tracked as live-gated work.
+_TL_EN_LEXICON: dict[str, str] = {
+    "pamasahe": "fare", "magkano": "how much cost price", "diskwento": "discount reduced",
+    "nakatatanda": "senior seniors", "matatanda": "seniors senior", "libre": "free",
+    "bata": "youth child children", "estudyante": "student students",
+    "beterano": "veteran veterans", "kapansanan": "disability disabled",
+    "buwanang": "monthly", "tiket": "ticket", "pasahero": "rider passenger",
+}
+
 
 def _expand_query(tokens: list[str]) -> list[str]:
     expanded = list(tokens)
     for tok in tokens:
         expanded.extend(_ES_EN_LEXICON.get(tok, "").split())
+        expanded.extend(_TL_EN_LEXICON.get(tok, "").split())
         expanded.extend(_EN_SYNONYMS.get(tok, "").split())
         # Poor man's plural folding, query side only.
         if tok.isalpha():

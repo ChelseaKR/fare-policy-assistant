@@ -534,6 +534,36 @@ Dropped after checking the evidence (honest non-action):
   a housing-voucher profile and runs detection through it with no code change;
   `docs/adapting.md` now centers on the profile as the thing to change.
 
+### Eighth pass (2026-06-20): the two model-gated features, scaffolded honestly
+
+Both remaining features need a live model for their core value. Rather than ship
+unvalidatable prompt edits, this pass ships and tests their deterministic halves
+and marks the generation halves as live-gated.
+
+- **R3-2 (cross-agency trips), retrieval half done.** Multi-agency retrieval
+  already returns a balanced split across the named agencies (the agency-quota
+  logic); a test now locks that. A `cross_agency` eval suite adds three
+  cross-agency targets (youth-free, senior-age, single-ride comparisons). No
+  prompt change ships: the existing prompt may already answer these, and a live
+  `make eval` decides whether a synthesis rule is needed. The suite is not in CI
+  smoke, and the regression baseline needs a refresh on the first live run that
+  includes it.
+- **R2-3 (stretch language), retrieval half done.** Tagalog was chosen over
+  Chinese because it is space-delimited Latin script, so the existing tokenizer
+  handles it and only a fare-vocabulary lexicon (`_TL_EN_LEXICON`) is needed to
+  bridge a Tagalog query to the English-only corpus. A test confirms a Tagalog
+  query for the MST discount retrieves the MST discount passage. Answering *in*
+  Tagalog, extending `detect_language` (with a safe refusal-message fallback),
+  and a parity suite need a live model and are tracked as live-gated; a stretch
+  suite was deliberately not added yet because the `language_match` check would
+  fail on a tangential reason (`detect_language` knows only en/es) until that
+  extension lands.
+
+This completes every backlog item that can be advanced without a live model or a
+person. What is left is genuinely gated: the prompt/answer-quality work (R0-1
+prepared, R1-2/4/6, R2-2, R0-4, and the generation halves of R3-2/R2-3) needs a
+live judge, and the accessibility walkthrough (R1a-1) needs a human.
+
 ### Full backlog disposition
 
 Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
@@ -560,12 +590,12 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R1a-3 | Folded into the walkthrough checklist; the JS-built reading treatment cannot be verified by the static gate, so it belongs to the manual pass |
 | R2-1 | Done (offline/printable fare reference at `/offline`, built from the corpus) |
 | R2-2 | Blocked: creds (staff answer mode is a prompt variant) |
-| R2-3 | Feature + creds (stretch language: corpus, prompts, suite) |
+| R2-3 | Scaffolded: Tagalog retrieval lexicon verified; answering in Tagalog + a parity suite are live-gated |
 | R2-4 | Done already (privacy-safe feedback exists in handler + UI; verified) |
 | R2-5 | Done (embeddable widget at `/embed`, frameable via configurable CSP) |
 | R2-6 | Done (corpus version id, `/version` pin check, `diff_corpus`, seeded changelog) |
 | R3-1 | Partly doable: adversarial-faithfulness eval *cases* can be added (deterministic parts validate offline; judge parts need creds) |
-| R3-2 | Feature (cross-agency trip handling) |
+| R3-2 | Scaffolded: multi-agency retrieval verified + cross-agency eval targets added; answer synthesis is live-gated |
 | R3-3 | Done (transit coupling isolated in a `DomainProfile`; new domain forks one file) |
 | R3-4 | Done (contributor scaffolding) |
 | R3-5 | Done (PDF text-layer ingest + OCR-fallback hook, ADR 0008) |

@@ -24,6 +24,14 @@ class TestAgencyDetection:
     def test_unknown_agency(self):
         assert detect_agency("How much is a senior fare on LA Metro?") is None
 
+    def test_tagalog_query_expansion(self):
+        # R2-3 retrieval half: a Tagalog fare query expands into the English
+        # vocabulary the corpus uses.
+        expanded = _expand_query(["magkano", "ang", "diskwento", "para", "nakatatanda"])
+        assert "discount" in expanded and "senior" in expanded
+        # Original tokens preserved.
+        assert "diskwento" in expanded
+
 
 class TestRetriever:
     def test_relevant_chunk_ranks_first(self, retriever):
@@ -37,3 +45,17 @@ class TestRetriever:
     def test_low_confidence_on_offtopic(self, retriever):
         results = retriever.search("weather forecast astronomy parliament")
         assert not retriever.confident(results)
+
+    def test_multi_agency_retrieval_surfaces_each(self, retriever):
+        # R3-2 retrieval half: a question naming two agencies retrieves passages
+        # from each, rather than letting one agency take every slot.
+        results = retriever.search("Compare senior fares on MST and Yolobus")
+        agencies = {sc.chunk.agency for sc in results}
+        assert {"MST", "Yolobus"} <= agencies
+
+    def test_tagalog_query_retrieves_the_right_passage(self, retriever):
+        # R2-3 retrieval half: a Tagalog query for the MST discount surfaces the
+        # MST discount passage, via the lexicon expansion (no model involved).
+        results = retriever.search("Magkano ang diskwento sa MST?")
+        assert results[0].chunk.agency == "MST"
+        assert results[0].chunk.chunk_id == "mst-fares#0"
