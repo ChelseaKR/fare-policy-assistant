@@ -114,6 +114,10 @@ discarded; nothing you type is stored. The serving path is one Lambda behind
 an HTTP API with layered cost guards (ADR 0004), deployed by
 `infra/deploy.sh`.
 
+For riders with no signal at the stop, `/offline` renders every agency's dated
+policy text on one printable page, built from the committed corpus with no model
+call (`make offline` writes it locally for inspection).
+
 ## Quick start
 
 Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are

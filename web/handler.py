@@ -36,6 +36,19 @@ MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
 MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+# Rendered once per container from the committed corpus; it changes only when the
+# corpus does, which means a new deploy.
+_OFFLINE_HTML: str | None = None
+
+
+def _offline_html() -> str:
+    global _OFFLINE_HTML
+    if _OFFLINE_HTML is None:
+        from assistant.ingest import load_chunks
+        from web.offline import render_offline_reference
+
+        _OFFLINE_HTML = render_offline_reference(load_chunks())
+    return _OFFLINE_HTML
 _RECENT: deque[float] = deque()
 # Per-container answer cache: identical questions return the recorded payload
 # without a model call, since the corpus is fixed and the model runs at
@@ -226,6 +239,8 @@ def handler(event: dict, context: object = None) -> dict:
 
     if path == "/" and method == "GET":
         return _response(200, _INDEX_HTML, "text/html; charset=utf-8")
+    if path == "/offline" and method == "GET":
+        return _response(200, _offline_html(), "text/html; charset=utf-8")
     if path in ("/api/ask", "/api/feedback"):
         if method != "POST":
             return _json(405, {"error": "Use POST."})

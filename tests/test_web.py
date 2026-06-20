@@ -69,6 +69,27 @@ class TestRouting:
         assert 'aria-pressed' in body
 
 
+class TestOfflineReference:
+    def test_offline_page_served(self):
+        resp = web_handler.handler(_event(method="GET", path="/offline"))
+        assert resp["statusCode"] == 200
+        assert "text/html" in resp["headers"]["content-type"]
+        body = resp["body"]
+        # Built from the committed corpus: every agency and the as-of framing.
+        for agency_full in ("Monterey-Salinas Transit", "Humboldt Transit Authority"):
+            assert agency_full in body
+        assert "published as of" in body
+        assert "Reference implementation" in body
+        # Citable sources are resolvable links, not internal doc ids.
+        assert "https://" in body and "[doc:" not in body
+
+    def test_offline_page_passes_structural_a11y(self):
+        from web.a11y import check_html
+
+        body = web_handler.handler(_event(method="GET", path="/offline"))["body"]
+        assert check_html(body) == []
+
+
 class TestValidation:
     def test_missing_body_400(self):
         resp = web_handler.handler(_event(body=None))

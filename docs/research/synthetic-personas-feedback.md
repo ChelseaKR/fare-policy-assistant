@@ -461,6 +461,20 @@ Dropped after checking the evidence (honest non-action):
   with ADR 0007, so changing it would be a vibes edit the project forbids. The
   fix is the prompt rule (shipped in v6) and the documented limitation.
 
+### Third pass (2026-06-20): first multi-session feature
+
+- **R2-1 done.** An offline, printable fare reference at `GET /offline`, rendered
+  once per container from the committed corpus with no model call and no network
+  (persona research F-11, P6/P1). It groups every agency's dated policy passages
+  on one page a rider can save or print before a trip, with the same reference-
+  implementation framing and resolvable source links as the chat page. Generator
+  in `web/offline.py` (`make offline` writes it for inspection), route in
+  `web/handler.py`, footer link from the demo, and the Lambda bundle now ships
+  it (`infra/deploy.sh`). Tested: the route serves, covers all five agencies, and
+  the generated HTML passes the same structural a11y gate as the chat page. Making
+  `web` a package (`web/__init__.py`) was needed so the intra-package import type-
+  checks under one module name.
+
 ### Full backlog disposition
 
 Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
@@ -485,7 +499,7 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R1a-1 | Scaffolded; Blocked: human (perform and record the walkthrough) |
 | R1a-2 | Done (live-region test) |
 | R1a-3 | Folded into the walkthrough checklist; the JS-built reading treatment cannot be verified by the static gate, so it belongs to the manual pass |
-| R2-1 | Feature (offline/printable fare card from corpus) |
+| R2-1 | Done (offline/printable fare reference at `/offline`, built from the corpus) |
 | R2-2 | Blocked: creds (staff answer mode is a prompt variant) |
 | R2-3 | Feature + creds (stretch language: corpus, prompts, suite) |
 | R2-4 | Done already (privacy-safe feedback exists in handler + UI; verified) |
