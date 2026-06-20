@@ -6,11 +6,22 @@ flags) because the eval report shows failures end to end.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from assistant import config, guards
 from assistant.models import Model, get_model
 from assistant.retrieve import Retriever, ScoredChunk, default_retriever
+
+# Citations render as clickable links in the browser. Corpus URLs are
+# operator-controlled and always https, but defend in depth at the point an
+# answer leaves the server: a non-http(s) scheme (javascript:, data:) would run
+# on click, so anything else is dropped to an empty href.
+_SAFE_URL = re.compile(r"^https?://", re.I)
+
+
+def _safe_url(url: str) -> str:
+    return url if _SAFE_URL.match(url) else ""
 
 
 @dataclass
@@ -208,7 +219,7 @@ def answer_question(
             doc_id=doc_id,
             agency=by_id[doc_id].agency,
             title=by_id[doc_id].doc_title,
-            url=by_id[doc_id].url,
+            url=_safe_url(by_id[doc_id].url),
             fetch_date=by_id[doc_id].fetch_date,
         )
         for doc_id in sorted(cited_ids)

@@ -130,9 +130,9 @@ at `/embed`:
 `/embed` is the only frameable route: it carries the reference-implementation
 notice and the will-not-do line, and is served same-origin so its `/api/ask`
 call stays under `connect-src 'self'`. The main page keeps `x-frame-options:
-DENY`. By default the widget allows any ancestor for the demo; set
-`FPA_EMBED_ANCESTORS` to a space-separated origin allowlist (the agency's own
-domains) in a real deployment.
+DENY`. By default the widget is frameable only same-origin (`frame-ancestors
+'self'`); set `FPA_EMBED_ANCESTORS` to a space-separated origin allowlist (the
+agency's own domains) to let those sites embed it.
 
 ## Quick start
 

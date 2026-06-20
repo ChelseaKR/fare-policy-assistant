@@ -1,6 +1,15 @@
 from assistant import config
-from assistant.answer import answer_question
+from assistant.answer import _safe_url, answer_question
 from assistant.models import Completion, MockModel
+
+
+def test_safe_url_drops_non_http_schemes():
+    # Defence in depth: a citation link href only ever carries http(s).
+    assert _safe_url("https://mst.org/fares/") == "https://mst.org/fares/"
+    assert _safe_url("http://example.org") == "http://example.org"
+    assert _safe_url("javascript:alert(1)") == ""
+    assert _safe_url("data:text/html,<script>") == ""
+    assert _safe_url("  https://x.test") == ""  # no leading junk allowed
 
 
 class ScriptedModel:

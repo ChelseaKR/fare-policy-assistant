@@ -30,6 +30,10 @@ from assistant.models import get_model  # noqa: E402
 from assistant.retrieve import default_retriever  # noqa: E402
 
 MAX_QUESTION_CHARS = 500
+# Reject oversized request bodies before json.loads parses them. A question (500
+# chars) plus three truncated history turns is a few KB; 16 KB is comfortable
+# headroom and well under the API Gateway 10 MB ceiling.
+MAX_BODY_BYTES = 16 * 1024
 REQUESTS_PER_MINUTE = 8  # per container; reserved concurrency bounds containers
 ANSWER_CACHE_SIZE = 256  # per container; answers are deterministic (temperature 0)
 MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
@@ -121,12 +125,13 @@ def _embed_response(body: str) -> dict:
     """The embed widget is the one route allowed to be framed. It drops the
     x-frame-options DENY of every other response and instead names allowed
     ancestors in CSP. The allowlist is read at call time from
-    FPA_EMBED_ANCESTORS (space-separated origins); it defaults to '*' for the
-    reference demo, and a real deployment should set it to the agency origins
-    that may embed the widget. Nothing else in the security posture changes: no
-    store, nosniff, no referrer, and the same default-src 'none' base.
+    FPA_EMBED_ANCESTORS (space-separated origins) and defaults to 'self', so out
+    of the box the widget is frameable only from this origin. A deployment that
+    wants agencies to embed it sets FPA_EMBED_ANCESTORS to their origins. Nothing
+    else in the security posture changes: no store, nosniff, no referrer, and the
+    same default-src 'none' base.
     """
-    ancestors = os.environ.get("FPA_EMBED_ANCESTORS", "*")
+    ancestors = os.environ.get("FPA_EMBED_ANCESTORS", "'self'")
     headers = {k: v for k, v in _SECURITY_HEADERS.items() if k != "x-frame-options"}
     headers["content-security-policy"] = (
         _SECURITY_HEADERS["content-security-policy"] + f"; frame-ancestors {ancestors}"
@@ -196,6 +201,8 @@ def _ask(event: dict) -> dict:
             import base64
 
             body = base64.b64decode(body).decode("utf-8")
+        if len(body) > MAX_BODY_BYTES:
+            return _json(413, {"error": "Request too large."})
         data = json.loads(body)
         question = data.get("question")
     except (ValueError, AttributeError):

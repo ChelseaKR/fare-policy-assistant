@@ -141,6 +141,11 @@ class TestEmbedWidget:
         assert main["x-frame-options"] == "DENY"
         assert "frame-ancestors" not in main["content-security-policy"]
 
+    def test_embed_defaults_to_same_origin_framing(self, monkeypatch):
+        monkeypatch.delenv("FPA_EMBED_ANCESTORS", raising=False)
+        csp = self._embed()["headers"]["content-security-policy"]
+        assert "frame-ancestors 'self'" in csp
+
     def test_embed_ancestor_allowlist_is_configurable(self, monkeypatch):
         monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov https://mst.org")
         csp = self._embed()["headers"]["content-security-policy"]
@@ -170,6 +175,12 @@ class TestValidation:
     def test_over_length_question_400(self):
         resp = _post("x" * (web_handler.MAX_QUESTION_CHARS + 1))
         assert resp["statusCode"] == 400
+
+    def test_oversized_body_rejected_before_parse_413(self):
+        event = _event()
+        event["body"] = "{" + "x" * (web_handler.MAX_BODY_BYTES + 1)
+        resp = web_handler.handler(event)
+        assert resp["statusCode"] == 413
 
 
 class TestAnswers:
