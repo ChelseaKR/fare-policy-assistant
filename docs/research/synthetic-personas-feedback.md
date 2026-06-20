@@ -475,6 +475,21 @@ Dropped after checking the evidence (honest non-action):
   `web` a package (`web/__init__.py`) was needed so the intra-package import type-
   checks under one module name.
 
+### Fourth pass (2026-06-20): PDF ingest
+
+- **R3-5 done.** Ingest can now read a PDF policy, closing CLAUDE.md open
+  question #3. A manifest document marked `format: pdf` (or a PDF content type on
+  fetch) is snapshotted as `.pdf` and processed through a text-first path:
+  `extract_pdf_text` reads the text layer with pypdf, `sections_from_text` infers
+  headings from flat text, and the same `_finalize_sections` tail as HTML shapes
+  the chunks so a PDF cites exactly like an HTML page. An OCR fallback for scanned
+  PDFs is wired behind `ocr: true` and the `ocr` extra but, honestly, not
+  exercised in CI (it needs tesseract and poppler system binaries). Optional `pdf`
+  extra keeps the core install light. ADR 0008 records the tradeoffs. Tests build
+  a minimal PDF by hand and round-trip it through extraction and sectioning, so
+  the only new test dependency is pypdf. No corpus document is PDF yet; wiring a
+  real agency PDF (for example MST's Courtesy Card form) is the follow-up.
+
 ### Full backlog disposition
 
 Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
@@ -509,7 +524,7 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R3-2 | Feature (cross-agency trip handling) |
 | R3-3 | Feature (isolate transit coupling; new-domain scaffold) |
 | R3-4 | Done (contributor scaffolding) |
-| R3-5 | Feature + ADR (PDF/OCR ingest) |
+| R3-5 | Done (PDF text-layer ingest + OCR-fallback hook, ADR 0008) |
 
 The honest summary: every item that is a document, a test, a safe UI affordance,
 or a code signal that can be validated offline is now done. What remains splits

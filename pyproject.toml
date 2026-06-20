@@ -19,6 +19,16 @@ dependencies = [
 dense = [
     "sentence-transformers>=3.0",
 ]
+# PDF policy ingest (ADR 0008). Text-layer extraction only; the OCR fallback
+# additionally needs the tesseract and poppler system binaries.
+pdf = [
+    "pypdf>=4.0",
+]
+ocr = [
+    "pypdf>=4.0",
+    "pytesseract>=0.3.10",
+    "pdf2image>=1.17",
+]
 
 [dependency-groups]
 dev = [
@@ -26,6 +36,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "types-pyyaml",
+    "pypdf>=4.0",
 ]
 
 [tool.ruff]
