@@ -505,6 +505,21 @@ Dropped after checking the evidence (honest non-action):
   and frame headers in `web/handler.py`, bundled by `infra/deploy.sh`, snippet in
   the README.
 
+### Sixth pass (2026-06-20): corpus version pinning
+
+- **R2-6 done.** The corpus now has a stable identity. `assistant.corpus`
+  computes a deterministic `corpus_version` (a short hash over chunk content and
+  fetch dates, order-independent), a `corpus_summary`, and a `diff_corpus` that
+  names added/removed/changed documents between two snapshots. The `/version`
+  endpoint reports the running corpus and, against `FPA_PINNED_CORPUS_VERSION`,
+  whether it matches the version an operator approved (a logged warning on
+  mismatch, not a block). The version rides on every `/api/ask` payload and the
+  offline page footer, and `corpus/CHANGELOG.md` is seeded with the current
+  version. Honest limit: the changelog has one entry because there is one
+  snapshot; `diff_corpus` is built and tested so the weekly corpus-freshness
+  automation can write future entries on drift. Tests in `tests/test_corpus.py`
+  and `tests/test_web.py`.
+
 ### Full backlog disposition
 
 Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
@@ -534,7 +549,7 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R2-3 | Feature + creds (stretch language: corpus, prompts, suite) |
 | R2-4 | Done already (privacy-safe feedback exists in handler + UI; verified) |
 | R2-5 | Done (embeddable widget at `/embed`, frameable via configurable CSP) |
-| R2-6 | Feature (corpus version pinning + fare-change changelog) |
+| R2-6 | Done (corpus version id, `/version` pin check, `diff_corpus`, seeded changelog) |
 | R3-1 | Partly doable: adversarial-faithfulness eval *cases* can be added (deterministic parts validate offline; judge parts need creds) |
 | R3-2 | Feature (cross-agency trip handling) |
 | R3-3 | Feature (isolate transit coupling; new-domain scaffold) |

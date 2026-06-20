@@ -185,6 +185,14 @@ Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`).
 
+The corpus has a stable version id, a deterministic hash of its chunk content
+and fetch dates (`uv run python -m assistant.corpus`). The `/version` endpoint
+reports it, and a deployment can approve a version in `corpus/CHANGELOG.md` and
+pin to it with `FPA_PINNED_CORPUS_VERSION`; `/version` then reports whether the
+running deploy matches. PDF policies are supported too (text-first, with an OCR
+fallback for scans; ADR 0008), so a fare program published as PDF is citable
+like an HTML page.
+
 ## Layout
 
 ```

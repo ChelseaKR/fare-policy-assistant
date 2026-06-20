@@ -90,6 +90,33 @@ class TestOfflineReference:
         assert check_html(body) == []
 
 
+class TestVersion:
+    def _version(self):
+        return web_handler.handler(_event(method="GET", path="/version"))
+
+    def test_version_reports_corpus_identity(self):
+        resp = self._version()
+        assert resp["statusCode"] == 200
+        data = json.loads(resp["body"])
+        assert len(data["corpus_version"]) == 12
+        assert data["as_of"]
+        assert set(data["agencies"]) >= {"MST", "Yolobus", "HTA"}
+        assert data["documents"] >= 5
+
+    def test_version_reports_pin_match(self, monkeypatch):
+        actual = json.loads(self._version()["body"])["corpus_version"]
+        monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", actual)
+        data = json.loads(self._version()["body"])
+        assert data["pinned"] == actual
+        assert data["matches_pin"] is True
+
+    def test_version_flags_pin_mismatch(self, monkeypatch, capsys):
+        monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", "deadbeefcafe")
+        data = json.loads(self._version()["body"])
+        assert data["matches_pin"] is False
+        assert "corpus_version_mismatch" in capsys.readouterr().out
+
+
 class TestEmbedWidget:
     def _embed(self):
         return web_handler.handler(_event(method="GET", path="/embed"))
@@ -156,6 +183,8 @@ class TestAnswers:
         assert {"agency", "title", "url", "fetch_date"} <= set(data["citations"][0])
         # Graded confidence signal for integrators/staff (persona research F-16).
         assert data["confidence"] in {"medium", "high"}
+        # The answer is tied to a corpus version (persona research R2-6).
+        assert len(data["corpus_version"]) == 12
 
     def test_pii_question_refused_and_never_echoed(self):
         resp = _post("My SSN is 123-45-6789, do I get the senior pass?")

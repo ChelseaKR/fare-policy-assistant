@@ -68,8 +68,11 @@ def _group_by_agency(chunks: list[Chunk]) -> dict[str, list[Chunk]]:
 
 
 def render_offline_reference(chunks: list[Chunk], as_of: str | None = None) -> str:
+    from assistant.corpus import corpus_version
+
     if as_of is None:
         as_of = max((c.fetch_date for c in chunks), default="")
+    version = corpus_version(chunks)
     by_agency = _group_by_agency(chunks)
 
     parts: list[str] = []
@@ -124,6 +127,7 @@ def render_offline_reference(chunks: list[Chunk], as_of: str | None = None) -> s
   <footer>
     <p>Based on policies published as of {_esc(as_of)}. Fare policy changes;
       confirm time-sensitive details with the agency.</p>
+    <p>Corpus version {_esc(version)}.</p>
     <p><a href="/">Back to the assistant</a></p>
   </footer>
 </main>

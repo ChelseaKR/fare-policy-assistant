@@ -49,6 +49,38 @@ def _offline_html() -> str:
 
         _OFFLINE_HTML = render_offline_reference(load_chunks())
     return _OFFLINE_HTML
+
+
+# Corpus identity, computed once per container.
+_CORPUS_SUMMARY: dict | None = None
+
+
+def _corpus_summary() -> dict:
+    global _CORPUS_SUMMARY
+    if _CORPUS_SUMMARY is None:
+        from assistant.corpus import corpus_summary
+
+        _CORPUS_SUMMARY = corpus_summary()
+    return _CORPUS_SUMMARY
+
+
+def _version_payload() -> dict:
+    """The corpus a deployment is actually serving, plus whether it matches the
+    version an operator approved (FPA_PINNED_CORPUS_VERSION). The mismatch is a
+    signal, not an error: the corpus is whatever was deployed, and this surfaces
+    when that differs from what was approved."""
+    summary = dict(_corpus_summary())
+    pinned = os.environ.get("FPA_PINNED_CORPUS_VERSION")
+    if pinned:
+        summary["pinned"] = pinned
+        summary["matches_pin"] = pinned == summary["corpus_version"]
+        if not summary["matches_pin"]:
+            print(json.dumps({
+                "warning": "corpus_version_mismatch",
+                "serving": summary["corpus_version"],
+                "pinned": pinned,
+            }))
+    return summary
 _RECENT: deque[float] = deque()
 # Per-container answer cache: identical questions return the recorded payload
 # without a model call, since the corpus is fixed and the model runs at
@@ -206,6 +238,9 @@ def _ask(event: dict) -> dict:
         # Operational confidence band for integrators and staff; never alters
         # the answer or the guards (persona research F-16).
         "confidence": result.confidence,
+        # The corpus snapshot this answer came from, so a client can tie an
+        # answer to an approved corpus version (persona research R2-6).
+        "corpus_version": _corpus_summary()["corpus_version"],
         "citations": [
             {"agency": c.agency, "title": c.title, "url": c.url, "fetch_date": c.fetch_date}
             for c in result.citations
@@ -266,6 +301,8 @@ def handler(event: dict, context: object = None) -> dict:
         from web.embed import EMBED_HTML
 
         return _embed_response(EMBED_HTML)
+    if path == "/version" and method == "GET":
+        return _json(200, _version_payload())
     if path in ("/api/ask", "/api/feedback"):
         if method != "POST":
             return _json(405, {"error": "Use POST."})
