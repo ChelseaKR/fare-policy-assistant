@@ -169,6 +169,9 @@ def _ask(event: dict) -> dict:
         "kind": result.kind,
         "language": guards.detect_language(result.answer),
         "as_of_date": result.as_of_date,
+        # Operational confidence band for integrators and staff; never alters
+        # the answer or the guards (persona research F-16).
+        "confidence": result.confidence,
         "citations": [
             {"agency": c.agency, "title": c.title, "url": c.url, "fetch_date": c.fetch_date}
             for c in result.citations

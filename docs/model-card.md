@@ -101,6 +101,8 @@ heading order, link text, zoom not disabled, 24px-minimum target size — and an
 advisory pa11y/axe pass cross-checks computed contrast and ARIA semantics. What
 neither can verify is the lived experience: a manual screen-reader and
 keyboard-only walkthrough is the human step the automation explicitly does not
-replace, and it should be done and recorded here before the demo is presented
-as production-ready. As of this writing the automated gates pass; the manual
-pass is pending.
+replace, and it should be done and recorded before the demo is presented
+as production-ready. The walkthrough checklist and its result log live in
+[docs/audits/a11y-walkthrough.md](audits/a11y-walkthrough.md). As of this writing
+the automated gates pass; the manual pass is pending (no result row recorded
+yet).

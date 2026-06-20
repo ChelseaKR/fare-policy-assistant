@@ -65,6 +65,11 @@ class RetrievalConfig:
     language_boost: float = 1.2
     # Below this top BM25 score the assistant declines rather than guessing.
     min_confidence: float = 4.0
+    # Operational confidence band for the answered path (not a tuned eval
+    # parameter): a top score at or above this reads as "high", between
+    # min_confidence and this as "medium". Surfaced to integrators and staff
+    # who want a graded signal, never used to gate or alter an answer.
+    confidence_high: float = 8.0
     use_dense: bool = os.environ.get("FPA_DENSE", "") == "1"
     dense_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     # Hybrid mixing weight when dense retrieval is enabled.

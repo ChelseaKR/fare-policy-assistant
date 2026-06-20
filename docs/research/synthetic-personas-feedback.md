@@ -429,6 +429,81 @@ Deliberately not executed here, with the reason:
 - **R1a-1 (manual screen-reader walkthrough).** Needs a human with NVDA or
   VoiceOver. Automation cannot stand in for it; that is the point of the item.
 
+### Second pass (2026-06-20)
+
+More verifiable, no-credentials items executed, each with a test or a committed
+artifact:
+
+- **R1-5 done.** A graded retrieval-confidence signal (`low` / `medium` / `high`
+  plus the top score) now rides on every `AnswerResult` and the API payload, the
+  signal staff and integrators asked for (F-16). It never changes the answer or
+  the guards. Tests in `tests/test_answer.py` and `tests/test_web.py`.
+- **R1a-2 done.** A test locks the polite live region that announces answers and
+  status (`tests/test_web.py::test_live_region_present_for_answer_status`); the
+  behavior already existed and is now regression-protected.
+- **R1a-1 scaffolded.** `docs/audits/a11y-walkthrough.md` is the manual
+  screen-reader and keyboard checklist with an empty result log, linked from the
+  README and the model card. The human pass itself still has to be performed and
+  recorded; the artifact is now ready for it.
+- **R0-3 done.** The README now states that the audit's a11y `1.000` is the
+  automated check, not a sign-off, and points to the pending manual walkthrough,
+  reconciling it with the model card.
+- **R3-4 done.** `CONTRIBUTING.md`, two issue templates (eval-failure and
+  bug/feature), and a PR template, all encoding the prompt-needs-live-eval
+  discipline and the hard rules.
+
+Dropped after checking the evidence (honest non-action):
+
+- **R1-3 (microtransit retrieval).** Not justified. In `ground-024` the BeeLine
+  passage was already retrieved top-ranked (the error was a generation misread of
+  the row), and in `ml-010` the rider never named BeeLine, so retrieving it is
+  not the fix. The evidence says retrieval is not the bottleneck here, consistent
+  with ADR 0007, so changing it would be a vibes edit the project forbids. The
+  fix is the prompt rule (shipped in v6) and the documented limitation.
+
+### Full backlog disposition
+
+Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
+needs a live answer/judge model (none in this environment). "Blocked: human"
+needs a person. "Feature" is a multi-session build left for a focused effort.
+
+| ID | Status |
+|---|---|
+| R0-1 | Prepared, pending live validation (prompts v6/v3; needs `make eval`) |
+| R0-2 | Done (README audit framing) |
+| R0-3 | Done (README ↔ model-card a11y reconciled) |
+| R0-4 | Blocked: creds. Growing the calibration sample needs live judge verdicts to label against; only the report-prose caveat is doable offline |
+| R0-5 | Done (issues #1–#6) |
+| R0-6 | Done (procurement brief) |
+| R1-1 | Done (UI already renders readable Sources; verified) |
+| R1-2 | Blocked: creds (close-the-loop prompting needs live validation); eval cases can be pre-written |
+| R1-3 | Dropped as unjustified (see above) |
+| R1-4 | Blocked: creds (positive-handoff prompt rule, partly in v6); eval case can be pre-written |
+| R1-5 | Done (confidence signal) |
+| R1-6 | Blocked: creds (two-ways-to-qualify template, partly in v6) |
+| R1-7 | Done (text-size + contrast controls) |
+| R1a-1 | Scaffolded; Blocked: human (perform and record the walkthrough) |
+| R1a-2 | Done (live-region test) |
+| R1a-3 | Folded into the walkthrough checklist; the JS-built reading treatment cannot be verified by the static gate, so it belongs to the manual pass |
+| R2-1 | Feature (offline/printable fare card from corpus) |
+| R2-2 | Blocked: creds (staff answer mode is a prompt variant) |
+| R2-3 | Feature + creds (stretch language: corpus, prompts, suite) |
+| R2-4 | Done already (privacy-safe feedback exists in handler + UI; verified) |
+| R2-5 | Feature (embeddable themed widget) |
+| R2-6 | Feature (corpus version pinning + fare-change changelog) |
+| R3-1 | Partly doable: adversarial-faithfulness eval *cases* can be added (deterministic parts validate offline; judge parts need creds) |
+| R3-2 | Feature (cross-agency trip handling) |
+| R3-3 | Feature (isolate transit coupling; new-domain scaffold) |
+| R3-4 | Done (contributor scaffolding) |
+| R3-5 | Feature + ADR (PDF/OCR ingest) |
+
+The honest summary: every item that is a document, a test, a safe UI affordance,
+or a code signal that can be validated offline is now done. What remains splits
+into three piles, none of which a single offline pass can legitimately close:
+prompt and answer-quality work that needs a live judge (R0-1, R1-2, R1-4, R1-6,
+R2-2, R0-4), the human accessibility walkthrough (R1a-1), and multi-session
+features (R2-1, R2-3, R2-5, R2-6, R3-2, R3-3, R3-5).
+
 ## Remediations and expansions backlog
 
 Grouped by theme, each with the findings it answers, a rough effort (S/M/L), the

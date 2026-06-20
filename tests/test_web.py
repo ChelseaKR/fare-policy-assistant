@@ -52,6 +52,13 @@ class TestRouting:
         assert resp["headers"]["x-frame-options"] == "DENY"
         assert "content-security-policy" in resp["headers"]
 
+    def test_live_region_present_for_answer_status(self):
+        # New answers and status are announced through a polite live region
+        # (persona research F-8); lock it so a refactor cannot drop it.
+        body = web_handler.handler(_event(method="GET", path="/"))["body"]
+        assert 'role="status"' in body
+        assert 'aria-live="polite"' in body
+
     def test_display_settings_controls_present(self):
         # Text-size and high-contrast controls for low-vision and older riders
         # (persona research F-2). They are labeled and toggle via aria-pressed.
@@ -91,6 +98,8 @@ class TestAnswers:
         assert data["as_of_date"]
         assert data["citations"], "an answered response must cite sources"
         assert {"agency", "title", "url", "fetch_date"} <= set(data["citations"][0])
+        # Graded confidence signal for integrators/staff (persona research F-16).
+        assert data["confidence"] in {"medium", "high"}
 
     def test_pii_question_refused_and_never_echoed(self):
         resp = _post("My SSN is 123-45-6789, do I get the senior pass?")

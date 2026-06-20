@@ -94,6 +94,13 @@ and prompt-injection checks. The method, the suite mapping, and the
 `--judge llm` path for real signal are in
 [`docs/audits/methodology.md`](docs/audits/methodology.md).
 
+The accessibility score above is the automated transcript and structural check.
+It is not a sign-off on the lived experience: a manual screen-reader and
+keyboard walkthrough is still pending, tracked in
+[`docs/audits/a11y-walkthrough.md`](docs/audits/a11y-walkthrough.md) and noted in
+the model card. Treat the demo as accessibility-reviewed by automation, not yet
+by a person.
+
 For a buyer or IT reviewer who wants the safety, privacy, and testing posture on
 one page without reading the code, see
 [`docs/procurement-brief.md`](docs/procurement-brief.md).

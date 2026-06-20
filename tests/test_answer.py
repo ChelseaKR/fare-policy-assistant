@@ -32,6 +32,31 @@ class TestAnswerPipeline:
         assert result.citations[0].url.startswith("https://")
         assert result.as_of_date == "2026-06-12"
 
+    def test_answered_response_reports_confidence_band(self, retriever):
+        result = answer_question(
+            "Do youth ride free on Yolobus?",
+            model=MockModel(),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.confidence in {"medium", "high"}
+        assert result.retrieval_score > 0
+
+    def test_unsupported_question_reports_low_confidence(self, chunks):
+        # A retriever that declines anything below a high bar: the band on a
+        # declined answer is "low".
+        from assistant.retrieve import Retriever
+
+        strict = Retriever(chunks, config.RetrievalConfig(top_k=3, min_confidence=50.0))
+        result = answer_question(
+            "Do youth ride free on Yolobus?",
+            model=MockModel(),
+            retriever=strict,
+            cfg=_cfg(),
+        )
+        assert result.kind == "refused_no_support"
+        assert result.confidence == "low"
+
     def test_pii_refused_before_retrieval(self, retriever):
         result = answer_question(
             "My SSN is 123-45-6789, what's my fare?",
