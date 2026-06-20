@@ -69,7 +69,10 @@ project was built end to end first, and those are the generalization of its
 
 `make audit` records the deployed pipeline's answers into a content-hashed
 dataset and replays them through GovChat-Eval. Latest run (committed under
-[`docs/audits/`](docs/audits/eval-report.md)):
+[`docs/audits/`](docs/audits/eval-report.md)). Read the table with the note
+directly beneath it: the two low scores are the floor of a deterministic lexical
+judge, not fabrication, and the explanation is part of the result, not an excuse
+for it.
 
 | Suite | Score | Threshold | |
 |---|---|---|---|
@@ -90,6 +93,10 @@ held to a lexical proxy. The other five suites pass, including the accessibility
 and prompt-injection checks. The method, the suite mapping, and the
 `--judge llm` path for real signal are in
 [`docs/audits/methodology.md`](docs/audits/methodology.md).
+
+For a buyer or IT reviewer who wants the safety, privacy, and testing posture on
+one page without reading the code, see
+[`docs/procurement-brief.md`](docs/procurement-brief.md).
 
 ## Live demo
 

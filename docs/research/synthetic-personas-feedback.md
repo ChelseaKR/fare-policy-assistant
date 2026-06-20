@@ -375,6 +375,46 @@ Four themes recur across constituencies and matter more than any single finding.
    independent second layer is exactly what buyers (P14) want, but the unframed
    0.04 line is a journalist's (P20) gift. Framing, not new engineering, fixes it.
 
+## Execution log (2026-06-20)
+
+A first execution pass against this backlog, with the honesty the project asks
+for: some findings turned out to be already satisfied once the code was read,
+and those are recorded as such rather than "fixed" twice.
+
+Verified already built (the synthetic finding was inaccurate about current state):
+
+- **F-18 (readable citations).** The rider UI already strips inline `[doc:id]`
+  tags and renders a "Sources" list of agency, title, and resolvable URL
+  (`web/index.html`). No work needed; R1-1's UI half is done.
+- **F-8 (focus on new answers).** The page already moves focus to each new turn
+  and announces status through an `aria-live` region (`web/index.html`). The
+  remaining gap is the human screen-reader walkthrough, not the code.
+
+Executed this pass:
+
+- **R0-6 done.** Added [`docs/procurement-brief.md`](../procurement-brief.md),
+  the one-page buyer artifact P14 and P12 asked for, linked from the README.
+- **R1-7 done.** Added reader text-size (A / A+ / A++) and high-contrast controls
+  to the demo for P1 and P4, persisted per browser, with a test
+  (`tests/test_web.py::test_display_settings_controls_present`). The structural
+  a11y gate still passes; high-contrast only deepens contrast so it cannot
+  regress the AA baseline.
+- **R0-2 done (framing half).** The README now frames the GovChat-Eval table
+  before the scary 0.04 line so a screenshot cannot mislead (P20). Committing a
+  live `--judge llm` audit run still needs Bedrock credentials.
+
+Deliberately not executed here, with the reason:
+
+- **R0-1 (faithfulness fixes).** These are the highest-value items, but they are
+  prompt changes that can only be validated by re-running the live LLM judge, and
+  the ROADMAP records that a prior blind attempt at `ground-026` regressed other
+  cases and was reverted. Editing the prompt without a live eval would repeat that
+  mistake. Hold for an environment with Bedrock credentials.
+- **R1a-1 (manual screen-reader walkthrough).** Needs a human with NVDA or
+  VoiceOver. Automation cannot stand in for it; that is the point of the item.
+- **R0-5 (file issues) and any PR.** Outward actions on the repo, left for an
+  explicit go-ahead.
+
 ## Remediations and expansions backlog
 
 Grouped by theme, each with the findings it answers, a rough effort (S/M/L), the

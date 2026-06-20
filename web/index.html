@@ -90,6 +90,41 @@
   .feedback { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--muted); margin-top: 0.6rem; }
   .feedback button { font-size: 0.85rem; padding: 0.3rem 0.8rem; min-height: 1.75rem; }
   .error { color: #991b1b; }
+  .display-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .display-settings .group { display: flex; gap: 0.3rem; align-items: center; }
+  .display-settings button {
+    font-size: 0.9rem;
+    padding: 0.3rem 0.7rem;
+    min-height: 1.75rem;
+  }
+  .display-settings button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  /* Reader-set text scale. The whole page is rem/em based, so raising the root
+     size scales type, spacing, and targets together. Persisted per browser. */
+  html.tsize-large { font-size: 112.5%; }
+  html.tsize-xlarge { font-size: 125%; }
+  /* High-contrast mode only deepens existing colours; it never lowers contrast,
+     so it cannot regress the AA baseline the default theme already meets. */
+  body.contrast {
+    --ink: #000000;
+    --muted: #2b3036;
+    --paper: #ffffff;
+    --card: #ffffff;
+    --line: #5a5a5a;
+    --accent: #0b3d20;
+  }
+  body.contrast footer a, body.contrast .sources a { color: #0b3d91; }
   footer {
     border-top: 1px solid var(--line);
     margin-top: 2rem;
@@ -119,6 +154,16 @@
     and Humboldt Transit.
     Based on policies published as of June 12, 2026. You can ask in English or Spanish.
   </p>
+
+  <div class="display-settings" role="region" aria-label="Display settings">
+    <span class="group" role="group" aria-label="Text size">
+      <span id="tsize-label">Text size</span>
+      <button type="button" id="tsize-normal" aria-describedby="tsize-label" aria-pressed="true">A</button>
+      <button type="button" id="tsize-large" aria-describedby="tsize-label" aria-pressed="false">A+</button>
+      <button type="button" id="tsize-xlarge" aria-describedby="tsize-label" aria-pressed="false">A++</button>
+    </span>
+    <button type="button" id="contrast" aria-pressed="false">High contrast</button>
+  </div>
 
   <section class="card" aria-labelledby="wnd">
     <h2 id="wnd">What it will not do</h2>
@@ -190,6 +235,47 @@
       input.focus();
     });
   });
+
+  // Reader display settings: text size and high contrast. Stored only as a
+  // local preference in this browser; nothing is sent to the server.
+  var store;
+  try { store = window.localStorage; } catch (e) { store = null; }
+  function pref(key, value) {
+    if (!store) { return null; }
+    try {
+      if (value === undefined) { return store.getItem(key); }
+      store.setItem(key, value);
+    } catch (e) { /* private mode: settings still apply for this page load */ }
+    return value;
+  }
+
+  var SIZES = ["normal", "large", "xlarge"];
+  function applyTextSize(size) {
+    SIZES.forEach(function (s) {
+      document.documentElement.classList.toggle("tsize-" + s, s === size && s !== "normal");
+      var b = document.getElementById("tsize-" + s);
+      if (b) { b.setAttribute("aria-pressed", String(s === size)); }
+    });
+  }
+  SIZES.forEach(function (s) {
+    var b = document.getElementById("tsize-" + s);
+    if (b) { b.addEventListener("click", function () { applyTextSize(pref("fpa-tsize", s)); }); }
+  });
+  applyTextSize(pref("fpa-tsize") || "normal");
+
+  function applyContrast(on) {
+    document.body.classList.toggle("contrast", on);
+    var b = document.getElementById("contrast");
+    if (b) { b.setAttribute("aria-pressed", String(on)); }
+  }
+  var contrastBtn = document.getElementById("contrast");
+  if (contrastBtn) {
+    contrastBtn.addEventListener("click", function () {
+      var on = document.body.classList.contains("contrast") ? "" : "on";
+      applyContrast(pref("fpa-contrast", on) === "on");
+    });
+  }
+  applyContrast(pref("fpa-contrast") === "on");
 
   reset.addEventListener("click", function () {
     conversation = [];

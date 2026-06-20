@@ -52,6 +52,15 @@ class TestRouting:
         assert resp["headers"]["x-frame-options"] == "DENY"
         assert "content-security-policy" in resp["headers"]
 
+    def test_display_settings_controls_present(self):
+        # Text-size and high-contrast controls for low-vision and older riders
+        # (persona research F-2). They are labeled and toggle via aria-pressed.
+        body = web_handler.handler(_event(method="GET", path="/"))["body"]
+        assert 'aria-label="Display settings"' in body
+        for control_id in ("tsize-normal", "tsize-large", "tsize-xlarge", "contrast"):
+            assert f'id="{control_id}"' in body
+        assert 'aria-pressed' in body
+
 
 class TestValidation:
     def test_missing_body_400(self):
