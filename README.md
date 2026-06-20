@@ -118,6 +118,22 @@ For riders with no signal at the stop, `/offline` renders every agency's dated
 policy text on one printable page, built from the committed corpus with no model
 call (`make offline` writes it locally for inspection).
 
+An agency can embed the assistant in its own fare page with one iframe pointing
+at `/embed`:
+
+```html
+<iframe src="https://<demo-host>/embed" title="Transit fare policy assistant"
+        width="100%" height="520"
+        style="border:1px solid #d6d3cb;border-radius:8px"></iframe>
+```
+
+`/embed` is the only frameable route: it carries the reference-implementation
+notice and the will-not-do line, and is served same-origin so its `/api/ask`
+call stays under `connect-src 'self'`. The main page keeps `x-frame-options:
+DENY`. By default the widget allows any ancestor for the demo; set
+`FPA_EMBED_ANCESTORS` to a space-separated origin allowlist (the agency's own
+domains) in a real deployment.
+
 ## Quick start
 
 Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are

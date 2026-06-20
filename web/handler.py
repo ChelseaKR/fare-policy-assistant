@@ -85,6 +85,27 @@ _SECURITY_HEADERS = {
 }
 
 
+def _embed_response(body: str) -> dict:
+    """The embed widget is the one route allowed to be framed. It drops the
+    x-frame-options DENY of every other response and instead names allowed
+    ancestors in CSP. The allowlist is read at call time from
+    FPA_EMBED_ANCESTORS (space-separated origins); it defaults to '*' for the
+    reference demo, and a real deployment should set it to the agency origins
+    that may embed the widget. Nothing else in the security posture changes: no
+    store, nosniff, no referrer, and the same default-src 'none' base.
+    """
+    ancestors = os.environ.get("FPA_EMBED_ANCESTORS", "*")
+    headers = {k: v for k, v in _SECURITY_HEADERS.items() if k != "x-frame-options"}
+    headers["content-security-policy"] = (
+        _SECURITY_HEADERS["content-security-policy"] + f"; frame-ancestors {ancestors}"
+    )
+    return {
+        "statusCode": 200,
+        "headers": {"content-type": "text/html; charset=utf-8", **headers},
+        "body": body,
+    }
+
+
 def _make_cfg() -> config.Config:
     """Read the provider at call time so tests can run the handler offline."""
     provider = os.environ.get("FPA_PROVIDER", "bedrock")
@@ -241,6 +262,10 @@ def handler(event: dict, context: object = None) -> dict:
         return _response(200, _INDEX_HTML, "text/html; charset=utf-8")
     if path == "/offline" and method == "GET":
         return _response(200, _offline_html(), "text/html; charset=utf-8")
+    if path == "/embed" and method == "GET":
+        from web.embed import EMBED_HTML
+
+        return _embed_response(EMBED_HTML)
     if path in ("/api/ask", "/api/feedback"):
         if method != "POST":
             return _json(405, {"error": "Use POST."})

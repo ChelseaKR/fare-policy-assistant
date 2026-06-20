@@ -90,6 +90,41 @@ class TestOfflineReference:
         assert check_html(body) == []
 
 
+class TestEmbedWidget:
+    def _embed(self):
+        return web_handler.handler(_event(method="GET", path="/embed"))
+
+    def test_embed_served(self):
+        resp = self._embed()
+        assert resp["statusCode"] == 200
+        assert "text/html" in resp["headers"]["content-type"]
+        body = resp["body"]
+        assert "embedded widget" in body
+        # The limits travel with the embed.
+        assert "does not decide your eligibility" in body
+        assert "Reference implementation" in body
+
+    def test_embed_is_frameable_main_page_is_not(self):
+        embed = self._embed()["headers"]
+        # The embed route drops the DENY and names ancestors in CSP instead.
+        assert "x-frame-options" not in {k.lower() for k in embed}
+        assert "frame-ancestors" in embed["content-security-policy"]
+        # The main page is still not frameable: embedding did not loosen it.
+        main = web_handler.handler(_event(method="GET", path="/"))["headers"]
+        assert main["x-frame-options"] == "DENY"
+        assert "frame-ancestors" not in main["content-security-policy"]
+
+    def test_embed_ancestor_allowlist_is_configurable(self, monkeypatch):
+        monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov https://mst.org")
+        csp = self._embed()["headers"]["content-security-policy"]
+        assert "frame-ancestors https://sbmtd.gov https://mst.org" in csp
+
+    def test_embed_passes_structural_a11y(self):
+        from web.a11y import check_html
+
+        assert check_html(self._embed()["body"]) == []
+
+
 class TestValidation:
     def test_missing_body_400(self):
         resp = web_handler.handler(_event(body=None))

@@ -490,6 +490,21 @@ Dropped after checking the evidence (honest non-action):
   the only new test dependency is pypdf. No corpus document is PDF yet; wiring a
   real agency PDF (for example MST's Courtesy Card form) is the follow-up.
 
+### Fifth pass (2026-06-20): embeddable widget
+
+- **R2-5 done.** A compact, frameable widget at `GET /embed` an agency can drop
+  into its own fare page with one iframe (persona P12, the comms manager). It is
+  the only frameable route: it drops the `x-frame-options: DENY` every other
+  response carries and instead names allowed ancestors in CSP `frame-ancestors`,
+  read at call time from `FPA_EMBED_ANCESTORS` (default `*` for the demo, an
+  origin allowlist in production). The main page stays `DENY`, tested so embedding
+  did not loosen it. The widget is served same-origin, so its `/api/ask` call
+  stays under `connect-src 'self'`; it carries the reference-implementation notice
+  and the does-not-decide-eligibility line so the limits travel with the embed;
+  and it passes the same structural a11y gate. Generator in `web/embed.py`, route
+  and frame headers in `web/handler.py`, bundled by `infra/deploy.sh`, snippet in
+  the README.
+
 ### Full backlog disposition
 
 Every backlog id below, so nothing is silently dropped. "Blocked: creds" means it
@@ -518,7 +533,7 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R2-2 | Blocked: creds (staff answer mode is a prompt variant) |
 | R2-3 | Feature + creds (stretch language: corpus, prompts, suite) |
 | R2-4 | Done already (privacy-safe feedback exists in handler + UI; verified) |
-| R2-5 | Feature (embeddable themed widget) |
+| R2-5 | Done (embeddable widget at `/embed`, frameable via configurable CSP) |
 | R2-6 | Feature (corpus version pinning + fare-change changelog) |
 | R3-1 | Partly doable: adversarial-faithfulness eval *cases* can be added (deterministic parts validate offline; judge parts need creds) |
 | R3-2 | Feature (cross-agency trip handling) |
