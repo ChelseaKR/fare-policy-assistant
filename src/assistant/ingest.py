@@ -83,7 +83,14 @@ def fetch_all(only: set[str] | None = None) -> None:
                 failures.append((doc["id"], str(exc)))
                 print(f"FAIL  {doc['id']}: {exc}", file=sys.stderr)
                 continue
-            raw_path = config.RAW_DIR / f"{doc['id']}.html"
+            # Trust an explicit manifest `format: pdf`, or sniff the response
+            # content type, so a PDF policy is snapshotted as .pdf and the
+            # processor reads it through the PDF path (ADR 0008).
+            is_pdf = (
+                doc.get("format") == "pdf"
+                or "application/pdf" in resp.headers.get("content-type", "").lower()
+            )
+            raw_path = config.RAW_DIR / f"{doc['id']}.{'pdf' if is_pdf else 'html'}"
             raw_path.write_bytes(resp.content)
             meta = {
                 "doc_id": doc["id"],
@@ -91,6 +98,7 @@ def fetch_all(only: set[str] | None = None) -> None:
                 "final_url": str(resp.url),
                 "fetch_date": datetime.now(UTC).date().isoformat(),
                 "http_status": resp.status_code,
+                "format": "pdf" if is_pdf else "html",
                 "sha256": hashlib.sha256(resp.content).hexdigest(),
                 "bytes": len(resp.content),
             }
@@ -186,6 +194,13 @@ def sections_from_html(html: str) -> list[tuple[str, str]]:
             if text:
                 sections[-1][1].append(text)
 
+    return _finalize_sections(sections)
+
+
+def _finalize_sections(sections: list[tuple[str, list[str]]]) -> list[tuple[str, str]]:
+    """Shared tail for HTML and PDF section extraction: drop boilerplate, dedupe
+    repeated lines, normalize transposed tables, and fold tiny fragments into the
+    preceding section so every chunk carries enough tokens to be retrieved."""
     out: list[tuple[str, str]] = []
     for heading, parts in sections:
         if _BOILERPLATE_HEADINGS.search(heading):
@@ -212,19 +227,98 @@ def sections_from_html(html: str) -> list[tuple[str, str]]:
     return out
 
 
+# ── PDF ingest (optional; see docs/decisions/0008) ───────────────────────────
+
+# A heading line in extracted PDF text: short, starts with a capital or digit,
+# not a sentence (no terminal punctuation), a phrase not a paragraph.
+_PDF_HEADING = re.compile(r"^[A-Z0-9].{0,78}$")
+
+
+def _looks_like_heading(line: str) -> bool:
+    if not (2 <= len(line) <= 80) or line[-1] in ".!?,:;":
+        return False
+    return bool(_PDF_HEADING.match(line)) and len(line.split()) <= 9
+
+
+def sections_from_text(text: str) -> list[tuple[str, str]]:
+    """Split flat PDF-extracted text into (heading, body) sections.
+
+    A PDF has no heading tags, so headings are inferred: a short, capitalized,
+    sentence-less line starts a new section; everything else is body. Falls back
+    to a single "(document start)" section when no headings are found. The shared
+    finalize step then dedupes, normalizes tables, and merges tiny fragments, so a
+    PDF chunk is shaped like an HTML one and cites the same way.
+    """
+    sections: list[tuple[str, list[str]]] = [("(document start)", [])]
+    for raw in text.splitlines():
+        line = re.sub(r"\s+", " ", raw).strip()
+        if not line:
+            continue
+        if _looks_like_heading(line):
+            sections.append((line, []))
+        else:
+            sections[-1][1].append(line)
+    return _finalize_sections(sections)
+
+
+def extract_pdf_text(data: bytes, *, ocr: bool = False) -> str:
+    """Extract text from a PDF.
+
+    Default path reads the embedded text layer with pypdf (pure Python, no system
+    binaries). `ocr=True` rasterizes and runs OCR for scanned PDFs that carry no
+    text layer; that path needs the optional OCR extras and the tesseract and
+    poppler system binaries, so it is not exercised in CI. See ADR 0008 for the
+    tradeoffs and when each path applies.
+    """
+    if ocr:
+        return _ocr_pdf_text(data)
+    try:
+        from pypdf import PdfReader
+    except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+        raise ModuleNotFoundError(
+            "PDF ingest needs the 'pdf' extra: `uv pip install '.[pdf]'`."
+        ) from exc
+    import io
+
+    reader = PdfReader(io.BytesIO(data))
+    pages = [(page.extract_text() or "").strip() for page in reader.pages]
+    return "\n\n".join(p for p in pages if p)
+
+
+def _ocr_pdf_text(data: bytes) -> str:  # pragma: no cover - needs system binaries
+    try:
+        import pytesseract
+        from pdf2image import convert_from_bytes
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "OCR fallback needs the 'ocr' extra (pytesseract, pdf2image) plus the "
+            "tesseract and poppler system binaries. See docs/decisions/0008."
+        ) from exc
+    pages = convert_from_bytes(data)
+    return "\n\n".join(pytesseract.image_to_string(img).strip() for img in pages)
+
+
 def process_all() -> None:
     manifest = load_manifest()
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     all_chunks: list[Chunk] = []
 
     for doc in manifest["documents"]:
-        raw_path = config.RAW_DIR / f"{doc['id']}.html"
+        fmt = doc.get("format", "html")
+        raw_path = config.RAW_DIR / f"{doc['id']}.{'pdf' if fmt == 'pdf' else 'html'}"
         meta_path = config.RAW_DIR / f"{doc['id']}.meta.yaml"
         if not raw_path.exists():
             print(f"skip  {doc['id']} (no snapshot; run `make fetch`)", file=sys.stderr)
             continue
         meta = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
-        sections = sections_from_html(raw_path.read_text(encoding="utf-8", errors="replace"))
+        if fmt == "pdf":
+            sections = sections_from_text(
+                extract_pdf_text(raw_path.read_bytes(), ocr=doc.get("ocr", False))
+            )
+        else:
+            sections = sections_from_html(
+                raw_path.read_text(encoding="utf-8", errors="replace")
+            )
 
         md_lines = [
             f"# {doc['title']} — {doc['agency']}",

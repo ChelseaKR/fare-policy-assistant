@@ -69,7 +69,10 @@ project was built end to end first, and those are the generalization of its
 
 `make audit` records the deployed pipeline's answers into a content-hashed
 dataset and replays them through GovChat-Eval. Latest run (committed under
-[`docs/audits/`](docs/audits/eval-report.md)):
+[`docs/audits/`](docs/audits/eval-report.md)). Read the table with the note
+directly beneath it: the two low scores are the floor of a deterministic lexical
+judge, not fabrication, and the explanation is part of the result, not an excuse
+for it.
 
 | Suite | Score | Threshold | |
 |---|---|---|---|
@@ -91,6 +94,19 @@ and prompt-injection checks. The method, the suite mapping, and the
 `--judge llm` path for real signal are in
 [`docs/audits/methodology.md`](docs/audits/methodology.md).
 
+The accessibility score above is the automated transcript and structural check.
+It is not a sign-off on the lived experience: a manual screen-reader and
+keyboard walkthrough is still pending, tracked in
+[`docs/audits/a11y-walkthrough.md`](docs/audits/a11y-walkthrough.md) and noted in
+the model card. Treat the demo as accessibility-reviewed by automation, not yet
+by a person.
+
+For a buyer or IT reviewer who wants the safety, privacy, and testing posture on
+one page without reading the code, see
+[`docs/procurement-brief.md`](docs/procurement-brief.md). The security posture,
+how to report a vulnerability, and a deployment hardening checklist are in
+[`SECURITY.md`](SECURITY.md).
+
 ## Live demo
 
 Try it at <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>. The page
@@ -99,6 +115,26 @@ cites the policy snapshot behind every answer. Questions are answered and
 discarded; nothing you type is stored. The serving path is one Lambda behind
 an HTTP API with layered cost guards (ADR 0004), deployed by
 `infra/deploy.sh`.
+
+For riders with no signal at the stop, `/offline` renders every agency's dated
+policy text on one printable page, built from the committed corpus with no model
+call (`make offline` writes it locally for inspection).
+
+An agency can embed the assistant in its own fare page with one iframe pointing
+at `/embed`:
+
+```html
+<iframe src="https://<demo-host>/embed" title="Transit fare policy assistant"
+        width="100%" height="520"
+        style="border:1px solid #d6d3cb;border-radius:8px"></iframe>
+```
+
+`/embed` is the only frameable route: it carries the reference-implementation
+notice and the will-not-do line, and is served same-origin so its `/api/ask`
+call stays under `connect-src 'self'`. The main page keeps `x-frame-options:
+DENY`. By default the widget is frameable only same-origin (`frame-ancestors
+'self'`); set `FPA_EMBED_ANCESTORS` to a space-separated origin allowlist (the
+agency's own domains) to let those sites embed it.
 
 ## Quick start
 
@@ -150,6 +186,14 @@ verification domain.
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`).
+
+The corpus has a stable version id, a deterministic hash of its chunk content
+and fetch dates (`uv run python -m assistant.corpus`). The `/version` endpoint
+reports it, and a deployment can approve a version in `corpus/CHANGELOG.md` and
+pin to it with `FPA_PINNED_CORPUS_VERSION`; `/version` then reports whether the
+running deploy matches. PDF policies are supported too (text-first, with an OCR
+fallback for scans; ADR 0008), so a fare program published as PDF is citable
+like an HTML page.
 
 ## Layout
 

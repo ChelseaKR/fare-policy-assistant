@@ -1,0 +1,41 @@
+# Cross-agency suite: questions that name two corpus agencies and expect an
+# answer addressing each, with a citation to each. Retrieval already surfaces
+# both agencies' passages (tested in tests/test_retrieve.py); these cases test
+# whether the *answer* keeps them separate and cited rather than blurring them.
+#
+# Status: live-validated targets. The deterministic checks (citation present,
+# as-of, language, no determination) run offline, but whether each answer cites
+# both agencies and states each fare correctly is an LLM-judge call that needs a
+# live `make eval`. No prompt change ships with these: the existing system prompt
+# may already handle multi-agency questions, and a live run decides whether a
+# rule is needed. These cases are not in the CI smoke subset (no `smoke: true`),
+# and the regression baseline must be refreshed (`--update-baseline`) on the
+# first live run that includes this suite.
+suite: cross_agency
+cases:
+  - id: xagency-001
+    question: "Do youth ride free on both Yolobus and SacRT?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      Yolobus youth 0-18 ride free (yolobus-fares); SacRT offers fare-free transit
+      for TK-12 students through RydeFreeRT (sacrt-fares). A good answer states
+      both, cites both, and does not conflate the two programs.
+
+  - id: xagency-002
+    question: "Is the senior discount age the same on MST and Yolobus?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      MST's discount is 65 and older (mst-fares); Yolobus's senior fare is 62 and
+      older (yolobus-fares). The answer must give each age with its agency and
+      cite each, not assume one age covers both.
+
+  - id: xagency-003
+    question: "What single-ride fares do Yolobus and SacRT charge?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      Yolobus and SacRT publish their own single-ride fares (yolobus-fares,
+      sacrt-fares). A correct answer attributes each fare to its agency with a
+      citation, rather than reporting one figure for both.
