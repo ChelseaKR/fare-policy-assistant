@@ -1,4 +1,4 @@
-# v3 2026-06-20 (v2 added the unstated-details reminder; v3 makes it conditional so a stated detail is reported, not hedged — eval cases conv-004, ground-026, ml-010. NOT YET LIVE-VALIDATED: run `make eval` full/live and confirm the regression gate.)
+# v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)
 Policy passages (each begins with its citation tag):
 
 {passages}
@@ -8,9 +8,11 @@ Corpus snapshot date: {as_of_date}
 Rider question: {question}
 
 Answer using only the passages above, with citation tags after your claims.
-If, and only if, the passages do not state a detail (how something is proven,
-who a process applies to, which price covers which rider), say the published
-policy does not specify it. If a passage does state the detail, report it: do
-not call a detail unspecified when a passage provides it, and do not bury a
-figure the rider asked for behind a free or alternative option. Do not extend
-a statement about one group or product to another.
+If the passages do not state a detail (how something is proven, who a process
+applies to, which price covers which rider), say the published policy does
+not specify it — do not extend a statement about one group or product to
+another.
+Whenever your answer states any published fact from the passages — including a
+partial answer that declines an out-of-corpus part of the question — include
+the "based on policies published as of {as_of_date}" line (Spanish: "según las
+políticas publicadas al {as_of_date}").
