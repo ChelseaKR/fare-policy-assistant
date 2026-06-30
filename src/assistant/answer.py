@@ -6,11 +6,22 @@ flags) because the eval report shows failures end to end.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from assistant import config, guards
 from assistant.models import Model, get_model
 from assistant.retrieve import Retriever, ScoredChunk, default_retriever
+
+# Citations render as clickable links in the browser. Corpus URLs are
+# operator-controlled and always https, but defend in depth at the point an
+# answer leaves the server: a non-http(s) scheme (javascript:, data:) would run
+# on click, so anything else is dropped to an empty href.
+_SAFE_URL = re.compile(r"^https?://", re.I)
+
+
+def _safe_url(url: str) -> str:
+    return url if _SAFE_URL.match(url) else ""
 
 
 @dataclass
@@ -32,6 +43,13 @@ class AnswerResult:
     guard_flags: list[str] = field(default_factory=list)
     model: str = ""
     as_of_date: str = ""
+    # Retrieval confidence, an operational signal for staff and integrators
+    # (persona research F-16). `retrieval_score` is the top passage's score;
+    # `confidence` is its band ("low" when the assistant declined for lack of
+    # support, "medium"/"high" on an answered response). It never changes the
+    # answer text or the guard behavior.
+    retrieval_score: float = 0.0
+    confidence: str = ""
     # Token usage of the answer model call (0 when no model was called, e.g.
     # an input-guard refusal or a low-confidence decline). Eval runs aggregate
     # these into a per-run cost estimate.
@@ -101,6 +119,14 @@ def _history_block(history: list[tuple[str, str]] | None) -> str:
     )
 
 
+def _confidence_band(top_score: float, rcfg: config.RetrievalConfig) -> str:
+    """Map a top retrieval score to a coarse band. Below min_confidence the
+    pipeline declines, so an answered response is "medium" or "high"."""
+    if top_score < rcfg.min_confidence:
+        return "low"
+    return "high" if top_score >= rcfg.confidence_high else "medium"
+
+
 def answer_question(
     question: str,
     *,
@@ -124,6 +150,10 @@ def answer_question(
     lang = guards.detect_language(question)
     results = retriever.search(_retrieval_query(question, history))
     as_of = max((sc.chunk.fetch_date for sc in results), default="")
+    top_score = results[0].score if results else 0.0
+    # Band from the retriever's own config, the same threshold confident() uses,
+    # so an answered response is never labeled "low".
+    band = _confidence_band(top_score, retriever.cfg)
     if not retriever.confident(results):
         from assistant.retrieve import detect_agency
 
@@ -133,6 +163,8 @@ def answer_question(
             kind="refused_no_support",
             passages=results,
             as_of_date=as_of,
+            retrieval_score=top_score,
+            confidence=band,
         )
 
     model = model or get_model(cfg.models.provider, cfg.models.answer_model)
@@ -176,6 +208,8 @@ def answer_question(
             input_tokens=completion.input_tokens,
             output_tokens=completion.output_tokens,
             raw_model_answer=completion.text,
+            retrieval_score=top_score,
+            confidence=band,
         )
 
     cited_ids = set(guards.CITATION_RE.findall(text))
@@ -185,7 +219,7 @@ def answer_question(
             doc_id=doc_id,
             agency=by_id[doc_id].agency,
             title=by_id[doc_id].doc_title,
-            url=by_id[doc_id].url,
+            url=_safe_url(by_id[doc_id].url),
             fetch_date=by_id[doc_id].fetch_date,
         )
         for doc_id in sorted(cited_ids)
@@ -203,4 +237,6 @@ def answer_question(
         input_tokens=completion.input_tokens,
         output_tokens=completion.output_tokens,
         raw_model_answer=completion.text if guard_flags else "",
+        retrieval_score=top_score,
+        confidence=band,
     )

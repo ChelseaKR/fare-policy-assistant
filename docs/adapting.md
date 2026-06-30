@@ -15,6 +15,17 @@ programs. This page lists what changes and what carries over unchanged.
 
 ## What you change
 
+0. **The domain profile.** The transit-specific knobs are isolated in one
+   object, `DomainProfile` in `src/assistant/domain.py`: the scopes (agencies),
+   the aliases users type for them, the adjacent topics to redirect, and the
+   fallback contact. A new domain writes a new profile and registers it; the
+   retrieval, guard, and config code reads the active profile unchanged. The
+   `test_a_new_domain_is_just_a_new_profile` case shows a housing-voucher profile
+   reusing the whole pipeline. What is deliberately not in the profile, because
+   it is cross-domain safety rather than domain content, is the PII, injection,
+   and eligibility-determination detectors in `guards.py`; those bind in every
+   domain.
+
 1. **Corpus manifest.** Point `corpus/manifest.yaml` at your documents.
    Check robots.txt and content signals; record your reading of them in the
    manifest, not just in your head. Re-run `make fetch && make ingest`.
@@ -39,7 +50,7 @@ programs. This page lists what changes and what carries over unchanged.
    - multilingual: mirrored cases so parity is a number, not a hope;
    - freshness: expired programs and "as of" behavior.
 
-5. **Agency/entity aliases.** `retrieve.py`'s alias map becomes whatever
+5. **Agency/entity aliases.** Set on the `DomainProfile` (item 0): whatever
    your users call the programs or offices in your corpus.
 
 ## The two habits that matter

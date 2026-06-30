@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y test lint typecheck check
+.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check
 
 fetch:        ## Snapshot corpus documents listed in corpus/manifest.yaml
 	uv run python -m assistant.ingest fetch
@@ -23,6 +23,9 @@ report:       ## Regenerate EVALS.md + HTML from the latest run
 
 a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, static subset)
 	uv run python -m web.a11y
+
+offline:      ## Render the offline fare reference (web/offline.html) from the corpus
+	uv run python -m web.offline
 
 audit:        ## Independent GovChat-Eval audit: record answers, then run the external harness
 	@test -d "$(EVAL_HARNESS)" || { echo "govchat-eval not found at $(EVAL_HARNESS); set EVAL_HARNESS=<path>"; exit 2; }

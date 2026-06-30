@@ -52,6 +52,110 @@ class TestRouting:
         assert resp["headers"]["x-frame-options"] == "DENY"
         assert "content-security-policy" in resp["headers"]
 
+    def test_live_region_present_for_answer_status(self):
+        # New answers and status are announced through a polite live region
+        # (persona research F-8); lock it so a refactor cannot drop it.
+        body = web_handler.handler(_event(method="GET", path="/"))["body"]
+        assert 'role="status"' in body
+        assert 'aria-live="polite"' in body
+
+    def test_display_settings_controls_present(self):
+        # Text-size and high-contrast controls for low-vision and older riders
+        # (persona research F-2). They are labeled and toggle via aria-pressed.
+        body = web_handler.handler(_event(method="GET", path="/"))["body"]
+        assert 'aria-label="Display settings"' in body
+        for control_id in ("tsize-normal", "tsize-large", "tsize-xlarge", "contrast"):
+            assert f'id="{control_id}"' in body
+        assert 'aria-pressed' in body
+
+
+class TestOfflineReference:
+    def test_offline_page_served(self):
+        resp = web_handler.handler(_event(method="GET", path="/offline"))
+        assert resp["statusCode"] == 200
+        assert "text/html" in resp["headers"]["content-type"]
+        body = resp["body"]
+        # Built from the committed corpus: every agency and the as-of framing.
+        for agency_full in ("Monterey-Salinas Transit", "Humboldt Transit Authority"):
+            assert agency_full in body
+        assert "published as of" in body
+        assert "Reference implementation" in body
+        # Citable sources are resolvable links, not internal doc ids.
+        assert "https://" in body and "[doc:" not in body
+
+    def test_offline_page_passes_structural_a11y(self):
+        from web.a11y import check_html
+
+        body = web_handler.handler(_event(method="GET", path="/offline"))["body"]
+        assert check_html(body) == []
+
+
+class TestVersion:
+    def _version(self):
+        return web_handler.handler(_event(method="GET", path="/version"))
+
+    def test_version_reports_corpus_identity(self):
+        resp = self._version()
+        assert resp["statusCode"] == 200
+        data = json.loads(resp["body"])
+        assert len(data["corpus_version"]) == 12
+        assert data["as_of"]
+        assert set(data["agencies"]) >= {"MST", "Yolobus", "HTA"}
+        assert data["documents"] >= 5
+
+    def test_version_reports_pin_match(self, monkeypatch):
+        actual = json.loads(self._version()["body"])["corpus_version"]
+        monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", actual)
+        data = json.loads(self._version()["body"])
+        assert data["pinned"] == actual
+        assert data["matches_pin"] is True
+
+    def test_version_flags_pin_mismatch(self, monkeypatch, capsys):
+        monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", "deadbeefcafe")
+        data = json.loads(self._version()["body"])
+        assert data["matches_pin"] is False
+        assert "corpus_version_mismatch" in capsys.readouterr().out
+
+
+class TestEmbedWidget:
+    def _embed(self):
+        return web_handler.handler(_event(method="GET", path="/embed"))
+
+    def test_embed_served(self):
+        resp = self._embed()
+        assert resp["statusCode"] == 200
+        assert "text/html" in resp["headers"]["content-type"]
+        body = resp["body"]
+        assert "embedded widget" in body
+        # The limits travel with the embed.
+        assert "does not decide your eligibility" in body
+        assert "Reference implementation" in body
+
+    def test_embed_is_frameable_main_page_is_not(self):
+        embed = self._embed()["headers"]
+        # The embed route drops the DENY and names ancestors in CSP instead.
+        assert "x-frame-options" not in {k.lower() for k in embed}
+        assert "frame-ancestors" in embed["content-security-policy"]
+        # The main page is still not frameable: embedding did not loosen it.
+        main = web_handler.handler(_event(method="GET", path="/"))["headers"]
+        assert main["x-frame-options"] == "DENY"
+        assert "frame-ancestors" not in main["content-security-policy"]
+
+    def test_embed_defaults_to_same_origin_framing(self, monkeypatch):
+        monkeypatch.delenv("FPA_EMBED_ANCESTORS", raising=False)
+        csp = self._embed()["headers"]["content-security-policy"]
+        assert "frame-ancestors 'self'" in csp
+
+    def test_embed_ancestor_allowlist_is_configurable(self, monkeypatch):
+        monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov https://mst.org")
+        csp = self._embed()["headers"]["content-security-policy"]
+        assert "frame-ancestors https://sbmtd.gov https://mst.org" in csp
+
+    def test_embed_passes_structural_a11y(self):
+        from web.a11y import check_html
+
+        assert check_html(self._embed()["body"]) == []
+
 
 class TestValidation:
     def test_missing_body_400(self):
@@ -72,6 +176,12 @@ class TestValidation:
         resp = _post("x" * (web_handler.MAX_QUESTION_CHARS + 1))
         assert resp["statusCode"] == 400
 
+    def test_oversized_body_rejected_before_parse_413(self):
+        event = _event()
+        event["body"] = "{" + "x" * (web_handler.MAX_BODY_BYTES + 1)
+        resp = web_handler.handler(event)
+        assert resp["statusCode"] == 413
+
 
 class TestAnswers:
     def test_answer_carries_citations_and_as_of(self):
@@ -82,6 +192,10 @@ class TestAnswers:
         assert data["as_of_date"]
         assert data["citations"], "an answered response must cite sources"
         assert {"agency", "title", "url", "fetch_date"} <= set(data["citations"][0])
+        # Graded confidence signal for integrators/staff (persona research F-16).
+        assert data["confidence"] in {"medium", "high"}
+        # The answer is tied to a corpus version (persona research R2-6).
+        assert len(data["corpus_version"]) == 12
 
     def test_pii_question_refused_and_never_echoed(self):
         resp = _post("My SSN is 123-45-6789, do I get the senior pass?")

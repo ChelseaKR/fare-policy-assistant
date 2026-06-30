@@ -13,5 +13,10 @@ corpus/index/
 evals/runs/
 # Lambda bundle staging (infra/deploy.sh)
 infra/build/
+# Generated offline fare reference (served at runtime from the corpus; make offline)
+web/offline.html
 # Original spec document; CLAUDE.md is the canonical committed copy
 CLAUDE-fare-assistant.md
+
+# runtime-fetched portfolio-standards (never commit)
+.standards/

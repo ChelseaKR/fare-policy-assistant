@@ -32,7 +32,8 @@ uv pip install --quiet --target "$BUNDLE" \
 cp -R "$ROOT/src/assistant" "$BUNDLE/src/assistant"
 cp -R "$ROOT/prompts" "$BUNDLE/prompts"
 cp "$ROOT/corpus/processed/chunks.jsonl" "$BUNDLE/corpus/processed/"
-cp "$ROOT/web/handler.py" "$ROOT/web/index.html" "$BUNDLE/web/"
+cp "$ROOT/web/__init__.py" "$ROOT/web/handler.py" "$ROOT/web/index.html" \
+   "$ROOT/web/offline.py" "$ROOT/web/embed.py" "$BUNDLE/web/"
 
 (cd "$BUNDLE" && zip -qr "$BUILD/bundle.zip" . -x '*__pycache__*' -x '*.dist-info/RECORD')
 

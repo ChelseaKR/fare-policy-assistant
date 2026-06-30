@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from assistant import domain
+
 # ── input guards ─────────────────────────────────────────────────────────────
 
 PII_PATTERNS: dict[str, re.Pattern[str]] = {
@@ -26,24 +28,11 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
     "medicare_id": re.compile(r"\b\d[A-Z]\d{2}-?[A-Z]\d{2}-?[A-Z]{2}\d{2}\b", re.I),
 }
 
-# Topics adjacent to fare policy that the assistant must redirect, not answer.
-OUT_OF_SCOPE_PATTERNS: dict[str, re.Pattern[str]] = {
-    "medical_advice": re.compile(
-        r"(how (do|can) i (get|prove|obtain).{0,40}(disability|diagnos)|"
-        r"what (disability|condition|diagnosis) (counts|qualifies)|"
-        r"what (should|do|can) i (tell|say to).{0,20}(doctor|physician)|"
-        r"(get|have|ask|convince) (my|a|the) (doctor|physician).{0,30}(write|sign|verif)|"
-        r"qué (le )?(digo|decirle) a[l]? (mi |un )?(médico|doctor)|"
-        r"(fake|pretend|claim).{0,20}disab)",
-        re.I,
-    ),
-    "immigration": re.compile(
-        r"(immigration status|undocumented|citizenship|green card|visa status|deport|"
-        r"estatus migratorio|indocumentad)",
-        re.I,
-    ),
-    "legal_advice": re.compile(r"\b(sue|lawsuit|legal advice|lawyer|attorney)\b", re.I),
-}
+# Topics adjacent to the domain that the assistant must redirect, not answer.
+# Domain-specific, so sourced from the active profile (src/assistant/domain.py);
+# the PII, injection, and determination guards below stay here because they are
+# cross-domain safety, not domain content.
+OUT_OF_SCOPE_PATTERNS: dict[str, re.Pattern[str]] = domain.get_profile().scope_topics
 
 INJECTION_PATTERNS = re.compile(
     r"(ignore (all |your |previous |prior )*(instructions|rules|prompts)|"
