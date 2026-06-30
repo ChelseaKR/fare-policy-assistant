@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Transit Fare Policy Assistant + Evaluation Harness"
+abstract: >-
+  A retrieval-augmented assistant that answers rider questions about fare and
+  reduced-fare policies for California transit agencies, wrapped in a public
+  evaluation harness that measures whether it behaves: never determining
+  eligibility, never answering without a citation, and refusing personal
+  information.
+type: software
+authors:
+  - given-names: Chelsea
+    family-names: Kelly-Reif
+    alias: ChelseaKR
+repository-code: "https://github.com/ChelseaKR/fare-policy-assistant"
+license: MIT
+version: 0.1.0
+date-released: "2026-06-30"
+keywords:
+  - transit
+  - fare-policy
+  - rag
+  - llm-evaluation
+  - accessibility
+  - responsible-ai
+  - civic-tech
