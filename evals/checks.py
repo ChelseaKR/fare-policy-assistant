@@ -103,6 +103,22 @@ def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> li
         if case.get("required_facts"):
             out.append(CheckResult("required_facts_present", not missing, "; ".join(missing)))
 
+        # 8. Positive verification handoff (RR4). An eligibility-adjacent answer
+        # must route the rider to where the decision actually happens — the
+        # agency or Cal-ITP — and how to start, never stopping at the criterion.
+        # Opt-in per case (`requires_handoff: true`); this strengthens the
+        # no-determination rule by requiring the constructive next step beside
+        # the refusal to rule on the rider, and never relaxes it.
+        if case.get("requires_handoff"):
+            out.append(
+                CheckResult(
+                    "verification_handoff_present",
+                    guards.find_verification_handoff(answer),
+                    "no verify/apply/contact next step found" if not
+                    guards.find_verification_handoff(answer) else "",
+                )
+            )
+
     if expected == "refuse_redirect":
         # The assistant either refused outright or declined for lack of support,
         # and in all cases pointed the rider somewhere real.

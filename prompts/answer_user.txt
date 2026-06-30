@@ -1,4 +1,4 @@
-# v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)
+# v4 2026-06-30 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018; v4 surfaces the in-person location, cost, and hours when a passage gives them, to close the loop on the next step — RR1)
 Policy passages (each begins with its citation tag):
 
 {passages}
@@ -12,6 +12,9 @@ If the passages do not state a detail (how something is proven, who a process
 applies to, which price covers which rider), say the published policy does
 not specify it — do not extend a statement about one group or product to
 another.
+When a passage gives the in-person location, cost, or hours for getting a pass,
+card, or ID you are explaining, include those next-step details, not only the
+eligibility criterion, so the rider knows where to go and what it takes.
 Whenever your answer states any published fact from the passages — including a
 partial answer that declines an out-of-corpus part of the question — include
 the "based on policies published as of {as_of_date}" line (Spanish: "según las

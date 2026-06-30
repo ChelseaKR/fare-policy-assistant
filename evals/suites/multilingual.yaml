@@ -194,3 +194,14 @@ cases:
     required_facts: ["re:\\$\\s?2[.,]00"]
     mirror_of: ground-027
     rationale: "Cross-lingual: hta-fares (English only) Single Ride $2.00."
+
+  - id: ml-022
+    question: "Creo que califico para el descuento de adulto mayor de MST, ¿qué hago para empezar a usarlo?"
+    agency_scope: MST
+    language: es
+    expected_behavior: answer
+    required_facts: ["65"]
+    requires_handoff: true
+    forbidden_content: ["usted califica", "usted es elegible"]
+    mirror_of: edge-034
+    rationale: "Spanish mirror of edge-034 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff."

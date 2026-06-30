@@ -94,6 +94,17 @@ nightly. A drop of more than 2 points on any suite fails the build.
 
 ## Independent audit
 
+This section leads with an audit, not a victory lap, on purpose. An agency is
+liable for what its chatbot tells a rider: a Canadian tribunal held an airline
+responsible for fare advice its bot invented, and a New York City business
+chatbot gave advice to break the law and stayed live for months. A wrong fare
+or eligibility line here would be the agency's problem, not a demo footnote, so
+the honest posture is to show the outside floor first. Two scores in the table
+below sit near zero. They are the floor of a deterministic lexical judge that
+cannot tell a paraphrase or a redirect from a fabricated claim, not evidence of
+fabrication; the note under the table explains exactly why, and that note is
+part of the result.
+
 The harness above is white-box: its checks know this corpus's doc-ids, the
 `guards.py` rules, and the agency-scope contract. As a second, independent
 layer, the deployed assistant is also audited by
