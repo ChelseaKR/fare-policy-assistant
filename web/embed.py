@@ -33,6 +33,13 @@ EMBED_HTML = """<!doctype html>
   .wrap { padding: 0.8rem; max-width: 38rem; margin: 0 auto; }
   h1 { font-size: 1.05rem; margin: 0 0 0.3rem; }
   .note { color: #4d5860; font-size: 0.85rem; margin: 0 0 0.6rem; }
+  /* Above-the-fold liability + staleness frame: the "confirm with the agency"
+     and "may be out of date" notes ride at the top of the widget, not only in
+     the footer, since an agency is liable for a wrong fare or eligibility line
+     (RR2). */
+  .frame { border: 1px solid #92400e; background: #fffbeb; border-radius: 6px;
+    padding: 0.5rem 0.7rem; margin: 0 0 0.7rem; font-size: 0.85rem; color: #1a1f24; }
+  .frame .es { display: block; margin-top: 0.35rem; }
   label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
   textarea { width: 100%; min-height: 3rem; font: inherit; padding: 0.5rem;
     border: 1px solid #d6d3cb; border-radius: 6px; background: #fff; color: #1a1f24; }
@@ -62,6 +69,15 @@ EMBED_HTML = """<!doctype html>
   <p class="note">Explains published fare and reduced-fare policy in English or
     Spanish. It does not decide your eligibility and does not collect personal
     information.</p>
+  <p class="frame">
+    <strong>Confirm before you rely on this.</strong> Answers explain published
+    policy from dated snapshots and can be out of date. The agency makes the
+    final eligibility decision; confirm anything time-sensitive with it.
+    <span class="es" lang="es"><strong>Confirme antes de usar esta
+    información.</strong> Las respuestas explican la política publicada a partir
+    de instantáneas con fecha y pueden estar desactualizadas. La agencia toma la
+    decisión final de elegibilidad; confirme cualquier detalle con ella.</span>
+  </p>
   <form id="form">
     <label for="q">Your question</label>
     <textarea id="q" name="question" maxlength="500" required

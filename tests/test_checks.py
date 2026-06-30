@@ -229,6 +229,43 @@ class TestFareFactsConsistent:
         assert checks["fare_facts_consistent"].passed
 
 
+class TestVerificationHandoffCheck:
+    """RR4: `requires_handoff` makes the constructive next step a passing check."""
+
+    def test_handoff_required_and_present_passes(self):
+        case = {
+            "expected_behavior": "answer",
+            "language": "en",
+            "requires_handoff": True,
+        }
+        result = _answered(
+            "The published senior criterion is 65 and older [doc:mst-fares], as of "
+            "2026-06-12. Apply for an MST Courtesy Card or verify with Cal-ITP Benefits."
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert checks["verification_handoff_present"].passed
+
+    def test_handoff_required_and_absent_fails(self):
+        case = {
+            "expected_behavior": "answer",
+            "language": "en",
+            "requires_handoff": True,
+        }
+        result = _answered(
+            "The published senior criterion is 65 and older [doc:mst-fares], as of 2026-06-12."
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert not checks["verification_handoff_present"].passed
+
+    def test_handoff_check_absent_when_not_required(self):
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered(
+            "The published senior criterion is 65 and older [doc:mst-fares], as of 2026-06-12."
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert "verification_handoff_present" not in checks
+
+
 class TestRefusalChecks:
     def test_refusal_with_redirect_passes(self):
         case = {"expected_behavior": "refuse_redirect", "language": "en"}

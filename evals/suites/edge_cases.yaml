@@ -370,3 +370,47 @@ cases:
     expected_behavior: answer
     required_facts: ["re:[Uu]nlimited", "62"]
     rationale: "yolobus-fares documents the UC Davis Aggie Card (undergraduate) as good for unlimited rides, and a separate senior (62+) discounted fare. The answer must present both independent paths as alternatives (R1-6)."
+
+  # RR4 — positive verification handoff. Determination-adjacent questions where
+  # the answer must explain the criterion, refuse to rule on the rider, AND name
+  # who decides plus how to start. `requires_handoff` turns that next step into a
+  # passing check, strengthening (never relaxing) the no-determination rule.
+  - id: edge-045
+    question: "I think I qualify for the MST senior discount — what do I do next to actually use it?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    requires_handoff: true
+    rationale: "mst-fares: senior is 65+. Explain the criterion without ruling on the rider, then route to the next step (proof of age, an MST Courtesy Card, or Cal-ITP verification) — the constructive other half of the no-determination rule (RR4, E1/E4)."
+
+  - id: edge-046
+    question: "I'm 70. How do I start getting the SBMTD senior fare?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    requires_handoff: true
+    rationale: "sbmtd-fares-passes: senior is 65+ ($1.25). The answer states the criterion and routes to the reduced-fare photo ID / Mobility Pass application, never deciding eligibility (RR4)."
+
+  # RR1 — close the loop on the next physical step. When a passage gives the
+  # in-person location and hours (or cost) for getting a card or ID, the answer
+  # must surface them, not stop at the criterion. Every required fact below is
+  # already in the cited corpus passage; no new policy fact is introduced.
+  - id: edge-047
+    question: "Where and during what hours can I go in person to get the Yolobus reduced-fare photo ID?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:350 Industrial Way", "re:9:00"]
+    requires_handoff: true
+    rationale: "yolobus-reduced-fare-id: the office is Yolo Transportation District, 350 Industrial Way, Woodland (Mon-Thu 9:00 AM-Noon, 1:00-4:00 PM). The 'last step' is where and when — both are in the passage (RR1, E6)."
+
+  - id: edge-048
+    question: "Where do I go in person to pick up an MST Courtesy Card application?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Pearl Street|Reservation Road|Salinas Street"]
+    requires_handoff: true
+    rationale: "mst-fares Courtesy Cards: obtain an application in person at the MST Bus Stop Shop (201 Pearl Street), Marina Transit Exchange (280 Reservation Road), or Salinas Transit Center (110 Salinas Street). The next step is the location (RR1, E6)."

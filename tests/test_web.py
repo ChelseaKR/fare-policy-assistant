@@ -160,6 +160,11 @@ class TestEmbedWidget:
         # The limits travel with the embed.
         assert "does not decide your eligibility" in body
         assert "Reference implementation" in body
+        # RR2: the liability/staleness frame rides above the fold, in both
+        # languages, not only in the footer.
+        assert "can be out of date" in body
+        assert "final eligibility decision" in body
+        assert "decisión final de elegibilidad" in body
 
     def test_embed_is_frameable_main_page_is_not(self):
         embed = self._embed()["headers"]
