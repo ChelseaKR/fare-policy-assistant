@@ -34,6 +34,14 @@ def test_summary_reports_agencies_and_counts(chunks):
     assert s["chunks"] == len(chunks)
 
 
+def test_main_prints_summary_json(capsys):
+    from assistant.corpus import main
+    assert main() == 0
+    import json
+    out = json.loads(capsys.readouterr().out)
+    assert "corpus_version" in out and out["chunks"] >= 1
+
+
 def test_diff_detects_added_removed_changed(chunks):
     old = list(chunks)
     # Remove one document entirely.
