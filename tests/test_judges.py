@@ -93,6 +93,15 @@ class TestGroundedness:
         v = judges.judge_groundedness(judge, _result(), _cfg())
         assert v.passed is None
 
+    def test_prompt_carries_the_passages_and_answer_to_judge(self):
+        # A groundedness verdict is only meaningful if the judge actually sees the
+        # retrieved passages and the answer. If the prompt dropped either, the
+        # judge would be scoring nothing — a silently corrupt measurement.
+        judge = ScriptedJudge('{"grounded": true, "reasoning": "ok"}')
+        judges.judge_groundedness(judge, _result(), _cfg())
+        assert "Seniors 65+ pay $1.00." in judge.last_user
+        assert "The senior fare is $1.00 [doc:mst-fares]." in judge.last_user
+
 
 class TestHelpfulness:
     def test_helpful_verdict_passes_with_score(self):
