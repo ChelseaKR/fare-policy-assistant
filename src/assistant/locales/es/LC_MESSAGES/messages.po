@@ -1,0 +1,66 @@
+# Spanish translations for fare-policy-assistant.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the
+# fare-policy-assistant project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: fare-policy-assistant 0.1.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-30 00:00+0000\n"
+"PO-Revision-Date: 2026-06-30 00:00+0000\n"
+"Last-Translator: fare-policy-assistant contributors\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+msgid ""
+"I can only answer questions about published transit fare policies. If you "
+"need other help, please contact the transit agency's customer service."
+msgstr ""
+"Solo puedo responder preguntas sobre las políticas de tarifas publicadas. Si"
+" necesita otra ayuda, comuníquese con el servicio al cliente de la agencia "
+"de tránsito."
+
+#, python-brace-format
+msgid ""
+"I don't have a published policy document that answers that, and I won't "
+"guess about fares or eligibility. Please check {where} for current "
+"information."
+msgstr ""
+"No tengo un documento de política publicado que responda eso, y no voy a "
+"adivinar sobre tarifas o elegibilidad. Consulte {where} para obtener "
+"información actualizada."
+
+msgid ""
+"Please don't share personal details like ID numbers, contact information, or"
+" birth dates — I don't need them to explain fare policy. Ask again without "
+"the personal details, or contact the transit agency's customer service "
+"directly."
+msgstr ""
+"Por favor no comparta datos personales como números de identificación, "
+"información de contacto o fechas de nacimiento; no los necesito para "
+"explicar la política de tarifas. Pregunte de nuevo sin los datos personales,"
+" o comuníquese con el servicio al cliente de la agencia de tránsito."
+
+msgid ""
+"That's outside what I can help with. I can explain published fare and "
+"reduced-fare policies; for medical, immigration, or legal matters, please "
+"contact the transit agency directly or a qualified professional."
+msgstr ""
+"Eso está fuera de lo que puedo responder. Puedo explicar las políticas de "
+"tarifas publicadas; para asuntos médicos, migratorios o legales, comuníquese"
+" con la agencia de tránsito directamente o con un profesional calificado."
+
+msgid "the agency's website or customer service"
+msgstr "el sitio web o el servicio al cliente de la agencia"
+
+#, python-brace-format
+msgid "your transit agency directly, or {statewide}"
+msgstr "su agencia de tránsito directamente, o {statewide}"
+

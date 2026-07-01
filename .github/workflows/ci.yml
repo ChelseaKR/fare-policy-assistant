@@ -28,6 +28,23 @@ jobs:
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
 
+  i18n:
+    name: i18n (gettext catalog gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+      # msgfmt (the G7 PO-compilation gate) is a system gettext binary, not a
+      # uv/pip dependency — installed here like any non-uv tool. babel/pybabel
+      # come from the dev dependency group, resolved by `uv run` inside the make
+      # target. `make i18n` is exactly what runs locally, so no local/CI drift:
+      # G2-lite (POT committed & current), G7 (msgfmt --check), G6/G5 (EN/ES
+      # key-parity + completeness + placeholder parity), G3 (BCP 47 validity).
+      - name: Install gettext (msgfmt)
+        run: sudo apt-get update && sudo apt-get install -y gettext
+      - name: i18n catalog gate (make i18n)
+        run: make i18n
+
   a11y-advisory:
     # Advisory axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).

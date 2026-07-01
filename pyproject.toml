@@ -38,6 +38,7 @@ dev = [
     "mypy>=1.11",
     "types-pyyaml",
     "pypdf>=4.0",
+    "babel>=2.16",
 ]
 # Advisory mutation testing (backlog #15). Isolated in its own group so the
 # default `make check` / CI install stays lean; installed only for `make

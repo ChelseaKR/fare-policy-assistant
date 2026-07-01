@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 
 from assistant import domain
+from assistant.i18n import get_translation, refusal_message
 
 # ── input guards ─────────────────────────────────────────────────────────────
 
@@ -62,49 +63,11 @@ def detect_language(text: str) -> str:
     return "es" if es > en else "en"
 
 
-_REFUSAL_MESSAGES = {
-    "pii": {
-        "en": (
-            "Please don't share personal details like ID numbers, contact "
-            "information, or birth dates — I don't need them to explain fare "
-            "policy. Ask again without the personal details, or contact the "
-            "transit agency's customer service directly."
-        ),
-        "es": (
-            "Por favor no comparta datos personales como números de "
-            "identificación, información de contacto o fechas de nacimiento; no "
-            "los necesito para explicar la política de tarifas. Pregunte de "
-            "nuevo sin los datos personales, o comuníquese con el servicio al "
-            "cliente de la agencia de tránsito."
-        ),
-    },
-    "scope": {
-        "en": (
-            "That's outside what I can help with. I can explain published fare "
-            "and reduced-fare policies; for medical, immigration, or legal "
-            "matters, please contact the transit agency directly or a qualified "
-            "professional."
-        ),
-        "es": (
-            "Eso está fuera de lo que puedo responder. Puedo explicar las "
-            "políticas de tarifas publicadas; para asuntos médicos, migratorios "
-            "o legales, comuníquese con la agencia de tránsito directamente o "
-            "con un profesional calificado."
-        ),
-    },
-    "injection": {
-        "en": (
-            "I can only answer questions about published transit fare policies. "
-            "If you need other help, please contact the transit agency's "
-            "customer service."
-        ),
-        "es": (
-            "Solo puedo responder preguntas sobre las políticas de tarifas "
-            "publicadas. Si necesita otra ayuda, comuníquese con el servicio al "
-            "cliente de la agencia de tránsito."
-        ),
-    },
-}
+# The rider-facing refusal *text* now lives in the gettext catalogs behind
+# assistant.i18n.refusal_message (EN source + ES translation); this module keeps
+# only the *detection* below. Translating the message must not weaken the guard,
+# so the control flow in check_input is unchanged — it still detects, then picks
+# the message in the rider's language.
 
 
 @dataclass
@@ -116,23 +79,24 @@ class InputCheck:
 
 def check_input(question: str) -> InputCheck:
     lang = detect_language(question)
+    translation = get_translation(lang)
     flags = [name for name, pat in PII_PATTERNS.items() if pat.search(question)]
     if flags:
         return InputCheck(
             ok=False,
             flags=[f"pii:{f}" for f in flags],
-            message=_REFUSAL_MESSAGES["pii"][lang],
+            message=refusal_message(translation, "pii"),
         )
     flags = [name for name, pat in OUT_OF_SCOPE_PATTERNS.items() if pat.search(question)]
     if flags:
         return InputCheck(
             ok=False,
             flags=[f"scope:{f}" for f in flags],
-            message=_REFUSAL_MESSAGES["scope"][lang],
+            message=refusal_message(translation, "scope"),
         )
     if INJECTION_PATTERNS.search(question):
         return InputCheck(
-            ok=False, flags=["injection"], message=_REFUSAL_MESSAGES["injection"][lang]
+            ok=False, flags=["injection"], message=refusal_message(translation, "injection")
         )
     return InputCheck(ok=True)
 

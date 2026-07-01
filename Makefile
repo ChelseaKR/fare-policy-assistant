@@ -3,7 +3,11 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation
+.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile
+
+# Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
+PACKAGE ?= assistant
+LOCALES := src/$(PACKAGE)/locales
 
 # Coverage floor for the first-party packages. Honest achieved is ~95%; the gate
 # sits a few points below to absorb Python-version / optional-extra drift in CI.
@@ -55,7 +59,33 @@ typecheck:
 
 check: lint typecheck test
 
-verify: check  ## Full offline gate: lint + typecheck + coverage-gated tests
+i18n:         ## i18n catalog gate: POT current + EN/ES parity + PO compiles + BCP-47
+	# G2-lite -- regenerate the extraction template and fail if it drifts from the
+	# committed one (a new/changed rider-facing string without a re-extract is a
+	# merge-blocker). The normalizer freezes volatile header/flag noise so this is
+	# a meaningful diff, not a flaky timestamp check. Local == CI.
+	uv run python -m babel.messages.frontend extract -F babel.cfg --no-location \
+		--sort-output --project=fare-policy-assistant --version=0.1.0 \
+		-o $(LOCALES)/messages.pot src/
+	uv run python tools/i18n_normalize_pot.py $(LOCALES)/messages.pot
+	git diff --exit-code -- $(LOCALES)/messages.pot
+	# G7 -- every PO compiles cleanly (format + domain checks), no msgfmt errors.
+	msgfmt --check --check-format --check-domain -o /dev/null \
+		$(LOCALES)/en/LC_MESSAGES/messages.po
+	msgfmt --check --check-format --check-domain -o /dev/null \
+		$(LOCALES)/es/LC_MESSAGES/messages.po
+	# G6 EN/ES key-parity + G5 completeness/placeholder parity.
+	uv run python tools/check_catalog_parity.py
+	# G3 -- BCP 47 / RFC 5646 validity of every authored locale tag.
+	uv run python tools/check_bcp47.py
+	@echo "i18n: POT current; EN/ES key-parity + completeness; PO compiles; BCP-47 valid."
+
+i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .po)
+	msgfmt -o $(LOCALES)/en/LC_MESSAGES/messages.mo $(LOCALES)/en/LC_MESSAGES/messages.po
+	msgfmt -o $(LOCALES)/es/LC_MESSAGES/messages.mo $(LOCALES)/es/LC_MESSAGES/messages.po
+	@echo "i18n-compile: refreshed messages.mo for en, es."
+
+verify: check i18n  ## Full offline gate: lint + typecheck + coverage-gated tests + i18n
 
 mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; never a merge gate)
 	# Scoped in [tool.mutmut] to evals/checks.py + evals/judges.py, run against

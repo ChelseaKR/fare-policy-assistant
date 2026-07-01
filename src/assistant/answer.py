@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from assistant import config, guards
+from assistant import config, guards, i18n
 from assistant.models import Model, get_model
 from assistant.retrieve import Retriever, ScoredChunk, default_retriever
 
@@ -73,24 +73,16 @@ def _format_passages(results: list[ScoredChunk]) -> str:
 
 
 def _no_support_message(agency_hint: str | None, lang: str = "en") -> str:
-    if lang == "es":
-        where = (
-            "el sitio web o el servicio al cliente de la agencia"
-            if agency_hint
-            else f"su agencia de tránsito directamente, o {config.STATEWIDE_TRANSIT_INFO}"
-        )
-        return (
-            "No tengo un documento de política publicado que responda eso, y no "
-            f"voy a adivinar sobre tarifas o elegibilidad. Consulte {where} para "
-            "obtener información actualizada."
-        )
-    where = "the agency's website or customer service" if agency_hint else (
-        f"your transit agency directly, or {config.STATEWIDE_TRANSIT_INFO}"
-    )
-    return (
-        "I don't have a published policy document that answers that, and I won't "
-        f"guess about fares or eligibility. Please check {where} for current "
-        "information."
+    """Rider-facing decline when no published policy supports an answer.
+
+    The bilingual text now lives in the gettext catalogs (assistant.i18n); this
+    keeps the same signature and control flow — same agency-hint branch, same
+    no-determination stance — so the no-support behavior is unchanged.
+    """
+    return i18n.no_support_message(
+        i18n.get_translation(lang),
+        agency_hint=agency_hint,
+        statewide_info=config.STATEWIDE_TRANSIT_INFO,
     )
 
 
