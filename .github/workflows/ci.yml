@@ -21,8 +21,10 @@ jobs:
         run: uv run ruff check src tests evals web
       - name: Typecheck
         run: uv run mypy src web
-      - name: Tests
-        run: uv run pytest -q
+      - name: Tests (with branch-coverage gate)
+        run: >-
+          uv run pytest -q --cov=assistant --cov=web --cov=evals --cov-branch
+          --cov-report=term-missing --cov-fail-under=90
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
 

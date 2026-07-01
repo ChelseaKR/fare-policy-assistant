@@ -7,6 +7,11 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .env
+# Coverage artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 # Built retrieval index (regenerate with `make index`)
 corpus/index/
 # Per-run eval artifacts (committed reports live in docs/)

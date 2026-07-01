@@ -33,6 +33,7 @@ ocr = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=5.0",
     "ruff>=0.6",
     "mypy>=1.11",
     "types-pyyaml",
@@ -56,6 +57,22 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 # evals/ is a repo-root package (it is the product, not a library to install).
 pythonpath = ["."]
+
+[tool.coverage.run]
+branch = true
+# The three first-party packages: the assistant pipeline (src/assistant), the
+# eval harness (evals/), and the demo web layer (web/). Optional integrations
+# (dense retrieval, OCR) need extras not installed in CI, so the lines that load
+# them stay uncovered honestly rather than being mocked into a green number.
+source = ["assistant", "web", "evals"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
