@@ -1,0 +1,40 @@
+name: Mutation (advisory)
+
+# ADVISORY mutation testing on the core scoring logic (backlog #15). This is a
+# diagnostic signal about test strength, not a merge gate: it never runs on
+# pull_request or push, only weekly and on demand, and the mutmut step is
+# continue-on-error so a low score can never fail the build. The per-PR merge
+# gate remains the coverage-gated suite in ci.yml. Scope, baseline, and how to
+# read survivors live in docs/mutation-testing.md.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+
+# Least privilege: read the code, write nothing.
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+      - name: Run mutmut on the core scoring modules (offline; advisory)
+        continue-on-error: true
+        run: make mutation
+      - name: Upload mutant results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: mutation-results
+          path: |
+            .mutmut-cache
+            mutants/**/*.meta
+          if-no-files-found: ignore

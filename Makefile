@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov
+.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation
 
 # Coverage floor for the first-party packages. Honest achieved is ~95%; the gate
 # sits a few points below to absorb Python-version / optional-extra drift in CI.
@@ -56,3 +56,11 @@ typecheck:
 check: lint typecheck test
 
 verify: check  ## Full offline gate: lint + typecheck + coverage-gated tests
+
+mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; never a merge gate)
+	# Scoped in [tool.mutmut] to evals/checks.py + evals/judges.py, run against
+	# the two fast offline unit suites. Not part of `check`/`verify` and never a
+	# per-PR gate; run it deliberately. See docs/mutation-testing.md for the
+	# baseline (~75% killed) and how to read survivors.
+	uv run --group mutation mutmut run
+	uv run --group mutation mutmut results

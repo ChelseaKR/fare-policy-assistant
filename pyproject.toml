@@ -39,6 +39,12 @@ dev = [
     "types-pyyaml",
     "pypdf>=4.0",
 ]
+# Advisory mutation testing (backlog #15). Isolated in its own group so the
+# default `make check` / CI install stays lean; installed only for `make
+# mutation` (and the manual weekly workflow). See docs/mutation-testing.md.
+mutation = [
+    "mutmut>=3.3,<4",
+]
 
 [tool.ruff]
 line-length = 100
@@ -57,6 +63,37 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 # evals/ is a repo-root package (it is the product, not a library to install).
 pythonpath = ["."]
+
+[tool.mutmut]
+# Advisory mutation testing (backlog #15). Scoped to the two correctness-critical
+# scoring modules whose bugs would silently corrupt a score or let a bad answer
+# pass: the deterministic per-case gate (checks.py) and the LLM-as-judge verdict
+# parsing (judges.py). The cross-domain safety guards (no-determination /
+# citation / PII in src/assistant/guards.py) are exercised transitively but are
+# not the mutation target here. Run with `make mutation`; never a per-PR merge
+# gate. See docs/mutation-testing.md for the baseline and how to read survivors.
+source_paths = [
+    "evals/checks.py",
+    "evals/judges.py",
+]
+# mutmut copies source_paths into a mutants/ sandbox and strips the originals
+# (`.`, `src/`, `source/`) from sys.path so the tests import the mutated copy.
+# The target modules import the assistant package (src/assistant) and live in
+# the evals package, so both must be copied into the sandbox too, or the tests
+# fail to import at all. evals/__init__.py makes mutants/evals an importable
+# package; src carries the unmutated assistant code the targets depend on.
+also_copy = [
+    "src",
+    "evals/__init__.py",
+    "prompts",
+]
+# Only the two fast, offline unit suites that exercise the target modules. No
+# network, no model calls, no coverage gate — this keeps each mutant cheap so the
+# bounded run finishes in well under a minute.
+pytest_add_cli_args_test_selection = [
+    "tests/test_checks.py",
+    "tests/test_judges.py",
+]
 
 [tool.coverage.run]
 branch = true

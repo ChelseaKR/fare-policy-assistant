@@ -12,6 +12,11 @@ __pycache__/
 .coverage.*
 coverage.xml
 htmlcov/
+# Mutation testing (advisory; make mutation). mutmut copies sources into
+# mutants/ and caches results in .mutmut-cache; both are regenerated per run.
+mutants/
+.mutmut-cache
+html/
 # Built retrieval index (regenerate with `make index`)
 corpus/index/
 # Per-run eval artifacts (committed reports live in docs/)

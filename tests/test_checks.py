@@ -79,6 +79,39 @@ class TestAnswerChecks:
         checks = _by_name(run_checks(case, result, DOC_IDS))
         assert not checks["language_match"].passed
 
+    def test_forbidden_content_match_is_case_insensitive(self):
+        # A forbidden phrase must be caught regardless of casing; otherwise an
+        # answer could slip a banned claim past the gate just by capitalizing it.
+        case = {
+            "expected_behavior": "answer",
+            "language": "en",
+            "forbidden_content": ["express lane discount"],
+        }
+        result = _answered("The Express Lane Discount applies [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert not checks["forbidden_content_absent"].passed
+
+    def test_required_fact_match_is_case_insensitive(self):
+        # A required fact present in different casing must still count as present;
+        # a case-sensitive match would fail a correct, grounded answer.
+        case = {
+            "expected_behavior": "answer",
+            "language": "en",
+            "required_facts": ["DD Form 214"],
+        }
+        result = _answered("Veterans show a dd form 214 [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert checks["required_facts_present"].passed
+
+    def test_agency_check_skipped_when_case_sets_no_scope(self):
+        # correct_agency_cited must only be evaluated when the case names an
+        # agency_scope; emitting it otherwise would fail answers that never
+        # claimed a specific agency.
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered("The fare is $2.00 [doc:mst-fares], as of 2026.")
+        names = {c.name for c in run_checks(case, result, DOC_IDS)}
+        assert "correct_agency_cited" not in names
+
 
 class TestRefusalChecks:
     def test_refusal_with_redirect_passes(self):
