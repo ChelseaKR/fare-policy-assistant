@@ -78,7 +78,15 @@ TRANSIT = DomainProfile(
             r"estatus migratorio|indocumentad)",
             re.I,
         ),
-        "legal_advice": re.compile(r"\b(sue|lawsuit|legal advice|lawyer|attorney)\b", re.I),
+        # Spanish mirrors added for multilingual guard parity (FIX-05).
+        # ``demandar?`` matches "demanda"/"demandar" but the trailing ``\b``
+        # keeps it off unrelated words like "demandado", and no benign fare
+        # term ("pasaje reducido") is in this alternation.
+        "legal_advice": re.compile(
+            r"\b(sue|lawsuit|legal advice|lawyer|attorney|"
+            r"demandar?|demanda|abogad[oa]|asesor[íi]a legal|consejo legal)\b",
+            re.I,
+        ),
     },
 )
 
