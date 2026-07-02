@@ -79,13 +79,13 @@ jobs:
       - name: i18n catalog gate (make i18n)
         run: make i18n
 
-  a11y-advisory:
-    # Advisory axe/pa11y pass over the served page — the cross-check the
+  a11y-browser:
+    # Blocking axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
-    # Non-blocking: the structural gate in `checks` is the merge gate.
+    # Graduated from advisory to merge-blocking (BL-12): the page is
+    # violation-free, so any new finding is a real regression.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -94,7 +94,6 @@ jobs:
         with:
           node-version: "20"
       - name: Run pa11y on the static page (WCAG2AA)
-        continue-on-error: true
         run: |
           printf '%s\n' '{"chromeLaunchConfig":{"args":["--no-sandbox"]}}' > /tmp/pa11y-ci.json
           npx --yes pa11y@8 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html

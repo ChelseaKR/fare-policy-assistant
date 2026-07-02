@@ -7,7 +7,7 @@ visible focus, `aria-live` results, 24px-minimum targets, works on a phone).
 
 `a11y.py` is a pure-Python structural accessibility gate (page language,
 labeled controls, heading order, link text, zoom not disabled, target size). It
-runs in CI and as `make a11y`; an advisory pa11y/axe pass cross-checks the
+runs in CI and as `make a11y`; a blocking pa11y/axe pass cross-checks the
 parts a static analysis cannot (computed contrast, ARIA semantics). Neither
 replaces a manual screen-reader walkthrough, recorded in the model card.
 
