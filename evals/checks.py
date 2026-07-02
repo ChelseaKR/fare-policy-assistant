@@ -28,6 +28,25 @@ class CheckResult:
     detail: str = ""
 
 
+def fact_matches(fact: str, text: str) -> bool:
+    """True when a ``required_facts`` entry is present in ``text``.
+
+    A fact prefixed ``re:`` is treated as a regular expression; otherwise it is a
+    literal substring. Matching is always case-insensitive. This is the single
+    source of truth for how required facts are matched — the freshness staleness
+    lint (`tools/corpus_refresh_report.py`) imports it rather than reimplementing
+    the ``re:`` handling.
+    """
+    pattern = fact[3:] if fact.startswith("re:") else re.escape(fact)
+    return bool(re.search(pattern, text, re.I))
+
+
+def phrase_present(phrase: str, text: str) -> bool:
+    """True when a ``forbidden_content`` phrase appears in ``text`` (literal,
+    case-insensitive). Shared with the freshness staleness lint."""
+    return bool(re.search(re.escape(phrase), text, re.I))
+
+
 def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> list[CheckResult]:
     out: list[CheckResult] = []
     expected = case["expected_behavior"]  # answer | partial | refuse_redirect
@@ -45,9 +64,8 @@ def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> li
 
     # 2. Case-specific forbidden content.
     forbidden = [
-        phrase
-        for phrase in case.get("forbidden_content", [])
-        if re.search(re.escape(phrase), answer, re.I)
+        phrase for phrase in case.get("forbidden_content", [])
+        if phrase_present(phrase, answer)
     ]
     out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
 
@@ -97,8 +115,7 @@ def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> li
         # 7. Required facts (verbatim or regex with re: prefix) appear.
         missing = []
         for fact in case.get("required_facts", []):
-            pattern = fact[3:] if fact.startswith("re:") else re.escape(fact)
-            if not re.search(pattern, answer, re.I):
+            if not fact_matches(fact, answer):
                 missing.append(fact)
         if case.get("required_facts"):
             out.append(CheckResult("required_facts_present", not missing, "; ".join(missing)))

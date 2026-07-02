@@ -74,20 +74,28 @@ bug for this repo specifically.
 
 What a real operator needs before trusting the thing unattended.
 
-> **Status (2026-06-16):** items 1, 2, and 5 done. Weekly corpus-freshness
+> **Status (2026-07-02):** items 1, 2, and 5 done. Weekly corpus-freshness
 > automation opens a PR on drift (`.github/workflows/corpus-freshness.yml`) and
 > the UI shows how long ago the cited policies were fetched; a per-container
 > answer cache fronts the model call in the deployed handler; the CI badge is
-> in the README. Remaining: observability/alarms (item 3) and a true
-> cross-container rate limit (item 4).
+> in the README. The freshness loop is now closed end to end (FIX-09): the
+> workflow keys the change decision on `corpus_version` rather than a raw
+> `git diff -- corpus/`, `tools/corpus_refresh_report.py` writes the changelog
+> entry and doc-level diff into the PR body and lints the eval suites for stale
+> facts, and `/version` reports `staleness_days` against a budget. Remaining:
+> observability/alarms (item 3) and a true cross-container rate limit (item 4).
 
-1. **Corpus-freshness automation.** Snapshots are taken by hand (`make fetch`)
-   and the UI's "as of" date is already drifting. Add a scheduled job
-   (GitHub Actions cron or an EventBridge-triggered Lambda) that re-fetches the
-   manifest URLs, diffs against the committed snapshots, and on any change opens
-   a PR and runs the full eval. Define a staleness budget and surface it in the
-   UI ("policies fetched N days ago"). Done = a corpus change becomes a
-   reviewable PR with eval deltas, no human polling.
+1. **Corpus-freshness automation.** ✅ **Done.** Snapshots were taken by hand
+   (`make fetch`) and the UI's "as of" date was drifting. A scheduled GitHub
+   Actions job now re-fetches the manifest URLs, keys the change decision on the
+   processed-chunk `corpus_version` (furniture-only churn opens nothing), and on
+   a real change opens a PR whose body carries the doc-level diff, a new
+   `corpus/CHANGELOG.md` entry, and a staleness lint of `evals/suites/` (a case
+   whose `required_facts` the refreshed corpus dropped, or whose
+   `forbidden_content` it now contains, is flagged with the same matcher as the
+   eval gate). The staleness budget (`FPA_STALENESS_BUDGET_DAYS`, default 90) is
+   surfaced on `/version` and the UI. A corpus change becomes a reviewable PR
+   with eval deltas, no human polling.
 2. **Answer caching in the deployed path.** Every question re-pays Bedrock. Add
    a content-keyed cache (normalized question + corpus hash → answer) in front
    of the model call in `answer.py`, backed by an in-memory LRU per container
