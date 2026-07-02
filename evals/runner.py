@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -31,6 +32,7 @@ from assistant.models import get_model
 from assistant.retrieve import Retriever
 from evals import judges
 from evals.checks import run_checks
+from evals.stats import wilson_interval
 
 
 def load_suites(only: str | None = None) -> list[dict]:
@@ -100,12 +102,73 @@ def _cost_block(cfg: config.Config, usage: dict[str, list[int]]) -> dict:
     }
 
 
+def _score_case(
+    case: dict,
+    *,
+    answer_model,
+    judge_model,
+    retriever: Retriever,
+    cfg: config.Config,
+    corpus_doc_ids: set[str],
+    run_judges: bool,
+    usage: dict[str, list[int]],
+) -> tuple[object, list, list, bool]:
+    """Answer, check, and judge a single case once. Accumulates token usage into
+    `usage` (so replicate passes are billed correctly) and returns
+    `(result, checks, verdicts, passed)`.
+
+    Factored out so `--replicates` can call it N times over the same case with
+    no change to the single-pass path: at N=1 this is exactly the body the
+    inline loop used to run.
+    """
+    if case.get("turns"):
+        # Multi-turn: replay earlier turns to build history, then the final turn
+        # is the one under test. Earlier turns' tokens count.
+        history: list[tuple[str, str]] = []
+        for q in case["turns"][:-1]:
+            prior = answer_question(
+                q, history=history or None, model=answer_model,
+                retriever=retriever, cfg=cfg,
+            )
+            usage["answer"][0] += prior.input_tokens
+            usage["answer"][1] += prior.output_tokens
+            history.append((q, prior.answer))
+        question = case["turns"][-1]
+        result = answer_question(
+            question, history=history or None, model=answer_model,
+            retriever=retriever, cfg=cfg,
+        )
+    else:
+        question = case["question"]
+        result = answer_question(
+            question, model=answer_model, retriever=retriever, cfg=cfg
+        )
+    checks = run_checks(case, result, corpus_doc_ids)
+    verdicts = []
+    if run_judges:
+        if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
+            verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
+        verdicts.append(
+            judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
+        )
+    passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
+    usage["answer"][0] += result.input_tokens
+    usage["answer"][1] += result.output_tokens
+    for v in verdicts:
+        usage["judge"][0] += v.input_tokens
+        usage["judge"][1] += v.output_tokens
+    return result, checks, verdicts, passed
+
+
 def run(
     *,
     smoke: bool = False,
     offline: bool = False,
     suite: str | None = None,
+    replicates: int = 1,
 ) -> Path:
+    if replicates < 1:
+        raise SystemExit("--replicates must be >= 1")
     cfg = config.Config()
     if offline:
         cfg = config.Config(
@@ -123,7 +186,7 @@ def run(
             "--offline (deterministic checks only).",
             file=sys.stderr,
         )
-        return run(smoke=smoke, offline=True, suite=suite)
+        return run(smoke=smoke, offline=True, suite=suite, replicates=replicates)
 
     suites = load_suites(suite)
     if not suites:
@@ -142,6 +205,9 @@ def run(
     results_path = run_dir / "results.jsonl"
 
     totals: dict[str, dict[str, int]] = {}
+    # Per-suite (successes, trials) across all replicate passes, used only when
+    # replicates > 1 to derive a mean pass rate and a Wilson interval.
+    trials: dict[str, dict[str, int]] = {}
     # Exact token usage, split by model (answer vs judge) since they price
     # differently. Aggregated into an estimated per-run cost in the summary.
     usage = {"answer": [0, 0], "judge": [0, 0]}  # [input_tokens, output_tokens]
@@ -152,42 +218,27 @@ def run(
         for case in s["cases"]:
             if smoke and not case.get("smoke"):
                 continue
-            if case.get("turns"):
-                # Multi-turn: replay earlier turns to build history, then the
-                # final turn is the one under test. Earlier turns' tokens count.
-                history: list[tuple[str, str]] = []
-                for q in case["turns"][:-1]:
-                    prior = answer_question(
-                        q, history=history or None, model=answer_model,
-                        retriever=retriever, cfg=cfg,
-                    )
-                    usage["answer"][0] += prior.input_tokens
-                    usage["answer"][1] += prior.output_tokens
-                    history.append((q, prior.answer))
-                question = case["turns"][-1]
-                result = answer_question(
-                    question, history=history or None, model=answer_model,
-                    retriever=retriever, cfg=cfg,
+            # Run the same case `replicates` times. At N=1 this loops once and is
+            # identical to the single-pass path; the first pass supplies the full
+            # trace, and passes are counted to form a per-case pass fraction.
+            passes = 0
+            first: tuple | None = None
+            for _rep in range(replicates):
+                result, checks, verdicts, passed = _score_case(
+                    case,
+                    answer_model=answer_model,
+                    judge_model=judge_model,
+                    retriever=retriever,
+                    cfg=cfg,
+                    corpus_doc_ids=corpus_doc_ids,
+                    run_judges=run_judges,
+                    usage=usage,
                 )
-            else:
-                question = case["question"]
-                result = answer_question(
-                    question, model=answer_model, retriever=retriever, cfg=cfg
-                )
-            checks = run_checks(case, result, corpus_doc_ids)
-            verdicts = []
-            if run_judges:
-                if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
-                    verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
-                verdicts.append(
-                    judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
-                )
-            passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
-            usage["answer"][0] += result.input_tokens
-            usage["answer"][1] += result.output_tokens
-            for v in verdicts:
-                usage["judge"][0] += v.input_tokens
-                usage["judge"][1] += v.output_tokens
+                if first is None:
+                    first = (result, checks, verdicts, passed)
+                passes += int(passed)
+            result, checks, verdicts, passed = first  # type: ignore[misc]
+            question = case["turns"][-1] if case.get("turns") else case["question"]
             record = {
                 "case_id": case["id"],
                 "suite": case["suite"],
@@ -213,16 +264,40 @@ def run(
                 "judges": [asdict(v) for v in verdicts],
                 "passed": passed,
             }
+            if replicates > 1:
+                # A case's "passed" is the first pass (deterministic checks are
+                # stable; judge variance is the point); pass_fraction carries the
+                # measured across-replicate rate for the interval and for compare.
+                record["replicates"] = replicates
+                record["pass_fraction"] = round(passes / replicates, 4)
             records.append(record)
             t = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
             t["total"] += 1
-            t["passed"] += int(passed)
+            # Count a case as passed by majority vote across replicates (== the
+            # single pass at N=1), so passed/total stays interpretable.
+            t["passed"] += 1 if passes * 2 >= replicates else 0
+            tr = trials.setdefault(case["suite"], {"successes": 0, "trials": 0})
+            tr["successes"] += passes
+            tr["trials"] += replicates
             status = "PASS" if passed else "FAIL"
             print(f"{status}  {case['id']}")
 
     with results_path.open("w", encoding="utf-8") as f:
         for r in records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    def _suite_entry(name: str, t: dict[str, int]) -> dict:
+        entry = {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
+        if replicates > 1:
+            # Report the mean pass rate over all replicate trials and its Wilson
+            # 95% interval, so the headline is a measured band, not a point.
+            tr = trials[name]
+            low, high = wilson_interval(tr["successes"], tr["trials"])
+            entry["pass_rate"] = round(100 * tr["successes"] / tr["trials"], 1)
+            entry["ci_low"] = round(100 * low, 1)
+            entry["ci_high"] = round(100 * high, 1)
+            entry["replicates"] = replicates
+        return entry
 
     summary = {
         "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -237,15 +312,14 @@ def run(
         },
         "duration_seconds": round(time.monotonic() - started, 1),
         "cost": _cost_block(cfg, usage),
-        "suites": {
-            name: {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
-            for name, t in sorted(totals.items())
-        },
+        "suites": {name: _suite_entry(name, t) for name, t in sorted(totals.items())},
         "total": {
             "passed": sum(t["passed"] for t in totals.values()),
             "total": sum(t["total"] for t in totals.values()),
         },
     }
+    if replicates > 1:
+        summary["replicates"] = replicates
     (run_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -255,19 +329,40 @@ def run(
     return run_dir
 
 
-def suite_regressed(base: dict, now: dict, threshold: float = 2.0) -> bool:
+def suite_regressed(
+    base: dict, now: dict, threshold: float = 2.0, case_floor: int = 2
+) -> bool:
     """A suite regresses only if its pass rate dropped more than `threshold`
-    points AND its pass count dropped by at least two cases.
+    points AND its pass count dropped by at least `case_floor` cases.
 
-    The two-case floor exists because the percentage gate alone is incoherent on
+    The case floor exists because the percentage gate alone is incoherent on
     small suites: one case in the 6-case conversation suite is 16.7 points, so a
     single boundary case flipping under LLM-judge variance would always trip a
     2-point gate. Two cases is still a cheap, sensitive signal on the larger
     suites while absorbing the one-case judge noise the harness sees run to run.
+
+    `case_floor` defaults to 2 (the historical hand-tuned value). Once a
+    replicated run (`--replicates`) has measured the per-case flip rate, pass a
+    floor derived from it — e.g. `ceil` of the expected number of cases that
+    flip under the null — instead of the guess. See `flip_case_floor`.
     """
     rate_drop = now["pass_rate"] < base["pass_rate"] - threshold
-    case_drop = base["passed"] - now["passed"] >= 2
+    case_drop = base["passed"] - now["passed"] >= case_floor
     return rate_drop and case_drop
+
+
+def flip_case_floor(flip_rate: float, n_cases: int, safety: float = 1.0) -> int:
+    """Derive a `suite_regressed` case floor from a measured per-case flip rate.
+
+    Given the fraction of cases that flip pass/fail between replicate runs of the
+    same config (`flip_rate`, from a `--replicates` run) and the suite size, the
+    expected number of noise flips is `flip_rate * n_cases`. The floor is that
+    expectation rounded up, times `safety`, and never below the historical 2 —
+    so switching a suite to a measured floor can only make the gate stricter,
+    never looser than today.
+    """
+    expected = math.ceil(flip_rate * n_cases * safety)
+    return max(2, expected)
 
 
 def check_regression(run_dir: Path, threshold: float = 2.0) -> None:
@@ -324,9 +419,18 @@ def main() -> None:
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--suite")
     parser.add_argument("--update-baseline", action="store_true")
+    parser.add_argument(
+        "--replicates",
+        type=int,
+        default=1,
+        help="run each case N times and report a per-suite mean ± Wilson interval "
+        "(N=1, the default, is byte-identical to a single run). Live and paid.",
+    )
     args = parser.parse_args()
 
-    run_dir = run(smoke=args.smoke, offline=args.offline, suite=args.suite)
+    run_dir = run(
+        smoke=args.smoke, offline=args.offline, suite=args.suite, replicates=args.replicates
+    )
     if args.full:
         from evals.report import generate
 
