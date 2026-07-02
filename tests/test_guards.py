@@ -47,6 +47,16 @@ class TestLanguageDetection:
     def test_spanish(self):
         assert guards.detect_language("¿Cuánto cuesta el pasaje reducido?") == "es"
 
+    def test_tagalog(self):
+        # FIX-11: the n-gram classifier adds Tagalog as a third language.
+        assert guards.detect_language("Magkano ang pamasahe?") == "tl"
+
+    def test_short_ambiguous_never_blocks(self):
+        # An uncertain detection must proceed (never refuse) and attach a note.
+        check = guards.check_input("hi")
+        assert check.ok
+        assert check.notice
+
 
 class TestDeterminationLanguage:
     def test_flat_determination_caught(self):

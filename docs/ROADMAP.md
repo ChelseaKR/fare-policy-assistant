@@ -170,6 +170,23 @@ Higher cost, lower urgency; do when the core is solid.
    language (Chinese, Vietnamese, Tagalog, or Korean) as a clearly-tagged
    stretch suite, honest about cross-lingual retrieval limits. Done = the new
    language has a mirrored suite and the report shows its parity gap.
+   - *(FIX-11 — done.)* **Robust, extensible language identification.** The
+     two-regex EN/ES word-count heuristic in `guards.detect_language` is replaced
+     by a dependency-free, deterministic character-trigram classifier
+     (`src/assistant/langid.py`) with per-language profiles committed as
+     `src/assistant/lang_profiles.json` and regenerated from committed sample
+     texts by `tools/build_lang_profiles.py` — so **adding a language is a data
+     file**. It supports en/es/**tl** (Tagalog), returns a confidence from the
+     top-two margin, and gives an honest `unsure` verdict for short / ambiguous /
+     code-switched input. `detect_language` keeps its `str` signature for
+     existing callers (`answer.py`, `retrieve.py`, `evals/checks.py`);
+     `detect_language_confident` exposes `(lang, conf, unsure)`. An uncertain
+     detection **never blocks** an answer — `check_input` proceeds in English and
+     attaches a translated "I wasn't sure of your language" note (new gettext
+     msgid, EN/ES catalogs). Tagalog is *detected* but has no fixed-string
+     catalog yet, so its refusals fall back to English via
+     `gettext` `fallback=True` (documented in `i18n.py`). Remaining for full
+     parity: a mirrored `tl` eval suite and a `locales/tl` catalog.
 4. **Reranker, only if earned.** Per CLAUDE.md, add one only if the evals show
    retrieval is the bottleneck, and justify it in an ADR with the deltas. Today
    retrieval is not the bottleneck (the failures are generation and judge
