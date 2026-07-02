@@ -128,3 +128,50 @@ class TestHelpfulness:
         judge = ScriptedJudge('{"helpful": true, "score": 3}')
         judges.judge_helpfulness(judge, _result(), "refuse_redirect", _cfg())
         assert "refuse_redirect" in judge.last_user
+
+    def test_rationale_is_passed_into_the_prompt(self):
+        judge = ScriptedJudge('{"helpful": true, "score": 3}')
+        judges.judge_helpfulness(
+            judge, _result(), "answer", _cfg(),
+            rationale="Rider already stated their age; do not re-ask.",
+        )
+        assert "Case rationale: Rider already stated their age; do not re-ask." in judge.last_user
+
+    def test_no_rationale_omits_the_rationale_line(self):
+        judge = ScriptedJudge('{"helpful": true, "score": 3}')
+        judges.judge_helpfulness(judge, _result(), "answer", _cfg())
+        assert "Case rationale" not in judge.last_user
+
+
+# A conversation whose earlier turns carry the facts the final answer resolves
+# against. Both judges must see these turns or they grade the final answer blind.
+_HISTORY = [
+    ("I'm 66. Do I get a discount on MST?", "Yes, seniors 65+ pay $1.00 [doc:mst-fares]."),
+    ("What about my spouse?", "The senior fare applies per rider aged 65+ [doc:mst-fares]."),
+]
+
+
+class TestJudgeHistory:
+    def test_helpfulness_prompt_carries_prior_turns(self):
+        judge = ScriptedJudge('{"helpful": true, "score": 4}')
+        judges.judge_helpfulness(judge, _result(), "answer", _cfg(), history=_HISTORY)
+        assert "Prior conversation turns:" in judge.last_user
+        assert "I'm 66. Do I get a discount on MST?" in judge.last_user
+        assert "What about my spouse?" in judge.last_user
+
+    def test_groundedness_prompt_carries_prior_turns(self):
+        judge = ScriptedJudge('{"grounded": true, "reasoning": "ok"}')
+        judges.judge_groundedness(judge, _result(), _cfg(), history=_HISTORY)
+        assert "Prior conversation turns:" in judge.last_user
+        assert "I'm 66. Do I get a discount on MST?" in judge.last_user
+
+    def test_no_history_leaves_prompts_without_the_header(self):
+        gj = ScriptedJudge('{"grounded": true, "reasoning": "ok"}')
+        judges.judge_groundedness(gj, _result(), _cfg())
+        assert "Prior conversation" not in gj.last_user
+        assert gj.last_user.startswith("Question:")
+
+        hj = ScriptedJudge('{"helpful": true, "score": 3}')
+        judges.judge_helpfulness(hj, _result(), "answer", _cfg())
+        assert "Prior conversation" not in hj.last_user
+        assert hj.last_user.startswith("Question:")

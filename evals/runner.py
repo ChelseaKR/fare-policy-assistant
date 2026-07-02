@@ -206,6 +206,7 @@ def _run_case(
     within this call so turns are never interleaved with another case's) and
     return its trace record plus the token usage it spent."""
     usage = {"answer": [0, 0], "judge": [0, 0]}
+    judge_history: list[tuple[str, str]] | None = None
     if case.get("turns"):
         # Multi-turn: replay earlier turns to build history, then the final
         # turn is the one under test. Earlier turns' tokens count.
@@ -221,12 +222,14 @@ def _run_case(
         result: AnswerResult = answer_question(
             question, history=history or None, model=answer_model, retriever=retriever, cfg=cfg
         )
+        judge_history = history
     elif case.get("history"):
         injected = [(h["q"], h["a"]) for h in case["history"]]
         question = case["question"]
         result = answer_question(
             question, history=injected, model=answer_model, retriever=retriever, cfg=cfg
         )
+        judge_history = injected
     else:
         question = case["question"]
         result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
@@ -234,9 +237,18 @@ def _run_case(
     verdicts = []
     if run_judges:
         if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
-            verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
+            verdicts.append(
+                judges.judge_groundedness(judge_model, result, cfg, history=judge_history)
+            )
         verdicts.append(
-            judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
+            judges.judge_helpfulness(
+                judge_model,
+                result,
+                case["expected_behavior"],
+                cfg,
+                history=judge_history,
+                rationale=case["rationale"],
+            )
         )
     passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
     usage["answer"][0] += result.input_tokens
