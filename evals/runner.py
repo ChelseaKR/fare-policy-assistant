@@ -152,10 +152,11 @@ def run(
         for case in s["cases"]:
             if smoke and not case.get("smoke"):
                 continue
+            history: list[tuple[str, str]] | None = None
             if case.get("turns"):
                 # Multi-turn: replay earlier turns to build history, then the
                 # final turn is the one under test. Earlier turns' tokens count.
-                history: list[tuple[str, str]] = []
+                history = []
                 for q in case["turns"][:-1]:
                     prior = answer_question(
                         q,
@@ -182,9 +183,16 @@ def run(
             verdicts = []
             if run_judges:
                 if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
-                    verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
+                    verdicts.append(
+                        judges.judge_groundedness(
+                            judge_model, result, cfg, history=history or None
+                        )
+                    )
                 verdicts.append(
-                    judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
+                    judges.judge_helpfulness(
+                        judge_model, result, case["expected_behavior"], cfg,
+                        history=history or None, rationale=case["rationale"],
+                    )
                 )
             passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
             usage["answer"][0] += result.input_tokens
