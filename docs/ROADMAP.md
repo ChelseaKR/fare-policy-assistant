@@ -74,12 +74,15 @@ bug for this repo specifically.
 
 What a real operator needs before trusting the thing unattended.
 
-> **Status (2026-06-16):** items 1, 2, and 5 done. Weekly corpus-freshness
+> **Status (2026-06-16):** items 1, 2, 3, and 5 done. Weekly corpus-freshness
 > automation opens a PR on drift (`.github/workflows/corpus-freshness.yml`) and
 > the UI shows how long ago the cited policies were fetched; a per-container
 > answer cache fronts the model call in the deployed handler; the CI badge is
-> in the README. Remaining: observability/alarms (item 3) and a true
-> cross-container rate limit (item 4).
+> in the README. Item 3: `deploy.sh` now provisions the metric filters, alarms
+> (handler/Lambda errors, throttles, p99, Bedrock surge), and a CloudWatch
+> dashboard (per-day cost proxy, traffic, alarm status) — only the one-time,
+> billing-scoped AWS Budget stays a manual step (`infra/README.md`). Remaining:
+> a true cross-container rate limit (item 4).
 
 1. **Corpus-freshness automation.** Snapshots are taken by hand (`make fetch`)
    and the UI's "as of" date is already drifting. Add a scheduled job
