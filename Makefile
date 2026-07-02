@@ -26,8 +26,9 @@ smoke:        ## CI smoke suite (25 cases, deterministic checks only unless key 
 eval:         ## Full eval run; writes evals/runs/<timestamp>/ and regenerates EVALS.md
 	uv run python -m evals.runner --full
 
-report:       ## Regenerate EVALS.md + HTML from the latest run
+report:       ## Regenerate EVALS.md + HTML from the latest run, and the eval-history trend page
 	uv run python -m evals.report
+	uv run python -m evals.history
 
 a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, static subset)
 	uv run python -m web.a11y
