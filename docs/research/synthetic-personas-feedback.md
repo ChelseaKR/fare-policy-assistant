@@ -581,7 +581,7 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 | R1-1 | Done (UI already renders readable Sources; verified) |
 | R1-2 | Scaffolded: companion where-to-apply retrieval (`src/assistant/retrieve.py`) + `answer_user` v4 close-the-loop rule shipped, edge-034–038 assert the next step (office, cost, hours) and the "process not published → agency next step" case; retrieval verified offline. The prompt rule's live judge validation is pending (`make eval`) |
 | R1-3 | Dropped as unjustified (see above) |
-| R1-4 | Blocked: creds (positive-handoff prompt rule, partly in v6); eval case can be pre-written |
+| R1-4 | Prompt + evals written (system.txt rule 2 now mandates the explicit "agency decides; here is how to start" handoff; refusal.yaml refuse-020/021/022 assert next-step handoff content). Live judge validation still creds-gated. |
 | R1-5 | Done (confidence signal) |
 | R1-6 | Blocked: creds (two-ways-to-qualify template, partly in v6) |
 | R1-7 | Done (text-size + contrast controls) |
@@ -633,7 +633,7 @@ a `CLAUDE.md` hard rule; several items strengthen them.
 | R1-1 | Render citations as human-readable source name + resolvable URL in the rider UI instead of `[doc:id]`; data is already in the manifest. | F-18, F-10 | M | `web/index.html`, `web/handler.py`, `corpus/manifest.yaml` | No |
 | R1-2 | "Close the loop" prompting and retrieval: when a fare question has a matching application/ID-card passage, include where-to-apply, cost, and hours. Add edge cases that assert the next step is present. | F-1, F-3, F-6, F-15 | M | `prompts/answer_user.txt`, `src/assistant/retrieve.py`, `evals/suites/edge_cases.yaml` | No |
 | R1-3 | Improve on-demand/microtransit retrieval so BeeLine-type questions stop collapsing into redirects; add a parity check vs. fixed-route. | F-12, F-7(data) | M | `src/assistant/retrieve.py`, `evals/suites/groundedness.yaml` | No |
-| R1-4 | Explicit positive handoff on any eligibility-adjacent answer: "the agency decides; here is how to start," tested as a check. Strengthens the no-determination rule. | F-19, F-25 | S | `prompts/answer_user.txt`, `evals/suites/refusal.yaml` | No |
+| R1-4 | Explicit positive handoff on any eligibility-adjacent answer: "the agency decides; here is how to start," tested as a check. Strengthens the no-determination rule. | F-19, F-25 | S | `prompts/system.txt`, `evals/suites/refusal.yaml` | Prompt + evals written (live judge creds-gated) |
 | R1-5 | Graded confidence signal surfaced to riders and staff when retrieval is weak ("I am not certain about this; confirm here"), distinct from a hard refusal. | F-16 | M | `src/assistant/answer.py`, `web/handler.py` | No |
 | R1-6 | "Two ways to qualify" disambiguation pattern (Medicare card vs. 65+, free program vs. paid fallback) as a reusable answer template plus edge cases per agency. | F-6, F-15, F-10 | M | `prompts/`, `evals/suites/edge_cases.yaml` | No |
 | R1-7 | Senior/low-vision affordances on the demo: a visible text-size/contrast control and plain-language default copy. | F-2 | S | `web/index.html`, `web/a11y.py` | No |
