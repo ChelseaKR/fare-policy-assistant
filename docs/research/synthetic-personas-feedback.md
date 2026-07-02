@@ -572,14 +572,14 @@ needs a person. "Feature" is a multi-session build left for a focused effort.
 
 | ID | Status |
 |---|---|
-| R0-1 | Prepared, pending live validation (prompts v6/v3; needs `make eval`) |
+| R0-1 | Prepared, pending live validation (prompts v6/v4; needs `make eval`) |
 | R0-2 | Done (README audit framing) |
 | R0-3 | Done (README ↔ model-card a11y reconciled) |
 | R0-4 | Blocked: creds. Growing the calibration sample needs live judge verdicts to label against; only the report-prose caveat is doable offline |
 | R0-5 | Done (issues #1–#6) |
 | R0-6 | Done (procurement brief) |
 | R1-1 | Done (UI already renders readable Sources; verified) |
-| R1-2 | Blocked: creds (close-the-loop prompting needs live validation); eval cases can be pre-written |
+| R1-2 | Scaffolded: companion where-to-apply retrieval (`src/assistant/retrieve.py`) + `answer_user` v4 close-the-loop rule shipped, edge-034–038 assert the next step (office, cost, hours) and the "process not published → agency next step" case; retrieval verified offline. The prompt rule's live judge validation is pending (`make eval`) |
 | R1-3 | Dropped as unjustified (see above) |
 | R1-4 | Blocked: creds (positive-handoff prompt rule, partly in v6); eval case can be pre-written |
 | R1-5 | Done (confidence signal) |
