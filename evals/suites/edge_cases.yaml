@@ -270,3 +270,58 @@ cases:
     expected_behavior: answer
     required_facts: ["62", "65"]
     rationale: "Cross-agency comparison: HTA reduced fare is 62+, MST discount is 65+. Both must be cited."
+
+  # R1-6 "two ways to qualify" disambiguation: per-agency cases where the corpus
+  # documents two independent paths to the same discount — a Medicare card vs. an
+  # age threshold, or a free program vs. a paid reduced fare. The answer must name
+  # both as alternatives ("either X or Y"), not merge them, and still not determine
+  # eligibility. SacRT/HTA have no Medicare pathway in the corpus, so their dual-path
+  # case is free-vs-paid only.
+
+  - id: edge-034
+    question: "I'm 52 and I have a Medicare card — can I get the SBMTD reduced fare, or do I have to be 65?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "65"]
+    rationale: "sbmtd-fares-passes lists two independent paths to the $1.25 reduced fare: Seniors (age 65+) OR Persons with Medicare Cards. The answer must present them as alternatives and must not treat 65 as a precondition for the Medicare path (R1-6)."
+
+  - id: edge-035
+    question: "My kid is in 8th grade and rides SacRT — is there a student discount fare, or can they ride free?"
+    agency_scope: SacRT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:RydeFreeRT", "re:\\$\\s?1\\.25"]
+    rationale: "sacrt-fares documents both a paid TK-12 student discount fare ($1.25 single) and the fare-free RydeFreeRT program for TK-12 students. Both paths must be named as alternatives, neither dropped (R1-6, and the ground-026 give-the-price behavior)."
+
+  - id: edge-036
+    question: "I'm a CSUMB student and I just turned 66 — do I ride MST free with my student ID, or use the senior discount fare?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "65"]
+    rationale: "mst-fares documents two independent paths: CSUMB students ride free with a valid photo student ID, and riders 65+ (or Medicare card holders) get the discount fare. The answer must offer both without merging them (R1-6)."
+
+  - id: edge-037
+    question: "I go to UCSB and I just turned 65 — do I ride MTD free as a student, or pay the senior fare?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:\\$\\s?1\\.25"]
+    rationale: "sbmtd-fares-passes documents UCSB students riding free and the $1.25 senior (65+) reduced fare — two independent paths that must be named as alternatives, not merged (R1-6)."
+
+  - id: edge-038
+    question: "I'm a Cal Poly Humboldt student and I'm 63 — do I ride Humboldt Transit free with my student ID, or pay the reduced senior fare?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:[Ss]tored [Vv]alue"]
+    rationale: "hta-fares documents Cal Poly Humboldt students riding free by swiping a current student ID, and a separate reduced fare (only on the Stored Value pass) for seniors 62+. Both paths must be presented without merging them (R1-6)."
+
+  - id: edge-039
+    question: "I'm a UC Davis undergrad with an Aggie Card and I'm 64 — do I ride Yolobus on the Aggie Card, or use the senior fare?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]nlimited", "62"]
+    rationale: "yolobus-fares documents the UC Davis Aggie Card (undergraduate) as good for unlimited rides, and a separate senior (62+) discounted fare. The answer must present both independent paths as alternatives (R1-6)."
