@@ -61,12 +61,32 @@ from evals.checks import run_checks
 from evals.stats import wilson_interval
 
 
+def _flatten_pairs(data: dict) -> list[dict]:
+    """A sensitivity suite is written as `pairs:` of minimal-pair `variants:`.
+
+    Flatten each variant into an ordinary case dict carrying a `pair_id` (the
+    parent pair's id) and the pair's `boundary`, so every downstream consumer —
+    validation, checks.py grading, credential gating, scoring — treats it as a
+    normal case. The variants are re-grouped by `pair_id` only for the
+    pair-level verdict (`pair_verdicts`), never for scoring.
+    """
+    cases = []
+    for pair in data["pairs"]:
+        for variant in pair["variants"]:
+            variant["pair_id"] = pair["id"]
+            variant.setdefault("boundary", pair.get("boundary"))
+            cases.append(variant)
+    return cases
+
+
 def load_suites(only: str | None = None) -> list[dict]:
     suites = []
     for path in sorted(config.EVAL_SUITES_DIR.glob("*.yaml")):
         if only and path.stem != only:
             continue
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if "pairs" in data and "cases" not in data:
+            data["cases"] = _flatten_pairs(data)
         for case in data["cases"]:
             case["suite"] = path.stem
         suites.append(data)
@@ -77,7 +97,18 @@ def validate_cases(suites: list[dict]) -> None:
     seen: set[str] = set()
     required = {"id", "expected_behavior", "rationale"}
     for suite in suites:
-        for case in suite["cases"]:
+        # Sensitivity suites carry minimal pairs that are flattened into cases.
+        for pair in suite.get("pairs", []):
+            if not pair.get("id"):
+                raise SystemExit("sensitivity pair missing `id`")
+            if not pair.get("boundary"):
+                raise SystemExit(f"pair {pair['id']}: missing `boundary`")
+            if len(pair.get("variants", [])) < 2:
+                raise SystemExit(f"pair {pair['id']}: needs at least two variants")
+        cases = suite.get("cases")
+        if cases is None and "pairs" in suite:
+            cases = _flatten_pairs(suite)
+        for case in cases or []:
             # Auto-drafted skeletons (assistant.scaffold_agency) carry
             # `draft: true`. They have TODO questions and empty required_facts,
             # so they must never run or land in results: a human fills the facts
@@ -120,6 +151,24 @@ def validate_cases(suites: list[dict]) -> None:
             seen.add(case["id"])
             if case["expected_behavior"] not in ("answer", "partial", "refuse_redirect"):
                 raise SystemExit(f"case {case['id']}: bad expected_behavior")
+
+
+def pair_verdicts(records: list[dict]) -> dict[str, bool]:
+    """Group scored records by `pair_id` and return {pair_id: passed}.
+
+    A minimal-pair boundary case only counts as distinguished if *every*
+    variant passed — the per-variant required_facts / forbidden_content prove
+    the answer actually changed (or held) across the boundary. One variant
+    passing on boilerplate is not evidence of discrimination, so a mixed
+    pass/fail pair reports failed.
+    """
+    grouped: dict[str, list[bool]] = {}
+    for r in records:
+        pid = r.get("pair_id")
+        if not pid:
+            continue
+        grouped.setdefault(pid, []).append(bool(r["passed"]))
+    return {pid: all(v) for pid, v in grouped.items()}
 
 
 def _have_credentials(provider: str) -> bool:
@@ -259,6 +308,7 @@ def _run_case(
     record = {
         "case_id": case["id"],
         "suite": case["suite"],
+        "pair_id": case.get("pair_id"),
         "mirror_of": case.get("mirror_of"),
         "language": case.get("language", "en"),
         "expected_behavior": case["expected_behavior"],
@@ -552,6 +602,15 @@ def run(
     }
     if replicates > 1:
         summary["replicates"] = replicates
+
+    # Counterfactual sensitivity: fold the pair-level verdict into the
+    # sensitivity suite's summary. A pair is distinguished only if every one of
+    # its variants passed (see `pair_verdicts`).
+    verdicts = pair_verdicts(records)
+    if verdicts and "sensitivity" in summary["suites"]:
+        summary["suites"]["sensitivity"]["pairs_passed"] = sum(verdicts.values())
+        summary["suites"]["sensitivity"]["pairs_total"] = len(verdicts)
+
     (run_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )

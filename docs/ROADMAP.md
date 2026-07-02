@@ -36,6 +36,14 @@ bug for this repo specifically.
 > fixed (combined-citation parsing). A prompt attempt at `ground-026` and
 > `refuse-018` regressed other cases and was reverted; both stay documented.
 > The GovChat-Eval audit runs in CI as an advisory job. Net: 97 → 98/103.
+>
+> **Status (2026-07-02):** EXP-02 (item 4) done. A 15-pair counterfactual
+> sensitivity suite (`evals/suites/sensitivity.yaml`) scores minimal pairs
+> jointly — a pair passes only if every variant passes — and the report renders
+> "N/15 boundary pairs correctly distinguished". This proves boundary
+> discrimination (62 vs 65, Medicare vs Medi-Cal, super-senior vs senior,
+> youth-free vs youth-discount, stored-value vs monthly), not just aggregate
+> pass rate.
 
 1. **Close the model-card claims.** `docs/model-card.md` states per-run cost is
    documented and that judge agreement is spot-checked on a 10% human-labeled
@@ -69,6 +77,18 @@ bug for this repo specifically.
    hand today. Add a CI job that runs it against the committed dataset and
    uploads the report; keep it advisory until the deterministic-judge floor is
    understood, then gate. Done = every PR shows an audit artifact.
+4. **EXP-02 — Counterfactual sensitivity suite.** *(Done, 2026-07-02.)*
+   Aggregate pass rate can hide a model that answers every eligibility question
+   with the same boilerplate. Add ~15 minimal-pair (or triple) cases that differ
+   by exactly one salient feature sitting on a real boundary already catalogued
+   in `edge_cases.yaml`, and score them jointly. `evals/suites/sensitivity.yaml`
+   holds them as `pairs:` of `variants:`; the runner flattens each variant into
+   an ordinary case (carrying a `pair_id`) so existing deterministic checks and
+   credential gating apply unchanged, then re-groups the results into a pair-level
+   verdict — a pair passes only if every variant passes. `EVALS.md` renders
+   "N/15 boundary pairs correctly distinguished". Done = the suite proves the
+   assistant discriminates across the boundary (62 vs 65, Medicare vs Medi-Cal,
+   super-senior vs senior), not merely that it produces plausible prose.
 
 ## P1 — Production hardening
 
