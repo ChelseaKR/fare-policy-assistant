@@ -52,6 +52,30 @@ class TestRouting:
         assert resp["headers"]["x-frame-options"] == "DENY"
         assert "content-security-policy" in resp["headers"]
 
+    def test_no_route_allows_unsafe_inline(self):
+        # The CSP hashes inline blocks instead of blanket-allowing them; no
+        # response may fall back to 'unsafe-inline' (FIX-10).
+        for path in ("/", "/offline", "/embed", "/version", "/api/ask", "/api/feedback"):
+            resp = web_handler.handler(_event(method="GET", path=path))
+            csp = resp["headers"].get("content-security-policy", "")
+            assert "unsafe-inline" not in csp, f"{path} CSP allows unsafe-inline: {csp}"
+
+    @pytest.mark.parametrize("path", ["/", "/offline", "/embed"])
+    def test_inline_block_hashes_appear_in_csp(self, path):
+        # Drift guard: recompute the sha256 of every inline <script>/<style>
+        # block from the *served* body and assert each token is in the CSP. If
+        # markup and policy ever drift apart, the browser would refuse the block
+        # and this fails first.
+        from web.csp import script_hashes, style_hashes
+
+        resp = web_handler.handler(_event(method="GET", path=path))
+        body = resp["body"]
+        csp = resp["headers"]["content-security-policy"]
+        tokens = script_hashes(body) + style_hashes(body)
+        assert tokens, f"{path} served no inline blocks to hash"
+        for token in tokens:
+            assert token in csp, f"{path} CSP is missing {token}"
+
     def test_live_region_present_for_answer_status(self):
         # New answers and status are announced through a polite live region
         # (persona research F-8); lock it so a refactor cannot drop it.
@@ -150,6 +174,14 @@ class TestEmbedWidget:
         monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov https://mst.org")
         csp = self._embed()["headers"]["content-security-policy"]
         assert "frame-ancestors https://sbmtd.gov https://mst.org" in csp
+
+    def test_embed_csp_ends_with_frame_ancestors(self, monkeypatch):
+        # Hashing the inline blocks must not disturb the frame-ancestors tail
+        # the embed appends (FIX-10 keeps the framing contract intact).
+        monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov")
+        csp = self._embed()["headers"]["content-security-policy"]
+        assert csp.rstrip().endswith("frame-ancestors https://sbmtd.gov")
+        assert "unsafe-inline" not in csp
 
     def test_embed_passes_structural_a11y(self):
         from web.a11y import check_html

@@ -32,8 +32,16 @@ as the only source of truth.
   citation fields are set as text, and citation links are validated to http(s)
   at the point an answer leaves the server, so a malformed corpus URL cannot
   inject a script-on-click link.
-- **Transport and headers.** Responses set `default-src 'none'` CSP, `nosniff`,
-  `no-referrer`, and `no-store`; the main page is `x-frame-options: DENY`.
+- **Transport and headers.** Responses set a `default-src 'none'` CSP, `nosniff`,
+  `no-referrer`, and `no-store`; the main page is `x-frame-options: DENY`. The
+  HTML pages carry their CSS/JS in inline `<style>`/`<script>` blocks (no build
+  step, no CDN), so `style-src`/`script-src` allow only those blocks by their
+  `'sha256-…'` hash — not `'unsafe-inline'` — and the hashes are recomputed from
+  the served markup, so an injected inline script or a drifted policy is refused.
+  There is no residual `'unsafe-inline'`; the pages carry no inline `on*=` event
+  handlers or `style=""` attributes (which hashes cannot cover). The embed adds a
+  configurable `frame-ancestors` in place of `x-frame-options` (see
+  `web/handler.py` and `web/csp.py`).
 - **Cost and abuse bounds.** A per-container request budget, Lambda reserved
   concurrency, an API Gateway throttle, a 500-character question cap, a request
   body size cap, and an IAM policy scoped to `bedrock:InvokeModel` on the pinned

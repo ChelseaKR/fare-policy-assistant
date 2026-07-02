@@ -28,6 +28,7 @@ from assistant import config, guards  # noqa: E402
 from assistant.answer import answer_question  # noqa: E402
 from assistant.models import get_model  # noqa: E402
 from assistant.retrieve import default_retriever  # noqa: E402
+from web.csp import html_csp  # noqa: E402
 
 MAX_QUESTION_CHARS = 500
 # Reject oversized request bodies before json.loads parses them. A question (500
@@ -40,6 +41,9 @@ MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
 MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+# The index page's CSP, computed once from its own markup: the inline <style> and
+# <script> blocks are allowed by sha256 hash, not 'unsafe-inline' (see web/csp.py).
+_INDEX_CSP = html_csp(_INDEX_HTML)
 # Rendered once per container from the committed corpus; it changes only when the
 # corpus does, which means a new deploy.
 _OFFLINE_HTML: str | None = None
@@ -131,16 +135,36 @@ def _cache_put(key: str, payload: dict) -> None:
 # Build the BM25 index once per container, not per request.
 default_retriever()
 
+# Baseline for JSON/API responses: nothing loads, nothing frames. HTML routes
+# override content-security-policy with a per-page policy that hashes their inline
+# blocks (see _html_response); JSON responses carry no scripts or styles, so the
+# blanket default-src 'none' is all they need. No 'unsafe-inline' anywhere.
 _SECURITY_HEADERS = {
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
     "referrer-policy": "no-referrer",
     "content-security-policy": (
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
-        "connect-src 'self'; form-action 'self'; base-uri 'none'"
+        "default-src 'none'; connect-src 'self'; form-action 'self'; base-uri 'none'"
     ),
 }
+
+
+def _html_response(body: str, csp: str, *, frameable: bool = False) -> dict:
+    """An HTML response carrying the baseline security headers with a per-page
+    CSP. The CSP hashes the page's own inline <style>/<script> blocks, so it can
+    never drift from the served markup. Framed routes (the embed) drop the
+    x-frame-options DENY and instead scope framing via frame-ancestors in the CSP.
+    """
+    headers = dict(_SECURITY_HEADERS)
+    if frameable:
+        headers.pop("x-frame-options", None)
+    headers["content-security-policy"] = csp
+    return {
+        "statusCode": 200,
+        "headers": {"content-type": "text/html; charset=utf-8", **headers},
+        "body": body,
+    }
 
 
 def _embed_response(body: str) -> dict:
@@ -151,18 +175,12 @@ def _embed_response(body: str) -> dict:
     of the box the widget is frameable only from this origin. A deployment that
     wants agencies to embed it sets FPA_EMBED_ANCESTORS to their origins. Nothing
     else in the security posture changes: no store, nosniff, no referrer, and the
-    same default-src 'none' base.
+    same default-src 'none' base with the widget's inline blocks hashed in.
     """
     ancestors = os.environ.get("FPA_EMBED_ANCESTORS", "'self'")
-    headers = {k: v for k, v in _SECURITY_HEADERS.items() if k != "x-frame-options"}
-    headers["content-security-policy"] = (
-        _SECURITY_HEADERS["content-security-policy"] + f"; frame-ancestors {ancestors}"
+    return _html_response(
+        body, html_csp(body, frame_ancestors=ancestors), frameable=True
     )
-    return {
-        "statusCode": 200,
-        "headers": {"content-type": "text/html; charset=utf-8", **headers},
-        "body": body,
-    }
 
 
 def _make_cfg() -> config.Config:
@@ -332,9 +350,10 @@ def handler(event: dict, context: object = None) -> dict:
     path = event.get("rawPath", "/")
 
     if path == "/" and method == "GET":
-        return _response(200, _INDEX_HTML, "text/html; charset=utf-8")
+        return _html_response(_INDEX_HTML, _INDEX_CSP)
     if path == "/offline" and method == "GET":
-        return _response(200, _offline_html(), "text/html; charset=utf-8")
+        body = _offline_html()
+        return _html_response(body, html_csp(body))
     if path == "/embed" and method == "GET":
         from web.embed import EMBED_HTML
 
