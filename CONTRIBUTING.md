@@ -80,6 +80,43 @@ names a case id, the failing check, and a proposed remediation. The generation
 and judge-strictness failures need a live eval to validate; the documentation and
 UI items do not.
 
+## Adding agency #6
+
+The corpus's whole credibility claim is "the same eval coverage as the existing
+agencies." A new agency is therefore not a data drop; it is a case-authoring
+task with a scaffold to keep it honest. The kit turns it into one reviewed PR:
+
+```sh
+# 1. Scaffold. Prints a manifest stanza and writes a checklist; --write also
+#    appends the stanza (commented out) to corpus/manifest.yaml.
+uv run python -m assistant.scaffold_agency <id> \
+    --agency-full "Full Agency Name" --url https://.../fares/ --write
+
+# 2. Uncomment and finish the manifest stanza, then fetch and ingest.
+make fetch && make ingest
+
+# 3. Re-run the scaffold now that chunks exist. It writes
+#    evals/suites/draft_<id>.yaml — one skeleton case per chunk, each with the
+#    source passage inline as its rationale.
+uv run python -m assistant.scaffold_agency <id>
+```
+
+Then do the human work the scaffold cannot: for each draft case write a real
+rider `question` answerable from the quoted passage and fill `required_facts`;
+find the edge-case boundaries this agency actually publishes; and mirror cases
+into the real suites (`groundedness`, `refusal`, `cross_agency`, `multilingual`,
+`freshness`) so parity is a number, not a hope. `docs/agencies/<id>-checklist.md`
+tracks every box, including the robots/permissions notes and the Spanish page.
+
+The draft skeletons carry a `draft: true` flag and **the eval runner refuses to
+run any suite while a single draft flag remains** (`evals/runner.py`,
+`validate_cases`). That is deliberate: an auto-drafted case can never land in
+eval results with its TODO question and empty facts. When a case has moved into
+a real suite, delete it from `draft_<id>.yaml`; when the file is empty, delete
+the file. The PR is done when the checklist is fully ticked and `make verify` is
+green. This mirrors the domain-porting recipe in
+[`docs/adapting.md`](docs/adapting.md) at single-agency scale.
+
 ## Style
 
 Prose in the README, model card, UI copy, and report follows the writing notes in
