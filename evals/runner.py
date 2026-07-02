@@ -76,6 +76,15 @@ def validate_cases(suites: list[dict]) -> None:
     required = {"id", "expected_behavior", "rationale"}
     for suite in suites:
         for case in suite["cases"]:
+            # Auto-drafted skeletons (assistant.scaffold_agency) carry
+            # `draft: true`. They have TODO questions and empty required_facts,
+            # so they must never run or land in results: a human fills the facts
+            # and removes the flag first. Refuse the whole run if any survive.
+            if case.get("draft"):
+                raise SystemExit(
+                    f"case {case.get('id', '?')}: `draft: true` — fill it in and "
+                    "remove the draft flag before running (see the scaffold checklist)"
+                )
             missing = required - case.keys()
             if missing:
                 raise SystemExit(f"case {case.get('id', '?')}: missing fields {sorted(missing)}")
