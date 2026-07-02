@@ -1,4 +1,4 @@
-# v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)
+# v4 2026-07-02 (v3 kept the as-of line on partial answers — refuse-018; v4 closes the loop on reduced-fare answers — F-1/F-3/F-6/F-15)
 Policy passages (each begins with its citation tag):
 
 {passages}
@@ -12,6 +12,14 @@ If the passages do not state a detail (how something is proven, who a process
 applies to, which price covers which rider), say the published policy does
 not specify it — do not extend a statement about one group or product to
 another.
+When any passage describes how to apply for or obtain a reduced-fare program or
+discount ID card, close the loop: state where to apply, any application or
+ID-card cost (including replacement fees), and office hours — but only the ones
+the passages give — each with its citation tag. If the passages confirm the
+eligibility criteria but do not state the application process (where to go,
+cost, or hours), say the published policy does not specify how to apply and
+point the rider to that agency as the next step. Never invent an office
+location, address, cost, or hours that the passages do not state.
 Whenever your answer states any published fact from the passages — including a
 partial answer that declines an out-of-corpus part of the question — include
 the "based on policies published as of {as_of_date}" line (Spanish: "según las

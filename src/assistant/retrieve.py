@@ -180,6 +180,45 @@ _TL_EN_LEXICON: dict[str, str] = {
 }
 
 
+# "Close the loop" retrieval (persona research R1-2). A rider who asks about a
+# reduced fare almost always needs the *next step* — where to apply for the
+# discount ID and what it costs — even when they don't spell that out. These two
+# patterns let search() append the agency's application/ID-card passage when the
+# top-ranked passages are the fare/eligibility tables and the where-to-apply
+# passage fell out of top_k.
+#
+# The query trigger is the reduced-fare vocabulary riders use; the companion
+# signal is keyed on the real section titles and phrasings in the corpus
+# (grep of corpus/processed/chunks.jsonl): MST "Courtesy Cards", SBMTD
+# "Mobility Pass: Reduced Fare and Medicare ID Cards", Yolobus reduced-fare-id
+# ("obtain a reduced fare photo ID by visiting …").
+_REDUCED_FARE_QUERY = re.compile(
+    r"\b(senior|seniors|disabled|disabilit\w*|medicare|discount|reduced|reduced[- ]fare"
+    r"|youth|id card|photo id|courtesy card|mobility pass|apply|application|obtain)\b",
+    re.I,
+)
+_APPLICATION_PASSAGE = re.compile(
+    r"obtain (an?|the)? ?(application|reduced[- ]fare|photo id|mtd photo id|courtesy card)"
+    r"|download an application"
+    r"|application completed"
+    r"|reduced[- ]fare (mtd )?photo id card"
+    r"|reduced[- ]fare photo id"
+    r"|courtesy card"
+    r"|mobility pass",
+    re.I,
+)
+
+
+def _is_reduced_fare_query(question: str) -> bool:
+    return bool(_REDUCED_FARE_QUERY.search(question))
+
+
+def _is_application_passage(chunk: Chunk) -> bool:
+    """A passage that tells the rider how to apply for / obtain a reduced-fare
+    program or ID card (where, cost, hours) — the 'close the loop' next step."""
+    return bool(_APPLICATION_PASSAGE.search(f"{chunk.section} {chunk.text}"))
+
+
 def _expand_query(tokens: list[str]) -> list[str]:
     expanded = list(tokens)
     for tok in tokens:
@@ -248,9 +287,9 @@ class Retriever:
         agencies = [agency] if agency else detect_agencies(question)
         ranked = self._rank_all(question)
         if len(agencies) == 1:
-            ranked = [sc for sc in ranked if sc.chunk.agency == agencies[0]]
-            return ranked[: self.cfg.top_k]
-        if agencies:
+            scoped = [sc for sc in ranked if sc.chunk.agency == agencies[0]]
+            results = scoped[: self.cfg.top_k]
+        elif agencies:
             # A question comparing agencies needs passages from each; a plain
             # union lets one agency's stronger lexical matches take every slot
             # (eval cases edge-004, edge-011). Give each agency an equal quota.
@@ -258,8 +297,46 @@ class Retriever:
             picked: list[ScoredChunk] = []
             for ag in agencies:
                 picked.extend([sc for sc in ranked if sc.chunk.agency == ag][:quota])
-            return sorted(picked, key=lambda sc: sc.score, reverse=True)
-        return ranked[: self.cfg.top_k]
+            results = sorted(picked, key=lambda sc: sc.score, reverse=True)
+        else:
+            results = ranked[: self.cfg.top_k]
+        return self._close_the_loop(question, agencies, results, ranked)
+
+    def _close_the_loop(
+        self,
+        question: str,
+        agencies: list[str],
+        results: list[ScoredChunk],
+        ranked: list[ScoredChunk],
+    ) -> list[ScoredChunk]:
+        """R1-2: on a reduced-fare/eligibility query, make sure the answer prompt
+        also receives the agency's where-to-apply passage. If the fare and
+        eligibility passages already won the top slots but the application/ID-card
+        passage fell out of top_k, append the best-ranked one per relevant agency
+        so the answer can state where to apply, the ID cost, and office hours."""
+        if not _is_reduced_fare_query(question):
+            return results
+        targets = list(agencies)
+        if not targets and results:
+            targets = [results[0].chunk.agency]
+        present = {sc.chunk.chunk_id for sc in results}
+        additions: list[ScoredChunk] = []
+        for ag in targets:
+            if any(
+                _is_application_passage(sc.chunk)
+                for sc in results
+                if sc.chunk.agency == ag
+            ):
+                continue  # the where-to-apply passage is already in hand
+            for sc in ranked:
+                if (
+                    sc.chunk.agency == ag
+                    and sc.chunk.chunk_id not in present
+                    and _is_application_passage(sc.chunk)
+                ):
+                    additions.append(sc)
+                    break
+        return results + additions
 
     def confidence_signals(self, question: str, results: list[ScoredChunk]) -> ConfidenceSignals:
         """The three normalized signals `confident()` decides on. Exposed

@@ -270,3 +270,48 @@ cases:
     expected_behavior: answer
     required_facts: ["62", "65"]
     rationale: "Cross-agency comparison: HTA reduced fare is 62+, MST discount is 65+. Both must be cited."
+
+  # R1-2 "close the loop": a reduced-fare answer should carry the next step —
+  # where to apply, the ID/application cost, and office hours when the corpus
+  # gives them — or say the process isn't published and name the agency. These
+  # cases assert those next-step facts. NOTE: whether the answer model actually
+  # states the next step is a prompt behavior (answer_user v4) that only a live
+  # judge run (`make eval`) can confirm; offline, required_facts checks that the
+  # where-to-apply passage is retrieved and present. Live validation is pending —
+  # see EVALS.md and the disposition table in
+  # docs/research/synthetic-personas-feedback.md.
+  - id: edge-034
+    question: "I'm a senior on Yolobus. What's the reduced fare and where do I go to get the discount ID?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "Woodland", "re:9:00"]
+    rationale: "yolobus-reduced-fare-id: senior/disabled riders obtain a reduced fare photo ID at the Yolo Transportation District office, 350 Industrial Way, Woodland (Mon-Thu 9:00 AM-Noon, 1:00-4:00 PM). The fare answer must close the loop with the office and its hours, not just the $1.00 fare (yolobus-fares)."
+  - id: edge-035
+    question: "How do I get the SBMTD Mobility Pass reduced-fare ID card, and what does a replacement cost?"
+    agency_scope: SBMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["MTD Transit Center", "re:\\$\\s?5"]
+    rationale: "sbmtd-fares-passes Mobility Pass: obtain the reduced-fare MTD photo ID with an application completed by a physician or MTD-certified agency — download it, get one at the MTD Transit Center, or call 805.963.3366; a lost card carries a $5.00 replacement fee. The where-to-apply location and the cost are the next step."
+  - id: edge-036
+    question: "Where do I pick up an MST Courtesy Card application, and is there a charge for it?"
+    agency_scope: MST
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Bus Stop Shop|Pearl Street", "free of charge"]
+    rationale: "mst-fares Courtesy Cards: available free of charge with a physician's verification or Medicare Card; obtain an application in person at the MST Bus Stop Shop (201 Pearl Street, Monterey), Marina Transit Exchange, or Salinas Transit Center. The answer must give the where and the no-cost, closing the loop."
+  - id: edge-037
+    question: "If I go to the SacRT sales center to get my Yolobus reduced-fare ID, what are the hours?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:8:30", "re:R Street|Sacramento"]
+    rationale: "yolobus-reduced-fare-id: the SacRT Customer Service & Sales Center at 1225 R Street, Sacramento is open Mon-Fri 8:30 AM-5:00 PM. Hours are the published next-step detail here — the office and its hours must both appear."
+  - id: edge-038
+    question: "How do I apply for the disabled-person transit ID that gets me the reduced Humboldt Transit fare?"
+    agency_scope: HTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:707-443-0826|Humboldt Transit Authority"]
+    rationale: "hta-fares Stored Value passes confirm reduced-fare eligibility for 'People with a disabled person Transit ID Card', but no HTA passage states how or where to obtain that ID card, its cost, or hours. Per R1-2 the answer must say the published policy does not specify the application process and point the rider to Humboldt Transit Authority (707-443-0826) as the next step — not invent an office or hours."
