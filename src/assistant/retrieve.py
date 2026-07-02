@@ -17,9 +17,18 @@ from rank_bm25 import BM25Okapi
 from assistant import config, domain
 from assistant.ingest import Chunk, load_chunks
 
-# Aliases users actually type, mapped to scope keys. Sourced from the active
-# domain profile (src/assistant/domain.py).
-AGENCY_ALIASES: dict[str, str] = domain.get_profile().aliases
+
+# Aliases users actually type, mapped to scope keys, are sourced from the active
+# domain profile (src/assistant/domain.py) at call time (see detect_agencies)
+# rather than pinned at import — the active profile is chosen by FPA_DOMAIN,
+# which may switch at runtime.
+#
+# Backward-compat: AGENCY_ALIASES resolves to the live profile's aliases on each
+# access for callers/tests that import it as a constant.
+def __getattr__(name: str) -> dict[str, str]:
+    if name == "AGENCY_ALIASES":
+        return domain.get_profile().aliases
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @dataclass
@@ -34,7 +43,7 @@ def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> lis
     domain, or a test) without touching this logic."""
     q = question.lower()
     found: list[str] = []
-    for alias, agency in (aliases or AGENCY_ALIASES).items():
+    for alias, agency in (aliases or domain.get_profile().aliases).items():
         if agency not in found and re.search(rf"\b{re.escape(alias)}\b", q):
             found.append(agency)
     return found
@@ -221,6 +230,13 @@ class Retriever:
         return bool(results) and results[0].score >= self.cfg.min_confidence
 
 
-@lru_cache(maxsize=1)
-def default_retriever() -> Retriever:
+@lru_cache(maxsize=4)
+def _retriever_for(profile_name: str) -> Retriever:
     return Retriever()
+
+
+def default_retriever() -> Retriever:
+    """The process-wide retriever for the active domain profile. Keyed on the
+    profile name so switching FPA_DOMAIN yields a distinct cached retriever
+    rather than one pinned to whatever profile was active at first call."""
+    return _retriever_for(domain.get_profile().name)

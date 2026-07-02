@@ -24,12 +24,30 @@ EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"
 
 # Sourced from the active domain profile (src/assistant/domain.py) so the
-# transit-specific knobs live in one place; re-exported here for the call sites
-# that already import them from config.
-KNOWN_AGENCIES = domain.get_profile().scopes
+# transit-specific knobs live in one place. These are call-time accessors, not
+# import-time constants: the active profile is chosen by FPA_DOMAIN, which may
+# be set any time before a request is handled, so binding the value at import
+# would pin it to whatever profile was active when this module first loaded.
+def known_agencies() -> tuple[str, ...]:
+    """The scopes (agencies) of the active domain profile, read at call time."""
+    return domain.get_profile().scopes
+
 
 # Riders asking about agencies we do not cover get pointed here.
-STATEWIDE_TRANSIT_INFO = domain.get_profile().fallback_contact
+def statewide_transit_info() -> str:
+    """The active profile's fallback contact, read at call time."""
+    return domain.get_profile().fallback_contact
+
+
+# Backward-compat: the old module constants KNOWN_AGENCIES / STATEWIDE_TRANSIT_INFO
+# now resolve to the live profile values on each attribute access, so external
+# users and tests that read them keep working while the value tracks FPA_DOMAIN.
+def __getattr__(name: str):
+    if name == "KNOWN_AGENCIES":
+        return known_agencies()
+    if name == "STATEWIDE_TRANSIT_INFO":
+        return statewide_transit_info()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # Bedrock serves these models through cross-region inference profiles
