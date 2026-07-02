@@ -74,7 +74,7 @@ bug for this repo specifically.
 
 What a real operator needs before trusting the thing unattended.
 
-> **Status (2026-07-02):** items 1, 2, and 5 done. Weekly corpus-freshness
+> **Status (2026-07-11):** items 1 through 5 done. Weekly corpus-freshness
 > automation opens a PR on drift (`.github/workflows/corpus-freshness.yml`) and
 > the UI shows how long ago the cited policies were fetched; a per-container
 > answer cache fronts the model call in the deployed handler; the CI badge is
@@ -82,8 +82,9 @@ What a real operator needs before trusting the thing unattended.
 > workflow keys the change decision on `corpus_version` rather than a raw
 > `git diff -- corpus/`, `tools/corpus_refresh_report.py` writes the changelog
 > entry and doc-level diff into the PR body and lints the eval suites for stale
-> facts, and `/version` reports `staleness_days` against a budget. Remaining:
-> observability/alarms (item 3).
+> facts, and `/version` reports `staleness_days` against a budget. `deploy.sh`
+> provisions metric filters, alarms, and a CloudWatch dashboard; only the
+> billing-scoped AWS Budget remains a documented one-time manual step.
 >
 > **Status (2026-07-08):** item 4 done. The API Gateway stage throttle added
 > alongside the HTTP API (ADR 0004 amendment, 2026-06-12) already held across

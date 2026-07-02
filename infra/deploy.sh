@@ -201,9 +201,69 @@ aws cloudwatch put-metric-alarm --region "$REGION" \
 # demo traffic and trips before spend runs away (concurrency caps it anyway).
 _alarm bedrock-surge "$FN" BedrockAnswerCalls Sum 300 500
 
+# ── dashboard: per-day cost proxy, live traffic, and alarm status ────────────
+# put-dashboard creates or overwrites by name, so this is idempotent. The
+# BedrockAnswerCalls widget uses a 1-day period so per-day call volume (the
+# cost proxy) is legible; a second widget shows 5-minute traffic. The alarm
+# widget surfaces the five alarms above without leaving the dashboard.
+_alarm_arn() { echo "arn:aws:cloudwatch:$REGION:$ACCOUNT:alarm:$FN-$1"; }
+DASHBOARD_BODY=$(cat <<EOF
+{
+  "widgets": [
+    {
+      "type": "metric", "x": 0, "y": 0, "width": 12, "height": 6,
+      "properties": {
+        "title": "Bedrock answer calls per day (cost proxy)",
+        "region": "$REGION", "view": "timeSeries", "stat": "Sum", "period": 86400,
+        "metrics": [["$FN", "BedrockAnswerCalls"]]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 0, "width": 12, "height": 6,
+      "properties": {
+        "title": "Traffic (5-minute)",
+        "region": "$REGION", "view": "timeSeries", "stat": "Sum", "period": 300,
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "$FN"],
+          ["AWS/Lambda", "Errors", "FunctionName", "$FN"],
+          ["AWS/Lambda", "Throttles", "FunctionName", "$FN"],
+          ["$FN", "HandlerErrors"],
+          ["$FN", "FeedbackDown"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Duration p99 (ms)",
+        "region": "$REGION", "view": "timeSeries", "stat": "p99", "period": 300,
+        "metrics": [["AWS/Lambda", "Duration", "FunctionName", "$FN"]]
+      }
+    },
+    {
+      "type": "alarm", "x": 12, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Alarms",
+        "alarms": [
+          "$(_alarm_arn handler-errors)",
+          "$(_alarm_arn lambda-errors)",
+          "$(_alarm_arn lambda-throttles)",
+          "$(_alarm_arn latency-p99)",
+          "$(_alarm_arn bedrock-surge)"
+        ]
+      }
+    }
+  ]
+}
+EOF
+)
+aws cloudwatch put-dashboard --region "$REGION" --dashboard-name "$FN" \
+  --dashboard-body "$DASHBOARD_BODY" >/dev/null
+
 # An account-level AWS Budget is the spend backstop beneath these; it needs
 # billing permissions this role may lack, so it stays a one-time manual step:
 #   aws budgets create-budget --account-id <id> --budget '{...}'  (see infra/README.md)
 
 echo "deployed: https://$API_ID.execute-api.$REGION.amazonaws.com/"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
+echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"
