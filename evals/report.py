@@ -144,6 +144,15 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
     pct = round(100 * total["passed"] / total["total"], 1) if total["total"] else 0
     lines.append(f"| **all** | **{total['passed']}** | **{total['total']}** | **{pct}%** |")
 
+    sens = summary["suites"].get("sensitivity")
+    if sens and "pairs_total" in sens:
+        lines += [
+            "",
+            f"**Counterfactual sensitivity:** {sens['pairs_passed']}/{sens['pairs_total']} "
+            "boundary pairs correctly distinguished "
+            "(a pair passes only if every variant passes across the boundary).",
+        ]
+
     parity = _spanish_parity(records)
     if parity:
         lines += ["", "## Spanish parity", "", parity]

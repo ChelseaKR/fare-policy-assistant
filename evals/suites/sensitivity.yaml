@@ -1,0 +1,293 @@
+# Counterfactual sensitivity suite (EXP-02).
+#
+# Minimal-pair cases: two (or more) variants that differ by exactly one salient
+# feature that sits on a real eligibility boundary catalogued in edge_cases.yaml
+# (senior ages that differ by agency, Medicare vs. Medi-Cal, super-senior vs.
+# senior, youth-free vs. youth-discount, stored-value vs. monthly, and so on).
+#
+# The variants are scored jointly: a *pair* passes only if EVERY variant passes.
+# That is what proves the assistant discriminates across the boundary rather
+# than emitting one boilerplate answer that happens to satisfy one side. Each
+# variant is an ordinary case dict (identical shape to the edge_cases suite) and
+# is scored by the same deterministic checks; the runner flattens the pairs into
+# per-variant cases carrying a `pair_id`, then re-groups the results for the
+# pair-level verdict. Every rationale names the source boundary.
+suite: sensitivity
+pairs:
+  - id: sens-001
+    boundary: "Senior age threshold: MST is 65+, Yolobus is 62+ (same rider age, different agency)."
+    variants:
+      - id: sens-001a
+        question: "I'm 62. Do I get the senior discount on MST?"
+        agency_scope: MST
+        language: en
+        expected_behavior: answer
+        required_facts: ["65"]
+        rationale: "mst-fares senior threshold is 65+; 62 does not meet it. The answer must cite 65."
+      - id: sens-001b
+        question: "I'm 62. Do I get the senior discount on Yolobus?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["62"]
+        rationale: "yolobus-fares senior is 62+; the identical age qualifies here. The answer must cite 62."
+
+  - id: sens-002
+    boundary: "Senior age threshold: MST is 65+, Humboldt Transit (HTA) is 62+."
+    variants:
+      - id: sens-002a
+        question: "What age makes me a senior on MST?"
+        agency_scope: MST
+        language: en
+        expected_behavior: answer
+        required_facts: ["65"]
+        rationale: "mst-fares: senior discount is 65+."
+      - id: sens-002b
+        question: "What age makes me a senior on Humboldt Transit?"
+        agency_scope: HTA
+        language: en
+        expected_behavior: answer
+        required_facts: ["62"]
+        rationale: "hta-fares: Reduced Fare Eligibility 'Seniors Aged 62+'."
+
+  - id: sens-003
+    boundary: "Yolobus reduced fare accepts a Medicare card but NOT a Medi-Cal card."
+    variants:
+      - id: sens-003a
+        question: "I have a Medicare card. Does that get me the reduced fare on Yolobus?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["Medicare"]
+        rationale: "yolobus-fares footnote: a Medicare Card is an accepted reduced-fare credential."
+      - id: sens-003b
+        question: "I have a Medi-Cal card. Does that get me the reduced fare on Yolobus?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["Medicare"]
+        forbidden_content: ["Medi-Cal card qualifies", "Medi-Cal is accepted", "Medi-Cal card is accepted"]
+        rationale: "yolobus-fares footnote: 'Medicare Card (NOT Medi-Cal)'. The answer must name the Medicare requirement and not imply Medi-Cal qualifies."
+
+  - id: sens-004
+    boundary: "SacRT super-senior monthly pass (75+, $40) vs. the regular senior threshold (62+)."
+    variants:
+      - id: sens-004a
+        question: "I'm 75 — does SacRT have anything cheaper than the regular senior monthly pass?"
+        agency_scope: SacRT
+        language: en
+        expected_behavior: answer
+        required_facts: ["75", "re:\\$\\s?40"]
+        rationale: "sacrt-fares: Super Senior Monthly Pass (age 75+) is $40.00."
+      - id: sens-004b
+        question: "I just turned 62 — what age do I count as a senior on SacRT?"
+        agency_scope: SacRT
+        language: en
+        expected_behavior: answer
+        required_facts: ["62"]
+        rationale: "sacrt-fares: Senior (age 62+) discount; 62 is the entry age, distinct from the 75+ super-senior tier."
+
+  - id: sens-005
+    boundary: "A 17-year-old rides free on Yolobus (youth 0-18) but pays a discount fare on MST (18-and-under)."
+    variants:
+      - id: sens-005a
+        question: "My son is 17. What does he pay to ride Yolobus?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["free"]
+        rationale: "yolobus-fares: Youth ages 0-18 ride free."
+      - id: sens-005b
+        question: "My son is 17. What does he pay to ride MST?"
+        agency_scope: MST
+        language: en
+        expected_behavior: answer
+        required_facts: ["18"]
+        forbidden_content: ["rides free", "ride free", "rides for free"]
+        rationale: "mst-fares: youth 18-and-under pay the discount fare, not free — the answer must not claim a free ride."
+
+  - id: sens-006
+    boundary: "On MST, a Medicare card qualifies regardless of age; without it a rider under 65 does not get the senior discount."
+    variants:
+      - id: sens-006a
+        question: "I'm 50 but I have a Medicare card. Can I get the MST discount fare?"
+        agency_scope: MST
+        language: en
+        expected_behavior: answer
+        required_facts: ["Medicare"]
+        rationale: "mst-fares Discount Eligibility lists Medicare Card holders independently of age."
+      - id: sens-006b
+        question: "I'm 50 with no Medicare card. Can I get the MST senior discount fare?"
+        agency_scope: MST
+        language: en
+        expected_behavior: answer
+        required_facts: ["65"]
+        rationale: "mst-fares: the age-based senior discount is 65+; at 50 without the Medicare pathway the criterion is unmet."
+
+  - id: sens-007
+    boundary: "SacRT monthly pass price by age tier: super-senior 75+ is $40, regular senior is $50."
+    variants:
+      - id: sens-007a
+        question: "I'm 76 — what does the SacRT senior monthly pass cost me?"
+        agency_scope: SacRT
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:\\$\\s?40"]
+        rationale: "sacrt-fares: Super Senior Monthly Pass (75+) is $40.00."
+      - id: sens-007b
+        question: "I'm 66 — what does the SacRT senior monthly pass cost me?"
+        agency_scope: SacRT
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:\\$\\s?50"]
+        forbidden_content: ["re:\\$\\s?40\\.00"]
+        rationale: "sacrt-fares: the regular senior monthly pass is $50.00; only 75+ reaches the $40 super-senior tier."
+
+  - id: sens-008
+    boundary: "An SBMTD transfer completes a one-way trip but is not valid for a return trip."
+    variants:
+      - id: sens-008a
+        question: "I need a second SBMTD bus to finish getting downtown — does my transfer cover it?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["one-way"]
+        rationale: "sbmtd-fares-passes TRANSFERS: valid to complete a one-way trip on a connecting bus."
+      - id: sens-008b
+        question: "Can I use my SBMTD transfer to ride back home later today?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["one-way"]
+        forbidden_content: ["valid for return", "valid for the return", "valid for return trips"]
+        rationale: "sbmtd-fares-passes TRANSFERS: not valid for return trips; the answer must not imply the return leg is covered."
+
+  - id: sens-009
+    boundary: "Yolobus Special (ADA paratransit) fare varies by distance: local $4.00 vs. intercity $4.50."
+    variants:
+      - id: sens-009a
+        question: "What does a local Yolobus Special paratransit trip cost?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:\\$\\s?4\\.00"]
+        rationale: "yolobus-fares ADA Paratransit: local trip is $4.00."
+      - id: sens-009b
+        question: "What does an intercity Yolobus Special paratransit trip cost?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:\\$\\s?4\\.50"]
+        rationale: "yolobus-fares ADA Paratransit: intercity trip is $4.50."
+
+  - id: sens-010
+    boundary: "Small children ride free by a HEIGHT rule on SBMTD (under 45 inches) but by an AGE rule on Yolobus (0-18)."
+    variants:
+      - id: sens-010a
+        question: "Does my 3-year-old ride free on Santa Barbara MTD?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["45 inches"]
+        rationale: "sbmtd-fares-passes: children under 45 inches tall ride free — a height criterion."
+      - id: sens-010b
+        question: "Does my 3-year-old ride free on Yolobus?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["free"]
+        forbidden_content: ["45 inches"]
+        rationale: "yolobus-fares: Youth ages 0-18 ride free — an age criterion, not a height one."
+
+  - id: sens-011
+    boundary: "HTA reduced fares apply ONLY to Stored Value; Day/Week/Month passes are not eligible."
+    variants:
+      - id: sens-011a
+        question: "I'm a senior on Humboldt Transit — how do I get the reduced fare when I pay per ride?"
+        agency_scope: HTA
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:[Ss]tored [Vv]alue"]
+        rationale: "hta-fares: the reduced fare applies to Stored Value."
+      - id: sens-011b
+        question: "I'm a senior on Humboldt Transit — can I get the reduced fare on a monthly pass?"
+        agency_scope: HTA
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:[Ss]tored [Vv]alue"]
+        rationale: "hta-fares: reduced fares apply ONLY to Stored Value; Month passes are not eligible — the answer must surface that restriction."
+
+  - id: sens-012
+    boundary: "SBMTD rides free with a Pacific Surfliner ticket only on the day of travel."
+    variants:
+      - id: sens-012a
+        question: "I'm riding the Pacific Surfliner into Santa Barbara today — can I ride MTD free with my ticket?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["free"]
+        rationale: "sbmtd-fares-passes Pacific Surfliner Program: a valid ticket on the day of travel rides MTD free."
+      - id: sens-012b
+        question: "Can I ride SBMTD free with yesterday's Pacific Surfliner ticket?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:same day|day of travel|same-day"]
+        forbidden_content: ["ride MTD free", "ride free with yesterday"]
+        rationale: "sbmtd-fares-passes: the free ride is limited to the day of travel; a prior-day ticket does not qualify."
+
+  - id: sens-013
+    boundary: "A UCSB student ID rides SBMTD fixed routes free but is NOT valid on the Downtown-Waterfront Shuttle."
+    variants:
+      - id: sens-013a
+        question: "Do UCSB students ride SBMTD regular bus routes for free?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["student ID"]
+        rationale: "sbmtd-fares-passes: UCSB & SBCC students use a valid student ID as a bus pass on the fixed routes."
+      - id: sens-013b
+        question: "Can a UCSB student ride the SBMTD Downtown-Waterfront Shuttle free with their student ID?"
+        agency_scope: SBMTD
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:Downtown[- ]Waterfront|Shuttle"]
+        forbidden_content: ["free on the Downtown-Waterfront", "valid on the Downtown-Waterfront"]
+        rationale: "sbmtd-fares-passes: the student-ID pass is not valid on the Downtown-Waterfront Shuttle — the boundary is the route exclusion."
+
+  - id: sens-014
+    boundary: "HTA youth reduced fare covers ages 3-17; an 18-year-old is an adult, outside the range."
+    variants:
+      - id: sens-014a
+        question: "My 16-year-old rides Humboldt Transit — do they get the youth discount?"
+        agency_scope: HTA
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:3\\s?[-–—]\\s?17"]
+        rationale: "hta-fares: Reduced Fare Eligibility 'Youth Aged 3-17'; 16 is inside the range."
+      - id: sens-014b
+        question: "My 18-year-old rides Humboldt Transit — do they get the youth discount?"
+        agency_scope: HTA
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:3\\s?[-–—]\\s?17"]
+        rationale: "hta-fares: youth is 3-17; at 18 the rider is outside the range — the answer must state the 3-17 bound so the exclusion is visible."
+
+  - id: sens-015
+    boundary: "The UC Davis Aggie Card is valid on Yolobus only for undergraduate or UCDE Global Study riders."
+    variants:
+      - id: sens-015a
+        question: "Can I ride Yolobus with my UC Davis Aggie Card as an undergraduate?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:[Uu]ndergrad"]
+        rationale: "yolobus-fares Other Fare Media: the Aggie Card is valid for unlimited rides for undergraduates."
+      - id: sens-015b
+        question: "Can I ride Yolobus with my UC Davis Aggie Card as a graduate student?"
+        agency_scope: Yolobus
+        language: en
+        expected_behavior: answer
+        required_facts: ["re:[Uu]ndergrad"]
+        forbidden_content: ["graduate students ride", "valid for graduate"]
+        rationale: "yolobus-fares: the Aggie Card is valid for undergraduate or UCDE Global Study only — the answer must surface the undergraduate restriction."
