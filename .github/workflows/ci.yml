@@ -27,6 +27,13 @@ jobs:
           --cov-report=term-missing --cov-fail-under=90
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
+      - name: Provenance gate (published artifacts match HEAD)
+        # Fails if EVALS.md, evals/baseline.json, or evals/govchat/golden.jsonl
+        # record prompt/corpus versions that disagree with HEAD. The documented
+        # escape is a loud waiver in evals/stale_acknowledged.json (each entry
+        # needs a reason), honoured by provenance.load_acknowledgements — so a
+        # credential-gated refresh can be acknowledged, never silently faked.
+        run: uv run python -m evals.provenance
 
   i18n:
     name: i18n (gettext catalog gate)

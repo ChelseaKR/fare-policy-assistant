@@ -3,6 +3,16 @@
   "mode": "full",
   "offline": false,
   "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "provenance": {
+    "run_id": "2026-06-17T03:11:14+00:00",
+    "corpus_version": "0938fff0539a",
+    "prompt_versions": {
+      "system": "v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018))",
+      "answer_user": "v3 2026-06-29 (v2 added the unstated-details reminder \u2014 ml-005, ml-011; v3 keeps the as-of line on partial answers \u2014 refuse-018)",
+      "judge_groundedness": "v1 2026-06-11",
+      "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy \u2014 eval cases ml-010, fresh-007)"
+    }
+  },
   "suites": {
     "conversation": {
       "passed": 4,

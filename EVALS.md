@@ -238,3 +238,8 @@ La política publicada no especifica el precio del pase de 2 horas para efectivo
 
 ---
 Regenerate with `make eval` (full) or `python -m evals.report` (report only).
+
+<!-- Machine-readable provenance for the CI gate (evals/provenance.py): the
+prompt versions and corpus this report was generated against. The gate fails
+if these drift from HEAD, so a stale report cannot masquerade as current. -->
+<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)", "judge_groundedness": "v1 2026-06-11", "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)", "system": "v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018))"}, "run_id": "2026-06-30T04:35:31+00:00"} -->
