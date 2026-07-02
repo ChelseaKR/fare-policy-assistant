@@ -133,6 +133,7 @@
     color: var(--muted);
   }
   footer a, .sources a { color: #1d4ed8; }
+  .noscript-note { max-width: 44rem; margin: 1rem auto; padding: 0 1rem; }
   @media (max-width: 480px) {
     h1 { font-size: 1.3rem; }
     .row { flex-direction: column; align-items: stretch; }
@@ -431,7 +432,7 @@
   });
 })();
 </script>
-<noscript><p style="max-width:44rem;margin:1rem auto;padding:0 1rem;">
+<noscript><p class="noscript-note">
   This demo needs JavaScript to send your question. The project, including every answer the
   evaluation suite produced, can be read without JavaScript in the
   <a href="https://github.com/ChelseaKR/fare-policy-assistant">source repository</a>.

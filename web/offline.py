@@ -119,7 +119,7 @@ def render_offline_reference(chunks: list[Chunk], as_of: str | None = None) -> s
   <h1>Offline fare reference</h1>
   <p>The snapshotted fare and reduced-fare policy text for every agency, on one
     page you can save or print. No internet is needed once this page has loaded.</p>
-  <p><button type="button" onclick="window.print()">Print or save this page</button></p>
+  <p><button type="button" id="print-page">Print or save this page</button></p>
   {body}
   <footer>
     <p>Based on policies published as of {_esc(as_of)}. Fare policy changes;
@@ -128,6 +128,13 @@ def render_offline_reference(chunks: list[Chunk], as_of: str | None = None) -> s
     <p><a href="/">Back to the assistant</a></p>
   </footer>
 </main>
+<script>
+  // Wired here rather than as an inline onclick so the page carries no
+  // 'unsafe-inline' in its CSP: this block is allowed by its sha256 hash.
+  document.getElementById("print-page").addEventListener("click", function () {{
+    window.print();
+  }});
+</script>
 </body>
 </html>
 """
