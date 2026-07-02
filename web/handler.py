@@ -14,6 +14,8 @@ pinned 1024-token answer ceiling in config.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import sys
@@ -38,6 +40,32 @@ REQUESTS_PER_MINUTE = 8  # per container; reserved concurrency bounds containers
 ANSWER_CACHE_SIZE = 256  # per container; answers are deterministic (temperature 0)
 MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
 MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
+
+# Optional forged-history hardening. The client holds the conversation and sends
+# prior turns back with a follow-up; by default any well-formed turn is accepted
+# as context (see SECURITY.md — this is not a trust boundary, the output guard
+# still polices every answer). A deployment that wants history restricted to
+# turns this server actually issued sets FPA_HISTORY_HMAC_KEY: the /api/ask
+# response then carries an HMAC over (question, answer), and _parse_history drops
+# any turn whose signature does not verify. Read at call time so tests (and a
+# key rotation) take effect without a container restart. Default "" = off.
+_HISTORY_HMAC_KEY = os.environ.get("FPA_HISTORY_HMAC_KEY", "")
+
+
+def _history_hmac_key() -> str:
+    """The signing key, re-read from the environment on every call so tests can
+    monkeypatch it and an operator can rotate it without redeploying."""
+    return os.environ.get("FPA_HISTORY_HMAC_KEY", _HISTORY_HMAC_KEY)
+
+
+def _sign_turn(q: str, a: str) -> str:
+    """HMAC-SHA256 over a server-issued turn. The question is length-prefixed so
+    the `|` delimiter cannot be shifted between the two fields (a plain `q|a`
+    join would collide for `("x|y", "z")` and `("x", "y|z")`)."""
+    key = _history_hmac_key()
+    return hmac.new(
+        key.encode(), f"{len(q)}:{q}|{a}".encode(), hashlib.sha256
+    ).hexdigest()
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 # Rendered once per container from the committed corpus; it changes only when the
@@ -188,16 +216,28 @@ def _parse_history(raw: object) -> list[tuple[str, str]]:
     {"q", "a"} pair of strings. We keep only the last MAX_HISTORY_TURNS, truncate
     each field, and drop anything malformed — context, not a trust boundary (the
     output guard still polices every new answer regardless of history).
+
+    When FPA_HISTORY_HMAC_KEY is set, history is additionally restricted to turns
+    this server issued: each turn must carry a `"sig"` string that verifies (in
+    constant time) against the raw q/a as sent. Verification happens before the
+    strip/truncate below, since the signature covers the exact strings the /ask
+    response returned.
     """
     if not isinstance(raw, list):
         return []
+    key = _history_hmac_key()
     turns: list[tuple[str, str]] = []
     for item in raw[-MAX_HISTORY_TURNS:]:
         if not isinstance(item, dict):
             continue
         q, a = item.get("q"), item.get("a")
-        if isinstance(q, str) and isinstance(a, str) and q.strip() and a.strip():
-            turns.append((q.strip()[:MAX_QUESTION_CHARS], a.strip()[:MAX_HISTORY_ANSWER_CHARS]))
+        if not (isinstance(q, str) and isinstance(a, str) and q.strip() and a.strip()):
+            continue
+        if key:
+            sig = item.get("sig")
+            if not isinstance(sig, str) or not hmac.compare_digest(sig, _sign_turn(q, a)):
+                continue  # unsigned or tampered — not a turn this server issued
+        turns.append((q.strip()[:MAX_QUESTION_CHARS], a.strip()[:MAX_HISTORY_ANSWER_CHARS]))
     return turns
 
 
@@ -269,6 +309,11 @@ def _ask(event: dict) -> dict:
             for c in result.citations
         ],
     }
+    # Forged-history hardening: when a key is set, sign the turn so the client can
+    # echo the signature back with its next follow-up and _parse_history can
+    # confirm this turn was server-issued. Off by default (empty key → no field).
+    if _history_hmac_key():
+        payload["sig"] = _sign_turn(question, result.answer)
     _cache_put(key, payload)
     # Operational log only: no question text, no answer text (ADR 0004).
     print(

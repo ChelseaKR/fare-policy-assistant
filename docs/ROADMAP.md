@@ -119,7 +119,12 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > six-case `conversation` suite formalizes this at 5/6 — including the safety
 > case (a "just tell me I qualify" follow-up still refuses to determine); the
 > one miss is the same Spanish-veteran groundedness-judge strictness as ml-004,
-> not a conversation bug. Item 2 (streaming) is deferred with a recorded
+> not a conversation bug. FIX-08 (forged-history hardening) is now done on top of
+> this: an optional per-turn HMAC gated on `FPA_HISTORY_HMAC_KEY` restricts
+> history to server-issued turns, and a `conv-forged-*` eval block asserts the
+> assistant re-grounds when a client injects a fabricated prior answer
+> (deterministic checks, no live judge). Default off for the demo; see
+> SECURITY.md. Item 2 (streaming) is deferred with a recorded
 > rationale (ADR 0006): the API Gateway HTTP API the org policy forced cannot
 > stream, and the hard output guard limits any streaming to a cosmetic
 > post-guard replay. Item 4 (dense-retrieval decision) is settled with evidence

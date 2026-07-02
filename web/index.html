@@ -421,7 +421,11 @@
       }
       status.textContent = "";
       appendTurn(question, r.data);
-      conversation.push({ q: question, a: r.data.answer });
+      // Store the whole turn, including the server's optional HMAC `sig` when
+      // present, so it is echoed back verbatim with the next follow-up. When the
+      // server issues no sig (default demo) the field is simply undefined and
+      // JSON.stringify drops it.
+      conversation.push({ q: question, a: r.data.answer, sig: r.data.sig });
       input.value = "";
     }).catch(function () {
       submit.disabled = false;

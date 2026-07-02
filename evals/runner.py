@@ -59,6 +59,25 @@ def validate_cases(suites: list[dict]) -> None:
                 raise SystemExit(f"case {case['id']}: needs `question` or `turns`")
             if case.get("turns") and len(case["turns"]) < 2:
                 raise SystemExit(f"case {case['id']}: `turns` needs at least two questions")
+            # `history`: a literal list of {q, a} pairs injected directly as the
+            # follow-up's context (forged-history cases). It combines with a
+            # single-turn `question` and is mutually exclusive with `turns`.
+            if case.get("history") is not None:
+                history = case["history"]
+                if not isinstance(history, list) or not history:
+                    raise SystemExit(f"case {case['id']}: `history` must be a non-empty list")
+                for pair in history:
+                    if not (isinstance(pair, dict)
+                            and isinstance(pair.get("q"), str)
+                            and isinstance(pair.get("a"), str)):
+                        raise SystemExit(
+                            f"case {case['id']}: each `history` entry needs string `q` and `a`"
+                        )
+                if case.get("turns"):
+                    raise SystemExit(f"case {case['id']}: `history` combines with `question`, "
+                                     "not `turns`")
+                if "question" not in case:
+                    raise SystemExit(f"case {case['id']}: `history` requires a `question`")
             if case["id"] in seen:
                 raise SystemExit(f"duplicate case id: {case['id']}")
             seen.add(case["id"])
@@ -175,6 +194,16 @@ def run(
                     retriever=retriever,
                     cfg=cfg,
                 )
+            elif case.get("history"):
+                # Forged-history case: inject a literal, fabricated history and
+                # ask the follow-up. No replay loop — the prior "answers" were
+                # never issued by the model, which is the whole point.
+                injected = [(h["q"], h["a"]) for h in case["history"]]
+                question = case["question"]
+                result = answer_question(
+                    question, history=injected, model=answer_model,
+                    retriever=retriever, cfg=cfg,
+                )
             else:
                 question = case["question"]
                 result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
@@ -200,6 +229,7 @@ def run(
                 "expected_behavior": case["expected_behavior"],
                 "question": question,
                 "turns": case.get("turns"),
+                "history": case.get("history"),
                 "rationale": case["rationale"],
                 "answer": result.answer,
                 "kind": result.kind,
