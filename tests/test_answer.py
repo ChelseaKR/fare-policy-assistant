@@ -136,20 +136,24 @@ class TestAnswerPipeline:
 class TestMultiTurn:
     def test_retrieval_query_inherits_prior_turn(self):
         from assistant.answer import _retrieval_query
+
         q = _retrieval_query("what about my spouse?", [("MST veteran discount", "...")])
         assert q == "MST veteran discount what about my spouse?"
 
     def test_retrieval_query_unchanged_without_history(self):
         from assistant.answer import _retrieval_query
+
         assert _retrieval_query("how much is the fare?", None) == "how much is the fare?"
 
     def test_history_block_empty_without_history(self):
         from assistant.answer import _history_block
+
         assert _history_block(None) == ""
         assert _history_block([]) == ""
 
     def test_history_block_includes_prior_turns(self):
         from assistant.answer import _history_block
+
         block = _history_block([("how much on MST?", "Single ride is $2.00.")])
         assert "how much on MST?" in block and "$2.00" in block
         assert "context only" in block  # framed as context, must re-ground

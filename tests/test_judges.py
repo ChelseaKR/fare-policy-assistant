@@ -26,22 +26,31 @@ class ScriptedJudge:
 
     def complete(self, system, user, max_tokens, temperature):
         self.last_user = user
-        return Completion(text=self.text, model="judge-mock",
-                          input_tokens=self._in, output_tokens=self._out)
+        return Completion(
+            text=self.text, model="judge-mock", input_tokens=self._in, output_tokens=self._out
+        )
 
 
 def _chunk() -> Chunk:
     return Chunk(
-        chunk_id="mst-fares#0", doc_id="mst-fares", agency="MST",
-        agency_full="Monterey-Salinas Transit", doc_title="Fares",
-        url="https://mst.org/fares/", fetch_date="2026-06-12", language="en",
-        section="Discount Eligibility", text="Seniors 65+ pay $1.00.",
+        chunk_id="mst-fares#0",
+        doc_id="mst-fares",
+        agency="MST",
+        agency_full="Monterey-Salinas Transit",
+        doc_title="Fares",
+        url="https://mst.org/fares/",
+        fetch_date="2026-06-12",
+        language="en",
+        section="Discount Eligibility",
+        text="Seniors 65+ pay $1.00.",
     )
 
 
 def _result(answer="The senior fare is $1.00 [doc:mst-fares].") -> AnswerResult:
     return AnswerResult(
-        question="How much is the MST senior fare?", answer=answer, kind="answered",
+        question="How much is the MST senior fare?",
+        answer=answer,
+        kind="answered",
         passages=[ScoredChunk(chunk=_chunk(), score=9.0)],
     )
 

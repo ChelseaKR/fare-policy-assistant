@@ -13,6 +13,7 @@ from assistant.ingest import extract_pdf_text, sections_from_text
 def _make_pdf(lines: list[str]) -> bytes:
     """A minimal single-page PDF with a text layer, built by hand so the test
     needs only pypdf (to read), not a PDF generator (to write)."""
+
     def esc(s: str) -> bytes:
         return s.replace("\\", "\\\\").replace("(", r"\(").replace(")", r"\)").encode("latin-1")
 
@@ -43,8 +44,11 @@ def _make_pdf(lines: list[str]) -> bytes:
     for off in offsets:
         out += f"{off:010d} 00000 n \n".encode()
     out += (
-        b"trailer\n<< /Size " + str(len(objs) + 1).encode()
-        + b" /Root 1 0 R >>\nstartxref\n" + str(xref_pos).encode() + b"\n%%EOF"
+        b"trailer\n<< /Size "
+        + str(len(objs) + 1).encode()
+        + b" /Root 1 0 R >>\nstartxref\n"
+        + str(xref_pos).encode()
+        + b"\n%%EOF"
     )
     return out
 
@@ -88,11 +92,13 @@ def test_sentences_are_not_treated_as_headings():
 
 
 def test_pdf_round_trip_through_sectioning():
-    pdf = _make_pdf([
-        "Discount Eligibility",
-        "Riders 65 and older qualify for the senior discount fare on all routes.",
-        "Proof of age such as a driver license is required when you board the bus.",
-    ])
+    pdf = _make_pdf(
+        [
+            "Discount Eligibility",
+            "Riders 65 and older qualify for the senior discount fare on all routes.",
+            "Proof of age such as a driver license is required when you board the bus.",
+        ]
+    )
     sections = dict(sections_from_text(extract_pdf_text(pdf)))
     assert "Discount Eligibility" in sections
     assert "senior discount" in sections["Discount Eligibility"]

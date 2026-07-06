@@ -24,7 +24,7 @@ from pathlib import Path
 
 import yaml
 
-from assistant import config
+from assistant import config, corpus
 from assistant.answer import answer_question
 from assistant.ingest import load_chunks
 from assistant.models import get_model
@@ -158,22 +158,26 @@ def run(
                 history: list[tuple[str, str]] = []
                 for q in case["turns"][:-1]:
                     prior = answer_question(
-                        q, history=history or None, model=answer_model,
-                        retriever=retriever, cfg=cfg,
+                        q,
+                        history=history or None,
+                        model=answer_model,
+                        retriever=retriever,
+                        cfg=cfg,
                     )
                     usage["answer"][0] += prior.input_tokens
                     usage["answer"][1] += prior.output_tokens
                     history.append((q, prior.answer))
                 question = case["turns"][-1]
                 result = answer_question(
-                    question, history=history or None, model=answer_model,
-                    retriever=retriever, cfg=cfg,
+                    question,
+                    history=history or None,
+                    model=answer_model,
+                    retriever=retriever,
+                    cfg=cfg,
                 )
             else:
                 question = case["question"]
-                result = answer_question(
-                    question, model=answer_model, retriever=retriever, cfg=cfg
-                )
+                result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
             checks = run_checks(case, result, corpus_doc_ids)
             verdicts = []
             if run_judges:
@@ -205,8 +209,12 @@ def run(
                 "raw_model_answer": result.raw_model_answer,
                 "citations": [asdict(c) for c in result.citations],
                 "passages": [
-                    {"chunk_id": sc.chunk.chunk_id, "section": sc.chunk.section,
-                     "score": round(sc.score, 2), "text": sc.chunk.text[:600]}
+                    {
+                        "chunk_id": sc.chunk.chunk_id,
+                        "section": sc.chunk.section,
+                        "score": round(sc.score, 2),
+                        "text": sc.chunk.text[:600],
+                    }
                     for sc in result.passages
                 ],
                 "checks": [asdict(c) for c in checks],
@@ -235,6 +243,9 @@ def run(
             name: config.prompt_version(name)
             for name in ("system", "answer_user", "judge_groundedness", "judge_helpfulness")
         },
+        # Pinned so the provenance gate (evals/provenance.py) can prove EVALS.md,
+        # the baseline, and the audit dataset describe the same corpus HEAD ships.
+        "corpus_version": corpus.corpus_version(chunks),
         "duration_seconds": round(time.monotonic() - started, 1),
         "cost": _cost_block(cfg, usage),
         "suites": {
@@ -298,8 +309,9 @@ def check_regression(run_dir: Path, threshold: float = 2.0) -> None:
                 f"{suite}: {base['passed']}/{base['total']} → {now['passed']}/{now['total']}"
             )
     if regressions:
-        print("REGRESSION (>2 points and >=2 cases):\n  " + "\n  ".join(regressions),
-              file=sys.stderr)
+        print(
+            "REGRESSION (>2 points and >=2 cases):\n  " + "\n  ".join(regressions), file=sys.stderr
+        )
         raise SystemExit(1)
 
 
@@ -310,6 +322,15 @@ def update_baseline(run_dir: Path) -> None:
         "mode": summary["mode"],
         "offline": summary["offline"],
         "answer_model": summary["answer_model"],
+        # Provenance so the gate can catch a baseline left behind by a prompt or
+        # corpus change. Older/synthetic summaries (e.g. test fixtures, or runs
+        # from before this field existed) may carry neither key, so fall back
+        # rather than raising: an absent prompt_versions renders as {} instead
+        # of crashing the update.
+        "provenance": {
+            "prompt_versions": summary.get("prompt_versions") or {},
+            "corpus_version": summary.get("corpus_version") or corpus.corpus_version(),
+        },
         "suites": summary["suites"],
     }
     path = config.EVAL_RUNS_DIR.parent / "baseline.json"

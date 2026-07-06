@@ -23,9 +23,7 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
     "email": re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b"),
     "phone": re.compile(r"\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b"),
-    "dob": re.compile(
-        r"\b(?:born on|date of birth|birthday is|dob)\b.{0,20}\d", re.I
-    ),
+    "dob": re.compile(r"\b(?:born on|date of birth|birthday is|dob)\b.{0,20}\d", re.I),
     "medicare_id": re.compile(r"\b\d[A-Z]\d{2}-?[A-Z]\d{2}-?[A-Z]{2}\d{2}\b", re.I),
 }
 

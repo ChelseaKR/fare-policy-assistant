@@ -11,15 +11,25 @@ on:
     - cron: "0 8 * * 1" # Mondays 08:00 UTC
   workflow_dispatch: {}
 
+# Least privilege at the workflow level; the one job that needs to write
+# (open the refresh PR) grants itself the scope below (CICD-04).
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          # The push/PR-open step below authenticates with its own explicit
+          # token (not the checkout-persisted credential), so the checkout
+          # itself does not need to leave a credential behind (zizmor
+          # artipacked).
+          persist-credentials: false
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
 
       - name: Re-snapshot and re-process the corpus
@@ -43,6 +53,7 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c  # v6
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: corpus-refresh
           commit-message: "Corpus refresh: re-snapshot manifest URLs"
           title: "Corpus refresh: published fare pages changed"

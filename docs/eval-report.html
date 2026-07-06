@@ -18,6 +18,7 @@ Generated from the run at `2026-06-30T04:35:31+00:00` (full, live).
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
 - Prompt versions: system v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018)), answer_user v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
+- Corpus version: `0938fff0539a`
 - Duration: 850.3s
 - Cost (estimated): $1.7021 for 732,847 tokens — answer $0.4747, judge $1.2274 (exact tokens, list-price estimate)
 
@@ -65,6 +66,7 @@ Human labels checked against this run&#x27;s judge verdicts on 16 of 16 sampled 
 
 - Raw agreement: **87.5%**
 - Cohen&#x27;s κ: **0.429**
+- Stale labels skipped (answer changed since labeling): **0**
 - Note: small, pass-skewed sample; read agreement alongside n and kappa.
 
 ## Representative failures
@@ -251,6 +253,15 @@ La política publicada no especifica el precio del pase de 2 horas para efectivo
 
 ---
 Regenerate with `make eval` (full) or `python -m evals.report` (report only).
+
+&lt;!-- Machine-readable provenance for two CI gates: evals/provenance.py
+(prompt versions and corpus this report was generated against — fails if
+these drift from HEAD, so a stale report cannot masquerade as current) and
+evals/check_report_regression.py (the `suites` scoreboard below, re-checked
+against the committed evals/baseline.json — fails if this committed report
+describes a regression that was never actually gated; see
+docs/audits/eval-regression-2026-06-30.md for why that check exists). --&gt;
+&lt;!-- provenance {&quot;corpus_version&quot;: &quot;0938fff0539a&quot;, &quot;prompt_versions&quot;: {&quot;answer_user&quot;: &quot;v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)&quot;, &quot;judge_groundedness&quot;: &quot;v1 2026-06-11&quot;, &quot;judge_helpfulness&quot;: &quot;v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)&quot;, &quot;system&quot;: &quot;v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018))&quot;}, &quot;run_id&quot;: &quot;2026-06-30T04:35:31+00:00&quot;, &quot;suites&quot;: {&quot;conversation&quot;: {&quot;pass_rate&quot;: 66.7, &quot;passed&quot;: 4, &quot;total&quot;: 6}, &quot;edge_cases&quot;: {&quot;pass_rate&quot;: 100.0, &quot;passed&quot;: 33, &quot;total&quot;: 33}, &quot;freshness&quot;: {&quot;pass_rate&quot;: 100.0, &quot;passed&quot;: 10, &quot;total&quot;: 10}, &quot;groundedness&quot;: {&quot;pass_rate&quot;: 100.0, &quot;passed&quot;: 29, &quot;total&quot;: 29}, &quot;multilingual&quot;: {&quot;pass_rate&quot;: 85.7, &quot;passed&quot;: 18, &quot;total&quot;: 21}, &quot;refusal&quot;: {&quot;pass_rate&quot;: 100.0, &quot;passed&quot;: 19, &quot;total&quot;: 19}}} --&gt;
 </pre>
 </body>
 </html>
