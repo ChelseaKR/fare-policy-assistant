@@ -12,9 +12,16 @@ import json
 import sys
 from pathlib import Path
 
-from assistant import config
+from assistant import config, corpus
+from evals import provenance
 
 FAILURES_PER_SUITE = 3
+
+
+def _corpus_version(summary: dict) -> str:
+    """Prefer the version recorded at run time; fall back to the current corpus
+    for older runs whose summary predates corpus_version recording."""
+    return summary.get("corpus_version") or corpus.corpus_version()
 
 
 def latest_run_dir() -> Path:
@@ -34,14 +41,8 @@ def load_run(run_dir: Path) -> tuple[dict, list[dict]]:
 
 
 def _failed_checks(record: dict) -> list[str]:
-    out = [
-        f"{c['name']}: {c['detail'] or 'failed'}" for c in record["checks"] if not c["passed"]
-    ]
-    out += [
-        f"judge/{j['name']}: {j['detail']}"
-        for j in record["judges"]
-        if j["passed"] is False
-    ]
+    out = [f"{c['name']}: {c['detail'] or 'failed'}" for c in record["checks"] if not c["passed"]]
+    out += [f"judge/{j['name']}: {j['detail']}" for j in record["judges"] if j["passed"] is False]
     return out
 
 
@@ -49,9 +50,7 @@ def _spanish_parity(records: list[dict]) -> str | None:
     """Compare each multilingual case against its English mirror."""
     by_id = {r["case_id"]: r for r in records}
     pairs = [
-        (r, by_id.get(r.get("mirror_of", "")))
-        for r in records
-        if r["suite"] == "multilingual"
+        (r, by_id.get(r.get("mirror_of", ""))) for r in records if r["suite"] == "multilingual"
     ]
     if not pairs:
         return None
@@ -99,8 +98,18 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
         "",
         f"- Raw agreement: **{c['agreement']:.1%}**",
         f"- Cohen's κ: **{kappa}**",
+        f"- Stale labels skipped (answer changed since labeling): **{c['n_stale']}**",
         f"- Note: {c['note']}.",
     ]
+    if c["stale"]:
+        lines.append(
+            "- Stale (bound answer changed — relabel with "
+            f"`python -m evals.calibration --emit`): {', '.join(c['stale'])}"
+        )
+    if c.get("unbound"):
+        lines.append(
+            f"- Unbound (no answer hash; not staleness-checked): {', '.join(c['unbound'])}"
+        )
     if c["unmatched"]:
         lines.append(f"- Unmatched (no judge verdict in this run): {', '.join(c['unmatched'])}")
     return "\n".join(lines)
@@ -121,6 +130,7 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         + ("yes" if summary["judges_ran"] else "no (recorded as skipped, not passed)"),
         "- Prompt versions: "
         + ", ".join(f"{k} {v}" for k, v in summary["prompt_versions"].items()),
+        f"- Corpus version: `{_corpus_version(summary)}`",
         f"- Duration: {summary['duration_seconds']}s",
         _cost_line(summary),
         "",
@@ -170,8 +180,9 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 "",
             ]
             for p in r["passages"][:3]:
-                lines.append(f"- `{p['chunk_id']}` ({p['section']}, score {p['score']}): "
-                             f"{p['text'][:200]}…")
+                lines.append(
+                    f"- `{p['chunk_id']}` ({p['section']}, score {p['score']}): {p['text'][:200]}…"
+                )
             lines += [
                 "",
                 f"**Answer ({r['kind']}):** {r['answer']}",
@@ -196,6 +207,22 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         "",
         "---",
         "Regenerate with `make eval` (full) or `python -m evals.report` (report only).",
+        "",
+        "<!-- Machine-readable provenance for two CI gates: evals/provenance.py",
+        "(prompt versions and corpus this report was generated against — fails if",
+        "these drift from HEAD, so a stale report cannot masquerade as current) and",
+        "evals/check_report_regression.py (the `suites` scoreboard below, re-checked",
+        "against the committed evals/baseline.json — fails if this committed report",
+        "describes a regression that was never actually gated; see",
+        "docs/audits/eval-regression-2026-06-30.md for why that check exists). -->",
+        provenance.render_evals_md_block(
+            {
+                "run_id": summary["run_at"],
+                "corpus_version": _corpus_version(summary),
+                "prompt_versions": summary["prompt_versions"],
+                "suites": summary["suites"],
+            }
+        ),
         "",
     ]
     return "\n".join(lines)

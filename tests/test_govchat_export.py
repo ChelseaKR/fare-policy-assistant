@@ -39,8 +39,8 @@ class TestRenderTranscript:
         html = gx.render_transcript("<b>hi</b>", "answer & more", ["MST: Fares"], "es")
         assert 'lang="es"' in html
         assert "&lt;b&gt;hi&lt;/b&gt;" in html  # question escaped
-        assert "answer &amp; more" in html       # answer escaped
-        assert "<li>MST: Fares</li>" in html      # sources rendered as a list
+        assert "answer &amp; more" in html  # answer escaped
+        assert "<li>MST: Fares</li>" in html  # sources rendered as a list
 
     def test_no_sources_omits_the_sources_block(self):
         html = gx.render_transcript("q", "a", [], "en")
@@ -50,18 +50,35 @@ class TestRenderTranscript:
 class TestProvenance:
     def test_uses_citation_agency_when_present(self):
         from assistant.answer import AnswerResult, Citation
-        r = AnswerResult(question="q", answer="a", kind="answered",
-                         citations=[Citation("d", "MST", "Fares", "u", "2026-06-12")])
+
+        r = AnswerResult(
+            question="q",
+            answer="a",
+            kind="answered",
+            citations=[Citation("d", "MST", "Fares", "u", "2026-06-12")],
+        )
         assert gx._provenance(r)["source"].startswith("MST")
 
     def test_falls_back_to_passage_agency_then_corpus(self):
         from assistant.answer import AnswerResult
         from assistant.ingest import Chunk
         from assistant.retrieve import ScoredChunk
-        ch = Chunk("c#0", "d", "MST", "Monterey-Salinas Transit", "Fares", "u",
-                   "2026-06-12", "en", "S", "t")
-        r = AnswerResult(question="q", answer="a", kind="answered",
-                         passages=[ScoredChunk(chunk=ch, score=1.0)])
+
+        ch = Chunk(
+            "c#0",
+            "d",
+            "MST",
+            "Monterey-Salinas Transit",
+            "Fares",
+            "u",
+            "2026-06-12",
+            "en",
+            "S",
+            "t",
+        )
+        r = AnswerResult(
+            question="q", answer="a", kind="answered", passages=[ScoredChunk(chunk=ch, score=1.0)]
+        )
         assert "Monterey-Salinas Transit" in gx._provenance(r)["source"]
         empty = AnswerResult(question="q", answer="a", kind="refused_no_support")
         assert "corpus" in gx._provenance(empty)["source"]

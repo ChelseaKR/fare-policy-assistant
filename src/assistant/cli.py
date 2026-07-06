@@ -1,7 +1,7 @@
 """Ask one question from the command line.
 
-    uv run python -m assistant.cli "What proof do I need for the veteran fare on MST?"
-    uv run python -m assistant.cli --offline "..."   # mock model, no API key needed
+uv run python -m assistant.cli "What proof do I need for the veteran fare on MST?"
+uv run python -m assistant.cli --offline "..."   # mock model, no API key needed
 """
 
 from __future__ import annotations

@@ -64,6 +64,10 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 # evals/ is a repo-root package (it is the product, not a library to install).
 pythonpath = ["."]
+# CQ-07: catch typo'd marks and ini options, and use the importlib import mode
+# (no sys.path/rootdir mutation, no __init__.py requirement ambiguity) rather
+# than pytest's legacy implicit-namespace-package import.
+addopts = "--strict-markers --strict-config --import-mode=importlib"
 
 [tool.mutmut]
 # Advisory mutation testing (backlog #15). Scoped to the two correctness-critical

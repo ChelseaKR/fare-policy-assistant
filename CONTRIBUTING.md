@@ -25,18 +25,33 @@ Requires [uv](https://docs.astral.sh/uv/). The corpus snapshots are committed, s
 the offline path needs no API key and no network:
 
 ```sh
-make test                                  # unit tests (ruff, mypy, pytest)
+make verify                                # the full offline gate: lint + format + typecheck + coverage-gated test + i18n
 uv run python -m evals.runner --offline    # full eval, deterministic checks only
 uv run python -m assistant.cli --offline "What proof do I need for the veteran fare on MST?"
 ```
+
+`make verify` is exactly the AUTO-GATE set CI runs (see the portfolio-wide
+[CI/CD standard](https://github.com/ChelseaKR/portfolio-standards/blob/main/CI-CD-STANDARD.md)'s
+`make verify` parity requirement) — if it is green locally, the mechanical part
+of CI will be too. `make test` alone (ruff + mypy + pytest, no i18n) is a
+faster inner loop while iterating, but is not the full gate.
 
 A live run (real answer and judge models) needs AWS Bedrock or an Anthropic key;
 see the README. You do not need a live run for most changes, but you do for any
 change to prompts, retrieval, or answer behavior (see below).
 
+This repo's cross-cutting rigor (coverage floors, SAST/secret-scan gates,
+accessibility, i18n, AI-eval calibration, and the rest) is defined once in
+[`ChelseaKR/portfolio-standards`](https://github.com/ChelseaKR/portfolio-standards)
+and referenced, not repeated, here (`standards.yml` pins and freshness-checks
+the exact version this repo was last measured against). This repo's own
+conformance declaration is the "Standards conformance" table in
+[`README.md`](README.md#standards-conformance).
+
 ## What "done" means
 
-- `make test` passes: ruff clean, mypy clean, pytest green.
+- `make verify` passes: ruff clean, ruff format clean, mypy clean, pytest green
+  (branch-coverage gate), i18n catalog gate green.
 - New deterministic behavior has a unit test. New rider-facing behavior has an
   eval case in `evals/suites/*.yaml` written against a real corpus passage.
 - The offline eval still runs (the regression gate is skipped offline; that is

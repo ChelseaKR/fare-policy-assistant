@@ -146,9 +146,7 @@ def no_support_message(
     if agency_hint:
         where = _("the agency's website or customer service")
     else:
-        where = _("your transit agency directly, or {statewide}").format(
-            statewide=statewide_info
-        )
+        where = _("your transit agency directly, or {statewide}").format(statewide=statewide_info)
     return _(
         "I don't have a published policy document that answers that, and I "
         "won't guess about fares or eligibility. Please check {where} for "

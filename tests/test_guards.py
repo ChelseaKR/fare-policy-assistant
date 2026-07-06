@@ -56,9 +56,7 @@ class TestDeterminationLanguage:
         assert guards.find_determination_language("Sorry, you are not eligible.")
 
     def test_hedged_form_allowed(self):
-        assert not guards.find_determination_language(
-            "You may qualify if you are 65 or older."
-        )
+        assert not guards.find_determination_language("You may qualify if you are 65 or older.")
 
     def test_conditional_allowed(self):
         assert not guards.find_determination_language(
@@ -84,9 +82,7 @@ class TestDeterminationLanguage:
         )
 
     def test_positive_meta_statement_still_caught(self):
-        assert guards.find_determination_language(
-            "Good news: I can tell you that you qualify."
-        )
+        assert guards.find_determination_language("Good news: I can tell you that you qualify.")
 
     def test_spanish_negated_meta_allowed(self):
         assert not guards.find_determination_language(
@@ -117,9 +113,7 @@ class TestOutputCheck:
         assert "missing_citation" in check.flags
 
     def test_cited_grounded_answer_ok(self):
-        check = guards.check_output(
-            "The regular fare is $2.00 [doc:mst-fares], as of 2026-06-12."
-        )
+        check = guards.check_output("The regular fare is $2.00 [doc:mst-fares], as of 2026-06-12.")
         assert check.ok
 
     def test_spanish_as_of_disclosure_recognized(self):

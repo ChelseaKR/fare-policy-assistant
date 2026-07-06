@@ -52,10 +52,7 @@ _STYLE = """
 
 
 def _esc(s: str) -> str:
-    return (
-        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _group_by_agency(chunks: list[Chunk]) -> dict[str, list[Chunk]]:

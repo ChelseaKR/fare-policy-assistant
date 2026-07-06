@@ -44,10 +44,12 @@ def test_load_suites_only_filter_selects_one_suite():
 
 def test_validate_cases_rejects_duplicate_ids():
     suites = [
-        {"cases": [
-            {"id": "dup", "question": "a?", "expected_behavior": "answer", "rationale": "x"},
-            {"id": "dup", "question": "b?", "expected_behavior": "answer", "rationale": "x"},
-        ]}
+        {
+            "cases": [
+                {"id": "dup", "question": "a?", "expected_behavior": "answer", "rationale": "x"},
+                {"id": "dup", "question": "b?", "expected_behavior": "answer", "rationale": "x"},
+            ]
+        }
     ]
     with pytest.raises(SystemExit, match="duplicate case id"):
         runner.validate_cases(suites)
@@ -55,9 +57,11 @@ def test_validate_cases_rejects_duplicate_ids():
 
 def test_validate_cases_rejects_bad_expected_behavior():
     suites = [
-        {"cases": [
-            {"id": "c", "question": "a?", "expected_behavior": "maybe", "rationale": "x"},
-        ]}
+        {
+            "cases": [
+                {"id": "c", "question": "a?", "expected_behavior": "maybe", "rationale": "x"},
+            ]
+        }
     ]
     with pytest.raises(SystemExit, match="bad expected_behavior"):
         runner.validate_cases(suites)
@@ -76,6 +80,7 @@ def test_the_committed_suites_validate():
 
 def test_run_raises_when_no_suite_matches(tmp_runs):
     import pytest as _pytest
+
     with _pytest.raises(SystemExit, match="no suites found"):
         runner.run(offline=True, suite="does-not-exist")
 
@@ -95,8 +100,12 @@ def test_have_credentials_anthropic_needs_api_key(monkeypatch):
 
 
 def test_have_credentials_bedrock_reads_aws_chain(monkeypatch, tmp_path):
-    for var in ("AWS_PROFILE", "AWS_WEB_IDENTITY_TOKEN_FILE", "AWS_ACCESS_KEY_ID",
-                "FPA_ASSUME_AWS_CREDS"):
+    for var in (
+        "AWS_PROFILE",
+        "AWS_WEB_IDENTITY_TOKEN_FILE",
+        "AWS_ACCESS_KEY_ID",
+        "FPA_ASSUME_AWS_CREDS",
+    ):
         monkeypatch.delenv(var, raising=False)
     # Point HOME at an empty dir so a real ~/.aws on the dev box can't leak in.
     monkeypatch.setattr(runner.Path, "home", classmethod(lambda cls: tmp_path))
@@ -109,9 +118,11 @@ def test_have_credentials_bedrock_reads_aws_chain(monkeypatch, tmp_path):
 
 
 def test_cost_block_aggregates_tokens_and_estimates_usd():
-    cfg = config.Config(models=config.ModelConfig(
-        provider="anthropic", answer_model="claude-haiku-4-5", judge_model="claude-sonnet-4-6"
-    ))
+    cfg = config.Config(
+        models=config.ModelConfig(
+            provider="anthropic", answer_model="claude-haiku-4-5", judge_model="claude-sonnet-4-6"
+        )
+    )
     usage = {"answer": [1_000_000, 1_000_000], "judge": [1_000_000, 1_000_000]}
     block = runner._cost_block(cfg, usage)
     # haiku $1/$5 per 1M, sonnet $3/$15 per 1M.
@@ -133,7 +144,7 @@ def test_offline_suite_run_writes_traces_and_scoreboard(tmp_runs):
     assert run_dir.parent == tmp_runs
     summary = _summary(run_dir)
     assert summary["offline"] is True
-    assert summary["judges_ran"] is False          # never judge offline
+    assert summary["judges_ran"] is False  # never judge offline
     assert summary["answer_model"] == "mock"
     assert "refusal" in summary["suites"]
     # results.jsonl carries one full trace per case.
@@ -202,46 +213,65 @@ def test_no_credentials_falls_back_to_offline(tmp_runs, monkeypatch):
 
 def _write_run(run_dir, suites, *, mode="suite:refusal", offline=True):
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "summary.json").write_text(json.dumps({
-        "run_at": "2026-06-12T00:00:00+00:00", "mode": mode, "offline": offline,
-        "answer_model": "mock", "suites": suites,
-        "total": {"passed": sum(s["passed"] for s in suites.values()),
-                  "total": sum(s["total"] for s in suites.values())},
-    }))
+    (run_dir / "summary.json").write_text(
+        json.dumps(
+            {
+                "run_at": "2026-06-12T00:00:00+00:00",
+                "mode": mode,
+                "offline": offline,
+                "answer_model": "mock",
+                "suites": suites,
+                "total": {
+                    "passed": sum(s["passed"] for s in suites.values()),
+                    "total": sum(s["total"] for s in suites.values()),
+                },
+            }
+        )
+    )
     return run_dir
 
 
 def test_check_regression_no_baseline_is_skipped(tmp_runs, capsys):
-    run_dir = _write_run(tmp_runs / "r1",
-                         {"refusal": {"passed": 5, "total": 5, "pass_rate": 100.0}})
+    run_dir = _write_run(
+        tmp_runs / "r1", {"refusal": {"passed": 5, "total": 5, "pass_rate": 100.0}}
+    )
     runner.check_regression(run_dir)  # no evals/baseline.json next to tmp runs
     assert "skipping regression gate" in capsys.readouterr().err
 
 
 def test_check_regression_flags_a_real_drop(tmp_runs):
-    baseline = {"mode": "suite:refusal", "offline": True,
-                "suites": {"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}}}
+    baseline = {
+        "mode": "suite:refusal",
+        "offline": True,
+        "suites": {"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}},
+    }
     (tmp_runs.parent / "baseline.json").write_text(json.dumps(baseline))
-    run_dir = _write_run(tmp_runs / "r2",
-                         {"refusal": {"passed": 7, "total": 10, "pass_rate": 70.0}})
+    run_dir = _write_run(
+        tmp_runs / "r2", {"refusal": {"passed": 7, "total": 10, "pass_rate": 70.0}}
+    )
     with pytest.raises(SystemExit):
         runner.check_regression(run_dir)
 
 
 def test_check_regression_passes_when_stable(tmp_runs):
-    baseline = {"mode": "suite:refusal", "offline": True,
-                "suites": {"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}}}
+    baseline = {
+        "mode": "suite:refusal",
+        "offline": True,
+        "suites": {"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}},
+    }
     (tmp_runs.parent / "baseline.json").write_text(json.dumps(baseline))
-    run_dir = _write_run(tmp_runs / "r3",
-                         {"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}})
+    run_dir = _write_run(
+        tmp_runs / "r3", {"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}}
+    )
     runner.check_regression(run_dir)  # no raise
 
 
 def test_check_regression_skips_offline_run_against_live_baseline(tmp_runs, capsys):
     baseline = {"mode": "suite:refusal", "offline": False, "suites": {}}
     (tmp_runs.parent / "baseline.json").write_text(json.dumps(baseline))
-    run_dir = _write_run(tmp_runs / "r4",
-                         {"refusal": {"passed": 1, "total": 1, "pass_rate": 100.0}})
+    run_dir = _write_run(
+        tmp_runs / "r4", {"refusal": {"passed": 1, "total": 1, "pass_rate": 100.0}}
+    )
     runner.check_regression(run_dir)
     assert "offline run vs. live baseline" in capsys.readouterr().err
 
@@ -249,16 +279,19 @@ def test_check_regression_skips_offline_run_against_live_baseline(tmp_runs, caps
 def test_check_regression_skips_on_mode_mismatch(tmp_runs, capsys):
     baseline = {"mode": "full", "offline": True, "suites": {}}
     (tmp_runs.parent / "baseline.json").write_text(json.dumps(baseline))
-    run_dir = _write_run(tmp_runs / "r5",
-                         {"refusal": {"passed": 1, "total": 1, "pass_rate": 100.0}},
-                         mode="suite:refusal")
+    run_dir = _write_run(
+        tmp_runs / "r5",
+        {"refusal": {"passed": 1, "total": 1, "pass_rate": 100.0}},
+        mode="suite:refusal",
+    )
     runner.check_regression(run_dir)
     assert "mode mismatch" in capsys.readouterr().err
 
 
 def test_update_baseline_writes_from_summary(tmp_runs):
-    run_dir = _write_run(tmp_runs / "r6",
-                         {"refusal": {"passed": 9, "total": 10, "pass_rate": 90.0}})
+    run_dir = _write_run(
+        tmp_runs / "r6", {"refusal": {"passed": 9, "total": 10, "pass_rate": 90.0}}
+    )
     runner.update_baseline(run_dir)
     baseline = json.loads((tmp_runs.parent / "baseline.json").read_text())
     assert baseline["suites"]["refusal"]["passed"] == 9
@@ -275,7 +308,8 @@ def test_main_offline_runs_and_checks_regression(tmp_runs, monkeypatch):
 
 
 def test_main_update_baseline_flag(tmp_runs, monkeypatch):
-    monkeypatch.setattr("sys.argv",
-                        ["runner", "--offline", "--suite", "refusal", "--update-baseline"])
+    monkeypatch.setattr(
+        "sys.argv", ["runner", "--offline", "--suite", "refusal", "--update-baseline"]
+    )
     runner.main()
     assert (tmp_runs.parent / "baseline.json").exists()

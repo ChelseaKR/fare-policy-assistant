@@ -23,8 +23,9 @@ class Completion:
 
 
 class Model(Protocol):
-    def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
-        ...
+    def complete(
+        self, system: str, user: str, max_tokens: int, temperature: float
+    ) -> Completion: ...
 
 
 class AnthropicModel:
