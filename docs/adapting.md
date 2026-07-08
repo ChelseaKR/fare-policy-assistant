@@ -4,6 +4,21 @@ The harness generalizes to any assistant that answers questions from
 published policy documents: benefits eligibility, licensing rules, housing
 programs. This page lists what changes and what carries over unchanged.
 
+Two ways to use it, in increasing order of commitment:
+
+- **Read this page and hand-copy.** Fine for a one-off experiment.
+- **Run `make template TARGET=../new-domain-assistant`.** Generates a
+  starter skeleton in an empty directory, built from
+  [`template/MANIFEST.yaml`](../template/MANIFEST.yaml) — the same claim
+  this page makes, but as data a script and a test both check against the
+  actual repo tree, so it can't silently drift the way prose can (see
+  `docs/ROADMAP.md` P3-5, "Generalize the harness"). It copies the
+  domain-agnostic modules verbatim, flags the handful that need a
+  domain-specific edit (each with a marker to grep for), writes a stubbed
+  `src/assistant/domain.py`, and drops a `GETTING_STARTED.md` in the new
+  tree pointing back at the checklist below. It does not touch corpus
+  content, eval case content, or prompts — see items 1-4.
+
 ## What carries over unchanged
 
 - The runner, deterministic check framework, judge plumbing, report
