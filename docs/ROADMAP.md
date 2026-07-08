@@ -205,10 +205,13 @@ Higher cost, lower urgency; do when the core is solid.
      catalog yet, so its refusals fall back to English via
      `gettext` `fallback=True` (documented in `i18n.py`). Remaining for full
      parity: a mirrored `tl` eval suite and a `locales/tl` catalog.
-4. **Reranker, only if earned.** Per CLAUDE.md, add one only if the evals show
-   retrieval is the bottleneck, and justify it in an ADR with the deltas. Today
-   retrieval is not the bottleneck (the failures are generation and judge
-   strictness), so this stays unbuilt until a failure says otherwise.
+ 4. **Reranker, only if earned.** *(Checked, not earned — see ADR 0009.)* Per
+   CLAUDE.md, add one only if the evals show retrieval is the bottleneck.
+   `evals/reranker_bottleneck_check.py` measures this directly against the
+   latest audit: 96.9% of failing cases already had the answer-bearing chunk
+   in the retrieved top-k (78.1% at rank 1), so the failures are generation
+   and judge strictness, not missing passages. Stays unbuilt until a re-run
+    of the check shows a rising recall-miss share.
 5. **Generalize the harness.** `docs/adapting.md` and the civic-AI family
    (GovChat-Eval, civic-rag-starter-kit) are the start of "adapt this to your
    domain." Fold the lessons from this project back into that template so the
