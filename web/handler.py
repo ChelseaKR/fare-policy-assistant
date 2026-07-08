@@ -7,8 +7,16 @@ Privacy: rider questions are answered and discarded. Nothing a rider types is
 logged or stored; request logs carry only the response kind, language, and
 timing so abuse stays visible without keeping content (see ADR 0004).
 
-Cost guards, in order: Lambda reserved concurrency (set by infra/deploy.sh),
-a per-container request budget here, a 500-character question cap, and the
+Cost guards, in order: the API Gateway stage throttle (set by
+infra/deploy.sh, derived from its reserved-concurrency value) is the true
+cross-container rate limit -- it is enforced before any container runs, so it
+holds identically across cold starts and concurrent containers. Lambda
+reserved concurrency is the hard ceiling on parallelism. The per-container
+request budget in this module (`_over_budget`) is a fast, in-process backstop
+on top of those two: cheap defense in depth within one warm container, not
+itself a cross-container guarantee -- it resets on cold start and is
+invisible to sibling containers (see ADR 0004 amendment, "a true
+cross-container rate limit"). Then a 500-character question cap, and the
 pinned 1024-token answer ceiling in config.
 """
 
@@ -36,7 +44,9 @@ MAX_QUESTION_CHARS = 500
 # chars) plus three truncated history turns is a few KB; 16 KB is comfortable
 # headroom and well under the API Gateway 10 MB ceiling.
 MAX_BODY_BYTES = 16 * 1024
-REQUESTS_PER_MINUTE = 8  # per container; reserved concurrency bounds containers
+REQUESTS_PER_MINUTE = 8  # per container, in-process backstop; the gateway
+# throttle (infra/deploy.sh) is the cross-container ceiling -- see module
+# docstring and ADR 0004 amendment "a true cross-container rate limit".
 ANSWER_CACHE_SIZE = 256  # per container; answers are deterministic (temperature 0)
 MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
 MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
@@ -221,6 +231,16 @@ def _json(status: int, payload: dict) -> dict:
 
 
 def _over_budget(now: float) -> bool:
+    """Per-container sliding-window backstop (defense in depth only).
+
+    This is intentionally *not* the cross-container rate limit: it lives in
+    this container's memory, so it resets on cold start and a burst spread
+    across several warm containers is invisible to it. The real, cross-
+    container ceiling is the API Gateway stage throttle configured in
+    infra/deploy.sh, which is enforced before a request ever reaches a
+    container. This function exists only to stop one warm container from
+    running away with Bedrock spend between gateway-throttle windows.
+    """
     while _RECENT and now - _RECENT[0] > 60.0:
         _RECENT.popleft()
     if len(_RECENT) >= REQUESTS_PER_MINUTE:
