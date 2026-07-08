@@ -19,6 +19,9 @@ RAW_DIR = CORPUS_DIR / "raw"
 PROCESSED_DIR = CORPUS_DIR / "processed"
 INDEX_DIR = CORPUS_DIR / "index"
 CHUNKS_PATH = PROCESSED_DIR / "chunks.jsonl"
+# Retained corpus history (EXP-05): one subdirectory per distinct corpus_version,
+# written by assistant.corpus.archive_version and never overwritten in place.
+VERSIONS_DIR = CORPUS_DIR / "versions"
 PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"

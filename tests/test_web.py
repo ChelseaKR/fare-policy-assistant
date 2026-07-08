@@ -116,6 +116,12 @@ class TestVersion:
         assert data["matches_pin"] is False
         assert "corpus_version_mismatch" in capsys.readouterr().out
 
+    def test_version_lists_known_retained_versions(self):
+        # EXP-05: the currently served corpus_version is itself a retained
+        # version once `make ingest` has archived it.
+        data = json.loads(self._version()["body"])
+        assert data["corpus_version"] in data["known_versions"]
+
 
 class TestEmbedWidget:
     def _embed(self):

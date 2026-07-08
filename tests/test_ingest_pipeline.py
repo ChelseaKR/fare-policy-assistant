@@ -33,6 +33,9 @@ def _point_config_at(tmp_path, monkeypatch, manifest: dict):
     monkeypatch.setattr(config, "RAW_DIR", raw)
     monkeypatch.setattr(config, "PROCESSED_DIR", processed)
     monkeypatch.setattr(config, "CHUNKS_PATH", processed / "chunks.jsonl")
+    # process_all() archives into VERSIONS_DIR (EXP-05); keep that under
+    # tmp_path too so tests never write into the repo's real corpus/versions/.
+    monkeypatch.setattr(config, "VERSIONS_DIR", tmp_path / "versions")
     return raw, processed
 
 
@@ -226,6 +229,43 @@ def test_process_all_round_trips_through_load_chunks(tmp_path, monkeypatch):
     assert c.agency == "MST" and c.doc_id == "mst-fares"
     assert c.fetch_date == "2026-06-12"
     assert "65 years and older" in " ".join(ch.text for ch in chunks)
+
+
+def test_process_all_archives_the_corpus_version(tmp_path, monkeypatch):
+    """EXP-05: process_all() retains this content under corpus/versions/<id>/,
+    not just corpus/processed/, so a later re-ingest cannot erase it."""
+    from assistant import corpus
+
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
+    }
+    raw, _ = _point_config_at(tmp_path, monkeypatch, manifest)
+    raw.mkdir(parents=True)
+    (raw / "mst-fares.html").write_text(_HTML_DOC, encoding="utf-8")
+    (raw / "mst-fares.meta.yaml").write_text(
+        yaml.safe_dump({"fetch_date": "2026-06-12"}), encoding="utf-8"
+    )
+
+    process_all()
+
+    live_chunks = load_chunks()
+    version = corpus.corpus_version(live_chunks)
+    archived = corpus.load_chunks(version)
+    assert [c.chunk_id for c in archived] == [c.chunk_id for c in live_chunks]
+    assert version in corpus.list_versions()
+    snapshot = config.VERSIONS_DIR / version / "manifest.snapshot.yaml"
+    assert "mst-fares" in snapshot.read_text(encoding="utf-8")
 
 
 def test_process_all_skips_documents_without_a_snapshot(tmp_path, monkeypatch, capsys):
