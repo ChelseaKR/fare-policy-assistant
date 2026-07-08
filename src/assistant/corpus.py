@@ -12,15 +12,27 @@ names which documents were added, removed, or changed. The weekly
 corpus-freshness automation is the intended caller, turning a snapshot drift into
 a human-readable changelog entry.
 
-    uv run python -m assistant.corpus        # print the current corpus summary
+`version_history` walks git history to build the changelog the agency operator
+console (EXP-09, `web/console.py`) reviews: every committed corpus snapshot,
+named by the same `corpus_version` hash, with its full chunk set so any two
+versions can be diffed without a live checkout. It shells out to `git` and reads
+the repo's commit history, so it only runs in development/CI (`make history`),
+never inside the deployed Lambda — the console reads the resulting
+`corpus/version_history.json` instead.
+
+    uv run python -m assistant.corpus            # print the current corpus summary
+    uv run python -m assistant.corpus history     # print the git-backed version history
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
+from datetime import UTC, datetime
 
+from assistant import config
 from assistant.ingest import Chunk, load_chunks
 
 
@@ -77,10 +89,77 @@ def diff_corpus(old: list[Chunk], new: list[Chunk]) -> dict:
     }
 
 
-def main() -> int:
-    print(json.dumps(corpus_summary(), indent=2))
+def _run_git(args: list[str]) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=config.REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f"git {' '.join(args)} failed")
+    return result.stdout
+
+
+def _chunks_from_jsonl_text(text: str) -> list[Chunk]:
+    return [Chunk(**json.loads(line)) for line in text.splitlines() if line.strip()]
+
+
+def version_history(limit: int = 20) -> list[dict]:
+    """Every commit that changed the committed corpus, newest first, each
+    carrying its full chunk set (so `diff_corpus` can run between any two
+    entries offline) plus the same `corpus_version` hash `/version` and
+    `FPA_PINNED_CORPUS_VERSION` use, so an operator can pin exactly what a
+    past deploy or eval run served. Requires a `git` checkout; see module
+    docstring for where this may and may not run."""
+    rel_path = str(config.CHUNKS_PATH.relative_to(config.REPO_ROOT))
+    log = _run_git(["log", f"-{limit}", "--format=%H\t%cI", "--", rel_path])
+    versions: list[dict] = []
+    for line in log.splitlines():
+        if not line.strip():
+            continue
+        sha, committed_at = line.split("\t", 1)
+        try:
+            chunks = _chunks_from_jsonl_text(_run_git(["show", f"{sha}:{rel_path}"]))
+        except (RuntimeError, TypeError, KeyError):
+            # A commit whose chunks.jsonl predates the current Chunk schema (or
+            # the path did not exist yet at that revision). Skip it rather than
+            # failing the whole history — a partial changelog beats none.
+            continue
+        versions.append(
+            {
+                "commit": sha[:12],
+                "committed_at": committed_at,
+                "corpus_version": corpus_version(chunks),
+                "agencies": sorted({c.agency for c in chunks}),
+                "documents": len({c.doc_id for c in chunks}),
+                "chunks": [c.__dict__ for c in chunks],
+            }
+        )
+    return versions
+
+
+def main(argv: list[str] | None = None) -> int:
+    # `argv` defaults to [] (not `sys.argv`), so calling `main()` directly — as
+    # the test suite does — is never at the mercy of whatever the enclosing
+    # process (e.g. pytest) was itself invoked with; only the __main__ block
+    # below wires in the real command line.
+    args = argv if argv is not None else []
+    cmd = args[0] if args else "summary"
+    if cmd == "history":
+        payload = {
+            "generated_at": datetime.now(UTC).isoformat(),
+            "versions": version_history(),
+        }
+    elif cmd == "summary":
+        payload = corpus_summary()
+    else:
+        raise SystemExit(f"unknown command: {cmd} (expected summary|history)")
+    print(json.dumps(payload, indent=2))
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

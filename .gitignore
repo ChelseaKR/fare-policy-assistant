@@ -25,6 +25,12 @@ evals/runs/
 infra/build/
 # Generated offline fare reference (served at runtime from the corpus; make offline)
 web/offline.html
+# Git-backed corpus changelog for the operator console (make history; EXP-09).
+# Regenerated at deploy time by infra/deploy-console.sh, same reasoning as
+# evals/runs/ above: a point-in-time export of git history, not a document.
+corpus/version_history.json
+# Also created by infra/deploy-console.sh's bundle step
+infra/build-console/
 # Original spec document; CLAUDE.md is the canonical committed copy
 CLAUDE-fare-assistant.md
 

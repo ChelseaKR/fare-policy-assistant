@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance
+.PHONY: fetch index ingest eval smoke report audit a11y offline history test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -34,6 +34,9 @@ a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, st
 
 offline:      ## Render the offline fare reference (web/offline.html) from the corpus
 	uv run python -m web.offline
+
+history:      ## Regenerate corpus/version_history.json (git-backed changelog for the operator console, EXP-09)
+	uv run python -m assistant.corpus history > corpus/version_history.json
 
 audit:        ## Independent GovChat-Eval audit: record answers, then run the external harness
 	@test -d "$(EVAL_HARNESS)" || { echo "govchat-eval not found at $(EVAL_HARNESS); set EVAL_HARNESS=<path>"; exit 2; }
