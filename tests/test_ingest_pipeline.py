@@ -33,6 +33,7 @@ def _point_config_at(tmp_path, monkeypatch, manifest: dict):
     monkeypatch.setattr(config, "RAW_DIR", raw)
     monkeypatch.setattr(config, "PROCESSED_DIR", processed)
     monkeypatch.setattr(config, "CHUNKS_PATH", processed / "chunks.jsonl")
+    monkeypatch.setattr(config, "FACTS_PATH", processed / "facts.jsonl")
     return raw, processed
 
 

@@ -14,6 +14,7 @@ anthropic); otherwise judge verdicts are recorded as skipped, never as passes.
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import os
 import sys
@@ -25,6 +26,7 @@ from pathlib import Path
 import yaml
 
 from assistant import config, corpus
+from assistant import facts as facts_module
 from assistant.answer import answer_question
 from assistant.ingest import load_chunks
 from assistant.models import get_model
@@ -132,6 +134,9 @@ def run(
 
     chunks = load_chunks()
     corpus_doc_ids = {c.doc_id for c in chunks}
+    facts_by_doc: dict[str, list] = collections.defaultdict(list)
+    for fact in facts_module.load_facts(config.FACTS_PATH):
+        facts_by_doc[fact.doc_id].append(fact)
     retriever = Retriever(chunks, cfg.retrieval)
     answer_model = get_model(cfg.models.provider, cfg.models.answer_model)
     judge_model = get_model(cfg.models.provider, cfg.models.judge_model)
@@ -178,7 +183,7 @@ def run(
             else:
                 question = case["question"]
                 result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
-            checks = run_checks(case, result, corpus_doc_ids)
+            checks = run_checks(case, result, corpus_doc_ids, facts_by_doc)
             verdicts = []
             if run_judges:
                 if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":

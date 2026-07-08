@@ -17,6 +17,14 @@ rather than tied to a published tag.
   verify` / CI gate (was check-only).
 
 ### Added
+- Structured fare-fact layer (EXP-01, `docs/ideation/03-expansions.md`):
+  `src/assistant/facts.py` extracts a typed `FareFact` row (agency, program,
+  rider_class, price, age_min/max, source chunk) per price/age figure found
+  at ingest, committed as `corpus/processed/facts.jsonl`; a new
+  `fare_facts_consistent` deterministic check in `evals/checks.py` verifies
+  every `$`-amount and age claim in an answer against a fact row scoped to
+  the cited document, instead of relying only on the LLM judge for
+  groundedness of numbers.
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.

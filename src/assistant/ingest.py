@@ -26,6 +26,7 @@ import yaml
 from bs4 import BeautifulSoup, Tag
 
 from assistant import config
+from assistant import facts as facts_module
 
 # Page furniture to drop wholesale during cleaning.
 _STRIP_TAGS = ("script", "style", "nav", "header", "footer", "form", "noscript", "iframe", "svg")
@@ -343,6 +344,23 @@ def process_all() -> None:
         for chunk in all_chunks:
             f.write(json.dumps(asdict(chunk), ensure_ascii=False) + "\n")
     print(f"\nwrote {len(all_chunks)} chunks → {config.CHUNKS_PATH}")
+
+    build_facts()
+
+
+def build_facts() -> None:
+    """Derive the FareFact table (EXP-01) from the chunks just written.
+
+    Automated extraction (`confidence="parsed"`) is fully re-derived every
+    run; any hand-curated `confidence="manual"` rows already committed at
+    `facts.jsonl` are preserved across the rebuild. See `assistant.facts`.
+    """
+    chunks = load_chunks()
+    parsed = facts_module.build_facts(chunks)
+    all_facts = facts_module.merge_manual_rows(parsed, config.FACTS_PATH)
+    facts_module.write_facts(all_facts, config.FACTS_PATH)
+    manual_count = sum(1 for f in all_facts if f.confidence == "manual")
+    print(f"wrote {len(all_facts)} fare facts ({manual_count} manual) → {config.FACTS_PATH}")
 
 
 def load_chunks(path: Path | None = None) -> list[Chunk]:
