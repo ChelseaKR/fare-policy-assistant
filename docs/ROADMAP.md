@@ -80,6 +80,19 @@ What a real operator needs before trusting the thing unattended.
 > answer cache fronts the model call in the deployed handler; the CI badge is
 > in the README. Remaining: observability/alarms (item 3) and a true
 > cross-container rate limit (item 4).
+>
+> **Status (2026-07-08):** item 4 done. The API Gateway stage throttle added
+> alongside the HTTP API (ADR 0004 amendment, 2026-06-12) already held across
+> containers; it just was not tuned against a documented figure, was not
+> called out anywhere as *the* cross-container ceiling, and had no regression
+> test. `infra/deploy.sh` now derives the throttle's rate and burst from the
+> same `RESERVED_CONCURRENCY` value used for the Lambda concurrency ceiling,
+> `tests/test_deploy_rate_limit.py` guards that relationship, and ADR 0004 has
+> a new amendment recording the decision, including why a DIY per-signal
+> token bucket (e.g. keyed on truncated IP, backed by DynamoDB) was rejected
+> again in favor of it. The per-container budget in `web/handler.py` stays as
+> a defense-in-depth backstop, now documented as such instead of implied to
+> be the real limit.
 
 1. **Corpus-freshness automation.** Snapshots are taken by hand (`make fetch`)
    and the UI's "as of" date is already drifting. Add a scheduled job

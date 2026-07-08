@@ -6,6 +6,12 @@ role scoped to the pinned answer model. Idempotent; re-run it after any change.
 Architecture, cost guards, and rejected alternatives are in ADR 0004
 (`docs/decisions/0004-demo-deploy.md`).
 
+The API Gateway stage throttle is the true cross-container rate limit (its
+rate and burst are derived from `RESERVED_CONCURRENCY` at the top of the
+script, so they cannot drift independently); `tests/test_deploy_rate_limit.py`
+guards that. See the 2026-07-08 amendment in ADR 0004 for why it, not a
+per-caller store, is the answer to roadmap P1 item 4.
+
 ## Observability
 
 The deploy also creates CloudWatch alarms (handler errors, Lambda errors and

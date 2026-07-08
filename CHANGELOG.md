@@ -8,6 +8,17 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Changed
+- Roadmap P1 item 4, "a true rate limit": `infra/deploy.sh` now derives the
+  API Gateway stage throttle's rate and burst from the same
+  `RESERVED_CONCURRENCY` value used for the Lambda concurrency ceiling, so
+  the gateway's cross-container rate limit is documented, tuned, and cannot
+  silently drift out of sync with concurrency. `web/handler.py`'s comments
+  and docstrings now correctly describe the gateway throttle, not the
+  per-container in-memory budget, as the guard that holds across containers.
+  New test: `tests/test_deploy_rate_limit.py`. See the 2026-07-08 amendment
+  in `docs/decisions/0004-demo-deploy.md`.
+
 ### Fixed
 - Corrected the multilingual eval regression flagged in the 2026-06-30 report
   (18/21 vs the committed 20/21 baseline); see

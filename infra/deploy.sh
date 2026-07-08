@@ -16,6 +16,25 @@ BUILD="$ROOT/infra/build"
 BUNDLE="$BUILD/bundle"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 
+# Hard ceiling on parallel Bedrock spend: at most this many containers run at
+# once, no matter how many requests arrive. Every other rate figure below is
+# derived from it so the two never drift out of sync (see ADR 0004 amendment,
+# "a true cross-container rate limit" / roadmap P1 item 4).
+RESERVED_CONCURRENCY=2
+# API Gateway stage throttle, tuned to that ceiling: sustained rate equals the
+# concurrency ceiling (a container answers a request in a few seconds, so
+# admitting more than RESERVED_CONCURRENCY requests/sec would just queue and
+# eventually 429/timeout at the Lambda layer instead of the gateway layer);
+# burst allows one short spike above steady-state (e.g. two riders loading the
+# page and asking at the same moment) to queue briefly rather than bounce.
+# This is the actual cross-container ceiling: it is enforced by API Gateway
+# before any container runs, so it holds identically whether the request lands
+# on a warm container, a cold start, or a container that no longer exists by
+# the time the next request arrives -- unlike the handler's in-memory budget
+# (web/handler.py), which resets per container and is not shared across them.
+THROTTLE_RATE_LIMIT="$RESERVED_CONCURRENCY"
+THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
+
 # ── bundle ───────────────────────────────────────────────────────────────────
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
@@ -88,9 +107,11 @@ fi
 aws lambda wait function-updated --function-name "$FN" --region "$REGION"
 
 # Hard ceiling on parallel Bedrock spend; the handler adds a per-container
-# request budget on top (web/handler.py).
+# request budget on top (web/handler.py) as defense in depth within a warm
+# container, but the true cross-container ceiling is the gateway throttle set
+# below, derived from this same RESERVED_CONCURRENCY value.
 aws lambda put-function-concurrency --function-name "$FN" --region "$REGION" \
-  --reserved-concurrent-executions 2 >/dev/null
+  --reserved-concurrent-executions "$RESERVED_CONCURRENCY" >/dev/null
 
 # Public endpoint: an HTTP API in front of the function. The first deploy
 # used a Function URL with auth NONE; this account denies anonymous
@@ -116,10 +137,13 @@ aws lambda add-permission --function-name "$FN" --region "$REGION" \
   --principal apigateway.amazonaws.com \
   --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT:$API_ID/*" \
   >/dev/null 2>&1 || true
-# Gateway-level throttle, ahead of the handler's own request budget.
+# Gateway-level throttle: the true cross-container rate limit (roadmap P1
+# item 4), ahead of the handler's own per-container request budget. Values are
+# derived from RESERVED_CONCURRENCY above, not restated here, so a future
+# change to one cannot silently leave the other untuned.
 aws apigatewayv2 update-stage --region "$REGION" --api-id "$API_ID" \
   --stage-name '$default' \
-  --default-route-settings '{"ThrottlingRateLimit": 2, "ThrottlingBurstLimit": 5}' \
+  --default-route-settings "{\"ThrottlingRateLimit\": $THROTTLE_RATE_LIMIT, \"ThrottlingBurstLimit\": $THROTTLE_BURST_LIMIT}" \
   >/dev/null
 
 # Short log retention: logs hold counts and timings, never rider questions.
