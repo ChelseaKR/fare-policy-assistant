@@ -321,6 +321,71 @@
     return html;
   }
 
+  // EXP-04 (structured answer contract): when the server could parse the
+  // answer into the typed shape (docs/answer-contract.schema.json), render it
+  // as labeled regions instead of one prose block — semantic headings a
+  // screen reader can jump between (persona F-9), not just a text wall. Only
+  // used for kind "answered"; refusals stay a single prose paragraph, since
+  // there is nothing to section. `data.structured` is null whenever the
+  // deterministic parse failed validation server-side, so this always has a
+  // real prose fallback below it, never a silent gap.
+  function renderStructured(structured) {
+    var frag = document.createDocumentFragment();
+
+    if (structured.criterion) {
+      var critH = document.createElement("h3");
+      critH.textContent = "Published criteria";
+      frag.appendChild(critH);
+      var crit = document.createElement("p");
+      crit.textContent = structured.criterion;
+      frag.appendChild(crit);
+    }
+
+    if (structured.prices.length) {
+      var priceH = document.createElement("h3");
+      priceH.textContent = "Prices";
+      frag.appendChild(priceH);
+      var priceUl = document.createElement("ul");
+      structured.prices.forEach(function (p) {
+        var li = document.createElement("li");
+        li.textContent = "$" + p.amount + " — " + p.context;
+        priceUl.appendChild(li);
+      });
+      frag.appendChild(priceUl);
+    }
+
+    if (structured.proof_docs.length) {
+      var proofH = document.createElement("h3");
+      proofH.textContent = "Proof you may need";
+      frag.appendChild(proofH);
+      var proofUl = document.createElement("ul");
+      structured.proof_docs.forEach(function (pd) {
+        var li = document.createElement("li");
+        li.textContent = pd.context;
+        proofUl.appendChild(li);
+      });
+      frag.appendChild(proofUl);
+    }
+
+    if (structured.next_step) {
+      var stepH = document.createElement("h3");
+      stepH.textContent = "Next step";
+      frag.appendChild(stepH);
+      var step = document.createElement("p");
+      step.textContent = structured.next_step;
+      frag.appendChild(step);
+    }
+
+    if (structured.decision_owner) {
+      var owner = document.createElement("p");
+      owner.className = "asof";
+      owner.textContent = "Who decides: " + structured.decision_owner + ", not this assistant.";
+      frag.appendChild(owner);
+    }
+
+    return frag;
+  }
+
   // Privacy-safe feedback: sends only the verdict, the response kind, and the
   // language. Never the question or the answer.
   function feedbackRow(data) {
@@ -357,7 +422,11 @@
     turn.appendChild(q);
 
     var ans = document.createElement("div");
-    ans.innerHTML = render(data.answer);
+    if (data.kind === "answered" && data.structured) {
+      ans.appendChild(renderStructured(data.structured));
+    } else {
+      ans.innerHTML = render(data.answer);
+    }
     ans.setAttribute("lang", data.language || "en");
     turn.appendChild(ans);
 

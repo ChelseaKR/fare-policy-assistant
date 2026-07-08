@@ -26,6 +26,7 @@ sys.path.insert(0, str(_ROOT / "src"))
 
 from assistant import config, guards  # noqa: E402
 from assistant.answer import answer_question  # noqa: E402
+from assistant.contract import build_structured_answer  # noqa: E402
 from assistant.models import get_model  # noqa: E402
 from assistant.retrieve import default_retriever  # noqa: E402
 from web.csp import html_csp  # noqa: E402
@@ -300,6 +301,13 @@ def _ask(event: dict) -> dict:
         model=get_model(cfg.models.provider, cfg.models.answer_model),
         cfg=cfg,
     )
+    # EXP-04 (docs/ideation/03-expansions.md): the typed contract alongside
+    # the existing prose `answer`. `structured` is additive — every prior
+    # field stays, so existing clients are unaffected — and is null when the
+    # deterministic parse fails schema validation; the UI falls back to
+    # rendering `answer` as prose in that case (never hidden, always logged
+    # below as structured_ok).
+    structured = build_structured_answer(result)
     payload = {
         "answer": result.answer,
         "kind": result.kind,
@@ -315,9 +323,11 @@ def _ask(event: dict) -> dict:
             {"agency": c.agency, "title": c.title, "url": c.url, "fetch_date": c.fetch_date}
             for c in result.citations
         ],
+        "structured": structured.to_json_dict() if structured.structured_ok else None,
     }
     _cache_put(key, payload)
     # Operational log only: no question text, no answer text (ADR 0004).
+    # structured_ok/reason reference schema field paths, not rider content.
     print(
         json.dumps(
             {
@@ -327,6 +337,8 @@ def _ask(event: dict) -> dict:
                 "turns": len(history),
                 "duration_ms": round(1000 * (time.monotonic() - started)),
                 "cache": "miss",
+                "structured_ok": structured.structured_ok,
+                "structured_fallback_reason": structured.fallback_reason or None,
             }
         )
     )

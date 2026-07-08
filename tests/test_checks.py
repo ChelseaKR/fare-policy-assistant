@@ -61,6 +61,14 @@ class TestAnswerChecks:
         checks = _by_name(run_checks(case, result, DOC_IDS))
         assert not checks["required_facts_present"].passed
 
+    def test_structured_contract_schema_valid_on_ordinary_answer(self):
+        # EXP-04: every case gets a schema-conformance check on the derived
+        # structured contract, alongside the existing prose checks.
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered("The fare is $2.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert checks["structured_contract_schema_valid"].passed
+
     def test_missing_as_of_fails(self):
         case = {"expected_behavior": "answer", "language": "en"}
         result = _answered("The fare is $2.00 [doc:mst-fares].")
