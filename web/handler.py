@@ -72,13 +72,26 @@ def _corpus_summary() -> dict:
     return _CORPUS_SUMMARY
 
 
+def _known_versions() -> list[str]:
+    """Retained corpus versions (EXP-05), most recent first, capped so the
+    payload stays small. `corpus/versions/` is a dev/provenance artifact, not
+    part of the deploy bundle (infra/deploy.sh ships only the pinned
+    `corpus/processed/chunks.jsonl`), so this is normally empty in a real
+    deployment and populated only when the handler runs against a full
+    checkout (e.g. local dev, `make offline`-style tooling)."""
+    from assistant.corpus import list_versions
+
+    return list(reversed(list_versions()))[:10]
+
+
 def _version_payload() -> dict:
     """The corpus a deployment is actually serving, plus whether it matches the
     version an operator approved (FPA_PINNED_CORPUS_VERSION). The mismatch is a
     signal, not an error: the corpus is whatever was deployed, and this surfaces
-    when that differs from what was approved."""
+    when that differs from what was approved. `known_versions` is provenance
+    only — the serving path always stays pinned to the one corpus above; there
+    is no time-travel answering for riders."""
     summary = dict(_corpus_summary())
-
     # Staleness budget: how old the freshest cited snapshot is, against a
     # configurable budget (FPA_STALENESS_BUDGET_DAYS, default 90). The UI already
     # shows the "as of" age; this surfaces the same signal as a machine-readable
@@ -93,6 +106,7 @@ def _version_payload() -> dict:
         summary["staleness_budget_days"] = budget
         summary["stale"] = age > budget
 
+    summary["known_versions"] = _known_versions()
     pinned = os.environ.get("FPA_PINNED_CORPUS_VERSION")
     if pinned:
         summary["pinned"] = pinned

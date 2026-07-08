@@ -344,6 +344,15 @@ def process_all() -> None:
             f.write(json.dumps(asdict(chunk), ensure_ascii=False) + "\n")
     print(f"\nwrote {len(all_chunks)} chunks → {config.CHUNKS_PATH}")
 
+    # Local import: assistant.corpus imports Chunk/load_manifest/load_chunks from
+    # this module, so importing it at module scope here would be circular.
+    # Retain this content under corpus/versions/<id>/ (EXP-05) so a past eval
+    # run's exact corpus stays loadable by version id after a later re-ingest.
+    from assistant.corpus import archive_version
+
+    version = archive_version(all_chunks, manifest)
+    print(f"archived corpus version {version} → {config.VERSIONS_DIR / version}")
+
 
 def load_chunks(path: Path | None = None) -> list[Chunk]:
     path = path or config.CHUNKS_PATH
