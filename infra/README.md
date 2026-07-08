@@ -34,3 +34,40 @@ pinned model versions, and the deployed corpus is the committed snapshot set.
 ```sh
 AWS_REGION=us-west-2 ./infra/deploy.sh
 ```
+
+## Agency operator console (EXP-09)
+
+`deploy-console.sh` deploys a second, separate Lambda + API Gateway route: the
+agency operator console (`web/console.py`). It exists so approving a corpus
+version, reviewing the changelog/diff, and setting the embed widget's allowed
+origins are a page with a button instead of an `aws lambda
+update-function-configuration` command someone has to remember the flags for.
+It never shares code, a Lambda, or an IAM role with the rider-facing deploy
+above; its role holds only `lambda:GetFunctionConfiguration` /
+`lambda:UpdateFunctionConfiguration` scoped to the one rider function ARN.
+
+```sh
+FPA_RIDER_FUNCTION_NAME=fare-policy-assistant-demo \
+FPA_CONSOLE_TOKEN=$(openssl rand -hex 32) \
+AWS_REGION=us-west-2 ./infra/deploy-console.sh
+```
+
+**Authentication is the operator's job to finish, not this script's.** Out of
+the box the console is gated by a shared bearer token
+(`FPA_CONSOLE_TOKEN`) — the handler (`web/console.py`) fails closed if that
+variable is unset, but a shared token is not identity. Before handing the
+console URL to a non-technical agency operator, put a real authorizer (JWT or
+IAM, backed by the agency's own SSO/IdP) in front of the console's API Gateway
+route; the exact `aws apigatewayv2 create-authorizer` invocation depends on
+that agency's identity provider, so it is documented as a one-time manual step
+in `deploy-console.sh`'s header comment rather than automated here, the same
+way the AWS Budget setup above is manual. An operator can pin a version,
+review a diff, and update embed origins entirely from the console page once
+deployed — see that script for the full walkthrough.
+
+The console's corpus changelog is a static file
+(`corpus/version_history.json`, `make history`), not a live `git` query: the
+standard Lambda Python runtime has no git binary, and reading committed
+history at request time would mean bundling a full `.git` directory for no
+good reason. `deploy-console.sh` regenerates and bundles it fresh on every
+deploy.

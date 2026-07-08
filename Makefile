@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
+.PHONY: fetch index ingest eval smoke report audit a11y offline history test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -45,6 +45,9 @@ offline:      ## Render the offline fare reference (web/offline.html) from the c
 template:     ## Extract the domain-agnostic skeleton to TARGET (see template/MANIFEST.yaml, docs/ROADMAP.md P3-5)
 	@test -n "$(TARGET)" || { echo "usage: make template TARGET=/path/to/new-domain-assistant"; exit 2; }
 	uv run python -m scripts.extract_template "$(TARGET)"
+
+history:      ## Regenerate corpus/version_history.json (git-backed changelog for the operator console, EXP-09)
+	uv run python -m assistant.corpus history > corpus/version_history.json
 
 audit:        ## Independent GovChat-Eval audit: record answers, then run the external harness
 	@test -d "$(EVAL_HARNESS)" || { echo "govchat-eval not found at $(EVAL_HARNESS); set EVAL_HARNESS=<path>"; exit 2; }

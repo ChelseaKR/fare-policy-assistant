@@ -80,6 +80,14 @@ rather than tied to a published tag.
   committed `EVALS.md` scoreboard has not regressed against the committed
   `evals/baseline.json` (closes the gap where a locally-regenerated, gate-failing
   report could be committed without CI ever seeing the failure).
+- Agency operator console (`web/console.py`, EXP-09): a small, separately
+  authenticated surface (fails closed without `FPA_CONSOLE_TOKEN`) where an
+  agency owner can pin a corpus version, review the git-backed changelog/diff
+  (`assistant.corpus.version_history`, `make history`), configure the embed
+  widget's allowed origins, and read the latest eval report — actions that
+  previously meant editing the rider Lambda's environment variables by hand.
+  Deployed separately from the rider demo via `infra/deploy-console.sh`, with
+  an IAM role scoped to only that one rider function's configuration.
 
 ## [0.1.0] - 2026-06-30
 
