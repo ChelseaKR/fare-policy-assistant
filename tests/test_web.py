@@ -197,6 +197,26 @@ class TestAnswers:
         # The answer is tied to a corpus version (persona research R2-6).
         assert len(data["corpus_version"]) == 12
 
+    def test_answered_response_carries_valid_structured_contract(self):
+        # EXP-04: the typed payload rides alongside `answer`, validated
+        # against docs/answer-contract.schema.json before it is ever sent.
+        from assistant.contract import validate_answer_contract
+
+        resp = _post("Do youth ride free on Yolobus?")
+        data = json.loads(resp["body"])
+        assert data["structured"] is not None, "the mock model's answer should parse cleanly"
+        assert validate_answer_contract(data["structured"]) == []
+        assert data["structured"]["kind"] == "answered"
+        assert data["structured"]["citations"]
+
+    def test_refusal_response_structured_is_null_or_valid(self):
+        from assistant.contract import validate_answer_contract
+
+        resp = _post("My SSN is 123-45-6789, do I get the senior pass?")
+        data = json.loads(resp["body"])
+        if data["structured"] is not None:
+            assert validate_answer_contract(data["structured"]) == []
+
     def test_pii_question_refused_and_never_echoed(self):
         resp = _post("My SSN is 123-45-6789, do I get the senior pass?")
         data = json.loads(resp["body"])

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ChelseaKR/fare-policy-assistant/docs/answer-contract.schema.json",
+  "title": "Fare Policy Assistant answer contract",
+  "description": "Typed shape for an answered response. EXP-04 (docs/ideation/03-expansions.md): a checkable field-by-field contract instead of a prose blob shaped only by prompt instructions. Built by assistant.contract from an AnswerResult and validated before the UI renders it; a payload that fails validation falls back to the plain-text answer (assistant.contract.build_structured_answer sets structured_ok=false and the UI renders prose instead of sections). This schema describes the 'structured' object attached to the existing /api/ask response; it does not replace answer/kind/citations/as_of_date, which stay for backward compatibility.",
+  "type": "object",
+  "required": [
+    "kind",
+    "criterion",
+    "prices",
+    "proof_docs",
+    "next_step",
+    "decision_owner",
+    "as_of_date",
+    "citations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string",
+      "description": "Mirrors AnswerResult.kind.",
+      "enum": ["answered", "refused_input", "refused_no_support", "answered_guarded"]
+    },
+    "criterion": {
+      "type": "string",
+      "description": "The published eligibility criterion or policy explanation, stripped of citation tags. May be empty only when kind is a refusal.",
+      "minLength": 0
+    },
+    "prices": {
+      "type": "array",
+      "description": "Every dollar amount stated in the answer, each tied to the sentence that gives it context.",
+      "items": {
+        "type": "object",
+        "required": ["amount", "currency", "context"],
+        "additionalProperties": false,
+        "properties": {
+          "amount": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]{2})?$" },
+          "currency": { "type": "string", "enum": ["USD"] },
+          "context": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "proof_docs": {
+      "type": "array",
+      "description": "Cited documents whose sentence context names a proof/documentation requirement (ID, card, letter, etc.).",
+      "items": {
+        "type": "object",
+        "required": ["doc_id", "title", "context"],
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "context": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "next_step": {
+      "type": "string",
+      "description": "The rider-facing action sentence (apply, contact the agency, visit 511.org, etc.). Empty string when the answer names no next step (counted by evals/checks.py, not hidden).",
+      "minLength": 0
+    },
+    "decision_owner": {
+      "type": "string",
+      "description": "Who actually decides eligibility -- always the transit agency, never this assistant (the hard rule in CLAUDE.md: 'the assistant never determines eligibility'). Empty string only when no agency could be identified.",
+      "minLength": 0
+    },
+    "as_of_date": {
+      "type": "string",
+      "description": "Corpus snapshot date. Mirrors AnswerResult.as_of_date.",
+      "minLength": 0
+    },
+    "citations": {
+      "type": "array",
+      "description": "Same citations as the existing response payload, repeated here so the structured object is self-contained for renderers that only read `structured`.",
+      "items": {
+        "type": "object",
+        "required": ["doc_id", "agency", "title", "url", "fetch_date"],
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": { "type": "string" },
+          "agency": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "fetch_date": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from assistant import guards
 from assistant.answer import AnswerResult
+from assistant.contract import build_structured_answer
 from assistant.guards import detect_language
 
 _REDIRECT_RE = re.compile(
@@ -40,6 +41,23 @@ def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> li
             "no_determination_language",
             not hits,
             "; ".join(hits) if hits else "",
+        )
+    )
+
+    # 1b. EXP-04 (docs/ideation/03-expansions.md): every result, regardless of
+    # kind, must parse into a schema-valid structured contract. The schema
+    # allows empty prices/proof_docs/next_step/decision_owner, so this checks
+    # that the contract is well-typed, not that any particular field is
+    # populated — field-completeness gating (next_step present, a price
+    # listed when a fact row matches, etc.) is the item's own excellence bar,
+    # and per its risk note needs a live regression cycle to add without
+    # false failures, which a deterministic-only run cannot provide.
+    structured = build_structured_answer(result)
+    out.append(
+        CheckResult(
+            "structured_contract_schema_valid",
+            structured.structured_ok,
+            structured.fallback_reason,
         )
     )
 
