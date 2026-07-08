@@ -1,0 +1,103 @@
+{
+  "generated": "2026-07-08T07:49:36.292871+00:00",
+  "records": [
+    {
+      "agency": "MST",
+      "fare_id": "Regular",
+      "name": "Regular",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "MST",
+      "fare_id": "Free",
+      "name": "Free",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "regular_route_standard_cash_fare",
+      "name": "Standard One-way Cash Fare",
+      "feed_amount": "2.50",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "regular_route_reduced_cash_fare",
+      "name": "Reduced One-way Cash Fare",
+      "feed_amount": "1.25",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "regular_route_child_free_fare",
+      "name": "Free Child Fare",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "regular_route_standard_contactless_fare",
+      "name": "Standard One-way Contactless Fare",
+      "feed_amount": "2.50",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "regular_route_reduced_contactless_fare",
+      "name": "Reduced One-way Contactless Fare",
+      "feed_amount": "1.25",
+      "feed_agrees": "yes"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "downtown_waterfront_shuttle_standard_cash_fare",
+      "name": "Waterfront Shuttle One-way Cash Fare",
+      "feed_amount": "0.50",
+      "feed_agrees": "no"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "downtown_waterfront_reduced_cash_fare",
+      "name": "Waterfront Shuttle Reduced One-way Cash Fare",
+      "feed_amount": "0.25",
+      "feed_agrees": "no"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "downtown_waterfront_shuttle_standard_contactless_fare",
+      "name": "Waterfront Shuttle One-way Contactless Fare",
+      "feed_amount": "0.50",
+      "feed_agrees": "no"
+    },
+    {
+      "agency": "SBMTD",
+      "fare_id": "downtown_waterfront_reduced_contactless_fare",
+      "name": "Waterfront Shuttle Reduced One-way Contactless Fare",
+      "feed_amount": "0.25",
+      "feed_agrees": "no"
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed"
+    },
+    {
+      "agency": "SacRT",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed"
+    },
+    {
+      "agency": "Yolobus",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed"
+    }
+  ]
+}

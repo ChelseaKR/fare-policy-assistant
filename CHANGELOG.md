@@ -17,6 +17,15 @@ rather than tied to a published tag.
   verify` / CI gate (was check-only).
 
 ### Added
+- `src/assistant/gtfs.py`: GTFS(-Fares) cross-validation channel (EXP-06).
+  `make gtfs-fetch` snapshots MST's and SBMTD's live GTFS static feeds
+  (surveyed and confirmed 2026-07-08 — the other three pilot agencies did
+  not resolve to a discoverable feed this pass) and `make gtfs-check`
+  cross-checks feed fares against the prose corpus, flagging disagreement as
+  `feed_agrees: yes|no|no_feed` in `corpus/processed/gtfs_cross_check.json`.
+  Never overrides an answer; see `docs/decisions/0009-gtfs-cross-validation.md`
+  for the design, the live survey, and the real coverage gap the first run
+  found (SBMTD's Downtown-Waterfront Shuttle fare has no citable prose page).
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.
