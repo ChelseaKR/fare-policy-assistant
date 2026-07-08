@@ -204,6 +204,15 @@ offline mode automatically.
 To use the direct Anthropic API instead, set `FPA_PROVIDER=anthropic` and
 `ANTHROPIC_API_KEY`.
 
+A fourth backend, `FPA_PROVIDER=local`, talks to a small model served
+locally by [Ollama](https://ollama.com) — no network call, no per-query
+cost, for an offline kiosk deployment (EXP-13 in
+`docs/ideation/03-expansions.md`). `evals/backend_comparison.py` runs the
+same guarded pipeline against `local` and `bedrock` and publishes the
+measured delta; see `docs/decisions/0010-local-model-kiosk-backend.md` for
+the result (a small model measured well short of the bar — generation does
+not ship on the kiosk today).
+
 To rebuild the corpus from the live agency sites (polite, manifest-driven,
 about two minutes because of crawl delays):
 
