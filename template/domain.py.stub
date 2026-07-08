@@ -1,0 +1,71 @@
+"""Domain profile: the one place THIS assistant's domain-specific knobs live.
+
+Copied from fare-policy-assistant's src/assistant/domain.py (see its
+docstring for the full rationale). Fill in a DomainProfile for your policy
+domain below; retrieve.py, config.py, and the guard architecture read the
+active profile unchanged.
+
+What deliberately stays OUT of the profile, because it is cross-domain
+safety rather than domain content: PII patterns, prompt-injection patterns,
+and the eligibility-determination-language detector in guards.py. Any policy
+assistant must refuse to collect personal data, resist injection, and
+decline to rule on a person -- those are not knobs, and guards.py should be
+reviewed (not just copied) for whether your domain needs additional
+forbidden-language patterns of its own (see template/README.md item 3).
+"""
+
+from __future__ import annotations
+
+import os
+import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class DomainProfile:
+    """The domain-variable configuration. `scopes` are the entities a
+    question can name (agencies, offices, programs); `aliases` map what
+    users actually type to a scope; `scope_topics` are adjacent subjects to
+    redirect, not answer; `fallback_contact` is where to send someone when
+    the corpus has no answer."""
+
+    name: str
+    scopes: tuple[str, ...]
+    aliases: dict[str, str]
+    fallback_contact: str
+    scope_topics: dict[str, re.Pattern[str]]
+
+
+# TODO: replace with your domain. Example shape, from the transit build:
+#
+# YOUR_DOMAIN = DomainProfile(
+#     name="your_domain",
+#     scopes=("agency-a", "agency-b"),
+#     aliases={"agency a": "agency-a", "the agency": "agency-a"},
+#     fallback_contact="Call 211 or see your county's benefits office.",
+#     scope_topics={
+#         "agency-a": re.compile(r"\b(some|adjacent|topic)\b", re.IGNORECASE),
+#     },
+# )
+YOUR_DOMAIN = DomainProfile(
+    name="TODO: human-readable domain name",
+    scopes=(),
+    aliases={},
+    fallback_contact="TODO",
+    scope_topics={},
+)
+
+_REGISTRY: dict[str, DomainProfile] = {"your_domain": YOUR_DOMAIN}
+
+
+def register(key: str, profile: DomainProfile) -> None:
+    """Register a profile so `FPA_DOMAIN=<key>` selects it (rename the env var
+    for your build if you like -- update get_profile below to match)."""
+    _REGISTRY[key.lower()] = profile
+
+
+def get_profile(name: str | None = None) -> DomainProfile:
+    """The active profile. Defaults to the FPA_DOMAIN env value, then the one
+    domain this build ships."""
+    key = (name or os.environ.get("FPA_DOMAIN", "your_domain")).lower()
+    return _REGISTRY.get(key, YOUR_DOMAIN)

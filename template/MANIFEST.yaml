@@ -1,0 +1,84 @@
+# Template manifest: the domain/generic boundary, made machine-checkable.
+#
+# docs/adapting.md has said in prose, since early in the project, which parts
+# of this repo carry over unchanged to a new domain and which parts a new
+# domain rewrites. That prose drifted out of sync with the code more than
+# once (a file would move or a new domain-specific module would land without
+# anyone updating the doc). This manifest is the same claim, but as data:
+# `scripts/extract_template.py` reads it to actually build a starter skeleton,
+# and `tests/test_extract_template.py` fails CI if a path here goes missing or
+# a new top-level module is added without being classified. See P3-5 in
+# docs/ROADMAP.md ("Generalize the harness").
+#
+# Categories:
+#   generic          - copied byte-for-byte; no fare-transit content.
+#   generic_edit     - copied, but has a marked spot the new domain must edit
+#                       (a package name, a path, a docstring example). Each
+#                       entry names the marker to search for after copying.
+#   domain_specific  - NOT copied. Listed so the manifest is a complete map of
+#                       the repo, and so the completeness test can confirm
+#                       every tracked top-level module is accounted for one
+#                       way or the other.
+
+generic:
+  - evals/__init__.py
+  - evals/runner.py
+  - evals/checks.py
+  - evals/judges.py
+  - evals/report.py
+  - evals/check_report_regression.py
+  - evals/calibration.py
+  - evals/provenance.py
+  - evals/retrieval_ablation.py
+  - src/assistant/__init__.py
+  - src/assistant/guards.py
+  - src/assistant/config.py
+  - src/assistant/retrieve.py
+  - src/assistant/answer.py
+  - src/assistant/models.py
+  - src/assistant/i18n.py
+  - src/assistant/corpus.py
+  - src/assistant/ingest.py
+  - src/assistant/cli.py
+  - web/a11y.py
+  - web/handler.py
+  - web/embed.py
+  - web/offline.py
+  - web/__init__.py
+  - .github/workflows/ci.yml
+  - .github/workflows/security.yml
+  - .github/workflows/mutation.yml
+  - .github/workflows/corpus-freshness.yml
+  - docs/adapting.md
+
+generic_edit:
+  - path: evals/govchat_export.py
+    marker: "Suite mapping (fare-policy-assistant"
+    note: >
+      GovChat-Eval export plumbing is generic; the suite-name mapping in the
+      module docstring and the forbidden-term extraction are written against
+      this domain's suite names and must be re-stated for the new ones.
+  - path: Makefile
+    marker: 'PACKAGE ?= assistant'
+    note: >
+      Targets are generic. Update PACKAGE to the new import package name and
+      EVAL_HARNESS if the govchat-eval clone lives elsewhere.
+  - path: pyproject.toml
+    marker: 'name = "fare-policy-assistant"'
+    note: "Project name, description, and package discovery paths."
+  - path: web/index.html
+    marker: "fare"
+    note: "Branding, copy, and example questions are transit-specific."
+
+domain_specific:
+  - src/assistant/domain.py          # the DomainProfile instance itself
+  - corpus/                          # manifest.yaml + raw/ snapshots
+  - evals/suites/                    # case content written from this corpus
+  - evals/govchat/                   # exported golden.jsonl + baseline
+  - docs/audits/                     # GovChat-Eval run artifacts
+  - prompts/                         # system/answer prompts naming transit
+  - tests/test_domain.py
+  - tests/test_corpus.py
+  - tests/test_ingest.py
+  - tests/test_ingest_pipeline.py
+  - tests/test_pdf_ingest.py

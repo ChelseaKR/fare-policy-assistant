@@ -249,7 +249,10 @@ The pattern is not specific to transit: a corpus manifest with dated
 snapshots, chunked policy text, an answer pipeline with input/output guards,
 and YAML cases scored by deterministic checks plus a separate judge model.
 `docs/adapting.md` walks through what to change for, say, a
-benefits-eligibility assistant.
+benefits-eligibility assistant, and `make template TARGET=<dir>` extracts the
+domain-agnostic modules into a starter skeleton for a second domain
+assistant, so it can start from this project's audited harness without
+forking the repo (`template/MANIFEST.yaml`, `docs/ROADMAP.md` P3-5).
 
 ---
 

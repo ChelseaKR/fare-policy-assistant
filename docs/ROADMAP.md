@@ -181,6 +181,15 @@ Higher cost, lower urgency; do when the core is solid.
    it. Done = a second domain can stand up the same gates without forking this
    repo.
 
+   > **Status (2026-07-08):** this repo's side is done: `template/MANIFEST.yaml`
+   > makes the generic/domain-specific split from `docs/adapting.md` into
+   > checked data, `make template TARGET=<dir>` (`scripts/extract_template.py`)
+   > extracts a runnable skeleton from it, and `tests/test_extract_template.py`
+   > fails CI if the manifest drifts from the code. What's still open: landing
+   > the equivalent scaffolding *inside* GovChat-Eval and civic-rag-starter-kit
+   > (separate repos) so a second domain's black-box audit and RAG template
+   > start from the same lessons — that's tracked in those repos, not here.
+
 ## Sequencing
 
 P0 first and soon: the model-card claims should not sit overstated on a public
