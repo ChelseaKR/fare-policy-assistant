@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline history test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
+.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -42,6 +42,9 @@ a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, st
 
 offline:      ## Render the offline fare reference (web/offline.html) from the corpus
 	uv run python -m web.offline
+
+guide:        ## Render the guided fare finder (web/guide.html): zero-model-call, no input fields
+	uv run python -m web.guide
 
 template:     ## Extract the domain-agnostic skeleton to TARGET (see template/MANIFEST.yaml, docs/ROADMAP.md P3-5)
 	@test -n "$(TARGET)" || { echo "usage: make template TARGET=/path/to/new-domain-assistant"; exit 2; }

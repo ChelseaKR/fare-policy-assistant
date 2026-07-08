@@ -34,6 +34,8 @@ web/offline.html
 corpus/version_history.json
 # Also created by infra/deploy-console.sh's bundle step
 infra/build-console/
+# Generated guided fare finder (served at runtime from the corpus; make guide)
+web/guide.html
 # Original spec document; CLAUDE.md is the canonical committed copy
 CLAUDE-fare-assistant.md
 
