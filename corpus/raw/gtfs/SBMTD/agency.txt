@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
+1,SBMTD,https://sbmtd.gov,America/Los_Angeles,en,805-963-3364,https://sbmtd.gov/fares-passes/ ,info1@sbmtd.gov

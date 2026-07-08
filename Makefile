@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template
+.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -19,6 +19,12 @@ fetch:        ## Snapshot corpus documents listed in corpus/manifest.yaml
 index: ingest
 ingest:       ## Clean, chunk, and index the fetched snapshots
 	uv run python -m assistant.ingest process
+
+gtfs-fetch:   ## Snapshot GTFS(-Fares) feed data listed in corpus/manifest.yaml (EXP-06)
+	uv run python -m assistant.gtfs fetch
+
+gtfs-check:   ## Cross-check snapshotted GTFS fares against the prose corpus (EXP-06)
+	uv run python -m assistant.gtfs check
 
 smoke:        ## CI smoke suite (25 cases, deterministic checks only unless key present)
 	uv run python -m evals.runner --smoke

@@ -233,6 +233,11 @@ running deploy matches. PDF policies are supported too (text-first, with an OCR
 fallback for scans; ADR 0008), so a fare program published as PDF is citable
 like an HTML page.
 
+A second, structured evidence source checks the prose corpus against reality:
+`make gtfs-fetch` / `make gtfs-check` cross-validate agency fares against
+their published GTFS(-Fares) feeds (MST and SBMTD, confirmed live; ADR 0009),
+flagging disagreement without ever overriding an answer.
+
 ## Layout
 
 ```

@@ -127,3 +127,28 @@ documents:
     url: https://humboldttransit.org/fares/
     language: en
     license_note: "Public agency fare information."
+
+# ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
+# A second, structured evidence source, checked against the prose documents
+# above so a disagreement ("web page says $2.50, feed says $3.00") is caught
+# mechanically instead of by luck. The feed is a tripwire, never a source of
+# truth: `src/assistant/gtfs.py` only flags disagreement, it never overrides
+# an answer or prefers the feed price over the cited prose. See
+# docs/decisions/0009-gtfs-cross-validation.md.
+#
+# Survey (live-fetched 2026-07-08): MST and SBMTD both resolve to a working
+# static GTFS feed with fare data. Yolobus, SacRT, and HTA did not resolve to
+# a GTFS zip at any conventionally-guessed URL in this pass (no agency GTFS
+# aggregator API key was available to look one up authoritatively either).
+# Per the "the design must tolerate feed absent" note in the EXP-06 ideation
+# entry, they are left out below rather than pointed at a guessed URL that
+# might 404 or silently serve the wrong agency's data. `make gtfs-check`
+# reports them as `no_feed`, not a failure. Add an entry once a real feed URL
+# is confirmed for one of them.
+gtfs_feeds:
+  - agency: MST
+    url: https://www.mst.org/google/google_transit.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+  - agency: SBMTD
+    url: https://www.sbmtd.gov/google_transit/feed.zip
+    fares_version: v2 # fare_products.txt + fare_leg_rules.txt + rider_categories.txt

@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone
+"Monterey-Salinas Transit","Monterey-Salinas Transit",http://www.mst.org,America/Los_Angeles,,1-888-MST-BUS1

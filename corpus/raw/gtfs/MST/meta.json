@@ -1,0 +1,12 @@
+{
+  "agency": "MST",
+  "url": "https://www.mst.org/google/google_transit.zip",
+  "fares_version": "v1",
+  "fetch_date": "2026-07-08",
+  "feed_bytes": 734426,
+  "fare_files": [
+    "agency.txt",
+    "fare_attributes.txt",
+    "fare_rules.txt"
+  ]
+}
