@@ -10,9 +10,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from assistant import facts as facts_module
 from assistant import guards
 from assistant.answer import AnswerResult
 from assistant.contract import build_structured_answer
+from assistant.facts import FareFact
 from assistant.guards import detect_language
 
 _REDIRECT_RE = re.compile(
@@ -48,7 +50,25 @@ def phrase_present(phrase: str, text: str) -> bool:
     return bool(re.search(re.escape(phrase), text, re.I))
 
 
-def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> list[CheckResult]:
+def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[FareFact]) -> bool:
+    claim_min, claim_max = claim
+    if claim_min is None and claim_max is None:
+        return True  # not a real claim; nothing to verify
+    for fact in candidates:
+        if claim_min is not None and fact.age_min != claim_min:
+            continue
+        if claim_max is not None and fact.age_max != claim_max:
+            continue
+        return True
+    return False
+
+
+def run_checks(
+    case: dict,
+    result: AnswerResult,
+    corpus_doc_ids: set[str],
+    facts_by_doc: dict[str, list[FareFact]] | None = None,
+) -> list[CheckResult]:
     out: list[CheckResult] = []
     expected = case["expected_behavior"]  # answer | partial | refuse_redirect
     answer = result.answer
@@ -136,6 +156,32 @@ def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> li
                 missing.append(fact)
         if case.get("required_facts"):
             out.append(CheckResult("required_facts_present", not missing, "; ".join(missing)))
+
+        # 8. EXP-01: numeric price/age claims verified against the structured
+        # FareFact table for the cited doc(s), deterministically, instead of
+        # relying only on the LLM judge for groundedness of numbers. Only
+        # emitted when we have a fact table for at least one cited doc — a
+        # doc the extractor found no facts in (e.g. a narrative or contact
+        # page) falls back to today's judge-only behavior rather than
+        # failing every numeric claim against an empty candidate set.
+        if facts_by_doc is not None and result.kind == "answered":
+            candidates = [f for c in result.citations for f in facts_by_doc.get(c.doc_id, [])]
+            if candidates:
+                unverified = [
+                    f"${amount:.2f}"
+                    for amount in facts_module.parse_price_claims(answer)
+                    if not any(
+                        f.price is not None and abs(f.price - amount) < 0.005 for f in candidates
+                    )
+                ]
+                unverified += [
+                    f"age {claim[0] or ''}-{claim[1] or ''}"
+                    for claim in facts_module.parse_age_claims(answer)
+                    if not _age_claim_supported(claim, candidates)
+                ]
+                out.append(
+                    CheckResult("fare_facts_consistent", not unverified, "; ".join(unverified))
+                )
 
     if expected == "refuse_redirect":
         # The assistant either refused outright or declined for lack of support,

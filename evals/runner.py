@@ -36,6 +36,7 @@ its history on every pass and pays for it every pass.
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import math
 import os
@@ -49,6 +50,7 @@ from pathlib import Path
 import yaml
 
 from assistant import config, corpus
+from assistant import facts as facts_module
 from assistant.answer import AnswerResult, answer_question
 from assistant.ingest import load_chunks
 from assistant.models import Model, get_model
@@ -178,6 +180,7 @@ def _run_case(
     retriever: Retriever,
     cfg: config.Config,
     corpus_doc_ids: set[str],
+    facts_by_doc: dict[str, list] | None,
     run_judges: bool,
 ) -> tuple[dict, dict[str, list[int]]]:
     """Execute one case (including its multi-turn history replay, sequentially
@@ -202,7 +205,7 @@ def _run_case(
     else:
         question = case["question"]
         result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
-    checks = run_checks(case, result, corpus_doc_ids)
+    checks = run_checks(case, result, corpus_doc_ids, facts_by_doc)
     verdicts = []
     if run_judges:
         if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
@@ -307,6 +310,9 @@ def run(
     chunks = load_chunks()
     corpus_doc_ids = {c.doc_id for c in chunks}
     corpus_version = corpus.corpus_version(chunks)
+    facts_by_doc: dict[str, list] = collections.defaultdict(list)
+    for fact in facts_module.load_facts(config.FACTS_PATH):
+        facts_by_doc[fact.doc_id].append(fact)
     retriever = Retriever(chunks, cfg.retrieval)
     run_judges = have_key and cfg.models.provider != "mock"
 
@@ -404,6 +410,7 @@ def run(
                 retriever=retriever,
                 cfg=cfg,
                 corpus_doc_ids=corpus_doc_ids,
+                facts_by_doc=facts_by_doc,
                 run_judges=run_judges,
             )
             for kind in ("answer", "judge"):

@@ -36,6 +36,7 @@ def _point_config_at(tmp_path, monkeypatch, manifest: dict):
     # process_all() archives into VERSIONS_DIR (EXP-05); keep that under
     # tmp_path too so tests never write into the repo's real corpus/versions/.
     monkeypatch.setattr(config, "VERSIONS_DIR", tmp_path / "versions")
+    monkeypatch.setattr(config, "FACTS_PATH", processed / "facts.jsonl")
     return raw, processed
 
 
