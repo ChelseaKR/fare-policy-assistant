@@ -43,8 +43,9 @@ class TestRetriever:
         assert all(sc.chunk.agency == "MST" for sc in results)
 
     def test_low_confidence_on_offtopic(self, retriever):
-        results = retriever.search("weather forecast astronomy parliament")
-        assert not retriever.confident(results)
+        q = "weather forecast astronomy parliament"
+        results = retriever.search(q)
+        assert not retriever.confident(q, results)
 
     def test_multi_agency_retrieval_surfaces_each(self, retriever):
         # R3-2 retrieval half: a question naming two agencies retrieves passages

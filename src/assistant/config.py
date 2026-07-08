@@ -99,13 +99,25 @@ class RetrievalConfig:
     top_k: int = 8
     # Mild preference for chunks in the question's language.
     language_boost: float = 1.2
-    # Below this top BM25 score the assistant declines rather than guessing.
-    min_confidence: float = 4.0
+    # FIX-07 / ADR 0009: the decline rule reads normalized, corpus-size-
+    # independent signals (assistant.retrieve.ConfidenceSignals) instead of
+    # an absolute BM25 score. An absolute score drifts every time the corpus
+    # grows (every new agency changes IDF for every existing chunk), so the
+    # old `min_confidence = 4.0` was an untracked moving floor. Below this
+    # z-score (top result vs the full-corpus score distribution for the same
+    # query) *or* below this fraction of query terms actually present in the
+    # top chunk, the assistant declines rather than guessing. Calibrated by
+    # evals/decline_calibration.py against a labeled should-answer/
+    # should-decline question set — see the ablation table in ADR 0009.
+    # Re-run the calibration after every corpus change.
+    decline_z_threshold: float = 1.75
+    decline_coverage_floor: float = 0.10
     # Operational confidence band for the answered path (not a tuned eval
-    # parameter): a top score at or above this reads as "high", between
-    # min_confidence and this as "medium". Surfaced to integrators and staff
-    # who want a graded signal, never used to gate or alter an answer.
-    confidence_high: float = 8.0
+    # parameter, and not itself calibrated by the ablation): a top z-score at
+    # or above this reads as "high", between decline_z_threshold and this as
+    # "medium". Surfaced to integrators and staff who want a graded signal,
+    # never used to gate or alter an answer.
+    confidence_high_z: float = 3.5
     use_dense: bool = os.environ.get("FPA_DENSE", "") == "1"
     dense_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     # Hybrid mixing weight when dense retrieval is enabled.
