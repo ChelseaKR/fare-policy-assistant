@@ -81,6 +81,21 @@ def test_spanish_parity_table_pairs_mirror():
     assert "| ml-001 | ✓ | ground-001 | ✗ |" in md
 
 
+def test_stretch_language_parity_table_pairs_mirror():
+    records = [
+        _rec(case_id="tl-001", suite="stretch_tagalog", mirror_of="ground-001", passed=False),
+        _rec(case_id="ground-001", suite="groundedness", passed=True),
+    ]
+    md = report.generate_markdown(SUMMARY_WITH_COST, records)
+    assert "## Stretch-language parity (Tagalog)" in md
+    assert "| tl-001 | ✗ | ground-001 | ✓ |" in md
+
+
+def test_stretch_language_parity_absent_when_no_stretch_cases():
+    md = report.generate_markdown(SUMMARY_WITH_COST, [_rec()])
+    assert "## Stretch-language parity" not in md
+
+
 def test_calibration_section_present_on_live_run():
     # A judge verdict that matches a committed human label drives the calibration
     # block; load_labels() reads the real evals/calibration/judge_labels.jsonl.

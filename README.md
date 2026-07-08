@@ -71,8 +71,8 @@ by the evaluation suites (`evals/suites/`). The model card
 
 ## How it is evaluated
 
-118 cases across six suites, each case written against a specific passage in
-the corpus and readable by a non-engineer:
+118 cases across six core suites, each case written against a specific
+passage in the corpus and readable by a non-engineer:
 
 | Suite | What it tests |
 |---|---|
@@ -91,6 +91,21 @@ that fails to parse counts as an error rather than a pass.
 
 A 25-case smoke suite runs in CI on every pull request. The full suite runs
 nightly. A drop of more than 2 points on any suite fails the build.
+
+### Stretch language: Tagalog
+
+Only Spanish is at parity. `evals/suites/stretch_tagalog.yaml` adds 15 more
+cases, each mirroring an existing English case, that ask the same questions
+in Tagalog — chosen over Chinese, Vietnamese, or Korean because it is
+space-delimited Latin script, so the existing tokenizer needs only a
+fare-vocabulary lexicon, not a script change, to bridge a query into the
+English-only corpus. No agency in the corpus publishes a Tagalog page, so
+this suite is deliberately kept out of the core count and the CI smoke gate:
+it is a clearly-tagged, non-parity suite that is expected to score well below
+English and Spanish, and EVALS.md prints its own "Stretch-language parity
+(Tagalog)" table against the same English mirrors the Spanish table uses, so
+the gap is a counted number, not a claim. Full details in
+`docs/model-card.md`.
 
 ## Independent audit
 

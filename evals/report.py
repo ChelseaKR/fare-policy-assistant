@@ -46,22 +46,35 @@ def _failed_checks(record: dict) -> list[str]:
     return out
 
 
-def _spanish_parity(records: list[dict]) -> str | None:
-    """Compare each multilingual case against its English mirror."""
+def _parity_table(records: list[dict], suite: str, lang_label: str) -> str | None:
+    """Compare each case in `suite` against its English mirror (`mirror_of`).
+
+    Shared by the Spanish suite (near parity expected) and any stretch-language
+    suite (a parity gap is expected and reported honestly, not hidden)."""
     by_id = {r["case_id"]: r for r in records}
-    pairs = [
-        (r, by_id.get(r.get("mirror_of", ""))) for r in records if r["suite"] == "multilingual"
-    ]
+    pairs = [(r, by_id.get(r.get("mirror_of", ""))) for r in records if r["suite"] == suite]
     if not pairs:
         return None
-    rows = ["| Spanish case | passed | English mirror | passed |", "|---|---|---|---|"]
-    for es, en in pairs:
+    rows = [f"| {lang_label} case | passed | English mirror | passed |", "|---|---|---|---|"]
+    for other, en in pairs:
         rows.append(
-            f"| {es['case_id']} | {'✓' if es['passed'] else '✗'} "
+            f"| {other['case_id']} | {'✓' if other['passed'] else '✗'} "
             f"| {en['case_id'] if en else '—'} "
             f"| {('✓' if en['passed'] else '✗') if en else '—'} |"
         )
     return "\n".join(rows)
+
+
+def _spanish_parity(records: list[dict]) -> str | None:
+    return _parity_table(records, "multilingual", "Spanish")
+
+
+def _stretch_language_parity(records: list[dict]) -> str | None:
+    """Tagalog stretch suite vs. its English mirrors — see docs/ROADMAP.md P3-3
+    and evals/suites/stretch_tagalog.yaml. Expected to trail the Spanish table;
+    that gap is the point, not a regression (evals/baseline.json carries no
+    threshold for this suite, so a low score here never fails a build)."""
+    return _parity_table(records, "stretch_tagalog", "Tagalog (stretch)")
 
 
 def _cost_line(summary: dict) -> str:
@@ -147,6 +160,21 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
     parity = _spanish_parity(records)
     if parity:
         lines += ["", "## Spanish parity", "", parity]
+
+    stretch_parity = _stretch_language_parity(records)
+    if stretch_parity:
+        lines += [
+            "",
+            "## Stretch-language parity (Tagalog)",
+            "",
+            "Clearly non-parity by design (docs/ROADMAP.md P3-3): no corpus document is "
+            "published in Tagalog, so every row below is a cross-lingual retrieval test, "
+            "not a translated-source lookup like the Spanish table above. A lower pass "
+            "rate here than in Spanish parity is the expected, honest result, not a "
+            "regression.",
+            "",
+            stretch_parity,
+        ]
 
     cal = _calibration_section(summary, records)
     if cal:

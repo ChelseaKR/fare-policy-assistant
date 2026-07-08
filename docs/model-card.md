@@ -16,6 +16,9 @@ Riders and rider-facing staff asking factual questions about published fare
 policy, in English or Spanish. Also engineers studying the evaluation harness,
 which is the main artifact of this repository.
 
+Tagalog is supported as an explicitly-tagged **stretch** language only, not a
+supported one: see "Stretch languages" below before relying on it.
+
 ## Out of scope
 
 - Eligibility determinations of any kind. The assistant describes published
@@ -52,9 +55,9 @@ in the system.
 
 ## Evaluation
 
-118 cases across groundedness, refusal, edge-case, multilingual, freshness, and
-multi-turn conversation suites; method and current scores in
-[EVALS.md](../EVALS.md). Deterministic
+133 cases across groundedness, refusal, edge-case, multilingual, freshness,
+multi-turn conversation, and stretch-language (Tagalog) suites; method and
+current scores in [EVALS.md](../EVALS.md). Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
 also records its exact token usage and an estimated cost, and checks the LLM
 judge against a hand-labeled sample (`evals/calibration/judge_labels.jsonl`):
@@ -72,6 +75,20 @@ Known limits found by the harness so far:
   page. For the other agencies Spanish answers depend on cross-lingual
   retrieval over English documents, and the parity table in EVALS.md shows
   where that falls short.
+- Tagalog is a **stretch** language, not a supported one, and the model card
+  says so on purpose. No corpus document is published in Tagalog (unlike
+  Spanish's `mst-fares-es`), so `evals/suites/stretch_tagalog.yaml` is an
+  honest, mirrored, all-cross-lingual test: a fare-vocabulary lexicon
+  (`assistant.retrieve._TL_EN_LEXICON`) bridges a Tagalog query to the
+  English corpus at retrieval time, but nothing downstream generates a
+  Tagalog answer or reliably detects a Tagalog question —
+  `assistant.guards.detect_language` currently returns only `en`/`es` — so
+  the suite's own `language_match` check is expected to fail on every case.
+  That failure is the parity gap this suite exists to make visible in the
+  "Stretch-language parity (Tagalog)" table in EVALS.md, not a bug to
+  silence. Chinese, Vietnamese, and Korean remain unaddressed; Tagalog was
+  chosen first because it is space-delimited Latin script, which the
+  existing tokenizer already handles (docs/ROADMAP.md P3-3).
 - The overall pass count moves by a couple of cases run to run. A handful of
   cases sit at the LLM judge's groundedness/helpfulness decision boundary (and
   the answer model is not perfectly deterministic at temperature 0 on Bedrock),
