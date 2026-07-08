@@ -118,6 +118,18 @@ def _have_credentials(provider: str) -> bool:
             or (Path.home() / ".aws" / "config").exists()
             or (Path.home() / ".aws" / "credentials").exists()
         )
+    if provider == "local":
+        # No credentials to check — the analogous question is "is the Ollama
+        # server up." A quick, short-timeout probe; any failure (not
+        # running, wrong FPA_OLLAMA_HOST) reads as "not available" so the
+        # normal --offline fallback below applies instead of hanging.
+        import httpx
+
+        host = os.environ.get("FPA_OLLAMA_HOST", "http://localhost:11434")
+        try:
+            return httpx.get(f"{host}/api/version", timeout=2.0).status_code == 200
+        except httpx.HTTPError:
+            return False
     return provider == "mock"
 
 

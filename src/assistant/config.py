@@ -65,6 +65,11 @@ _DEFAULT_MODELS = {
         "us.anthropic.claude-sonnet-4-6",
     ),
     "anthropic": ("claude-haiku-4-5", "claude-sonnet-4-6"),
+    # Two distinct small models so the judge-must-differ-from-answer rule
+    # holds standalone (`FPA_PROVIDER=local`), same as the hosted backends.
+    # Both are small enough to be kiosk-appropriate; pull with
+    # `ollama pull llama3.2:3b && ollama pull qwen2.5:3b`. See ADR 0010.
+    "local": ("llama3.2:3b", "qwen2.5:3b"),
     "mock": ("mock", "mock"),
 }
 

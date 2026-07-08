@@ -1,10 +1,14 @@
 """Provider-portable model adapter.
 
-Three backends:
+Four backends:
   bedrock   — default; Claude on Amazon Bedrock via the Anthropic SDK's
               Bedrock client (AWS credential chain, anthropic.-prefixed
               model IDs). See ADR 0003.
   anthropic — direct Anthropic API, available behind FPA_PROVIDER=anthropic.
+  local     — offline, no-network backend for kiosk deployment: a small model
+              served by Ollama on localhost. FPA_PROVIDER=local. See ADR 0010
+              and evals/backend_comparison.py for the measured delta against
+              Bedrock before shipping this on a kiosk.
   mock      — deterministic offline backend for tests and plumbing runs.
 """
 
@@ -12,6 +16,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
+
+# Module-level (unlike the lazy `import anthropic` in the hosted backends
+# below): httpx is already an unconditional dependency of this project
+# (transport for the Anthropic SDK), so importing it eagerly here costs
+# nothing and lets tests monkeypatch `models.httpx.Client`.
+import httpx
 
 
 @dataclass
@@ -90,6 +100,60 @@ class BedrockModel:
         )
 
 
+class LocalModel:
+    """A small model served locally by Ollama — no network call, no per-query cost.
+
+    This is the offline kiosk backend from EXP-13 in `docs/ideation/03-expansions.md`:
+    the identical guarded pipeline (retrieval, prompt assembly, citation
+    extraction, guards) but with generation happening on-device against a
+    model already pulled onto the kiosk hardware. Talks to the Ollama HTTP
+    API (`ollama serve`, default `http://localhost:11434`) rather than the
+    `ollama` Python package, so this backend adds no new dependency beyond
+    `httpx`, already required for the Anthropic SDK's transport.
+
+    `FPA_OLLAMA_HOST` overrides the host. A connection error (Ollama not
+    running, wrong host) raises `httpx.ConnectError` — the caller sees the
+    same "backend unreachable" failure shape as a Bedrock/Anthropic auth or
+    network error, rather than a silent fallback to a different backend.
+    """
+
+    def __init__(self, model: str):
+        import os
+
+        self.model = model
+        host = os.environ.get("FPA_OLLAMA_HOST", "http://localhost:11434")
+        # Local generation on modest kiosk hardware can be slow; a long
+        # timeout avoids flagging a slow-but-working answer as a backend
+        # failure. No retries — a kiosk should fail fast and fall back to
+        # EXP-07's no-model guide rather than hang.
+        self._client = httpx.Client(base_url=host, timeout=120.0)
+
+    def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
+        resp = self._client.post(
+            "/api/chat",
+            json={
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "stream": False,
+                "options": {"temperature": temperature, "num_predict": max_tokens},
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return Completion(
+            text=data["message"]["content"],
+            model=self.model,
+            # Ollama's own token counts for the served request, not a
+            # cross-provider-comparable tokenizer — good enough for the
+            # cost/usage bookkeeping the eval harness does per backend.
+            input_tokens=data.get("prompt_eval_count", 0),
+            output_tokens=data.get("eval_count", 0),
+        )
+
+
 class MockModel:
     """Echoes a grounded-looking answer built only from the passages it was given.
 
@@ -123,6 +187,8 @@ def get_model(provider: str, model: str) -> Model:
         return AnthropicModel(model)
     if provider == "bedrock":
         return BedrockModel(model)
+    if provider == "local":
+        return LocalModel(model)
     if provider == "mock":
         return MockModel(model)
     raise ValueError(f"unknown provider: {provider}")
