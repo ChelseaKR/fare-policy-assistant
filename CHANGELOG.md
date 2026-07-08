@@ -8,6 +8,14 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Changed
+- Replaced the absolute BM25 `min_confidence` decline threshold with
+  normalized, corpus-size-independent retrieval signals
+  (`assistant.retrieve.ConfidenceSignals`: a z-score against the full-corpus
+  score distribution and query-term coverage), calibrated by the new
+  `evals/decline_calibration.py` against a labeled should-answer/
+  should-decline question set. See `docs/decisions/0009` (FIX-07).
+
 ### Fixed
 - Corrected the multilingual eval regression flagged in the 2026-06-30 report
   (18/21 vs the committed 20/21 baseline); see

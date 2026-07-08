@@ -83,4 +83,4 @@ def chunks() -> list[Chunk]:
 
 @pytest.fixture
 def retriever(chunks) -> Retriever:
-    return Retriever(chunks, config.RetrievalConfig(top_k=3, min_confidence=0.5))
+    return Retriever(chunks, config.RetrievalConfig(top_k=3))

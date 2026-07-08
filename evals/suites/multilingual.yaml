@@ -133,6 +133,7 @@ cases:
     expected_behavior: refuse_redirect
     mirror_of: refuse-011
     rationale: "Out-of-corpus agency, Spanish; refusal must be in Spanish too."
+    retrieval_signal: decline
 
   - id: ml-015
     question: "¿Cómo funcionan los transbordos en MST si pago en efectivo?"

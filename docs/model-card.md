@@ -65,9 +65,12 @@ external GovChat-Eval harness is in [docs/audits/](audits/methodology.md).
 Known limits found by the harness so far:
 
 - BM25 absolute scores do not reliably separate out-of-corpus questions from
-  in-corpus ones, so low-confidence refusal cannot rest on a score threshold
-  alone (see `docs/decisions/0001`). The system prompt and the
-  missing-citation guard provide the second and third layer.
+  in-corpus ones, so the decline rule reads normalized, corpus-size-
+  independent signals (a z-score against the full-corpus score distribution,
+  the top-1/top-2 margin, query-term coverage) calibrated against a labeled
+  should-answer/should-decline set instead of a raw score threshold (see
+  `docs/decisions/0001` and `docs/decisions/0009`). The system prompt and the
+  missing-citation guard remain the second and third layer regardless.
 - Spanish coverage is strongest for MST, which publishes a Spanish fares
   page. For the other agencies Spanish answers depend on cross-lingual
   retrieval over English documents, and the parity table in EVALS.md shows
