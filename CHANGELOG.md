@@ -17,6 +17,16 @@ rather than tied to a published tag.
   verify` / CI gate (was check-only).
 
 ### Added
+- System prompt **v7 draft, `NOT YET LIVE-VALIDATED`** (2026-07-09): never
+  state a fee/payment consequence beyond what the passage supports — targets
+  the `ml-015` cross-lingual assertiveness gap. The multilingual regression
+  gate stays red until a maintainer runs a live `make eval`; no baseline,
+  threshold, or scoreboard number was touched.
+- Documented the **MST Spanish-content parity ceiling** behind `ml-012`
+  (2026-07-09): `mst.org/es/fares/benefits/` exists but is an untranslated
+  English shell, verified once via the polite fetch pipeline and deliberately
+  not ingested. See `docs/I18N.md` and the addendum in
+  `docs/audits/eval-regression-2026-06-30.md`.
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.
