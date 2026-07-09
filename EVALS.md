@@ -5,6 +5,7 @@ Generated from the run at `2026-06-30T04:35:31+00:00` (full, live).
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
 - Prompt versions: system v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018)), answer_user v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
+- Corpus version: `0938fff0539a`
 - Duration: 850.3s
 - Cost (estimated): $1.7021 for 732,847 tokens — answer $0.4747, judge $1.2274 (exact tokens, list-price estimate)
 
@@ -52,6 +53,7 @@ Human labels checked against this run's judge verdicts on 16 of 16 sampled (case
 
 - Raw agreement: **87.5%**
 - Cohen's κ: **0.429**
+- Stale labels skipped (answer changed since labeling): **0**
 - Note: small, pass-skewed sample; read agreement alongside n and kappa.
 
 ## Representative failures
@@ -239,7 +241,11 @@ La política publicada no especifica el precio del pase de 2 horas para efectivo
 ---
 Regenerate with `make eval` (full) or `python -m evals.report` (report only).
 
-<!-- Machine-readable provenance for the CI gate (evals/provenance.py): the
-prompt versions and corpus this report was generated against. The gate fails
-if these drift from HEAD, so a stale report cannot masquerade as current. -->
-<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)", "judge_groundedness": "v1 2026-06-11", "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)", "system": "v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018))"}, "run_id": "2026-06-30T04:35:31+00:00"} -->
+<!-- Machine-readable provenance for two CI gates: evals/provenance.py
+(prompt versions and corpus this report was generated against — fails if
+these drift from HEAD, so a stale report cannot masquerade as current) and
+evals/check_report_regression.py (the `suites` scoreboard below, re-checked
+against the committed evals/baseline.json — fails if this committed report
+describes a regression that was never actually gated; see
+docs/audits/eval-regression-2026-06-30.md for why that check exists). -->
+<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)", "judge_groundedness": "v1 2026-06-11", "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)", "system": "v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018))"}, "run_id": "2026-06-30T04:35:31+00:00", "suites": {"conversation": {"pass_rate": 66.7, "passed": 4, "total": 6}, "edge_cases": {"pass_rate": 100.0, "passed": 33, "total": 33}, "freshness": {"pass_rate": 100.0, "passed": 10, "total": 10}, "groundedness": {"pass_rate": 100.0, "passed": 29, "total": 29}, "multilingual": {"pass_rate": 85.7, "passed": 18, "total": 21}, "refusal": {"pass_rate": 100.0, "passed": 19, "total": 19}}} -->

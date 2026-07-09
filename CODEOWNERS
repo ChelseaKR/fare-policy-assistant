@@ -1,0 +1,15 @@
+# Code owners for the paths where a review matters most: CI/security config,
+# the safety-critical guard module, prompts (this repo's own thesis requires a
+# live-validated eval before a prompt change lands), and the regression
+# baseline (changing it silently is exactly the failure this repo audits
+# against — see docs/audits/eval-regression-2026-06-30.md).
+#
+# This file makes review routing an existence-checkable artifact (CQ-39,
+# CICD-17). It does not by itself force review: enforcing "required reviewers"
+# on these paths is a hosted branch-protection/ruleset setting, a separate
+# manual action (see the 2026-07-05 execution log).
+
+/.github/workflows/    @ChelseaKR
+/src/assistant/guards.py @ChelseaKR
+/prompts/              @ChelseaKR
+/evals/baseline.json   @ChelseaKR

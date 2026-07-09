@@ -30,14 +30,34 @@ def make_chunk(**kw) -> Chunk:
 def chunks() -> list[Chunk]:
     # BM25 needs a handful of documents for sane IDF; pad with realistic filler.
     fillers = [
-        ("mst-fares#1", "mst-fares", "MST", "GoCard",
-         "The GoCard is a stored value card with 10% bonus on reload."),
-        ("mst-fares#2", "mst-fares", "MST", "Pass Outlets",
-         "GoPasses available at customer service locations in Monterey county."),
-        ("sacrt-fares#0", "sacrt-fares", "SacRT", "Light Rail",
-         "Single ride tickets are valid for 90 minutes from validation on light rail."),
-        ("sbmtd-fares-passes#0", "sbmtd-fares-passes", "SBMTD", "Transfers",
-         "Transfers are issued by the driver and valid for 60 minutes on the second bus."),
+        (
+            "mst-fares#1",
+            "mst-fares",
+            "MST",
+            "GoCard",
+            "The GoCard is a stored value card with 10% bonus on reload.",
+        ),
+        (
+            "mst-fares#2",
+            "mst-fares",
+            "MST",
+            "Pass Outlets",
+            "GoPasses available at customer service locations in Monterey county.",
+        ),
+        (
+            "sacrt-fares#0",
+            "sacrt-fares",
+            "SacRT",
+            "Light Rail",
+            "Single ride tickets are valid for 90 minutes from validation on light rail.",
+        ),
+        (
+            "sbmtd-fares-passes#0",
+            "sbmtd-fares-passes",
+            "SBMTD",
+            "Transfers",
+            "Transfers are issued by the driver and valid for 60 minutes on the second bus.",
+        ),
     ]
     return [
         make_chunk(),

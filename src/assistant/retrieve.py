@@ -50,23 +50,52 @@ def detect_agency(question: str) -> str | None:
 # mirrored into English for BM25 to stand a chance (eval cases ml-009/010/011;
 # see ADR 0001 — dense multilingual retrieval is the heavier alternative).
 _ES_EN_LEXICON: dict[str, str] = {
-    "pasaje": "fare", "tarifa": "fare", "tarifas": "fares", "boleto": "ticket",
-    "mensual": "monthly", "semanal": "weekly",
-    "diario": "daily", "descuento": "discount", "reducido": "reduced",
-    "reducida": "reduced", "mayores": "seniors senior", "mayor": "senior",
-    "niños": "children youth kids", "jóvenes": "youth", "gratis": "free",
-    "edad": "age", "años": "years", "veterano": "veteran", "veteranos": "veterans",
-    "discapacidad": "disability disabled", "estudiante": "student",
-    "estudiantes": "students", "autobús": "bus", "viajan": "ride",
-    "viajar": "ride", "cuesta": "cost costs", "costo": "cost", "precio": "price",
-    "sencillo": "single", "tarjeta": "card", "prueba": "proof",
-    "esposa": "spouse", "esposo": "spouse", "cónyuge": "spouse",
-    "mes": "month", "identificación": "identification id",
-    "pagan": "pay fare", "paga": "pay fare", "pagar": "pay fare",
-    "viaje": "ride trip", "viajes": "rides trips", "personas": "persons",
+    "pasaje": "fare",
+    "tarifa": "fare",
+    "tarifas": "fares",
+    "boleto": "ticket",
+    "mensual": "monthly",
+    "semanal": "weekly",
+    "diario": "daily",
+    "descuento": "discount",
+    "reducido": "reduced",
+    "reducida": "reduced",
+    "mayores": "seniors senior",
+    "mayor": "senior",
+    "niños": "children youth kids",
+    "jóvenes": "youth",
+    "gratis": "free",
+    "edad": "age",
+    "años": "years",
+    "veterano": "veteran",
+    "veteranos": "veterans",
+    "discapacidad": "disability disabled",
+    "estudiante": "student",
+    "estudiantes": "students",
+    "autobús": "bus",
+    "viajan": "ride",
+    "viajar": "ride",
+    "cuesta": "cost costs",
+    "costo": "cost",
+    "precio": "price",
+    "sencillo": "single",
+    "tarjeta": "card",
+    "prueba": "proof",
+    "esposa": "spouse",
+    "esposo": "spouse",
+    "cónyuge": "spouse",
+    "mes": "month",
+    "identificación": "identification id",
+    "pagan": "pay fare",
+    "paga": "pay fare",
+    "pagar": "pay fare",
+    "viaje": "ride trip",
+    "viajes": "rides trips",
+    "personas": "persons",
     # GoPass is MST's product name for passes; the fare tables say "GoPass"
     # where a rider says "pase" (eval case ml-002).
-    "pases": "passes gopass", "pase": "pass gopass",
+    "pases": "passes gopass",
+    "pase": "pass gopass",
 }
 
 
@@ -75,10 +104,7 @@ def _tokenize(text: str) -> list[str]:
     score unrelated chunks on articles alone. Digits, "$", and "id" stay —
     ages, prices, and ID cards are exactly what riders ask about."""
     raw = re.findall(r"[a-záéíóúüñ0-9$]+", text.lower())
-    return [
-        t for t in raw
-        if len(t) > 2 or t == "id" or any(ch.isdigit() for ch in t) or "$" in t
-    ]
+    return [t for t in raw if len(t) > 2 or t == "id" or any(ch.isdigit() for ch in t) or "$" in t]
 
 
 # English variants BM25 can't bridge without stemming: riders say "disabled",
@@ -87,8 +113,10 @@ def _tokenize(text: str) -> list[str]:
 _EN_SYNONYMS: dict[str, str] = {
     "disabled": "disabilities disability",
     "disability": "disabled disabilities",
-    "kid": "youth child", "kids": "youth children",
-    "teen": "youth", "teenager": "youth",
+    "kid": "youth child",
+    "kids": "youth children",
+    "teen": "youth",
+    "teenager": "youth",
 }
 
 # Stretch language: Tagalog, a high-demand California language that, unlike
@@ -98,11 +126,19 @@ _EN_SYNONYMS: dict[str, str] = {
 # (R2-3); answering *in* Tagalog and a parity suite need a live model and a
 # detect_language extension, and are tracked as live-gated work.
 _TL_EN_LEXICON: dict[str, str] = {
-    "pamasahe": "fare", "magkano": "how much cost price", "diskwento": "discount reduced",
-    "nakatatanda": "senior seniors", "matatanda": "seniors senior", "libre": "free",
-    "bata": "youth child children", "estudyante": "student students",
-    "beterano": "veteran veterans", "kapansanan": "disability disabled",
-    "buwanang": "monthly", "tiket": "ticket", "pasahero": "rider passenger",
+    "pamasahe": "fare",
+    "magkano": "how much cost price",
+    "diskwento": "discount reduced",
+    "nakatatanda": "senior seniors",
+    "matatanda": "seniors senior",
+    "libre": "free",
+    "bata": "youth child children",
+    "estudyante": "student students",
+    "beterano": "veteran veterans",
+    "kapansanan": "disability disabled",
+    "buwanang": "monthly",
+    "tiket": "ticket",
+    "pasahero": "rider passenger",
 }
 
 
@@ -162,10 +198,7 @@ class Retriever:
             for c, s in zip(self.chunks, scores, strict=True)
         )
         ranked = sorted(
-            (
-                ScoredChunk(chunk=c, score=s)
-                for c, s in zip(self.chunks, boosted, strict=True)
-            ),
+            (ScoredChunk(chunk=c, score=s) for c, s in zip(self.chunks, boosted, strict=True)),
             key=lambda sc: sc.score,
             reverse=True,
         )

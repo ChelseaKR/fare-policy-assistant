@@ -106,7 +106,7 @@ def _history_block(history: list[tuple[str, str]] | None) -> str:
     joined = "\n\n".join(turns)
     return (
         "Earlier in this conversation (context only — re-ground every claim in "
-        "the passages below, and resolve references like \"it\" or \"my spouse\" "
+        'the passages below, and resolve references like "it" or "my spouse" '
         f"against these turns):\n\n{joined}\n\n"
     )
 

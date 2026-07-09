@@ -205,8 +205,10 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print("provenance: EVALS.md, baseline.json, and golden.jsonl match HEAD "
-          f"(corpus {head_corpus_version()}).")
+    print(
+        "provenance: EVALS.md, baseline.json, and golden.jsonl match HEAD "
+        f"(corpus {head_corpus_version()})."
+    )
     return 0
 
 

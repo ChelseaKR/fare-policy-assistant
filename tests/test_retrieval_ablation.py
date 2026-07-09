@@ -26,17 +26,17 @@ class TestFactInChunks:
 class TestRecall:
     def test_counts_cases_with_all_facts_retrieved(self, retriever):
         cases = [
-            {"question": "Do youth ride free on Yolobus?",
-             "required_facts": ["free"]},
-            {"question": "Do youth ride free on Yolobus?",
-             "required_facts": ["this fact is nowhere in the corpus xyzzy"]},
+            {"question": "Do youth ride free on Yolobus?", "required_facts": ["free"]},
+            {
+                "question": "Do youth ride free on Yolobus?",
+                "required_facts": ["this fact is nowhere in the corpus xyzzy"],
+            },
         ]
         hits, total = _recall(retriever, cases)
         assert total == 2
         assert hits == 1  # first case's fact is retrievable, second's is not
 
     def test_multiturn_case_uses_last_turn_as_query(self, retriever):
-        cases = [{"turns": ["hi", "Do youth ride free on Yolobus?"],
-                  "required_facts": ["free"]}]
+        cases = [{"turns": ["hi", "Do youth ride free on Yolobus?"], "required_facts": ["free"]}]
         hits, total = _recall(retriever, cases)
         assert (hits, total) == (1, 1)

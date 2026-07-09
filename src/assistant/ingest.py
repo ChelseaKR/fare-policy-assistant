@@ -65,9 +65,7 @@ def fetch_all(only: set[str] | None = None) -> None:
 
     last_hit: dict[str, float] = {}
     failures = []
-    with httpx.Client(
-        headers={"User-Agent": ua}, follow_redirects=True, timeout=30
-    ) as client:
+    with httpx.Client(headers={"User-Agent": ua}, follow_redirects=True, timeout=30) as client:
         for doc in manifest["documents"]:
             if only and doc["id"] not in only:
                 continue
@@ -316,9 +314,7 @@ def process_all() -> None:
                 extract_pdf_text(raw_path.read_bytes(), ocr=doc.get("ocr", False))
             )
         else:
-            sections = sections_from_html(
-                raw_path.read_text(encoding="utf-8", errors="replace")
-            )
+            sections = sections_from_html(raw_path.read_text(encoding="utf-8", errors="replace"))
 
         md_lines = [
             f"# {doc['title']} — {doc['agency']}",
@@ -340,9 +336,7 @@ def process_all() -> None:
             )
             all_chunks.append(chunk)
             md_lines += [f"## {heading}", "", body, ""]
-        (config.PROCESSED_DIR / f"{doc['id']}.md").write_text(
-            "\n".join(md_lines), encoding="utf-8"
-        )
+        (config.PROCESSED_DIR / f"{doc['id']}.md").write_text("\n".join(md_lines), encoding="utf-8")
         print(f"ok    {doc['id']}: {len(sections)} sections")
 
     with config.CHUNKS_PATH.open("w", encoding="utf-8") as f:

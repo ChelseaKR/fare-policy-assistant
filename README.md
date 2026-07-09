@@ -10,6 +10,44 @@ evaluate.
 
 **[Read the latest evaluation report → EVALS.md](EVALS.md)**
 
+## Status: Beta
+
+Deployed and evaluated (see the live demo and EVALS.md below), but not
+production-grade: the manual accessibility walkthrough is still pending, the
+EN/ES answer-quality gap exceeds this project's own ≤5-point target, and the
+judge-calibration sample is smaller than the standard's floor. All three are
+tracked in the [Standards conformance](#standards-conformance) table below.
+This is, and is meant to be read as, a reference implementation — see the
+closing note.
+
+## Standards conformance
+
+Assessed against [`ChelseaKR/portfolio-standards`](https://github.com/ChelseaKR/portfolio-standards)
+(pinned version in `.standards-version`; `standards.yml` checks staleness on
+every push). "Applies" means the standard's AUTO/REVIEW gates are being worked
+toward, not that they all pass yet — see the linked gap for current state.
+
+| Standard | Applies? | State |
+|---|---|---|
+| Quality & Metrics | Applies | Partial. Coverage gate (90% branch) is green; DORA ledger and AI-capabilities checklist not yet started. No tracking issue filed yet — this row is the gap record until one is. |
+| Code Quality | Applies | Partial. `ruff format --check`, pytest strict flags, and `.python-version` landed 2026-07-05; mypy strict mode and ruff's full pinned rule set (`S`, `C90`) are not yet on; no pre-commit config; no CODEOWNERS-enforced review. No tracking issue filed yet. |
+| Security & Supply Chain | Applies | Partial. SAST (Semgrep) and secret-scan (gitleaks) are blocking; dependency-vulnerability scanning (`pip-audit`) landed 2026-07-05 (see `security.yml`). No ASVS level declared, no CodeQL, no zizmor, no Scorecard yet. No tracking issue filed yet. |
+| CI/CD | Applies | Partial. OIDC-only credentials, SHA-pinned actions, per-job least-privilege permissions (including `corpus-freshness.yml`, fixed 2026-07-05). No branch-ruleset artifact, no CODEOWNERS-enforced review (`CODEOWNERS` file added 2026-07-05; the hosted branch-protection setting itself is a manual, human action — see the 2026-07-05 execution log in the audit folder). No tracking issue filed yet. |
+| Release & Versioning | **N/A — not consumed downstream.** Nothing is published to a package index and no other repo depends on a pinned version of this one. `pyproject.toml`/`CITATION.cff`/`CHANGELOG.md` are kept in sync by convention, not by a release pipeline. If that changes, this row flips to Applies and a tag-triggered `make verify` workflow is added (see `docs/decisions/`). | — |
+| Accessibility | Applies | Partial. Merge-blocking structural gate (`web/a11y.py`) is green; the advisory browser pass (pa11y/axe) has not yet graduated to blocking, and the manual screen-reader walkthrough is still pending (`docs/audits/a11y-walkthrough.md`). No tracking issue filed yet. |
+| Observability | Applies (Tier: informational/low-traffic demo service — no SLO, no paging). JSON structured logs exist (no PII, test-enforced); no OpenTelemetry, no alerting. This tier declaration is the gap-closer for OBS-21; raising the tier is tracked in `docs/ROADMAP.md` P1-3. | — |
+| Internationalization | Applies | Best-conforming standard in this repo: gettext catalogs with 9 merge-blocking gates (`docs/I18N.md`). Known, tracked gap: the disaggregated EN/ES answer-quality delta (~14pp) exceeds the ≤5pp bar — root-caused in `docs/audits/eval-regression-2026-06-30.md`. |
+| AI Evaluation | Applies | This is the project's thesis. 118-case harness, versioned prompts, a committed regression baseline, an independent GovChat-Eval audit. **Currently red**: the multilingual suite is below its own committed baseline (root cause and mitigation plan in `docs/audits/eval-regression-2026-06-30.md`) and judge-calibration κ (0.429) is below the 0.60 floor (small, pass-skewed sample; `evals/calibration.py`). |
+| Documentation | Applies | Partial. This table is new (2026-07-05); ADRs, model card, and CONTRIBUTING exist and are dated. `CHANGELOG.md` added 2026-07-05. No tracking issue filed yet. |
+| Responsible Tech Framework | Applies (civic domain touching age/disability/income/veteran status). Misuse-resistance is code-enforced and tested (`src/assistant/guards.py`). No DPIA, AI-risk register, or EU-AI-Act classification yet: the source material for all three already exists in ADR 0004, `SECURITY.md`, and the model card; writing them up is future work. | — |
+
+No GitHub tracking issues are linked above: this pass verified `gh auth
+status` succeeds against this repo but did not file issues autonomously (that
+write action was outside this remediation pass's scope — see the 2026-07-05
+execution log). Until issues exist, the linked doc/file in each row is the
+authoritative gap record; open the issues by hand (or ask an agent to, in a
+session that's explicitly scoped for it) and replace these notes with links.
+
 ## What this assistant will not do
 
 - It never determines anyone's eligibility. It explains published criteria

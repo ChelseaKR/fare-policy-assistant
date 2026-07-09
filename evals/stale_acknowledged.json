@@ -1,0 +1,29 @@
+{
+  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated.",
+  "acknowledged": [
+    {
+      "artifact": "baseline.json",
+      "field": "prompt_versions.system",
+      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under system prompt v5; a baseline legitimately lags HEAD (that is what makes it a reference), and refreshing it requires a live paid eval run plus an owner-approved re-baseline rationale (AIEV-27). See docs/audits/eval-regression-2026-06-30.md; scheduled for the BUG-01 live-validation cycle.",
+      "added": "2026-07-09"
+    },
+    {
+      "artifact": "baseline.json",
+      "field": "prompt_versions.answer_user",
+      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under answer_user prompt v2; a baseline legitimately lags HEAD (that is what makes it a reference), and refreshing it requires a live paid eval run plus an owner-approved re-baseline rationale (AIEV-27). See docs/audits/eval-regression-2026-06-30.md; scheduled for the BUG-01 live-validation cycle.",
+      "added": "2026-07-09"
+    },
+    {
+      "artifact": "golden.jsonl",
+      "field": "prompt_versions.system",
+      "reason": "The independent-audit dataset's answers were recorded 2026-06-16 (commit 3901855) under system prompt v4; re-recording requires live model calls (make audit). Declared truthfully instead of being stamped current; refresh is batched into the next live-validation cycle.",
+      "added": "2026-07-09"
+    },
+    {
+      "artifact": "golden.jsonl",
+      "field": "prompt_versions.answer_user",
+      "reason": "The independent-audit dataset's answers were recorded 2026-06-16 (commit 3901855) under answer_user prompt v2; re-recording requires live model calls (make audit). Declared truthfully instead of being stamped current; refresh is batched into the next live-validation cycle.",
+      "added": "2026-07-09"
+    }
+  ]
+}

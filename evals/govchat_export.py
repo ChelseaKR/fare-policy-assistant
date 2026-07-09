@@ -82,8 +82,14 @@ def _literal_facts(required_facts: list[str], answer: str) -> list[str]:
             facts.append(m.group(0))
             continue
         lit = pattern.split("|")[0]
-        for a, b in ((r"\$", "$"), (r"\s?", " "), (r"\s", " "), (r"\.", "."),
-                     (r"\b", ""), (r"\\", "")):
+        for a, b in (
+            (r"\$", "$"),
+            (r"\s?", " "),
+            (r"\s", " "),
+            (r"\.", "."),
+            (r"\b", ""),
+            (r"\\", ""),
+        ):
             lit = lit.replace(a, b)
         lit = re.sub(r"[\[\](){}?+*^]", "", lit).strip()
         facts.append(lit)
@@ -114,8 +120,14 @@ def render_transcript(question: str, answer: str, source_labels: list[str], lang
 
 
 def _provenance(result) -> dict[str, str]:
-    agency = result.citations[0].agency if result.citations else (
-        result.passages[0].chunk.agency_full if result.passages else "fare-policy-assistant corpus"
+    agency = (
+        result.citations[0].agency
+        if result.citations
+        else (
+            result.passages[0].chunk.agency_full
+            if result.passages
+            else "fare-policy-assistant corpus"
+        )
     )
     return {
         "source": f"{agency} published fare pages (see corpus/manifest.yaml)",

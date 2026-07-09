@@ -53,23 +53,37 @@ def test_fetch_all_writes_snapshot_and_meta(tmp_path, monkeypatch):
         "user_agent": "test-agent/0.1",
         "crawl_delay_seconds": 7,
         "documents": [
-            {"id": "mst-fares", "agency": "MST", "agency_full": "Monterey-Salinas Transit",
-             "title": "Fares", "url": "https://mst.org/fares/", "language": "en"},
-            {"id": "mst-fares-2", "agency": "MST", "agency_full": "Monterey-Salinas Transit",
-             "title": "More", "url": "https://mst.org/fares/more/", "language": "en"},
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            },
+            {
+                "id": "mst-fares-2",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "More",
+                "url": "https://mst.org/fares/more/",
+                "language": "en",
+            },
         ],
     }
     raw, _ = _point_config_at(tmp_path, monkeypatch, manifest)
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, content=_HTML_DOC.encode(),
-                              headers={"content-type": "text/html"})
+        return httpx.Response(
+            200, content=_HTML_DOC.encode(), headers={"content-type": "text/html"}
+        )
 
     monkeypatch.setattr("assistant.ingest.httpx.Client", _mock_client(handler))
     slept: list[float] = []
     monkeypatch.setattr("assistant.ingest.time.sleep", lambda s: slept.append(s))
 
     from assistant import ingest
+
     ingest.fetch_all()
 
     assert (raw / "mst-fares.html").exists()
@@ -82,27 +96,47 @@ def test_fetch_all_writes_snapshot_and_meta(tmp_path, monkeypatch):
 
 def test_fetch_all_pdf_is_sniffed_from_content_type(tmp_path, monkeypatch):
     manifest = {
-        "user_agent": "test-agent/0.1", "crawl_delay_seconds": 0,
-        "documents": [{"id": "policy", "agency": "MST", "agency_full": "MST",
-                       "title": "Policy", "url": "https://mst.org/p.pdf", "language": "en"}],
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "policy",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "Policy",
+                "url": "https://mst.org/p.pdf",
+                "language": "en",
+            }
+        ],
     }
     raw, _ = _point_config_at(tmp_path, monkeypatch, manifest)
 
     def handler(request):
-        return httpx.Response(200, content=b"%PDF-1.4 fake",
-                              headers={"content-type": "application/pdf"})
+        return httpx.Response(
+            200, content=b"%PDF-1.4 fake", headers={"content-type": "application/pdf"}
+        )
 
     monkeypatch.setattr("assistant.ingest.httpx.Client", _mock_client(handler))
     from assistant import ingest
+
     ingest.fetch_all()
     assert (raw / "policy.pdf").exists()
 
 
 def test_fetch_all_records_failures_and_exits_nonzero(tmp_path, monkeypatch):
     manifest = {
-        "user_agent": "test-agent/0.1", "crawl_delay_seconds": 0,
-        "documents": [{"id": "gone", "agency": "MST", "agency_full": "MST",
-                       "title": "Gone", "url": "https://mst.org/404", "language": "en"}],
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "gone",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "Gone",
+                "url": "https://mst.org/404",
+                "language": "en",
+            }
+        ],
     }
     _point_config_at(tmp_path, monkeypatch, manifest)
 
@@ -113,25 +147,45 @@ def test_fetch_all_records_failures_and_exits_nonzero(tmp_path, monkeypatch):
     import pytest
 
     from assistant import ingest
+
     with pytest.raises(SystemExit):
         ingest.fetch_all()
 
 
 def test_fetch_all_only_filter_skips_unselected_docs(tmp_path, monkeypatch):
     manifest = {
-        "user_agent": "test-agent/0.1", "crawl_delay_seconds": 0,
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
         "documents": [
-            {"id": "keep", "agency": "MST", "agency_full": "MST", "title": "K",
-             "url": "https://mst.org/keep", "language": "en"},
-            {"id": "skip", "agency": "MST", "agency_full": "MST", "title": "S",
-             "url": "https://mst.org/skip", "language": "en"},
+            {
+                "id": "keep",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "K",
+                "url": "https://mst.org/keep",
+                "language": "en",
+            },
+            {
+                "id": "skip",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "S",
+                "url": "https://mst.org/skip",
+                "language": "en",
+            },
         ],
     }
     raw, _ = _point_config_at(tmp_path, monkeypatch, manifest)
-    monkeypatch.setattr("assistant.ingest.httpx.Client", _mock_client(
-        lambda r: httpx.Response(200, content=_HTML_DOC.encode(),
-                                 headers={"content-type": "text/html"})))
+    monkeypatch.setattr(
+        "assistant.ingest.httpx.Client",
+        _mock_client(
+            lambda r: httpx.Response(
+                200, content=_HTML_DOC.encode(), headers={"content-type": "text/html"}
+            )
+        ),
+    )
     from assistant import ingest
+
     ingest.fetch_all(only={"keep"})
     assert (raw / "keep.html").exists()
     assert not (raw / "skip.html").exists()
@@ -142,10 +196,18 @@ def test_fetch_all_only_filter_skips_unselected_docs(tmp_path, monkeypatch):
 
 def test_process_all_round_trips_through_load_chunks(tmp_path, monkeypatch):
     manifest = {
-        "user_agent": "test-agent/0.1", "crawl_delay_seconds": 0,
-        "documents": [{"id": "mst-fares", "agency": "MST",
-                       "agency_full": "Monterey-Salinas Transit", "title": "Fares",
-                       "url": "https://mst.org/fares/", "language": "en"}],
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
     }
     raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
     raw.mkdir(parents=True)
@@ -168,9 +230,18 @@ def test_process_all_round_trips_through_load_chunks(tmp_path, monkeypatch):
 
 def test_process_all_skips_documents_without_a_snapshot(tmp_path, monkeypatch, capsys):
     manifest = {
-        "user_agent": "test-agent/0.1", "crawl_delay_seconds": 0,
-        "documents": [{"id": "missing", "agency": "MST", "agency_full": "MST",
-                       "title": "Fares", "url": "https://mst.org/fares/", "language": "en"}],
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "missing",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
     }
     _, processed = _point_config_at(tmp_path, monkeypatch, manifest)
     processed.mkdir(parents=True)
@@ -184,10 +255,18 @@ def test_process_all_skips_documents_without_a_snapshot(tmp_path, monkeypatch, c
 
 def test_main_process_dispatch(tmp_path, monkeypatch):
     manifest = {
-        "user_agent": "x", "crawl_delay_seconds": 0,
-        "documents": [{"id": "mst-fares", "agency": "MST",
-                       "agency_full": "MST", "title": "Fares",
-                       "url": "https://mst.org/fares/", "language": "en"}],
+        "user_agent": "x",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
     }
     raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
     raw.mkdir(parents=True)
@@ -202,8 +281,10 @@ def test_main_process_dispatch(tmp_path, monkeypatch):
 
 def test_main_unknown_command_exits():
     import pytest
+
     monkeypatch_argv = ["ingest", "frobnicate"]
     import sys
+
     old = sys.argv
     sys.argv = monkeypatch_argv
     try:

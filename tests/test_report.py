@@ -39,9 +39,7 @@ RECORDS = [
         "passages": [
             {"chunk_id": "mst-fares#1", "section": "Fares", "score": 9.1, "text": "x" * 300}
         ],
-        "checks": [
-            {"name": "citation_present_and_resolvable", "passed": False, "detail": "none"}
-        ],
+        "checks": [{"name": "citation_present_and_resolvable", "passed": False, "detail": "none"}],
         "judges": [],
     },
 ]
