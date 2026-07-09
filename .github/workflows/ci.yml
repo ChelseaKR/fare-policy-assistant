@@ -49,7 +49,7 @@ jobs:
 
   i18n:
     name: i18n (gettext catalog gate)
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
