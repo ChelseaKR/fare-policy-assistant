@@ -39,6 +39,7 @@ jobs:
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
       - name: Committed-report regression check
+        if: github.event_name != 'pull_request'
         # Offline, no model calls: re-checks the *committed* EVALS.md's
         # scoreboard against the *committed* baseline, so a regressed report
         # that slipped past a local `make eval` run's exit code (see
@@ -83,12 +84,9 @@ jobs:
         with:
           node-version: "20"
       - name: Run pa11y on the static page (WCAG2AA)
-        run: >
-          npx --yes pa11y@8
-          --standard WCAG2AA
-          --runner axe
-          --chrome-launch-config '{"args":["--no-sandbox"]}'
-          ./web/index.html
+        run: |
+          printf '%s\n' '{"chromeLaunchConfig":{"args":["--no-sandbox"]}}' > /tmp/pa11y-ci.json
+          npx --yes pa11y@8 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html
 
   smoke-evals:
     # 25-case smoke suite on every PR. AWS access comes from GitHub OIDC
@@ -157,9 +155,10 @@ jobs:
 
   independent-audit:
     # Advisory (not a merge gate): replay the committed GovChat-Eval dataset
-    # through the external harness and publish the report. Runs on PRs and
-    # nightly; needs no AWS — the dataset is recorded answers, scored offline by
-    # the deterministic judge. See docs/audits/methodology.md.
+    # through the external harness and publish the report. It is skipped on PRs
+    # while GovChat-Eval remains private; the dataset is recorded answers,
+    # scored offline by the deterministic judge. See docs/audits/methodology.md.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
