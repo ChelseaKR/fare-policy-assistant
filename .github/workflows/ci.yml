@@ -83,7 +83,12 @@ jobs:
         with:
           node-version: "20"
       - name: Run pa11y on the static page (WCAG2AA)
-        run: npx --yes pa11y@8 --standard WCAG2AA --runner axe ./web/index.html
+        run: >
+          npx --yes pa11y@8
+          --standard WCAG2AA
+          --runner axe
+          --chrome-launch-config '{"args":["--no-sandbox"]}'
+          ./web/index.html
 
   smoke-evals:
     # 25-case smoke suite on every PR. AWS access comes from GitHub OIDC
