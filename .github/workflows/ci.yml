@@ -11,8 +11,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -43,6 +48,7 @@ jobs:
 
   i18n:
     name: i18n (gettext catalog gate)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -66,6 +72,7 @@ jobs:
     # Advisory axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
     # Non-blocking: the structural gate in `checks` is the merge gate.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -85,6 +92,7 @@ jobs:
     # bedrock:InvokeModel on the pinned models. Forks and repos without the
     # variable run offline: deterministic checks only, judges recorded as
     # skipped.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
