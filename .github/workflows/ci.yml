@@ -17,7 +17,11 @@ concurrency:
 
 jobs:
   checks:
-    if: github.event_name == 'push'
+    # Merge gate: must run on every PR to main, not just push. Skipped only
+    # on the nightly `schedule` trigger — that run is redundant here since
+    # `full-evals-nightly` already covers the scheduled slot and nothing
+    # changes between the last push/merge and 9am if no PR landed.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -39,7 +43,6 @@ jobs:
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
       - name: Committed-report regression check
-        if: github.event_name == 'schedule'
         # Offline, no model calls: re-checks the *committed* EVALS.md's
         # scoreboard against the *committed* baseline, so a regressed report
         # that slipped past a local `make eval` run's exit code (see
@@ -49,7 +52,9 @@ jobs:
 
   i18n:
     name: i18n (gettext catalog gate)
-    if: github.event_name == 'push'
+    # Merge gate: must run on every PR to main, not just push. See `checks`
+    # above for why `schedule` alone is excluded.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -72,8 +77,10 @@ jobs:
   a11y-advisory:
     # Advisory axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
-    # Non-blocking: the structural gate in `checks` is the merge gate.
-    if: github.event_name == 'push'
+    # Non-blocking: the structural gate in `checks` is the merge gate. Still
+    # runs on PRs (not just push) so the advisory signal shows up before
+    # merge, not after; skipped only on `schedule` like `checks`/`i18n`.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:

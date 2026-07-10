@@ -9,6 +9,19 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- Restored the `checks` and `i18n` merge-gate jobs, and the committed-report
+  eval-regression check inside `checks`, to run on every pull request in
+  `ci.yml`. A 2026-07-08 Actions-minutes optimization (`Optimize GitHub
+  Actions minutes` / `Stabilize push CI after workflow budget pass`)
+  accidentally gated `checks`/`i18n` to `push`-only (dropping `pull_request`
+  entirely) and gated the regression-check step to `schedule`-only, which,
+  combined with `checks` no longer running on `schedule`, meant the step
+  never executed at all. README/`docs/I18N.md` already described these as
+  merge-blocking the whole time, so this was a silent gap between docs and
+  reality, not a doc change — the fix keeps the legitimate part of the
+  original optimization (skip the redundant nightly re-run of `checks`/`i18n`
+  now that `full-evals-nightly` covers the scheduled slot) while restoring
+  the PR trigger.
 - Corrected the multilingual eval regression flagged in the 2026-06-30 report
   (18/21 vs the committed 20/21 baseline); see
   `docs/audits/eval-regression-2026-06-30.md` for the root-cause writeup and
