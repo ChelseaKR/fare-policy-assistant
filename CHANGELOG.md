@@ -17,6 +17,13 @@ rather than tied to a published tag.
   verify` / CI gate (was check-only).
 
 ### Added
+- Tag-triggered release workflow (`.github/workflows/release.yml`, STANDARDS
+  conformance REL-14): on a `v*` tag it checks the tag matches
+  `pyproject.toml`'s version, re-runs `make verify` at the tagged commit,
+  builds sdist+wheel, generates a CycloneDX SBOM, attests SLSA build
+  provenance, and creates a GitHub Release with the matching CHANGELOG
+  section as notes. No tag has been pushed yet, so the note above ("does not
+  yet cut tagged releases") still holds until the first one is.
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.
