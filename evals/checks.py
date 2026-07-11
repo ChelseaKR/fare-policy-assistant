@@ -55,11 +55,18 @@ def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[
     if claim_min is None and claim_max is None:
         return True  # not a real claim; nothing to verify
     for fact in candidates:
-        if claim_min is not None and fact.age_min != claim_min:
-            continue
-        if claim_max is not None and fact.age_max != claim_max:
-            continue
-        return True
+        # A single fare-table column can name multiple rider classes and age
+        # ranges (for example, "Seniors (62+)/Disabled & Youth (0-18)").
+        # FareFact keeps the first parsed range in its scalar fields, so also
+        # inspect the source rider-class label before declaring a later range
+        # unsupported.
+        supported = {(fact.age_min, fact.age_max), *facts_module.parse_age_claims(fact.rider_class)}
+        for supported_min, supported_max in supported:
+            if claim_min is not None and supported_min != claim_min:
+                continue
+            if claim_max is not None and supported_max != claim_max:
+                continue
+            return True
     return False
 
 
@@ -175,7 +182,8 @@ def run_checks(
                     )
                 ]
                 unverified += [
-                    f"age {claim[0] or ''}-{claim[1] or ''}"
+                    f"age {'' if claim[0] is None else claim[0]}-"
+                    f"{'' if claim[1] is None else claim[1]}"
                     for claim in facts_module.parse_age_claims(answer)
                     if not _age_claim_supported(claim, candidates)
                 ]
