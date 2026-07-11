@@ -74,12 +74,15 @@ class TestAuth:
         resp = console.console_handler(_event())
         assert resp["statusCode"] == 200
 
-    def test_console_page_requires_auth(self):
+    def test_console_page_is_public_but_contains_no_operator_data(self):
         resp = console.console_handler(_event(method="GET", path="/console", headers={}))
+        assert resp["statusCode"] == 200
+        assert "Agency operator console" in resp["body"]
+        assert "test-token" not in resp["body"]
+
+    def test_console_api_still_requires_auth_when_page_is_public(self):
+        resp = console.console_handler(_event(method="GET", path="/console/api/status", headers={}))
         assert resp["statusCode"] == 401
-        ok = console.console_handler(_event(method="GET", path="/console"))
-        assert ok["statusCode"] == 200
-        assert "Agency operator console" in ok["body"]
 
     def test_console_page_passes_structural_a11y(self):
         from web.a11y import check_html
