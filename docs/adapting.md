@@ -21,7 +21,11 @@ programs. This page lists what changes and what carries over unchanged.
    fallback contact. A new domain writes a new profile and registers it; the
    retrieval, guard, and config code reads the active profile unchanged. The
    `test_a_new_domain_is_just_a_new_profile` case shows a housing-voucher profile
-   reusing the whole pipeline. What is deliberately not in the profile, because
+   reusing the whole pipeline. The active profile is **late-bound**:
+   `retrieve`, `guards`, and `config` read it at call time, not import time, so
+   `FPA_DOMAIN` may be set any time before a request is handled and the switch
+   takes effect immediately (`default_retriever()`'s cache is keyed on the
+   profile, so it switches too). What is deliberately not in the profile, because
    it is cross-domain safety rather than domain content, is the PII, injection,
    and eligibility-determination detectors in `guards.py`; those bind in every
    domain.
