@@ -114,8 +114,7 @@ class Detection:
 
     def __repr__(self) -> str:  # pragma: no cover - debug aid
         return (
-            f"Detection(lang={self.lang!r}, confidence={self.confidence:.3f}, "
-            f"unsure={self.unsure})"
+            f"Detection(lang={self.lang!r}, confidence={self.confidence:.3f}, unsure={self.unsure})"
         )
 
 
