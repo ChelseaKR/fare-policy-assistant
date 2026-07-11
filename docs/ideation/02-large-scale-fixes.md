@@ -108,6 +108,19 @@ stale/skipped label counts; a prompt change can never inflate agreement.
 
 ## FIX-04 — Statistical treatment of eval variance
 
+**Status: shipped (2026-07-02).** `--replicates N` added to `evals/runner.py`
+(per-case `pass_fraction`, per-suite mean pass rate + Wilson 95% interval in
+`summary.json`; N=1 byte-identical to before). Wilson interval and an exact
+binomial McNemar p-value live as pure stdlib functions in new `evals/stats.py`.
+New `evals/compare.py` (`python -m evals.compare <A> <B>`) does the paired,
+McNemar-style A/B comparison with per-suite deltas and exits nonzero on
+malformed/mismatched runs. `evals/report.py` renders the mean ± interval in the
+scoreboard and documents the tooling in a "Measuring variance" section.
+`suite_regressed` now takes a `case_floor` (with `flip_case_floor` to derive it
+from a measured flip rate), defaulting to the historical two-case behavior.
+Live replicated runs remain credential-gated (paid). Tests: `tests/test_stats.py`,
+`tests/test_compare.py`, and `--replicates` cases in `tests/test_runner.py`.
+
 **Pitch:** turn "the headline is a band (~113 of 118)" from a prose caveat
 into a measured quantity.
 

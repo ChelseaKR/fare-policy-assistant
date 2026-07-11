@@ -402,3 +402,94 @@ def test_main_update_baseline_flag(tmp_runs, monkeypatch):
     )
     runner.main()
     assert (tmp_runs.parent / "baseline.json").exists()
+
+
+# ── --replicates (variance measurement) ──────────────────────────────────────
+
+
+def test_single_replicate_omits_the_new_fields(tmp_runs):
+    # N=1 must be byte-identical to today: no pass_fraction/replicates on records,
+    # no ci_* on suites, no top-level replicates key.
+    run_dir = runner.run(offline=True, suite="refusal", replicates=1)
+    summary = _summary(run_dir)
+    assert "replicates" not in summary
+    for s in summary["suites"].values():
+        assert "ci_low" not in s and "ci_high" not in s and "replicates" not in s
+    records = [json.loads(x) for x in (run_dir / "results.jsonl").read_text().splitlines()]
+    assert all("pass_fraction" not in r and "replicates" not in r for r in records)
+
+
+def test_replicates_records_pass_fraction_and_wilson_interval(tmp_runs):
+    n = 3
+    run_dir = runner.run(offline=True, suite="refusal", replicates=n)
+    summary = _summary(run_dir)
+    assert summary["replicates"] == n
+    for s in summary["suites"].values():
+        assert s["replicates"] == n
+        assert 0.0 <= s["ci_low"] <= s["pass_rate"] <= s["ci_high"] <= 100.0
+    records = [json.loads(x) for x in (run_dir / "results.jsonl").read_text().splitlines()]
+    for r in records:
+        assert r["replicates"] == n
+        # Offline/mock is deterministic, so every replicate agrees: 0.0 or 1.0.
+        assert r["pass_fraction"] in (0.0, 1.0)
+
+
+def test_replicates_actually_reruns_each_case_n_times(tmp_runs, monkeypatch):
+    # The answer model must be invoked N times per single-turn case, not once.
+    calls = {"n": 0}
+    real = runner.answer_question
+
+    def counting(*args, **kwargs):
+        calls["n"] += 1
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(runner, "answer_question", counting)
+    single = runner.run(offline=True, suite="refusal", replicates=1)
+    base = calls["n"]
+    calls["n"] = 0
+    runner.run(offline=True, suite="refusal", replicates=3)
+    # Same suite, three passes → ~3x the answer calls (multi-turn history replay
+    # scales identically, so exact 3x holds for this single-turn suite).
+    assert base > 0
+    assert calls["n"] == 3 * base
+    assert single.parent == tmp_runs
+
+
+def test_replicates_must_be_positive(tmp_runs):
+    with pytest.raises(SystemExit, match="replicates"):
+        runner.run(offline=True, suite="refusal", replicates=0)
+
+
+def test_main_threads_replicates_flag(tmp_runs, monkeypatch):
+    captured = {}
+    real = runner.run
+
+    def spy(**kwargs):
+        captured.update(kwargs)
+        return real(**kwargs)
+
+    monkeypatch.setattr(runner, "run", spy)
+    monkeypatch.setattr(
+        "sys.argv", ["runner", "--offline", "--suite", "refusal", "--replicates", "2"]
+    )
+    runner.main()
+    assert captured["replicates"] == 2
+
+
+# ── flip-rate-derived regression-gate floor ──────────────────────────────────
+
+
+def test_suite_regressed_respects_custom_case_floor():
+    base = {"passed": 30, "total": 30, "pass_rate": 100.0}
+    now = {"passed": 27, "total": 30, "pass_rate": 90.0}
+    # Three cases dropped, 10 points: trips the default 2-case floor.
+    assert runner.suite_regressed(base, now) is True
+    # A measured floor of 4 absorbs the same drop.
+    assert runner.suite_regressed(base, now, case_floor=4) is False
+
+
+def test_flip_case_floor_scales_with_measured_rate_and_never_below_two():
+    # 10% of 50 cases flip → 5, but never let the floor drop under the historical 2.
+    assert runner.flip_case_floor(0.10, 50) == 5
+    assert runner.flip_case_floor(0.0, 50) == 2
+    assert runner.flip_case_floor(0.01, 10) == 2  # ceil(0.1) == 1, floored to 2

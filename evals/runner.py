@@ -8,6 +8,7 @@
     python -m evals.runner --no-cache            # skip the answer/judge cache (FIX-04 runs)
     python -m evals.runner --only-failed          # rerun only cases that failed last time
     python -m evals.runner --since 20260701T000000Z  # reuse unchanged cases from that run
+    python -m evals.runner --replicates 3         # score every case 3x, Wilson intervals
 
 Each run writes evals/runs/<timestamp>/ with results.jsonl (full traces) and
 summary.json (scoreboard + versions). Judges run only when provider
@@ -22,12 +23,21 @@ Answer and judge model calls are served from a content-keyed on-disk cache
 (evals/cache.py) by default, so an incremental re-run after a one-prompt or
 one-corpus change only pays for the cases that actually changed; `--no-cache`
 disables this for runs that need to measure real model variance (FIX-04).
+
+Variance runs (`--replicates N`, N > 1) score every case N times — a case's
+replicate passes run sequentially inside its worker — and report a per-suite
+mean pass rate with a Wilson 95% interval. A replicate run always bypasses the
+cache (a cache-served replicate returns byte-identical answers and verdicts and
+would measure zero variance) and cannot combine with `--since`/`--only-failed`
+(reused cases contribute no fresh trials). A replicated multi-turn case replays
+its history on every pass and pays for it every pass.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -46,6 +56,7 @@ from assistant.retrieve import Retriever
 from evals import judges
 from evals.cache import CachingModel, EvalCache, case_content_key
 from evals.checks import run_checks
+from evals.stats import wilson_interval
 
 
 def load_suites(only: str | None = None) -> list[dict]:
@@ -225,7 +236,20 @@ def run(
     use_cache: bool = True,
     only_failed: bool = False,
     since: str | None = None,
+    replicates: int = 1,
 ) -> Path:
+    if replicates < 1:
+        raise SystemExit("--replicates must be >= 1")
+    if replicates > 1:
+        if only_failed or since:
+            raise SystemExit(
+                "--replicates cannot combine with --since/--only-failed: a variance "
+                "run must score every case fresh (reused cases contribute no trials)"
+            )
+        # A cache-served replicate returns byte-identical answers and verdicts
+        # and would measure zero variance, so replicate runs always bypass the
+        # answer/judge cache (equivalent to --no-cache).
+        use_cache = False
     cfg = config.Config()
     if offline:
         cfg = config.Config(
@@ -251,6 +275,7 @@ def run(
             use_cache=use_cache,
             only_failed=only_failed,
             since=since,
+            replicates=replicates,
         )
 
     suites = load_suites(suite)
@@ -332,26 +357,51 @@ def run(
     results_path = run_dir / "results.jsonl"
 
     totals: dict[str, dict[str, int]] = {}
+    # Per-suite (successes, trials) across all replicate passes, used only when
+    # replicates > 1 to derive a mean pass rate and a Wilson interval.
+    trials: dict[str, dict[str, int]] = {}
     # Exact token usage, split by model (answer vs judge) since they price
     # differently. Aggregated into an estimated per-run cost in the summary.
     # Reused (--since) cases spent no tokens this run, so they contribute 0.
     usage = {"answer": [0, 0], "judge": [0, 0]}  # [input_tokens, output_tokens]
     started = time.monotonic()
 
-    def _execute(case: dict) -> dict:
-        record, case_usage = _run_case(
-            case,
-            answer_model=answer_model,
-            judge_model=judge_model,
-            retriever=retriever,
-            cfg=cfg,
-            corpus_doc_ids=corpus_doc_ids,
-            run_judges=run_judges,
-        )
+    def _execute(case: dict) -> tuple[dict, dict[str, list[int]], int]:
+        """Run one case's replicate passes (sequentially, within this worker —
+        so a multi-turn replay is never interleaved) and return
+        (record, usage, passes). The first pass supplies the full trace; passes
+        across replicates form the case's pass fraction. At N=1 this is exactly
+        one `_run_case` call."""
+        agg: dict[str, list[int]] = {"answer": [0, 0], "judge": [0, 0]}
+        record: dict | None = None
+        passes = 0
+        for _rep in range(replicates):
+            rep_record, case_usage = _run_case(
+                case,
+                answer_model=answer_model,
+                judge_model=judge_model,
+                retriever=retriever,
+                cfg=cfg,
+                corpus_doc_ids=corpus_doc_ids,
+                run_judges=run_judges,
+            )
+            for kind in ("answer", "judge"):
+                agg[kind][0] += case_usage[kind][0]
+                agg[kind][1] += case_usage[kind][1]
+            passes += int(rep_record["passed"])
+            if record is None:
+                record = rep_record
+        assert record is not None
+        if replicates > 1:
+            # A case's "passed" stays the first pass's verdict (its trace);
+            # pass_fraction carries the measured across-replicate rate for the
+            # interval and for compare.py. Suite totals count majority votes.
+            record["replicates"] = replicates
+            record["pass_fraction"] = round(passes / replicates, 4)
         record["case_key"] = _case_key(case)
-        return record, case_usage
+        return record, agg, passes
 
-    fresh_by_id: dict[str, tuple[dict, dict]] = {}
+    fresh_by_id: dict[str, tuple[dict, dict[str, list[int]], int]] = {}
     if jobs <= 1:
         for case in to_run:
             fresh_by_id[case["id"]] = _execute(case)
@@ -367,7 +417,7 @@ def run(
     records = []
     for case in ordered_cases:
         if case["id"] in fresh_by_id:
-            record, case_usage = fresh_by_id[case["id"]]
+            record, case_usage, passes = fresh_by_id[case["id"]]
             usage["answer"][0] += case_usage["answer"][0]
             usage["answer"][1] += case_usage["answer"][1]
             usage["judge"][0] += case_usage["judge"][0]
@@ -375,11 +425,17 @@ def run(
             status = "PASS" if record["passed"] else "FAIL"
         else:
             record = reused_by_id[case["id"]]
+            passes = int(record["passed"])  # reuse path implies replicates == 1
             status = ("PASS" if record["passed"] else "FAIL") + " (reused)"
         records.append(record)
         t = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
         t["total"] += 1
-        t["passed"] += int(record["passed"])
+        # Count a case as passed by majority vote across replicates (== the
+        # single pass at N=1), so passed/total stays interpretable.
+        t["passed"] += 1 if passes * 2 >= replicates else 0
+        tr = trials.setdefault(case["suite"], {"successes": 0, "trials": 0})
+        tr["successes"] += passes
+        tr["trials"] += replicates
         print(f"{status}  {case['id']}")
 
     with results_path.open("w", encoding="utf-8") as f:
@@ -387,6 +443,19 @@ def run(
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
     cache.save()
+
+    def _suite_entry(name: str, t: dict[str, int]) -> dict:
+        entry = {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
+        if replicates > 1:
+            # Report the mean pass rate over all replicate trials and its Wilson
+            # 95% interval, so the headline is a measured band, not a point.
+            tr = trials[name]
+            low, high = wilson_interval(tr["successes"], tr["trials"])
+            entry["pass_rate"] = round(100 * tr["successes"] / tr["trials"], 1)
+            entry["ci_low"] = round(100 * low, 1)
+            entry["ci_high"] = round(100 * high, 1)
+            entry["replicates"] = replicates
+        return entry
 
     summary = {
         "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -409,15 +478,14 @@ def run(
             "reused_cases": len(reused),
             "executed_cases": len(to_run),
         },
-        "suites": {
-            name: {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
-            for name, t in sorted(totals.items())
-        },
+        "suites": {name: _suite_entry(name, t) for name, t in sorted(totals.items())},
         "total": {
             "passed": sum(t["passed"] for t in totals.values()),
             "total": sum(t["total"] for t in totals.values()),
         },
     }
+    if replicates > 1:
+        summary["replicates"] = replicates
     (run_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -427,19 +495,38 @@ def run(
     return run_dir
 
 
-def suite_regressed(base: dict, now: dict, threshold: float = 2.0) -> bool:
+def suite_regressed(base: dict, now: dict, threshold: float = 2.0, case_floor: int = 2) -> bool:
     """A suite regresses only if its pass rate dropped more than `threshold`
-    points AND its pass count dropped by at least two cases.
+    points AND its pass count dropped by at least `case_floor` cases.
 
-    The two-case floor exists because the percentage gate alone is incoherent on
+    The case floor exists because the percentage gate alone is incoherent on
     small suites: one case in the 6-case conversation suite is 16.7 points, so a
     single boundary case flipping under LLM-judge variance would always trip a
     2-point gate. Two cases is still a cheap, sensitive signal on the larger
     suites while absorbing the one-case judge noise the harness sees run to run.
+
+    `case_floor` defaults to 2 (the historical hand-tuned value). Once a
+    replicated run (`--replicates`) has measured the per-case flip rate, pass a
+    floor derived from it — e.g. `ceil` of the expected number of cases that
+    flip under the null — instead of the guess. See `flip_case_floor`.
     """
     rate_drop = now["pass_rate"] < base["pass_rate"] - threshold
-    case_drop = base["passed"] - now["passed"] >= 2
+    case_drop = base["passed"] - now["passed"] >= case_floor
     return rate_drop and case_drop
+
+
+def flip_case_floor(flip_rate: float, n_cases: int, safety: float = 1.0) -> int:
+    """Derive a `suite_regressed` case floor from a measured per-case flip rate.
+
+    Given the fraction of cases that flip pass/fail between replicate runs of the
+    same config (`flip_rate`, from a `--replicates` run) and the suite size, the
+    expected number of noise flips is `flip_rate * n_cases`. The floor is that
+    expectation rounded up, times `safety`, and never below the historical 2 —
+    so switching a suite to a measured floor can only make the gate stricter,
+    never looser than today.
+    """
+    expected = math.ceil(flip_rate * n_cases * safety)
+    return max(2, expected)
 
 
 def check_regression(run_dir: Path, threshold: float = 2.0) -> None:
@@ -528,6 +615,14 @@ def main() -> None:
         help="reuse cases unchanged (by content key) from evals/runs/RUN; also the reference "
         "run for --only-failed if given",
     )
+    parser.add_argument(
+        "--replicates",
+        type=int,
+        default=1,
+        help="run each case N times and report a per-suite mean ± Wilson interval "
+        "(N=1, the default, is byte-identical to a single run). Live and paid; "
+        "always bypasses the cache and excludes --since/--only-failed.",
+    )
     args = parser.parse_args()
 
     run_dir = run(
@@ -538,6 +633,7 @@ def main() -> None:
         use_cache=not args.no_cache,
         only_failed=args.only_failed,
         since=args.since,
+        replicates=args.replicates,
     )
     if args.full:
         from evals.report import generate
