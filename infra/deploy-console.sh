@@ -63,7 +63,7 @@ mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/web" "$BUNDLE/evals"
 # the rest of assistant/.
 uv pip install --quiet --target "$BUNDLE" \
   --python-platform aarch64-manylinux2014 --python-version 3.12 --only-binary :all: \
-  "boto3>=1.34" "pyyaml>=6.0"
+  "boto3>=1.34" "pyyaml>=6.0" "httpx>=0.27" "beautifulsoup4>=4.12"
 
 cp -R "$ROOT/src/assistant" "$BUNDLE/src/assistant"
 cp "$ROOT/corpus/processed/chunks.jsonl" "$BUNDLE/corpus/processed/"

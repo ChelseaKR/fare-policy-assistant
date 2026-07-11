@@ -39,18 +39,19 @@ THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
 rm -rf "$BUNDLE" "$BUILD/bundle.zip"
-mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/web"
+mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs" "$BUNDLE/web"
 
 # Cross-platform install: the Lambda runs linux/arm64, not the build machine's
 # platform, so force manylinux wheels (numpy's C extension breaks otherwise).
 uv pip install --quiet --target "$BUNDLE" \
   --python-platform aarch64-manylinux2014 --python-version 3.12 --only-binary :all: \
   "anthropic[bedrock]>=0.100" "rank-bm25>=0.2.2" "pyyaml>=6.0" \
-  "httpx>=0.27" "beautifulsoup4>=4.12"
+  "httpx>=0.27" "beautifulsoup4>=4.12" "jsonschema>=4.20"
 
 cp -R "$ROOT/src/assistant" "$BUNDLE/src/assistant"
 cp -R "$ROOT/prompts" "$BUNDLE/prompts"
 cp "$ROOT/corpus/processed/chunks.jsonl" "$BUNDLE/corpus/processed/"
+cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"
 cp "$ROOT/web/__init__.py" "$ROOT/web/handler.py" "$ROOT/web/index.html" \
    "$ROOT/web/offline.py" "$ROOT/web/embed.py" "$BUNDLE/web/"
 
