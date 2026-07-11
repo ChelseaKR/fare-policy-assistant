@@ -365,10 +365,19 @@ def _ask(event: dict) -> dict:
     # rendering `answer` as prose in that case (never hidden, always logged
     # below as structured_ok).
     structured = build_structured_answer(result)
+    response_language, language_confidence, language_uncertain = guards.detect_language_confident(
+        result.answer
+    )
     payload = {
         "answer": result.answer,
         "kind": result.kind,
-        "language": guards.detect_language(result.answer),
+        # Report the classifier's actual top language. Input safety still uses
+        # the conservative English fallback when detection is uncertain; output
+        # metadata exposes that uncertainty rather than silently relabeling a
+        # Taglish answer as English.
+        "language": response_language,
+        "language_confidence": round(language_confidence, 3),
+        "language_uncertain": language_uncertain,
         "as_of_date": result.as_of_date,
         # Operational confidence band for integrators and staff; never alters
         # the answer or the guards (persona research F-16).
