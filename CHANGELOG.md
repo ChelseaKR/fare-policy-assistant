@@ -11,6 +11,15 @@ rather than tied to a published tag.
 ### Fixed
 - Reformatted the codebase with `ruff format` and made it a blocking `make
   verify` / CI gate (was check-only).
+- `docs/ROADMAP.md` P2 item 5 (a11y wiring) was stale: it still listed feeding
+  transcripts to GovChat-Eval's a11y suite (`transcript_html`) as remaining
+  work, but that landed in the same session two commits later
+  (`evals.govchat_export.render_transcript`, documented in
+  `docs/audits/methodology.md` as "a11y now runs"). Corrected the roadmap to
+  reflect that only the manual screen-reader/keyboard walkthrough
+  (`docs/audits/a11y-walkthrough.md`, still an unfilled result table) remains
+  — that step needs a human at a real assistive-tech session and is not
+  something this pass fabricates.
 
 ### Added
 - Root-caused (not yet fixed) the multilingual eval regression flagged in the
