@@ -1,4 +1,4 @@
-"""Eval-history trend artifact: render every committed run into one page.
+"""Eval-history trend artifact: render every recorded run into one page.
 
 Walks `evals/runs/*/summary.json` and emits `docs/eval-history.md` plus a
 hand-built `docs/eval-history.svg`, so the 2026-06-12 → present trajectory —
@@ -29,15 +29,25 @@ from assistant import config
 # Distinct, print-safe colours for the per-series polylines. "overall" is drawn
 # last and heaviest so the headline trajectory reads first.
 _SERIES_COLORS = [
-    "#1d4ed8", "#b91c1c", "#047857", "#b45309", "#7c3aed",
-    "#0891b2", "#be185d", "#4d7c0f", "#9a3412",
+    "#1d4ed8",
+    "#b91c1c",
+    "#047857",
+    "#b45309",
+    "#7c3aed",
+    "#0891b2",
+    "#be185d",
+    "#4d7c0f",
+    "#9a3412",
 ]
 _OVERALL_COLOR = "#111827"
 
 
 def _esc(s: str) -> str:
     return (
-        str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
 
@@ -106,8 +116,7 @@ def load_runs(runs_dir: Path | None = None) -> list[dict]:
                 "instrument": instrument_of(summary),
                 "overall": _overall_pct(summary),
                 "suites": {
-                    name: s.get("pass_rate", 0.0)
-                    for name, s in summary.get("suites", {}).items()
+                    name: s.get("pass_rate", 0.0) for name, s in summary.get("suites", {}).items()
                 },
                 "est_usd": cost.get("total_est_usd"),
                 "duration": summary.get("duration_seconds", 0.0),
@@ -142,9 +151,11 @@ def generate_markdown(runs: list[dict], svg_name: str = "eval-history.svg") -> s
     lines = [
         "# Evaluation history",
         "",
-        "Every committed eval run in `evals/runs/`, oldest first, on one page: "
+        "Every recorded eval run in `evals/runs/`, oldest first, on one page: "
         "per-suite pass rates, cost, duration, and each prompt-version bump. "
-        "Regenerate with `make report` (or `python -m evals.history`).",
+        "The run directories themselves are a local, gitignored archive; this "
+        "rendered page (and the SVG) is the committed artifact. Regenerate with "
+        "`make report` (or `python -m evals.history`).",
         "",
         "> **Read within an instrument, never across.** Mock/offline runs are "
         "scored by deterministic checks against a mock answer model; live runs "
@@ -188,8 +199,7 @@ def generate_markdown(runs: list[dict], svg_name: str = "eval-history.svg") -> s
                 f"**{run['overall']}%**",
             ]
             cells += [
-                f"{run['suites'][name]}%" if name in run["suites"] else "—"
-                for name in suites
+                f"{run['suites'][name]}%" if name in run["suites"] else "—" for name in suites
             ]
             cells += [_fmt_usd(run["est_usd"]), f"{run['duration']}s"]
             lines.append("| " + " | ".join(cells) + " |")
@@ -207,7 +217,9 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
     plot_w, plot_h = 560, 200
     width = pad_l + plot_w + pad_r
     panel_h = pad_t + plot_h + pad_b
-    x0, y0 = pad_l, top + pad_t
+    # Local (panel) coordinates: the whole panel is wrapped in a
+    # translate(0, top) group, so nothing here may add `top` again.
+    x0, y0 = pad_l, pad_t
 
     def px(i: int, n: int) -> float:
         if n <= 1:
@@ -257,9 +269,7 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
         color = _SERIES_COLORS[idx % len(_SERIES_COLORS)]
         pts = [(i, r["suites"][name]) for i, r in enumerate(group) if name in r["suites"]]
         series.append((name, color, pts))
-    series.append(
-        ("overall", _OVERALL_COLOR, [(i, r["overall"]) for i, r in enumerate(group)])
-    )
+    series.append(("overall", _OVERALL_COLOR, [(i, r["overall"]) for i, r in enumerate(group)]))
 
     for name, color, pts in series:
         width_stroke = "3" if name == "overall" else "1.5"
@@ -270,9 +280,7 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
                 f'stroke-width="{width_stroke}" points="{coords}"/>'
             )
         for i, v in pts:
-            parts.append(
-                f'<circle cx="{px(i, n):.1f}" cy="{py(v):.1f}" r="2.5" fill="{color}"/>'
-            )
+            parts.append(f'<circle cx="{px(i, n):.1f}" cy="{py(v):.1f}" r="2.5" fill="{color}"/>')
 
     # Legend down the right margin.
     lx = x0 + plot_w + 16
@@ -283,8 +291,7 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
             f'stroke="{color}" stroke-width="{"3" if name == "overall" else "2"}"/>'
         )
         parts.append(
-            f'<text x="{lx + 26}" y="{ly}" font-size="11" '
-            f'fill="#374151">{_esc(name)}</text>'
+            f'<text x="{lx + 26}" y="{ly}" font-size="11" fill="#374151">{_esc(name)}</text>'
         )
         ly += 18
 
@@ -310,7 +317,7 @@ def generate_svg(runs: list[dict]) -> str:
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{top}" '
         f'viewBox="0 0 {width} {top}" font-family="-apple-system, BlinkMacSystemFont, '
-        f'\'Segoe UI\', Roboto, Helvetica, Arial, sans-serif" '
+        f"'Segoe UI', Roboto, Helvetica, Arial, sans-serif\" "
         f'role="img" aria-label="Eval pass-rate trajectory per instrument">\n'
         f'<rect width="{width}" height="{top}" fill="#ffffff"/>\n'
         f"{body}\n</svg>\n"

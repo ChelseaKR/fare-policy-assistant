@@ -31,6 +31,11 @@ msgid ""
 msgstr ""
 
 msgid ""
+"I wasn't sure which language you were using, so I'm answering in English."
+" If you'd like a different language, please ask again in that language."
+msgstr ""
+
+msgid ""
 "Please don't share personal details like ID numbers, contact information,"
 " or birth dates — I don't need them to explain fare policy. Ask again "
 "without the personal details, or contact the transit agency's customer "

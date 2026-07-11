@@ -82,7 +82,7 @@ def _no_support_message(agency_hint: str | None, lang: str = "en") -> str:
     return i18n.no_support_message(
         i18n.get_translation(lang),
         agency_hint=agency_hint,
-        statewide_info=config.STATEWIDE_TRANSIT_INFO,
+        statewide_info=config.statewide_transit_info(),
     )
 
 

@@ -74,6 +74,21 @@ def _version_payload() -> dict:
     signal, not an error: the corpus is whatever was deployed, and this surfaces
     when that differs from what was approved."""
     summary = dict(_corpus_summary())
+
+    # Staleness budget: how old the freshest cited snapshot is, against a
+    # configurable budget (FPA_STALENESS_BUDGET_DAYS, default 90). The UI already
+    # shows the "as of" age; this surfaces the same signal as a machine-readable
+    # over-budget flag for operators and the freshness automation.
+    as_of = summary.get("as_of")
+    if as_of:
+        from datetime import UTC, date, datetime
+
+        budget = int(os.environ.get("FPA_STALENESS_BUDGET_DAYS", "90"))
+        age = (datetime.now(UTC).date() - date.fromisoformat(as_of)).days
+        summary["staleness_days"] = age
+        summary["staleness_budget_days"] = budget
+        summary["stale"] = age > budget
+
     pinned = os.environ.get("FPA_PINNED_CORPUS_VERSION")
     if pinned:
         summary["pinned"] = pinned

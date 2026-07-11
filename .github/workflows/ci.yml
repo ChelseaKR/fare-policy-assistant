@@ -46,6 +46,12 @@ jobs:
         # docs/audits/eval-regression-2026-06-30.md) now fails PR-time CI too,
         # not just a nightly job that only uploads an artifact.
         run: uv run python -m evals.check_report_regression
+      - name: Provenance gate (published artifacts vs HEAD)
+        # Offline, no model calls: EVALS.md, evals/baseline.json, and
+        # evals/govchat/golden.jsonl must declare the prompt+corpus versions
+        # HEAD actually ships, or carry a documented, reasoned waiver in
+        # evals/stale_acknowledged.json (FIX-01/M-2; promoted from advisory).
+        run: uv run python -m evals.provenance
 
   i18n:
     name: i18n (gettext catalog gate)

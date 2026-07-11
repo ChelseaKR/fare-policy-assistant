@@ -58,3 +58,30 @@ def test_offline_run_is_labeled():
     md = generate_markdown(SUMMARY, RECORDS)
     assert "deterministic checks only" in md
     assert "skipped, not passed" in md
+
+
+def test_variance_section_always_documents_the_tooling():
+    md = generate_markdown(SUMMARY, RECORDS)
+    assert "## Measuring variance" in md
+    assert "--replicates" in md
+    assert "evals.compare" in md
+
+
+def test_scoreboard_renders_wilson_interval_when_replicated():
+    summary = {
+        **SUMMARY,
+        "replicates": 3,
+        "suites": {
+            "groundedness": {
+                "passed": 1,
+                "total": 2,
+                "pass_rate": 50.0,
+                "ci_low": 23.7,
+                "ci_high": 76.3,
+                "replicates": 3,
+            }
+        },
+    }
+    md = generate_markdown(summary, RECORDS)
+    assert "| groundedness | 1 | 2 | 50.0% (23.7–76.3) |" in md
+    assert "mean over 3 replicate runs" in md

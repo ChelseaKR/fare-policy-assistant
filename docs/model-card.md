@@ -36,6 +36,26 @@ retrieval (PII, scope, injection patterns); output guards block determination
 language and uncited answers, replacing them with a refusal that points to the
 agency.
 
+### Input-guard language coverage
+
+Detection patterns, not just the refusal text, are mirrored across languages so
+a guard trips regardless of the question's language. The `guard_parity` block in
+`evals/suites/refusal.yaml` asserts an English *and* a Spanish case per family.
+Tagalog is pending FIX-11 (language detection).
+
+| Guard family        | English | Spanish | Tagalog        |
+| ------------------- | :-----: | :-----: | :------------: |
+| PII — SSN/email/phone/Medicare ID | ✅ | ✅ (locale-independent) | ✅ (locale-independent) |
+| PII — date of birth | ✅ | ✅ | pending FIX-11 |
+| Scope — medical advice | ✅ | ✅ | pending FIX-11 |
+| Scope — immigration | ✅ | ✅ | pending FIX-11 |
+| Scope — legal advice | ✅ | ✅ | pending FIX-11 |
+| Prompt injection    | ✅ | ✅ | pending FIX-11 |
+
+Number- and symbol-based PII (SSN, email, phone, Medicare ID) is inherently
+language-independent; the date-of-birth guard needs per-language lead-in phrases
+("born on", "nací el", "fecha de nacimiento"), so it is tracked per language.
+
 Models are pinned in `src/assistant/config.py`. Default backend is Claude on
 Amazon Bedrock via cross-region inference profiles
 (`us.anthropic.claude-haiku-4-5-20251001-v1:0` for answers,

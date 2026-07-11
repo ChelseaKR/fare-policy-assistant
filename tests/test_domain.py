@@ -50,3 +50,24 @@ def test_a_new_domain_is_just_a_new_profile():
 
 def test_unknown_profile_falls_back_to_transit():
     assert domain.get_profile("no-such-domain") is domain.TRANSIT
+
+
+def test_spanish_legal_advice_flagged():
+    # Multilingual guard parity (FIX-05): Spanish legal-advice phrasing is
+    # redirected the same way as the English "sue/lawyer" family.
+    check = guards.check_input("¿Puedo demandar a la agencia si me niegan el descuento?")
+    assert not check.ok
+    assert "scope:legal_advice" in check.flags
+
+
+def test_spanish_abogado_flagged():
+    check = guards.check_input("Necesito un abogado para pelear la multa del autobús.")
+    assert not check.ok
+    assert "scope:legal_advice" in check.flags
+
+
+def test_benign_spanish_fare_question_not_flagged_as_legal():
+    # "demanda"-adjacent words must not fire: an ordinary reduced-fare question
+    # stays in scope (no false positive from the new Spanish alternation).
+    check = guards.check_input("¿Cuánto cuesta el pasaje reducido?")
+    assert check.ok

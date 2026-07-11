@@ -66,7 +66,7 @@ dep-scan:     ## Dependency-vulnerability scan over the locked deps (pip-audit; 
 	uv export --frozen --no-emit-project --all-groups --format requirements-txt -o /tmp/requirements-audit.txt
 	uv run --with pip-audit pip-audit --strict --desc -r /tmp/requirements-audit.txt
 
-provenance:   ## ADVISORY: do EVALS.md/baseline.json/golden.jsonl declare the prompt+corpus versions HEAD actually ships? (evals/provenance.py; not yet a blocking gate — see 2026-07-05 execution log for why)
+provenance:   ## BLOCKING: EVALS.md/baseline.json/golden.jsonl must declare the prompt+corpus versions HEAD ships, or carry a documented waiver in evals/stale_acknowledged.json (promoted from advisory 2026-07-09, FIX-01/M-2 — a baseline may legitimately lag HEAD, but only loudly)
 	uv run python -m evals.provenance
 
 i18n:         ## i18n catalog gate: POT current + EN/ES parity + PO compiles + BCP-47
@@ -95,7 +95,7 @@ i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .p
 	msgfmt -o $(LOCALES)/es/LC_MESSAGES/messages.mo $(LOCALES)/es/LC_MESSAGES/messages.po
 	@echo "i18n-compile: refreshed messages.mo for en, es."
 
-verify: check i18n a11y report-regression  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression check
+verify: check i18n a11y report-regression provenance  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate
 
 report-regression:  ## Committed EVALS.md must not regress vs evals/baseline.json (see docs/audits/eval-regression-2026-06-30.md)
 	uv run python -m evals.check_report_regression

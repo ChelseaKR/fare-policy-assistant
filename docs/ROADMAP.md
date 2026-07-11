@@ -74,20 +74,28 @@ bug for this repo specifically.
 
 What a real operator needs before trusting the thing unattended.
 
-> **Status (2026-06-16):** items 1, 2, and 5 done. Weekly corpus-freshness
+> **Status (2026-07-02):** items 1, 2, and 5 done. Weekly corpus-freshness
 > automation opens a PR on drift (`.github/workflows/corpus-freshness.yml`) and
 > the UI shows how long ago the cited policies were fetched; a per-container
 > answer cache fronts the model call in the deployed handler; the CI badge is
-> in the README. Remaining: observability/alarms (item 3) and a true
-> cross-container rate limit (item 4).
+> in the README. The freshness loop is now closed end to end (FIX-09): the
+> workflow keys the change decision on `corpus_version` rather than a raw
+> `git diff -- corpus/`, `tools/corpus_refresh_report.py` writes the changelog
+> entry and doc-level diff into the PR body and lints the eval suites for stale
+> facts, and `/version` reports `staleness_days` against a budget. Remaining:
+> observability/alarms (item 3) and a true cross-container rate limit (item 4).
 
-1. **Corpus-freshness automation.** Snapshots are taken by hand (`make fetch`)
-   and the UI's "as of" date is already drifting. Add a scheduled job
-   (GitHub Actions cron or an EventBridge-triggered Lambda) that re-fetches the
-   manifest URLs, diffs against the committed snapshots, and on any change opens
-   a PR and runs the full eval. Define a staleness budget and surface it in the
-   UI ("policies fetched N days ago"). Done = a corpus change becomes a
-   reviewable PR with eval deltas, no human polling.
+1. **Corpus-freshness automation.** ✅ **Done.** Snapshots were taken by hand
+   (`make fetch`) and the UI's "as of" date was drifting. A scheduled GitHub
+   Actions job now re-fetches the manifest URLs, keys the change decision on the
+   processed-chunk `corpus_version` (furniture-only churn opens nothing), and on
+   a real change opens a PR whose body carries the doc-level diff, a new
+   `corpus/CHANGELOG.md` entry, and a staleness lint of `evals/suites/` (a case
+   whose `required_facts` the refreshed corpus dropped, or whose
+   `forbidden_content` it now contains, is flagged with the same matcher as the
+   eval gate). The staleness budget (`FPA_STALENESS_BUDGET_DAYS`, default 90) is
+   surfaced on `/version` and the UI. A corpus change becomes a reviewable PR
+   with eval deltas, no human polling.
 2. **Answer caching in the deployed path.** Every question re-pays Bedrock. Add
    a content-keyed cache (normalized question + corpus hash → answer) in front
    of the model call in `answer.py`, backed by an in-memory LRU per container
@@ -125,7 +133,10 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > post-guard replay. Item 4 (dense-retrieval decision) is settled with evidence
 > (ADR 0007): a retrieval-recall ablation shows the dense hybrid is worse
 > everywhere and −11.8 points on Spanish — the case it was meant to help — so it
-> stays off, behind its flag. Items 3 and 5 (feedback, a11y wiring) are open.
+> stays off, behind its flag. Item 3 (feedback) is open. Item 5 (a11y wiring)
+> is code-complete — GovChat-Eval's a11y suite now audits every recorded
+> transcript — with only the manual screen-reader/keyboard walkthrough left,
+> which needs a human at a real assistive-tech session, not automation.
 
 1. **Multi-turn within a session.** The UI is a chat but the pipeline is
    single-shot; "what about my spouse?" loses context. Add stateless
@@ -147,12 +158,19 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
    place, especially for Spanish questions over English-only docs. Run the
    suite both ways, record the delta, and either enable it or document why not
    (extends ADR 0001). Done = the choice is evidence-backed, not deferred.
-5. **Wire the a11y audit, not just structure.** *(Largely done.)* The page now
-   targets WCAG 2.2 AA, a pure-Python structural gate (`web/a11y.py`) runs in CI
-   and as `make a11y`, and an advisory pa11y/axe pass cross-checks contrast and
-   ARIA. Remaining: feed rendered transcripts to GovChat-Eval's a11y suite
-   (`transcript_html`) so the independent audit covers a11y too, and do and
-   record the manual screen-reader walkthrough (model card notes it pending).
+5. **Wire the a11y audit, not just structure.** *(Automation done; one manual
+   step outstanding.)* The page targets WCAG 2.2 AA, a pure-Python structural
+   gate (`web/a11y.py`) runs in CI and as `make a11y`, and an advisory
+   pa11y/axe pass cross-checks contrast and ARIA. Every recorded turn also
+   carries an accessible HTML transcript
+   (`evals.govchat_export.render_transcript` → `transcript_html` in
+   `evals/govchat/golden.jsonl`), so GovChat-Eval's structural checker audits
+   a11y too — see `docs/audits/methodology.md` ("a11y now runs"). Remaining:
+   do and record the manual screen-reader and keyboard-only walkthrough.
+   Checklist and result log live in `docs/audits/a11y-walkthrough.md`; the
+   result table is still unfilled (model card notes it pending), and the demo
+   should not be presented as accessibility-reviewed beyond automation until a
+   person completes it.
 
 ## P3 — Breadth and scale
 
@@ -170,6 +188,23 @@ Higher cost, lower urgency; do when the core is solid.
    language (Chinese, Vietnamese, Tagalog, or Korean) as a clearly-tagged
    stretch suite, honest about cross-lingual retrieval limits. Done = the new
    language has a mirrored suite and the report shows its parity gap.
+   - *(FIX-11 — done.)* **Robust, extensible language identification.** The
+     two-regex EN/ES word-count heuristic in `guards.detect_language` is replaced
+     by a dependency-free, deterministic character-trigram classifier
+     (`src/assistant/langid.py`) with per-language profiles committed as
+     `src/assistant/lang_profiles.json` and regenerated from committed sample
+     texts by `tools/build_lang_profiles.py` — so **adding a language is a data
+     file**. It supports en/es/**tl** (Tagalog), returns a confidence from the
+     top-two margin, and gives an honest `unsure` verdict for short / ambiguous /
+     code-switched input. `detect_language` keeps its `str` signature for
+     existing callers (`answer.py`, `retrieve.py`, `evals/checks.py`);
+     `detect_language_confident` exposes `(lang, conf, unsure)`. An uncertain
+     detection **never blocks** an answer — `check_input` proceeds in English and
+     attaches a translated "I wasn't sure of your language" note (new gettext
+     msgid, EN/ES catalogs). Tagalog is *detected* but has no fixed-string
+     catalog yet, so its refusals fall back to English via
+     `gettext` `fallback=True` (documented in `i18n.py`). Remaining for full
+     parity: a mirrored `tl` eval suite and a `locales/tl` catalog.
 4. **Reranker, only if earned.** Per CLAUDE.md, add one only if the evals show
    retrieval is the bottleneck, and justify it in an ADR with the deltas. Today
    retrieval is not the bottleneck (the failures are generation and judge

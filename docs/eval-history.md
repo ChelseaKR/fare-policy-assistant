@@ -1,6 +1,6 @@
 # Evaluation history
 
-Every committed eval run in `evals/runs/`, oldest first, on one page: per-suite pass rates, cost, duration, and each prompt-version bump. Regenerate with `make report` (or `python -m evals.history`).
+Every recorded eval run in `evals/runs/`, oldest first, on one page: per-suite pass rates, cost, duration, and each prompt-version bump. The run directories themselves are a local, gitignored archive; this rendered page (and the SVG) is the committed artifact. Regenerate with `make report` (or `python -m evals.history`).
 
 > **Read within an instrument, never across.** Mock/offline runs are scored by deterministic checks against a mock answer model; live runs call a real answer and judge model. They are different instruments and measure different things, so the chart and tables below group runs by instrument (mode + offline/live) and never plot mock and live scores on the same series. Smoke and full runs differ in sample size too. Only the trajectory *within* one instrument is a like-for-like comparison.
 

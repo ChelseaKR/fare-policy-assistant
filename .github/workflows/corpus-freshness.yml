@@ -32,21 +32,27 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
 
+      # Record the corpus_version and the current processed chunks BEFORE
+      # re-processing overwrites them, so the report step can diff against a real
+      # prior snapshot instead of git plumbing.
+      - name: Snapshot the current corpus version
+        run: uv run python tools/corpus_refresh_report.py --snapshot-old /tmp/old.json
+
       - name: Re-snapshot and re-process the corpus
         run: |
           uv run python -m assistant.ingest fetch
           uv run python -m assistant.ingest process
 
+      # Key the change decision on corpus_version, not a raw `git diff -- corpus/`:
+      # furniture-only churn that leaves the policy text intact opens nothing. On a
+      # real change this appends a CHANGELOG entry, lints the eval suites for stale
+      # facts, and writes the PR body to /tmp/pr-body.md.
       - name: Detect corpus changes
         id: diff
         run: |
-          if git diff --quiet -- corpus/; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Corpus unchanged since the last snapshot."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "## Corpus changed" >> "$GITHUB_STEP_SUMMARY"
-            git diff --stat -- corpus/ >> "$GITHUB_STEP_SUMMARY"
+          uv run python tools/corpus_refresh_report.py --report /tmp/old.json --out /tmp/pr-body.md
+          if [ -f /tmp/pr-body.md ]; then
+            cat /tmp/pr-body.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Open a refresh PR
@@ -57,13 +63,7 @@ jobs:
           branch: corpus-refresh
           commit-message: "Corpus refresh: re-snapshot manifest URLs"
           title: "Corpus refresh: published fare pages changed"
-          body: |
-            Automated weekly re-snapshot found changes in one or more agency
-            fare pages. Review the corpus diff, then let CI run the smoke evals
-            on this PR to see the impact before merging.
-
-            If figures or programs changed, also check whether any eval case in
-            `evals/suites/` now asserts a stale fact.
+          body-path: /tmp/pr-body.md
           labels: corpus, automated
           add-paths: |
             corpus/

@@ -18,6 +18,39 @@ from evals import provenance
 FAILURES_PER_SUITE = 3
 
 
+def _rate_cell(suite: dict) -> str:
+    """Scoreboard pass-rate cell. When the run recorded a Wilson interval
+    (a `--replicates` run), render `mean% (low–high)`; otherwise just `mean%`."""
+    if "ci_low" in suite and "ci_high" in suite:
+        return f"{suite['pass_rate']}% ({suite['ci_low']}–{suite['ci_high']})"
+    return f"{suite['pass_rate']}%"
+
+
+def _variance_section() -> str:
+    """Static documentation of the variance tooling, linked from the scoreboard
+    when replicated, and always present so the methods are discoverable."""
+    return "\n".join(
+        [
+            "Deterministic checks are stable run to run; LLM-as-judge verdicts are not. "
+            "Two tools quantify that noise instead of leaving it as a prose caveat.",
+            "",
+            "**Replicated runs.** `python -m evals.runner --replicates N` scores every "
+            "case N times and reports, per suite, the mean pass rate over all N·(cases) "
+            "trials with a Wilson 95% confidence interval (`pass_rate`, `ci_low`, "
+            "`ci_high` in `summary.json`; `pass_fraction` per case in `results.jsonl`). "
+            "`N=1` is the default and is byte-identical to a single run. Replicates make "
+            "live calls, so they are gated behind credentials like any live run.",
+            "",
+            "**Paired A/B comparison.** `python -m evals.compare <run_dir_A> <run_dir_B>` "
+            "joins two runs by case id and treats each case as its own control. It "
+            "reports McNemar flip counts — `b` cases that regressed (A pass → B fail) "
+            "and `c` that improved (A fail → B pass) — with an exact two-sided McNemar "
+            "p-value, plus per-suite pass-rate deltas. Use it to decide a prompt change "
+            "from a paired test rather than a single before/after delta.",
+        ]
+    )
+
+
 def _corpus_version(summary: dict) -> str:
     """Prefer the version recorded at run time; fall back to the current corpus
     for older runs whose summary predates corpus_version recording."""
@@ -140,9 +173,16 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         "|---|---|---|---|",
     ]
     for name, s in summary["suites"].items():
-        lines.append(f"| {name} | {s['passed']} | {s['total']} | {s['pass_rate']}% |")
+        lines.append(f"| {name} | {s['passed']} | {s['total']} | {_rate_cell(s)} |")
     pct = round(100 * total["passed"] / total["total"], 1) if total["total"] else 0
     lines.append(f"| **all** | **{total['passed']}** | **{total['total']}** | **{pct}%** |")
+    if summary.get("replicates", 1) > 1:
+        lines += [
+            "",
+            f"Pass rate is the mean over {summary['replicates']} replicate runs of the "
+            "same cases; the parenthesized band is a Wilson 95% confidence interval. "
+            "See [Measuring variance](#measuring-variance).",
+        ]
 
     parity = _spanish_parity(records)
     if parity:
@@ -151,6 +191,8 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
     cal = _calibration_section(summary, records)
     if cal:
         lines += ["", "## Judge calibration", "", cal]
+
+    lines += ["", "## Measuring variance", "", _variance_section()]
 
     lines += [
         "",
