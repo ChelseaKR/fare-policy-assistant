@@ -23,6 +23,7 @@ PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"
 
+
 # Sourced from the active domain profile (src/assistant/domain.py) so the
 # transit-specific knobs live in one place. These are call-time accessors, not
 # import-time constants: the active profile is chosen by FPA_DOMAIN, which may

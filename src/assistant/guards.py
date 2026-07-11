@@ -27,6 +27,7 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
     "medicare_id": re.compile(r"\b\d[A-Z]\d{2}-?[A-Z]\d{2}-?[A-Z]{2}\d{2}\b", re.I),
 }
 
+
 # Topics adjacent to the domain that the assistant must redirect, not answer,
 # are domain-specific, so sourced from the active profile at call time (see
 # check_input below and src/assistant/domain.py) rather than pinned at import —
@@ -40,6 +41,7 @@ def __getattr__(name: str):
     if name == "OUT_OF_SCOPE_PATTERNS":
         return domain.get_profile().scope_topics
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 INJECTION_PATTERNS = re.compile(
     r"(ignore (all |your |previous |prior )*(instructions|rules|prompts)|"
@@ -94,9 +96,7 @@ def check_input(question: str) -> InputCheck:
             message=refusal_message(translation, "pii"),
         )
     flags = [
-        name
-        for name, pat in domain.get_profile().scope_topics.items()
-        if pat.search(question)
+        name for name, pat in domain.get_profile().scope_topics.items() if pat.search(question)
     ]
     if flags:
         return InputCheck(
