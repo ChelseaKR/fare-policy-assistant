@@ -192,6 +192,51 @@ class TestFareFactsConsistent:
         checks = _by_name(run_checks(case, result, DOC_IDS, FACTS_BY_DOC))
         assert not checks["fare_facts_consistent"].passed
 
+    def test_later_age_range_in_combined_rider_class_passes(self):
+        facts_by_doc = {
+            "mst-fares": [
+                FareFact(
+                    agency="MST",
+                    doc_id="mst-fares",
+                    chunk_id="mst-fares#1",
+                    program="On-demand fare",
+                    rider_class="Seniors (62+)/Disabled & Youth (0-18)",
+                    price=1.50,
+                    currency="USD",
+                    age_min=62,
+                    age_max=None,
+                    confidence="parsed",
+                )
+            ]
+        }
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered("Youth (0-18) pay $1.50 [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(case, result, DOC_IDS, facts_by_doc))
+        assert checks["fare_facts_consistent"].passed
+
+    def test_unlisted_age_range_in_combined_rider_class_fails(self):
+        facts_by_doc = {
+            "mst-fares": [
+                FareFact(
+                    agency="MST",
+                    doc_id="mst-fares",
+                    chunk_id="mst-fares#1",
+                    program="On-demand fare",
+                    rider_class="Seniors (62+)/Disabled & Youth (0-18)",
+                    price=1.50,
+                    currency="USD",
+                    age_min=62,
+                    age_max=None,
+                    confidence="parsed",
+                )
+            ]
+        }
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered("Youth (0-17) pay $1.50 [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(case, result, DOC_IDS, facts_by_doc))
+        assert not checks["fare_facts_consistent"].passed
+        assert "age 0-17" in checks["fare_facts_consistent"].detail
+
     def test_price_from_the_wrong_doc_fails(self):
         # conv-005/ml-004-class misattribution: a real price, but not one
         # that belongs to the cited document.
