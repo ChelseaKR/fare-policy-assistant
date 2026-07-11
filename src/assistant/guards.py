@@ -14,8 +14,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from assistant import domain
-from assistant.i18n import get_translation, refusal_message
+from assistant import domain, langid
+from assistant.i18n import get_translation, language_uncertain_notice, refusal_message
 
 # ── input guards ─────────────────────────────────────────────────────────────
 
@@ -50,24 +50,34 @@ INJECTION_PATTERNS = re.compile(
     re.I,
 )
 
-# Lightweight language detection; enough to answer refusals in the rider's
-# language and to power the eval language-match check.
-_ES_MARKERS = re.compile(
-    r"\b(el|la|los|las|un|una|de|del|que|para|por|con|usted|cu[áa]nto|c[óo]mo|"
-    r"tarifa|pasaje|descuento|reducida?|años|puede|debe|gratis|cuesta|necesito)\b",
-    re.I,
-)
-_EN_MARKERS = re.compile(
-    r"\b(the|a|an|of|that|for|with|you|is|do|how|what|fare|discount|reduced|"
-    r"years|may|must|free|costs?)\b",
-    re.I,
-)
+# Language detection now delegates to the confidence-bearing character-n-gram
+# classifier in :mod:`assistant.langid` (en/es/tl + an honest "unsure"). The old
+# two-regex EN/ES word-count heuristic could not represent uncertainty and
+# silently misclassified short or code-switched questions; the classifier returns
+# a confidence and an "unsure" verdict that :func:`check_input` acts on. This
+# still only *picks the rider's language*; it never blocks an answer.
 
 
 def detect_language(text: str) -> str:
-    es = len(_ES_MARKERS.findall(text))
-    en = len(_EN_MARKERS.findall(text))
-    return "es" if es > en else "en"
+    """Best-guess BCP-47 language tag for ``text`` (``str`` for existing callers).
+
+    Delegates to :func:`assistant.langid.detect`, which maps an uncertain input
+    to :data:`~assistant.langid.DEFAULT_LANGUAGE` ("en"). Callers that need the
+    confidence or the uncertainty flag use :func:`detect_language_confident`.
+    """
+    lang, _confidence = langid.detect(text)
+    return lang
+
+
+def detect_language_confident(text: str) -> tuple[str, float, bool]:
+    """Return ``(lang, confidence, unsure)`` for callers that want the margin.
+
+    ``lang`` is the classifier's best guess (a real tag, e.g. ``"tl"``, even when
+    unsure), ``confidence`` is the top-two margin in ``[0, 1]``, and ``unsure`` is
+    ``True`` when that margin is below :data:`assistant.langid.UNSURE_MARGIN`.
+    """
+    result = langid.classify(text)
+    return result.lang, result.confidence, result.unsure
 
 
 # The rider-facing refusal *text* now lives in the gettext catalogs behind
@@ -82,11 +92,26 @@ class InputCheck:
     ok: bool
     flags: list[str] = field(default_factory=list)
     message: str | None = None
+    #: A short rider-facing note, in the answer language, set only when language
+    #: detection was *unsure* and the pipeline fell back to English. It never
+    #: blocks the answer — a caller may surface it alongside the answer so the
+    #: rider knows we guessed. ``None`` whenever detection was confident.
+    notice: str | None = None
 
 
 def check_input(question: str) -> InputCheck:
-    lang = detect_language(question)
-    translation = get_translation(lang)
+    lang, _confidence, unsure = detect_language_confident(question)
+    # An uncertain detection must never block an answer: we proceed in English
+    # (the assistant's source language) and attach a translated note rather than
+    # refuse or silently pick a language. Refusal *messages* below still render in
+    # the detected language when detection was confident.
+    if unsure:
+        answer_lang = langid.DEFAULT_LANGUAGE
+        notice: str | None = language_uncertain_notice(get_translation(answer_lang))
+    else:
+        answer_lang = lang
+        notice = None
+    translation = get_translation(answer_lang)
     flags = [name for name, pat in PII_PATTERNS.items() if pat.search(question)]
     if flags:
         return InputCheck(
@@ -105,7 +130,7 @@ def check_input(question: str) -> InputCheck:
         return InputCheck(
             ok=False, flags=["injection"], message=refusal_message(translation, "injection")
         )
-    return InputCheck(ok=True)
+    return InputCheck(ok=True, flags=["lang:unsure"] if unsure else [], notice=notice)
 
 
 # ── output guards ────────────────────────────────────────────────────────────

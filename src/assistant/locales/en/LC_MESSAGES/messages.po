@@ -28,6 +28,13 @@ msgstr ""
 
 #, python-brace-format
 msgid ""
+"I wasn't sure which language you were using, so I'm answering in English. If"
+" you'd like a different language, please ask again in that language."
+msgstr ""
+"I wasn't sure which language you were using, so I'm answering in English. If"
+" you'd like a different language, please ask again in that language."
+
+msgid ""
 "I don't have a published policy document that answers that, and I won't "
 "guess about fares or eligibility. Please check {where} for current "
 "information."
