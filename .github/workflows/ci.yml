@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   checks:
-    if: github.event_name == 'push'
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -39,7 +39,6 @@ jobs:
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
       - name: Committed-report regression check
-        if: github.event_name == 'schedule'
         # Offline, no model calls: re-checks the *committed* EVALS.md's
         # scoreboard against the *committed* baseline, so a regressed report
         # that slipped past a local `make eval` run's exit code (see
@@ -55,7 +54,7 @@ jobs:
 
   i18n:
     name: i18n (gettext catalog gate)
-    if: github.event_name == 'push'
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -79,7 +78,7 @@ jobs:
     # Advisory axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
     # Non-blocking: the structural gate in `checks` is the merge gate.
-    if: github.event_name == 'push'
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:

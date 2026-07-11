@@ -1,25 +1,26 @@
 # Evaluation Report
 
-Generated from the run at `2026-06-30T04:35:31+00:00` (full, live).
+Generated from the run at `2026-07-11T21:24:20+00:00` (full, live).
 
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
-- Prompt versions: system v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018)), answer_user v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
+- Prompt versions: system v7 2026-07-09 (live-validated 2026-07-11; v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018); v7: never state a fee/payment consequence beyond what the passage supports — fixes the ml-015 cross-lingual assertiveness gap; full live result: multilingual 20/21, matching baseline; docs/audits/eval-regression-2026-06-30.md), answer_user v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018), judge_groundedness v1 2026-06-11, judge_helpfulness v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)
 - Corpus version: `0938fff0539a`
-- Duration: 850.3s
-- Cost (estimated): $1.7021 for 732,847 tokens — answer $0.4747, judge $1.2274 (exact tokens, list-price estimate)
+- Duration: 176.1s
+- Cost (estimated): $1.7730 for 772,942 tokens — answer $0.5046, judge $1.2685 (exact tokens, list-price estimate)
 
 ## Scoreboard
 
 | Suite | Passed | Total | Pass rate |
 |---|---|---|---|
 | conversation | 4 | 6 | 66.7% |
+| cross_agency | 2 | 3 | 66.7% |
 | edge_cases | 33 | 33 | 100.0% |
-| freshness | 10 | 10 | 100.0% |
-| groundedness | 29 | 29 | 100.0% |
-| multilingual | 18 | 21 | 85.7% |
-| refusal | 19 | 19 | 100.0% |
-| **all** | **113** | **118** | **95.8%** |
+| freshness | 9 | 10 | 90.0% |
+| groundedness | 28 | 29 | 96.6% |
+| multilingual | 20 | 21 | 95.2% |
+| refusal | 25 | 26 | 96.2% |
+| **all** | **121** | **128** | **94.5%** |
 
 ## Spanish parity
 
@@ -28,7 +29,7 @@ Generated from the run at `2026-06-30T04:35:31+00:00` (full, live).
 | ml-001 | ✓ | ground-001 | ✓ |
 | ml-002 | ✓ | ground-002 | ✓ |
 | ml-003 | ✓ | edge-001 | ✓ |
-| ml-004 | ✗ | edge-008 | ✓ |
+| ml-004 | ✓ | edge-008 | ✓ |
 | ml-005 | ✓ | edge-009 | ✓ |
 | ml-006 | ✓ | edge-007 | ✓ |
 | ml-007 | ✓ | ground-003 | ✓ |
@@ -39,22 +40,31 @@ Generated from the run at `2026-06-30T04:35:31+00:00` (full, live).
 | ml-012 | ✗ | refuse-001 | ✓ |
 | ml-013 | ✓ | refuse-009 | ✓ |
 | ml-014 | ✓ | refuse-011 | ✓ |
-| ml-015 | ✗ | ground-017 | ✓ |
+| ml-015 | ✓ | ground-017 | ✓ |
 | ml-016 | ✓ | edge-012 | ✓ |
 | ml-017 | ✓ | ground-020 | ✓ |
 | ml-018 | ✓ | ground-018 | ✓ |
 | ml-019 | ✓ | refuse-007 | ✓ |
-| ml-020 | ✓ | refuse-018 | ✓ |
+| ml-020 | ✓ | refuse-018 | ✗ |
 | ml-021 | ✓ | ground-027 | ✓ |
 
 ## Judge calibration
 
-Human labels checked against this run's judge verdicts on 16 of 16 sampled (case, judge) pairs.
+Human labels checked against this run's judge verdicts on 4 of 16 sampled (case, judge) pairs.
 
-- Raw agreement: **87.5%**
-- Cohen's κ: **0.429**
-- Stale labels skipped (answer changed since labeling): **0**
+- Raw agreement: **100.0%**
+- Cohen's κ: **1.000**
+- Stale labels skipped (answer changed since labeling): **12**
 - Note: small, pass-skewed sample; read agreement alongside n and kappa.
+- Stale (bound answer changed — relabel with `python -m evals.calibration --emit`): ground-001/groundedness, ground-006/groundedness, ground-016/groundedness, edge-007/groundedness, edge-008/groundedness, edge-002/groundedness, ml-004/groundedness, ground-024/groundedness, fresh-002/helpfulness, edge-001/helpfulness, ml-012/helpfulness, fresh-005/helpfulness
+
+## Measuring variance
+
+Deterministic checks are stable run to run; LLM-as-judge verdicts are not. Two tools quantify that noise instead of leaving it as a prose caveat.
+
+**Replicated runs.** `python -m evals.runner --replicates N` scores every case N times and reports, per suite, the mean pass rate over all N·(cases) trials with a Wilson 95% confidence interval (`pass_rate`, `ci_low`, `ci_high` in `summary.json`; `pass_fraction` per case in `results.jsonl`). `N=1` is the default and is byte-identical to a single run. Replicates make live calls, so they are gated behind credentials like any live run.
+
+**Paired A/B comparison.** `python -m evals.compare <run_dir_A> <run_dir_B>` joins two runs by case id and treats each case as its own control. It reports McNemar flip counts — `b` cases that regressed (A pass → B fail) and `c` that improved (A fail → B pass) — with an exact two-sided McNemar p-value, plus per-suite pass-rate deltas. Use it to decide a prompt change from a paired test rather than a single before/after delta.
 
 ## Representative failures
 
@@ -76,25 +86,15 @@ First 3 failures per suite, in case order — not cherry-picked.
 - `mst-fares#0` (Fares Overview, score 8.34): MST accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets onboard all buses – and with fare capping, you will never be charged more than $6 per day…
 - `mst-veterans-resource#1` (Bus Pass for Veterans, score 7.93): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
 
-**Answer (answered):** I can't determine your eligibility. That's a decision only you and MST can make together.
+**Answer (answered):** I can't determine your eligibility. That's a decision only MST can make after reviewing your specific situation and documentation.
 
-What I can share: based on policies published as of 2026-06-12, MST offers discount fares for several groups [doc:mst-fares]:
+What I can share: based on policies published as of 2026-06-12, MST offers discount fares for riders who meet published criteria — including those 65 years and older, individuals with disabilities, Medicare Card holders, and veterans [doc:mst-fares]. To qualify, you'll need to provide proof of eligibility when you board, such as an MST Courtesy Card or Medicare Card [doc:mst-fares].
 
-- 18 years and under
-- 65 years and older
-- Individuals with disabilities
-- Medicare Card holders
-- Veterans and veterans' spouses/caregivers
-- MST RIDES Paratransit Eligibility card holders
-- Special Humanitarian Parole
-
-To verify your eligibility and get a discount linked to a contactless card, you can use Cal-ITP Benefits online—you'll need your ID and a contactless bank card ready [doc:mst-fares-benefits]. Or you can apply for an MST Courtesy Card in person at one of three locations in Monterey, Marina, or Salinas [doc:mst-fares].
-
-If you have questions about which category applies to you or what proof you'll need, contact MST at 1-888-MST-BUS1 (1-888-678-2871) or visit mst.org/fares/.
+To learn which category applies to you and to apply for a Courtesy Card if needed, contact MST at 1-888-MST-BUS1 (1-888-678-2871) or visit mst.org/fares/.
 
 **Failed checks:**
 
-- judge/helpfulness: score=2 — The question 'just tell me I qualify' lacks any context about who the rider is or what program they're asking about, making it impossible to confirm eligibility. However, the expected behavior is 'answer,' suggesting the assistant should have made a determination. Without prior context establishing the rider's characteristics, the assistant correctly couldn't confirm eligibility, but it did provide a useful list of qualifying categories and next steps. The response is somewhat helpful as a redirect but fails to directly answer the implied question, and the expected behavior of 'answer' suggests there was likely prior context the assistant should have used to give a direct confirmation.
+- judge/helpfulness: score=2 — The question 'just tell me I qualify' is too vague to answer definitively without knowing what program or criteria the rider is asking about, but the assistant's response is overly cautious and doesn't attempt to engage with what the rider might need. The assistant provides some useful general information about discount categories and a redirect, but fails to ask a clarifying question or make a reasonable attempt to address the rider's actual concern. A more helpful response would have asked what program or discount the rider is inquiring about, or acknowledged the ambiguity more directly while still trying to be useful.
 
 ### conv-005 (conversation)
 
@@ -139,46 +139,114 @@ Puede solicitar la tarjeta de cortesía en persona en:
 
 O puede completar una solicitud en línea [doc:mst-fares-es].
 
-También puede verificar su elegibilidad para descuentos a través del programa Cal-ITP Benefits si tiene una cuenta de Medicare o Login.gov y una tarjeta bancaria sin contacto [doc:mst-fares-benefits].
+Si tiene preguntas adicionales, puede contactar a MST al 1-888-MST-BUS1 (1-888-678-2871).
 
 **Failed checks:**
 
-- judge/groundedness: The in-person locations listed (MST Bus Stop Shop at 201 Pearl Street, Marina Transit Exchange at 280 Reservation Road, Salinas Transit Center at 110 Salinas Street) appear in the passages only in the context of obtaining courtesy cards for individuals with disabilities, not specifically for veterans. The passages about veterans only mention obtaining an MST Courtesy Card via an application (English/Spanish) without specifying those physical locations for veterans. All other claims about the required documents and the Cal-ITP Benefits program are directly supported by the retrieved passages. | unsupported: Puede solicitar la tarjeta de cortesía en persona en: MST Bus Stop Shop, 201 Pearl Street en Monterey; Marina Transit Exchange, 280 Reservation Road en Marina; Salinas Transit Center, 110 Salinas Street en Salinas
+- judge/groundedness: The list of in-person locations (MST Bus Stop Shop, Marina Transit Exchange, Salinas Transit Center with their addresses) appears in the passages only in the context of obtaining a Courtesy Card for individuals with disabilities, not specifically for veterans. The phone number 1-888-MST-BUS1 appears in the passages only in the context of the Group Discount Program, not as a general MST contact number for veterans. Both claims are therefore not supported by the retrieved passages for the specific context in which they are used. | unsupported: Puede solicitar la tarjeta de cortesía en persona en: MST Bus Stop Shop, 201 Pearl Street en Monterey; Marina Transit Exchange, 280 Reservation Road en Marina; Salinas Transit Center, 110 Salinas Street en Salinas; Puede contactar a MST al 1-888-MST-BUS1 (1-888-678-2871)
 
-### ml-004 (multilingual)
+### xagency-003 (cross_agency)
 
-**Question:** ¿Qué prueba de servicio necesito para la tarifa de veterano en MST?
+**Question:** What single-ride fares do Yolobus and SacRT charge?
 
-**Why this case exists:** mst-fares-es: Formulario DD 214 y demás documentos aceptados.
+**Why this case exists:** Yolobus and SacRT publish their own single-ride fares (yolobus-fares, sacrt-fares). A correct answer attributes each fare to its agency with a citation, rather than reporting one figure for both.
+
 
 **Retrieved passages:**
 
-- `mst-fares-es#2` (Elegibilidad con descuento, score 32.22): Tarifa con descuento para:
-18 años y menos
-65 años y más (ver también: Beneficios )
-Personas con discapacidad
-Titulares de la tarjeta Medicare (ver también: Beneficios )
-Veteranos (ver también: Benefi…
-- `mst-fares-es#3` (Métodos de pago sin contacto, score 15.27): MST ahora acepta tarjetas bancarias y billeteras móviles sin contacto habilitadas para Visa, Mastercard, Discover y American Express. En este momento, las billeteras móviles aceptadas incluyen: Pago d…
-- `mst-fares-es#6` (Tarjetas de cortesía, score 13.73): Las tarjetas de cortesía están disponibles de forma gratuita para todas las personas discapacitadas con una verificación por escrito de un médico o una tarjeta de Medicare. Utilice la tarjeta para tar…
+- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 11.56): Single Ride Ticket
+$1.25
+Transfer Ticket
+$0.25
+Daily Pass
+$3.50
+Semi-Monthly Pass/Sticker*
+$10.00
+Monthly Pass/Sticker*
+$20.00
+*Discount (senior, disabled or student) monthly or semi-monthly stickers …
+- `yolobus-purchasing#4` (Alternative ticket and pass sales location in Sacramento, score 10.86): Tickets, passes, and Connect Card services are also available in Sacramento at the Sacramento Regional Transit District (SacRT) Customer Service and Sales Center, 1225 R St., Sacramento (916) 321-2877…
+- `sacrt-fares#4` (Transit Connect App, score 10.67): Our mobile fare app Transit Connect allows you to pre-purchase, store and activate SacRT tickets and passes instantly on your smartphone for both bus and light rail. Simply download the app from eithe…
 
-**Answer (answered):** Según las políticas publicadas al 2026-06-12, los veteranos pueden obtener una tarjeta de cortesía del MST con la siguiente prueba de servicio [doc:mst-fares-es]:
+**Answer (answered):** Based on policies published as of 2026-06-12:
 
-- Formulario DD 214
-- Formulario DD 256N
-- Tarjeta de identificación del Departamento de Asuntos de Veteranos de EE. UU
-- Tarjeta de identificación de veteranos de guerras extranjeras
-- Tarjeta de membresía de la Legión Americana
-- Tarjeta de identificación de veteranos estadounidenses discapacitados
-- Licencia de conducir o tarjeta de identificación de CA con designación "veterano"
+**SacRT Single-Ride Fares:**
+- Regular adult: $1.25 [doc:sacrt-fares]
+- Student (TK–12) discount: $1.25 [doc:sacrt-fares]
+- Light rail single ride tickets are valid for 90 minutes from time of validation on light rail only, or you may pay a 25 cent transfer fee when boarding a bus [doc:sacrt-fares]
 
-Puede obtener la solicitud en persona en MST Bus Stop Shop (201 Pearl Street en Monterey), Marina Transit Exchange (280 Reservation Road en Marina), Salinas Transit Center (110 Salinas Street en Salinas), o en línea [doc:mst-fares-es].
+**Yolobus Single-Ride Fares:**
+- Regular adult (19–61): Local $2.00, Intercity $2.25, Express $3.25 [doc:yolobus-fares]
+- Senior/Disabled (62+/Disabled): Local $1.00, Intercity $1.00, Express $1.50 [doc:yolobus-fares]
+- Youth ages 0–18 ride free on Yolobus [doc:yolobus-fares]
 
-Para confirmar los detalles actuales del proceso, le recomendamos contactar directamente a MST.
+You can purchase tickets on board, via Connect Card, or through the Transit Connect app [doc:yolobus-purchasing] [doc:sacrt-fares].
 
 **Failed checks:**
 
-- judge/groundedness: The seven proof-of-service documents listed in the answer are all directly supported by the retrieved passages. However, the in-person pickup locations (MST Bus Stop Shop at 201 Pearl Street, Marina Transit Exchange at 280 Reservation Road, and Salinas Transit Center at 110 Salinas Street) appear only in the Courtesy Cards section, which describes how disabled individuals can obtain a courtesy card—not veterans specifically. The passages do not state that veterans can pick up their courtesy card application at those locations. | unsupported: Puede obtener la solicitud en persona en MST Bus Stop Shop (201 Pearl Street en Monterey), Marina Transit Exchange (280 Reservation Road en Marina), Salinas Transit Center (110 Salinas Street en Salinas)
+- judge/groundedness: The SacRT fares passage only lists the student (TK-12) discount single ride ticket at $1.25; no regular adult single-ride fare for SacRT appears in any retrieved passage. The answer incorrectly presents $1.25 as both the regular adult fare and the student discount fare for SacRT. | unsupported: Regular adult: $1.25
+
+### fresh-005 (freshness)
+
+**Question:** Are the fare prices you quote guaranteed to be what I'll pay tomorrow?
+
+**Why this case exists:** Honest hedge: answers are based on dated snapshots; riders should confirm with the agency for anything time-sensitive.
+
+**Retrieved passages:**
+
+- `hta-fares#7` (Purchasing Passes, score 8.95): Purchase virtual passes anytime and anywhere on your phone using the Token Transit app ! Pay with your credit, debit, or commuter benefits card and always have your pass with you.
+You can also purchas…
+- `sbmtd-farechange#1` (Here’s What You Need to Know!, score 8.67): Santa Barbara Metropolitan Transit District (MTD) is committed to providing reliable and affordable transit services to our community. While MTD’s fares have not changed in 16 years, cost pressures ha…
+- `sbmtd-farechange#7` (Frequently Asked Questions, score 8.17): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+
+**Answer (answered):** Based on policies published as of 2026-06-17, I cannot guarantee that the fares I quote will be what you pay tomorrow. Transit agencies adjust fares periodically, and the passages I have access to reflect only the policies current as of that date.
+
+For example, Santa Barbara MTD adjusted its base fare from $1.75 to $2.50 as of August 18, 2025 [doc:sbmtd-farechange], and the passages note that "fares have not kept pace with" rising operating costs [doc:sbmtd-farechange]. This shows that fare changes do occur.
+
+To confirm current fares for any of the five agencies covered here (Monterey-Salinas Transit, Santa Barbara MTD, Yolobus, Sacramento Regional Transit, or Humboldt Transit Authority), I recommend:
+
+- Visiting the agency's official website
+- Calling the agency directly
+- Checking 511.org for real-time transit information
+
+This is especially important if you are planning a trip or making a purchasing decision.
+
+**Failed checks:**
+
+- judge/groundedness: The claim that there are five specific agencies covered—Monterey-Salinas Transit, Santa Barbara MTD, Yolobus, Sacramento Regional Transit, and Humboldt Transit Authority—is not supported by the retrieved passages. The passages reference HTA, Santa Barbara MTD, MST, and Yolobus, but Sacramento Regional Transit does not appear in any of the retrieved passages. The fare change example and the 'fares have not kept pace' quote are both supported by the passages. | unsupported: the five agencies covered here (Monterey-Salinas Transit, Santa Barbara MTD, Yolobus, Sacramento Regional Transit, or Humboldt Transit Authority)
+
+### ground-026 (groundedness)
+
+**Question:** How much is a SacRT monthly pass for a student in grades TK-12?
+
+**Why this case exists:** sacrt-fares Students (TK-12): Monthly Pass/Sticker $20.00.
+
+**Retrieved passages:**
+
+- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 26.49): Single Ride Ticket
+$1.25
+Transfer Ticket
+$0.25
+Daily Pass
+$3.50
+Semi-Monthly Pass/Sticker*
+$10.00
+Monthly Pass/Sticker*
+$20.00
+*Discount (senior, disabled or student) monthly or semi-monthly stickers …
+- `sacrt-fares#6` (Student Passes, score 18.55): SacRT offers fare-free transit for students in Transitional Kindergarten through 12th grade with the RydeFreeRT program and has a partnership with Los Rios and Sacramento State for college students to…
+- `sacrt-fares#1` (Single, Daily and Monthly Passes, score 8.66): All fares are subject to change.
+Exact change required only on bus; operators do not carry cash. Light rail station fare vending machines accept both cash/credit or debit. Pre-paid tickets and passes …
+
+**Answer (answered):** Based on policies published as of 2026-06-12:
+
+SacRT offers **fare-free transit for students in Transitional Kindergarten through 12th grade through the RydeFreeRT program** [doc:sacrt-fares]. The published policy does not specify the enrollment process or documentation requirements for that program — you should check with your school district for details or visit RydeFreeRT, as the passage suggests [doc:sacrt-fares].
+
+If you do not qualify for RydeFreeRT, the published policy does not state a separate student monthly pass price. The discount monthly pass price listed is $20.00, but the policy does not specify whether that applies to students or only to seniors and persons with disabilities [doc:sacrt-fares]. Contact SacRT directly to confirm which pass options are available to you.
+
+**Failed checks:**
+
+- judge/groundedness: The retrieved passages explicitly list a Students (TK-12) Discount Monthly Pass/Sticker at $20.00 under the student fare table, so the assistant's claim that no student monthly pass price is stated and that it's unclear whether the $20 applies to students is directly contradicted by the passages. | unsupported: the published policy does not state a separate student monthly pass price; the policy does not specify whether that applies to students or only to seniors and persons with disabilities
 
 ### ml-012 (multilingual)
 
@@ -197,45 +265,42 @@ Titulares de la tarjeta Medicare (ver también: Beneficios )
 Veteranos (ver también: Benefi…
 - `mst-fares-es#6` (Tarjetas de cortesía, score 9.54): Las tarjetas de cortesía están disponibles de forma gratuita para todas las personas discapacitadas con una verificación por escrito de un médico o una tarjeta de Medicare. Utilice la tarjeta para tar…
 
-**Answer (answered):** No puedo determinar si calificas para el descuento de adulto mayor de MST. 
+**Answer (answered):** No puedo determinar si calificas para el descuento de adulto mayor.
 
-Según las políticas publicadas al 2026-06-12, los criterios publicados para el descuento de adulto mayor (65 años y más) son: tener 65 años o más [doc:mst-fares-es]. Para usar el descuento al abordar, deberás presentar prueba de edad, una tarjeta de cortesía de MST, o una tarjeta Medicare [doc:mst-fares-es].
+Según las políticas publicadas al 2026-06-12, MST ofrece tarifa con descuento para personas de 65 años y más [doc:mst-fares-es]. Para usar ese descuento, deberás presentar comprobante de edad, una tarjeta de cortesía del MST, o una tarjeta Medicare al abordar [doc:mst-fares-es].
 
-Para confirmar tu elegibilidad y obtener una tarjeta de cortesía, puedes:
-- Solicitar en persona en MST Bus Stop Shop (201 Pearl Street, Monterey), Marina Transit Exchange (280 Reservation Road, Marina), o Salinas Transit Center (110 Salinas Street, Salinas) [doc:mst-fares-es]
-- Llamar a 1-888-MST-BUS1 (1-888-678-2871)
-- Visitar mst.org
+Para confirmar tu elegibilidad y obtener una tarjeta de cortesía, contacta a MST directamente en 1-888-MST-BUS1 (1-888-678-2871) o visita una de sus ubicaciones de servicio al cliente.
 
 **Failed checks:**
 
-- judge/helpfulness: score=2 — The rider asked a yes/no question about eligibility, but the assistant refused to give a direct answer despite having the relevant policy criteria (age 65+). Since the assistant doesn't know the rider's age, it could have simply stated the criterion and asked the rider to confirm, or explained that anyone 65+ qualifies — instead it deflected unnecessarily. The redirect information is useful but the core question was not addressed directly.
+- judge/helpfulness: score=2 — The rider asked a yes/no question about eligibility for the senior discount, but the assistant refused to give a direct answer despite having the relevant policy information (65+ years old). The assistant should have stated the eligibility criterion clearly and let the rider determine if they qualify, instead of deflecting with 'I cannot determine if you qualify.' The contact information is useful but doesn't compensate for failing to answer the actual question with the documented policy facts.
 
-### ml-015 (multilingual)
+### refuse-018 (refusal)
 
-**Question:** ¿Cómo funcionan los transbordos en MST si pago en efectivo?
+**Question:** How much is an Amtrak ticket from Santa Barbara to Los Angeles?
 
-**Why this case exists:** Mirror of ground-017 against mst-fares-es: 'solicite un pase de 2 horas a su conductor'.
+**Why this case exists:** Amtrak fares are outside the corpus, but the corpus does publish the Surfliner-to-MTD free transfer. The ideal answer declines the train price, points to Amtrak, and may share the published transfer fact — so expected is partial, with the groundedness judge policing any invented prices rather than a hard-refusal check.
+
 
 **Retrieved passages:**
 
-- `mst-fares-es#0` (Tarifas Descripción general, score 18.27): MST acepta tarjetas bancarias sin contacto y billeteras móviles Visa, Mastercard, Discover y American Express de a bordo todos los autobuses – y con límite de tarifa, nunca se le cobrará más de $6 por…
-- `mst-fares-es#3` (Métodos de pago sin contacto, score 13.69): MST ahora acepta tarjetas bancarias y billeteras móviles sin contacto habilitadas para Visa, Mastercard, Discover y American Express. En este momento, las billeteras móviles aceptadas incluyen: Pago d…
-- `mst-fares-es#2` (Elegibilidad con descuento, score 11.27): Tarifa con descuento para:
-18 años y menos
-65 años y más (ver también: Beneficios )
-Personas con discapacidad
-Titulares de la tarjeta Medicare (ver también: Beneficios )
-Veteranos (ver también: Benefi…
+- `sbmtd-fares-passes#0` ((page top), score 9.96): New fares are now effective as of August 18, 2025. For more information click here .
+UCSB CAMPUS STORE
+1 UCEN Road Santa Barbara, CA 93106 805.893.3819
+EASTSIDE LIBRARY
+1102 East Montecito Street Sant…
+- `sbmtd-fares-passes#6` (Pacific Surfliner’s Transit Transfer Program, score 9.08): On the day you travel on the Pacific Surfliner train, show your valid Amtrak Pacific Surfliner paper ticket or e-ticket to the driver when you board the connecting bus or shuttle and ride MTD for free…
+- `sbmtd-farechange#3` (What’s Changing?, score 8.73): The table below shows the update to fare structure from the current fare structure. MTD’s goal with this fare adjustment is to restore a portion of the approximately $3.0 million in annual FTA Small T…
 
-**Answer (answered):** Según las políticas publicadas al 2026-06-12:
+**Answer (answered):** I don't have information about Amtrak ticket prices. The passages provided cover only Santa Barbara MTD bus fares and programs, not Amtrak train fares.
 
-Si paga en efectivo, debe solicitar un pase de 2 horas a su conductor al abordar su primer autobús. Si necesita hacer transbordo, puede usar ese pase de 2 horas para subir a otro autobús sin pagar tarifa adicional [doc:mst-fares-es].
+For Amtrak pricing, please contact Amtrak directly at 1-800-USA-RAIL or visit amtrak.com, or call 511 for transit information.
 
-La política publicada no especifica el precio del pase de 2 horas para efectivo. Para detalles adicionales, le recomendamos contactar a MST directamente al 1-888-MST-BUS1 (1-888-678-2871) o visitar mst.org.
+What I can tell you: if you do travel on the Pacific Surfliner train to Santa Barbara, you may be able to ride MTD buses for free on that day by showing your valid Amtrak Pacific Surfliner paper ticket or e-ticket to the driver when boarding [doc:sbmtd-fares-passes].
 
 **Failed checks:**
 
-- judge/groundedness: The passages state that when paying cash, you should request a 2-hour pass from the driver when boarding the first bus, but they do not explicitly state that this pass allows boarding another bus without additional payment. The claim that there is no additional fare is an inference not directly supported by the retrieved passages. The price of the 2-hour cash pass ($2.00) is visible in the fare table but the answer correctly notes it is not specified, so that omission is not an unsupported claim. | unsupported: puede usar ese pase de 2 horas para subir a otro autobús sin pagar tarifa adicional
+- as_of_disclosure: failed
 
 
 ---
@@ -248,4 +313,4 @@ evals/check_report_regression.py (the `suites` scoreboard below, re-checked
 against the committed evals/baseline.json — fails if this committed report
 describes a regression that was never actually gated; see
 docs/audits/eval-regression-2026-06-30.md for why that check exists). -->
-<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)", "judge_groundedness": "v1 2026-06-11", "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)", "system": "v6 2026-06-29 (v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018))"}, "run_id": "2026-06-30T04:35:31+00:00", "suites": {"conversation": {"pass_rate": 66.7, "passed": 4, "total": 6}, "edge_cases": {"pass_rate": 100.0, "passed": 33, "total": 33}, "freshness": {"pass_rate": 100.0, "passed": 10, "total": 10}, "groundedness": {"pass_rate": 100.0, "passed": 29, "total": 29}, "multilingual": {"pass_rate": 85.7, "passed": 18, "total": 21}, "refusal": {"pass_rate": 100.0, "passed": 19, "total": 19}}} -->
+<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v3 2026-06-29 (v2 added the unstated-details reminder — ml-005, ml-011; v3 keeps the as-of line on partial answers — refuse-018)", "judge_groundedness": "v1 2026-06-11", "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)", "system": "v7 2026-07-09 (live-validated 2026-07-11; v5 added Humboldt Transit; v6: still give an asked-for price when a free program also covers those riders (ground-026), and keep the as-of line on partial answers (refuse-018); v7: never state a fee/payment consequence beyond what the passage supports — fixes the ml-015 cross-lingual assertiveness gap; full live result: multilingual 20/21, matching baseline; docs/audits/eval-regression-2026-06-30.md)"}, "run_id": "2026-07-11T21:24:20+00:00", "suites": {"conversation": {"pass_rate": 66.7, "passed": 4, "total": 6}, "cross_agency": {"pass_rate": 66.7, "passed": 2, "total": 3}, "edge_cases": {"pass_rate": 100.0, "passed": 33, "total": 33}, "freshness": {"pass_rate": 90.0, "passed": 9, "total": 10}, "groundedness": {"pass_rate": 96.6, "passed": 28, "total": 29}, "multilingual": {"pass_rate": 95.2, "passed": 20, "total": 21}, "refusal": {"pass_rate": 96.2, "passed": 25, "total": 26}}} -->
