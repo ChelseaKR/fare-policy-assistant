@@ -9,12 +9,17 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
-- Corrected the multilingual eval regression flagged in the 2026-06-30 report
-  (18/21 vs the committed 20/21 baseline); see
-  `docs/audits/eval-regression-2026-06-30.md` for the root-cause writeup and
-  current status.
 - Reformatted the codebase with `ruff format` and made it a blocking `make
   verify` / CI gate (was check-only).
+- `docs/ROADMAP.md` P2 item 5 (a11y wiring) was stale: it still listed feeding
+  transcripts to GovChat-Eval's a11y suite (`transcript_html`) as remaining
+  work, but that landed in the same session two commits later
+  (`evals.govchat_export.render_transcript`, documented in
+  `docs/audits/methodology.md` as "a11y now runs"). Corrected the roadmap to
+  reflect that only the manual screen-reader/keyboard walkthrough
+  (`docs/audits/a11y-walkthrough.md`, still an unfilled result table) remains
+  — that step needs a human at a real assistive-tech session and is not
+  something this pass fabricates.
 
 ### Added
 - **Provenance gate promoted to blocking** (FIX-01/M-2, 2026-07-09): `make
@@ -25,6 +30,11 @@ rather than tied to a published tag.
   `evals/stale_acknowledged.json` with written reasons — declared, not
   stamped current. `evals/govchat_export.py` now emits a dataset-level
   `# provenance:` header on every regeneration.
+- Root-caused (not yet fixed) the multilingual eval regression flagged in the
+  2026-06-30 report (18/21 vs the committed 20/21 baseline). The regression is
+  open: the gate is red and is deliberately being left red until a live re-run
+  resolves it. See `docs/audits/eval-regression-2026-06-30.md` for the
+  root-cause writeup and current status.
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.

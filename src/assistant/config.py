@@ -22,6 +22,9 @@ CHUNKS_PATH = PROCESSED_DIR / "chunks.jsonl"
 PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"
+# Content-keyed answer/judge cache (evals/cache.py, FIX-12). Gitignored, like
+# evals/runs/ — it is a local speed/cost optimization, not an artifact.
+EVAL_CACHE_DIR = REPO_ROOT / "evals" / "cache"
 
 # Sourced from the active domain profile (src/assistant/domain.py) so the
 # transit-specific knobs live in one place; re-exported here for the call sites

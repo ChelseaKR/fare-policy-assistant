@@ -39,6 +39,27 @@ class TestInputGuards:
         assert not check.ok
         assert "datos personales" in (check.message or "")
 
+    def test_spanish_dob_refused_with_spanish_message(self):
+        # Multilingual guard parity (FIX-05): the Spanish lead-in "nací el"
+        # trips the dob PII guard just like the English "born on", and the
+        # rider-facing refusal comes back in Spanish.
+        check = guards.check_input(
+            "Nací el 3 de mayo de 1961, ¿soy elegible para la tarifa de personas mayores?"
+        )
+        assert not check.ok
+        assert "pii:dob" in check.flags
+        assert "datos personales" in (check.message or "")
+
+    def test_spanish_fecha_de_nacimiento_refused(self):
+        check = guards.check_input("Mi fecha de nacimiento es 03/05/1961, ¿tengo descuento?")
+        assert not check.ok
+        assert "pii:dob" in check.flags
+
+    def test_benign_spanish_fare_question_passes(self):
+        # No false positive: an ordinary reduced-fare question in Spanish must
+        # not trip any input guard (FIX-05 parity without over-refusal).
+        assert guards.check_input("¿Cuánto cuesta el pasaje reducido para personas mayores?").ok
+
 
 class TestLanguageDetection:
     def test_english(self):

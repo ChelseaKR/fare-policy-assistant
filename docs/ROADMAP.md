@@ -125,7 +125,10 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > post-guard replay. Item 4 (dense-retrieval decision) is settled with evidence
 > (ADR 0007): a retrieval-recall ablation shows the dense hybrid is worse
 > everywhere and −11.8 points on Spanish — the case it was meant to help — so it
-> stays off, behind its flag. Items 3 and 5 (feedback, a11y wiring) are open.
+> stays off, behind its flag. Item 3 (feedback) is open. Item 5 (a11y wiring)
+> is code-complete — GovChat-Eval's a11y suite now audits every recorded
+> transcript — with only the manual screen-reader/keyboard walkthrough left,
+> which needs a human at a real assistive-tech session, not automation.
 
 1. **Multi-turn within a session.** The UI is a chat but the pipeline is
    single-shot; "what about my spouse?" loses context. Add stateless
@@ -147,12 +150,19 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
    place, especially for Spanish questions over English-only docs. Run the
    suite both ways, record the delta, and either enable it or document why not
    (extends ADR 0001). Done = the choice is evidence-backed, not deferred.
-5. **Wire the a11y audit, not just structure.** *(Largely done.)* The page now
-   targets WCAG 2.2 AA, a pure-Python structural gate (`web/a11y.py`) runs in CI
-   and as `make a11y`, and an advisory pa11y/axe pass cross-checks contrast and
-   ARIA. Remaining: feed rendered transcripts to GovChat-Eval's a11y suite
-   (`transcript_html`) so the independent audit covers a11y too, and do and
-   record the manual screen-reader walkthrough (model card notes it pending).
+5. **Wire the a11y audit, not just structure.** *(Automation done; one manual
+   step outstanding.)* The page targets WCAG 2.2 AA, a pure-Python structural
+   gate (`web/a11y.py`) runs in CI and as `make a11y`, and an advisory
+   pa11y/axe pass cross-checks contrast and ARIA. Every recorded turn also
+   carries an accessible HTML transcript
+   (`evals.govchat_export.render_transcript` → `transcript_html` in
+   `evals/govchat/golden.jsonl`), so GovChat-Eval's structural checker audits
+   a11y too — see `docs/audits/methodology.md` ("a11y now runs"). Remaining:
+   do and record the manual screen-reader and keyboard-only walkthrough.
+   Checklist and result log live in `docs/audits/a11y-walkthrough.md`; the
+   result table is still unfilled (model card notes it pending), and the demo
+   should not be presented as accessibility-reviewed beyond automation until a
+   person completes it.
 
 ## P3 — Breadth and scale
 
