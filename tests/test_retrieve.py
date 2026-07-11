@@ -1,4 +1,14 @@
-from assistant.retrieve import _expand_query, detect_agencies, detect_agency
+import pytest
+
+from assistant import config
+from assistant.retrieve import (
+    Retriever,
+    _expand_query,
+    _is_application_passage,
+    _is_reduced_fare_query,
+    detect_agencies,
+    detect_agency,
+)
 
 
 class TestAgencyDetection:
@@ -43,8 +53,9 @@ class TestRetriever:
         assert all(sc.chunk.agency == "MST" for sc in results)
 
     def test_low_confidence_on_offtopic(self, retriever):
-        results = retriever.search("weather forecast astronomy parliament")
-        assert not retriever.confident(results)
+        q = "weather forecast astronomy parliament"
+        results = retriever.search(q)
+        assert not retriever.confident(q, results)
 
     def test_multi_agency_retrieval_surfaces_each(self, retriever):
         # R3-2 retrieval half: a question naming two agencies retrieves passages
@@ -59,3 +70,80 @@ class TestRetriever:
         results = retriever.search("Magkano ang diskwento sa MST?")
         assert results[0].chunk.agency == "MST"
         assert results[0].chunk.chunk_id == "mst-fares#0"
+
+
+class TestCloseTheLoopTriggers:
+    """R1-2 heuristics: the query trigger and the application-passage signal."""
+
+    @pytest.mark.parametrize(
+        "question",
+        [
+            "What is the senior discount fare on Yolobus?",
+            "I have a disability — how do I get the reduced fare?",
+            "Where do I apply for a Medicare discount ID card?",
+            "youth fare on SacRT",
+        ],
+    )
+    def test_reduced_fare_queries_trigger(self, question):
+        assert _is_reduced_fare_query(question)
+
+    def test_plain_fare_query_does_not_trigger(self):
+        assert not _is_reduced_fare_query("What is the regular adult cash fare?")
+
+    def test_application_passage_signal_matches_real_sections(self):
+        from assistant.ingest import load_chunks
+
+        by_id = {c.chunk_id: c for c in load_chunks()}
+        # Real where-to-apply passages keyed from corpus/processed/chunks.jsonl.
+        assert _is_application_passage(by_id["sbmtd-fares-passes#3"])  # Mobility Pass
+        assert _is_application_passage(by_id["mst-fares#6"])  # Courtesy Cards
+        assert _is_application_passage(by_id["yolobus-reduced-fare-id#0"])  # obtain ID
+        # A plain fare table is not an application passage.
+        assert not _is_application_passage(by_id["hta-fares#0"])
+
+
+class TestCloseTheLoopRetrieval:
+    """R1-2: a reduced-fare query must deliver the where-to-apply passage to the
+    answer prompt, even when the fare/eligibility passages win the top slots."""
+
+    @pytest.fixture
+    def corpus_retriever(self):
+        # Real corpus with a tight top_k so the fare passages fill the ranked
+        # slots and the application passage would fall out without the companion
+        # step — the exact condition R1-2 fixes.
+        return Retriever(cfg=config.RetrievalConfig(use_dense=False, top_k=3))
+
+    def test_companion_application_chunk_appears_for_reduced_fare_query(self, corpus_retriever):
+        results = corpus_retriever.search("I am 65 and disabled, what do I pay on Yolobus?")
+        ids = [sc.chunk.chunk_id for sc in results]
+        # The where-to-apply passage (Woodland office, hours) is appended.
+        assert "yolobus-reduced-fare-id#0" in ids
+        assert any(_is_application_passage(sc.chunk) for sc in results)
+
+    def test_companion_respects_agency_scope(self, corpus_retriever):
+        results = corpus_retriever.search("How do I get the SBMTD reduced-fare Mobility Pass ID?")
+        assert any(sc.chunk.chunk_id == "sbmtd-fares-passes#3" for sc in results)
+        # No cross-agency application passage leaks in.
+        assert all(sc.chunk.agency == "SBMTD" for sc in results)
+
+    def test_no_companion_appended_for_plain_fare_query(self, corpus_retriever):
+        results = corpus_retriever.search("What is the regular adult fare on Yolobus?")
+        assert "yolobus-reduced-fare-id#0" not in [sc.chunk.chunk_id for sc in results]
+
+    def test_companion_not_duplicated_when_already_present(self, corpus_retriever):
+        # When the application passage already ranks in top_k, it is not added twice.
+        results = corpus_retriever.search("How do I get a reduced-fare photo ID for Yolobus?")
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert ids.count("yolobus-reduced-fare-id#0") == 1
+
+    def test_veteran_query_excludes_disabled_courtesy_card_process(self, corpus_retriever):
+        results = corpus_retriever.search(
+            "¿Qué prueba de servicio necesito para la tarifa de veterano en MST?"
+        )
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert "mst-fares-es#6" not in ids
+        assert "mst-fares-es#2" in ids
+
+    def test_senior_query_excludes_disabled_courtesy_card_process(self, corpus_retriever):
+        results = corpus_retriever.search("How do I use the MST senior discount?")
+        assert "mst-fares#6" not in [sc.chunk.chunk_id for sc in results]

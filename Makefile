@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance
+.PHONY: fetch index ingest eval smoke report audit a11y offline history test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -20,6 +20,12 @@ index: ingest
 ingest:       ## Clean, chunk, and index the fetched snapshots
 	uv run python -m assistant.ingest process
 
+gtfs-fetch:   ## Snapshot GTFS(-Fares) feed data listed in corpus/manifest.yaml (EXP-06)
+	uv run python -m assistant.gtfs fetch
+
+gtfs-check:   ## Cross-check snapshotted GTFS fares against the prose corpus (EXP-06)
+	uv run python -m assistant.gtfs check
+
 smoke:        ## CI smoke suite (25 cases, deterministic checks only unless key present)
 	uv run python -m evals.runner --smoke
 
@@ -35,6 +41,13 @@ a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, st
 
 offline:      ## Render the offline fare reference (web/offline.html) from the corpus
 	uv run python -m web.offline
+
+template:     ## Extract the domain-agnostic skeleton to TARGET (see template/MANIFEST.yaml, docs/ROADMAP.md P3-5)
+	@test -n "$(TARGET)" || { echo "usage: make template TARGET=/path/to/new-domain-assistant"; exit 2; }
+	uv run python -m scripts.extract_template "$(TARGET)"
+
+history:      ## Regenerate corpus/version_history.json (git-backed changelog for the operator console, EXP-09)
+	uv run python -m assistant.corpus history > corpus/version_history.json
 
 audit:        ## Independent GovChat-Eval audit: record answers, then run the external harness
 	@test -d "$(EVAL_HARNESS)" || { echo "govchat-eval not found at $(EVAL_HARNESS); set EVAL_HARNESS=<path>"; exit 2; }
@@ -53,11 +66,11 @@ test:         ## Run the unit suite with the branch-coverage gate (offline; no p
 cov: test     ## Alias for the coverage-gated test run
 
 lint:
-	uv run ruff check src tests evals web
-	uv run ruff format --check src tests evals web
+	uv run ruff check src tests evals web scripts
+	uv run ruff format --check src tests evals web scripts
 
 typecheck:
-	uv run mypy src web
+	uv run mypy src web scripts
 
 check: lint typecheck test
 

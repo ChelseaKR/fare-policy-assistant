@@ -56,7 +56,7 @@ class TestAnswerPipeline:
         # declined answer is "low".
         from assistant.retrieve import Retriever
 
-        strict = Retriever(chunks, config.RetrievalConfig(top_k=3, min_confidence=50.0))
+        strict = Retriever(chunks, config.RetrievalConfig(top_k=3, decline_z_threshold=50.0))
         result = answer_question(
             "Do youth ride free on Yolobus?",
             model=MockModel(),

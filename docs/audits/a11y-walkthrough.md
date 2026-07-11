@@ -1,6 +1,6 @@
 # Manual accessibility walkthrough
 
-The automated gates (`web/a11y.py` in CI, advisory pa11y/axe) check structure and
+The automated gates (`web/a11y.py` in CI, blocking pa11y/axe) check structure and
 computed contrast. They cannot check the lived experience: whether the page is
 actually operable and comprehensible with a screen reader and a keyboard. This
 file is the record of that human step. Until the result table below is filled in
@@ -62,7 +62,7 @@ automation did not miss the real behavior.
 - [ ] The page reflows without horizontal scrolling at 400% zoom (1.4.10). (auto:
       zoom not disabled)
 - [ ] Contrast meets AA in both the default and high-contrast themes. (auto:
-      advisory axe/pa11y)
+      blocking axe/pa11y)
 - [ ] Target sizes are comfortable on a phone. (auto: 24px minimum in CSS)
 
 ## Result log

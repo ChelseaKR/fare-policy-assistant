@@ -160,6 +160,42 @@ class TestOutputCheck:
         assert "scope:medical_advice" in check.flags
 
 
+class TestVerificationHandoff:
+    """RR4: the positive other half of the no-determination rule — an
+    eligibility-adjacent answer routes the rider to where the decision happens."""
+
+    def test_apply_for_card_is_a_handoff(self):
+        assert guards.find_verification_handoff(
+            "You may qualify if you are 65 or older [doc:mst-fares]; apply for an "
+            "MST Courtesy Card to use the discount."
+        )
+
+    def test_calitp_verification_is_a_handoff(self):
+        assert guards.find_verification_handoff(
+            "Verify your eligibility through Cal-ITP Benefits to link the discount "
+            "to a contactless card [doc:mst-fares-benefits]."
+        )
+
+    def test_contact_agency_is_a_handoff(self):
+        assert guards.find_verification_handoff(
+            "The published criterion is age 65+ [doc:sbmtd-fares-passes]. Contact "
+            "SBMTD customer service to confirm what proof to bring."
+        )
+
+    def test_spanish_handoff_detected(self):
+        assert guards.find_verification_handoff(
+            "Los criterios publicados son 65 años o más [doc:mst-fares-es]. Puede "
+            "solicitar la tarjeta de cortesía o comuníquese con el servicio al cliente."
+        )
+
+    def test_bare_criterion_is_not_a_handoff(self):
+        # An answer that stops at the criterion has no next step — the case the
+        # RR4 check exists to catch.
+        assert not guards.find_verification_handoff(
+            "The published senior criterion is 65 and older, as of 2026-06-12."
+        )
+
+
 class TestCombinedCitations:
     def test_combined_citation_resolves_all_ids(self):
         # A single bracket listing several docs (eval case fresh-001) must

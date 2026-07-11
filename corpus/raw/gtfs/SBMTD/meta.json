@@ -1,0 +1,15 @@
+{
+  "agency": "SBMTD",
+  "url": "https://www.sbmtd.gov/google_transit/feed.zip",
+  "fares_version": "v2",
+  "fetch_date": "2026-07-08",
+  "feed_bytes": 2120705,
+  "fare_files": [
+    "agency.txt",
+    "fare_products.txt",
+    "fare_leg_rules.txt",
+    "fare_media.txt",
+    "fare_transfer_rules.txt",
+    "rider_categories.txt"
+  ]
+}

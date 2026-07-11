@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded in-flight runs for the same PR to save Actions minutes.
+# Scoped to pull_request only, so pushes to main and the nightly schedule are
+# never cancelled mid-run.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -24,6 +27,8 @@ jobs:
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
         run: uv sync --frozen --all-groups
       - name: Lint
@@ -74,13 +79,13 @@ jobs:
       - name: i18n catalog gate (make i18n)
         run: make i18n
 
-  a11y-advisory:
-    # Advisory axe/pa11y pass over the served page — the cross-check the
+  a11y-browser:
+    # Blocking axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
-    # Non-blocking: the structural gate in `checks` is the merge gate.
+    # Graduated from advisory to merge-blocking (BL-12): the page is
+    # violation-free, so any new finding is a real regression.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -89,10 +94,9 @@ jobs:
         with:
           node-version: "20"
       - name: Run pa11y on the static page (WCAG2AA)
-        continue-on-error: true
         run: |
           printf '%s\n' '{"chromeLaunchConfig":{"args":["--no-sandbox"]}}' > /tmp/pa11y-ci.json
-          npx --yes pa11y@8 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html
+          npx --yes pa11y@9.1.1 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html
 
   smoke-evals:
     # 25-case smoke suite on every PR. AWS access comes from GitHub OIDC
@@ -111,6 +115,8 @@ jobs:
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Configure AWS credentials via OIDC
         if: ${{ vars.AWS_OIDC_ROLE_ARN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4
@@ -142,6 +148,8 @@ jobs:
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Configure AWS credentials via OIDC
         if: ${{ vars.AWS_OIDC_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4
@@ -172,6 +180,8 @@ jobs:
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Clone GovChat-Eval
         run: git clone --depth 1 https://github.com/ChelseaKR/govchat-eval.git ../govchat-eval
       - name: Validate dataset

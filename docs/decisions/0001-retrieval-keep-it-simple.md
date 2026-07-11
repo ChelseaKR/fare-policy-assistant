@@ -31,6 +31,10 @@ refusal. The refusal suite measures the combined behavior. If live runs show
 gaps, the next candidates are dense-score gating or a query-coverage check,
 and the eval deltas will decide.
 
+Superseded by ADR 0013: `min_confidence` is gone. The decline rule now reads
+normalized, corpus-size-independent signals instead of the absolute BM25
+score this section describes.
+
 ## Live-run findings (2026-06-12) and the dense-retrieval trigger
 
 The first live runs added two ranking findings:

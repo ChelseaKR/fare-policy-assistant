@@ -8,6 +8,23 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Changed
+- Replaced the absolute BM25 `min_confidence` decline threshold with
+  normalized, corpus-size-independent retrieval signals
+  (`assistant.retrieve.ConfidenceSignals`: a z-score against the full-corpus
+  score distribution and query-term coverage), calibrated by the new
+  `evals/decline_calibration.py` against a labeled should-answer/
+  should-decline question set. See `docs/decisions/0013` (FIX-07).
+- Roadmap P1 item 4, "a true rate limit": `infra/deploy.sh` now derives the
+  API Gateway stage throttle's rate and burst from the same
+  `RESERVED_CONCURRENCY` value used for the Lambda concurrency ceiling, so
+  the gateway's cross-container rate limit is documented, tuned, and cannot
+  silently drift out of sync with concurrency. `web/handler.py`'s comments
+  and docstrings now correctly describe the gateway throttle, not the
+  per-container in-memory budget, as the guard that holds across containers.
+  New test: `tests/test_deploy_rate_limit.py`. See the 2026-07-08 amendment
+  in `docs/decisions/0004-demo-deploy.md`.
+
 ### Fixed
 - Restored the `checks`, i18n, and advisory browser-accessibility jobs on pull
   requests after a CI-minutes optimization accidentally made them push-only.
@@ -57,6 +74,23 @@ rather than tied to a published tag.
 - Re-recorded the 122-item independent GovChat-Eval dataset under the validated
   v7 prompt and regenerated its report. The advisory deterministic audit still
   reports its known groundedness and multilingual gaps; they remain visible.
+- `src/assistant/gtfs.py`: GTFS(-Fares) cross-validation channel (EXP-06).
+  `make gtfs-fetch` snapshots MST's and SBMTD's live GTFS static feeds
+  (surveyed and confirmed 2026-07-08 — the other three pilot agencies did
+  not resolve to a discoverable feed this pass) and `make gtfs-check`
+  cross-checks feed fares against the prose corpus, flagging disagreement as
+  `feed_agrees: yes|no|no_feed` in `corpus/processed/gtfs_cross_check.json`.
+   Never overrides an answer; see `docs/decisions/0011-gtfs-cross-validation.md`
+   for the design, the live survey, and the real coverage gap the first run
+   found (SBMTD's Downtown-Waterfront Shuttle fare has no citable prose page).
+- Structured fare-fact layer (EXP-01, `docs/ideation/03-expansions.md`):
+  `src/assistant/facts.py` extracts a typed `FareFact` row (agency, program,
+  rider_class, price, age_min/max, source chunk) per price/age figure found
+  at ingest, committed as `corpus/processed/facts.jsonl`; a new
+  `fare_facts_consistent` deterministic check in `evals/checks.py` verifies
+  every `$`-amount and age claim in an answer against a fact row scoped to
+  the cited document, instead of relying only on the LLM judge for
+  groundedness of numbers.
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.
@@ -71,6 +105,14 @@ rather than tied to a published tag.
   committed `EVALS.md` scoreboard has not regressed against the committed
   `evals/baseline.json` (closes the gap where a locally-regenerated, gate-failing
   report could be committed without CI ever seeing the failure).
+- Agency operator console (`web/console.py`, EXP-09): a small, separately
+  authenticated surface (fails closed without `FPA_CONSOLE_TOKEN`) where an
+  agency owner can pin a corpus version, review the git-backed changelog/diff
+  (`assistant.corpus.version_history`, `make history`), configure the embed
+  widget's allowed origins, and read the latest eval report — actions that
+  previously meant editing the rider Lambda's environment variables by hand.
+  Deployed separately from the rider demo via `infra/deploy-console.sh`, with
+  an IAM role scoped to only that one rider function's configuration.
 
 ## [0.1.0] - 2026-06-30
 

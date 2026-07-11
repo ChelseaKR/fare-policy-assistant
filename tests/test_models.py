@@ -3,14 +3,18 @@
 The mock backend and dispatch need no network. The Anthropic and Bedrock
 backends are covered by injecting a fake SDK client (monkeypatching the
 `anthropic` constructors), so the adapter's response handling — joining text
-blocks and reading token usage — is verified without a paid call.
+blocks and reading token usage — is verified without a paid call. The local
+(Ollama) backend is covered the same way, via an `httpx.MockTransport` in
+place of a real HTTP call.
 """
 
 from __future__ import annotations
 
+import json
 import sys
 import types
 
+import httpx
 import pytest
 
 from assistant import models
@@ -94,6 +98,7 @@ def test_get_model_dispatches_each_provider(fake_anthropic):
     assert isinstance(
         models.get_model("bedrock", "us.anthropic.claude-haiku-4-5"), models.BedrockModel
     )
+    assert isinstance(models.get_model("local", "llama3.2:3b"), models.LocalModel)
 
 
 def test_get_model_rejects_unknown_provider():
@@ -120,3 +125,50 @@ def test_bedrock_uses_region_and_reads_usage(fake_anthropic, monkeypatch):
     out = model.complete(system="s", user="u", max_tokens=64, temperature=0.0)
     assert out.text == "Senior fare is $1.00 [doc:mst-fares]."
     assert out.input_tokens == 42 and out.output_tokens == 13
+
+
+# ── local (Ollama) backend, faked transport ──────────────────────────────────
+
+
+def test_local_posts_chat_and_reads_ollama_usage():
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "message": {
+                    "role": "assistant",
+                    "content": "Senior fare is $1.00 [doc:mst-fares].",
+                },
+                "prompt_eval_count": 40,
+                "eval_count": 11,
+            },
+        )
+
+    model = models.LocalModel("llama3.2:3b")
+    # Swap in a client wired to a fake transport instead of a real socket —
+    # same base_url, so the /api/chat path assembly is exercised for real.
+    model._client = httpx.Client(
+        base_url=model._client.base_url, transport=httpx.MockTransport(handler)
+    )
+    out = model.complete(system="s", user="u", max_tokens=64, temperature=0.0)
+
+    assert out.text == "Senior fare is $1.00 [doc:mst-fares]."
+    assert out.model == "llama3.2:3b"
+    assert out.input_tokens == 40 and out.output_tokens == 11
+    assert captured["url"].endswith("/api/chat")
+    assert captured["body"]["model"] == "llama3.2:3b"
+    assert captured["body"]["messages"] == [
+        {"role": "system", "content": "s"},
+        {"role": "user", "content": "u"},
+    ]
+    assert captured["body"]["options"] == {"temperature": 0.0, "num_predict": 64}
+
+
+def test_local_uses_fpa_ollama_host(monkeypatch):
+    monkeypatch.setenv("FPA_OLLAMA_HOST", "http://kiosk-box:11434")
+    model = models.LocalModel("llama3.2:3b")
+    assert str(model._client.base_url) == "http://kiosk-box:11434"

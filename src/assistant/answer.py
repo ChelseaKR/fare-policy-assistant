@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from assistant import config, guards, i18n
 from assistant.models import Model, get_model
-from assistant.retrieve import Retriever, ScoredChunk, default_retriever
+from assistant.retrieve import ConfidenceSignals, Retriever, ScoredChunk, default_retriever
 
 # Citations render as clickable links in the browser. Corpus URLs are
 # operator-controlled and always https, but defend in depth at the point an
@@ -111,12 +111,15 @@ def _history_block(history: list[tuple[str, str]] | None) -> str:
     )
 
 
-def _confidence_band(top_score: float, rcfg: config.RetrievalConfig) -> str:
-    """Map a top retrieval score to a coarse band. Below min_confidence the
-    pipeline declines, so an answered response is "medium" or "high"."""
-    if top_score < rcfg.min_confidence:
+def _confidence_band(signals: ConfidenceSignals, rcfg: config.RetrievalConfig) -> str:
+    """Map the calibrated retrieval signals (FIX-07 / ADR 0013) to a coarse
+    band. Below the decline thresholds the pipeline declines, so an answered
+    response is never "low"."""
+    low_z = signals.z_score < rcfg.decline_z_threshold
+    low_coverage = signals.term_coverage < rcfg.decline_coverage_floor
+    if low_z or low_coverage:
         return "low"
-    return "high" if top_score >= rcfg.confidence_high else "medium"
+    return "high" if signals.z_score >= rcfg.confidence_high_z else "medium"
 
 
 def answer_question(
@@ -140,13 +143,15 @@ def answer_question(
         )
 
     lang = guards.detect_language(question)
-    results = retriever.search(_retrieval_query(question, history))
+    rq = _retrieval_query(question, history)
+    results = retriever.search(rq)
     as_of = max((sc.chunk.fetch_date for sc in results), default="")
     top_score = results[0].score if results else 0.0
-    # Band from the retriever's own config, the same threshold confident() uses,
-    # so an answered response is never labeled "low".
-    band = _confidence_band(top_score, retriever.cfg)
-    if not retriever.confident(results):
+    # Band from the same signals confident() decides on, so an answered
+    # response is never labeled "low".
+    signals = retriever.confidence_signals(rq, results)
+    band = _confidence_band(signals, retriever.cfg)
+    if not retriever.confident(rq, results):
         from assistant.retrieve import detect_agency
 
         return AnswerResult(

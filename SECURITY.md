@@ -32,8 +32,16 @@ as the only source of truth.
   citation fields are set as text, and citation links are validated to http(s)
   at the point an answer leaves the server, so a malformed corpus URL cannot
   inject a script-on-click link.
-- **Transport and headers.** Responses set `default-src 'none'` CSP, `nosniff`,
-  `no-referrer`, and `no-store`; the main page is `x-frame-options: DENY`.
+- **Transport and headers.** Responses set a `default-src 'none'` CSP, `nosniff`,
+  `no-referrer`, and `no-store`; the main page is `x-frame-options: DENY`. The
+  HTML pages carry their CSS/JS in inline `<style>`/`<script>` blocks (no build
+  step, no CDN), so `style-src`/`script-src` allow only those blocks by their
+  `'sha256-…'` hash — not `'unsafe-inline'` — and the hashes are recomputed from
+  the served markup, so an injected inline script or a drifted policy is refused.
+  There is no residual `'unsafe-inline'`; the pages carry no inline `on*=` event
+  handlers or `style=""` attributes (which hashes cannot cover). The embed adds a
+  configurable `frame-ancestors` in place of `x-frame-options` (see
+  `web/handler.py` and `web/csp.py`).
 - **Cost and abuse bounds.** A per-container request budget, Lambda reserved
   concurrency, an API Gateway throttle, a 500-character question cap, a request
   body size cap, and an IAM policy scoped to `bedrock:InvokeModel` on the pinned
@@ -55,6 +63,16 @@ The demo defaults are safe, but a real deployment should confirm each of these.
 - **Corpus pinning.** Approve a corpus version in `corpus/CHANGELOG.md` and set
   `FPA_PINNED_CORPUS_VERSION`; the `/version` endpoint then reports whether the
   running deploy matches.
+- **Forged conversation history.** A follow-up carries prior turns the client
+  holds; by default the server accepts any well-formed turn as context (this is
+  not a trust boundary — the output guard polices every new answer — but a
+  tampered prior "answer" can still be fed back as a leading premise). To
+  restrict history to turns this server actually issued, set
+  `FPA_HISTORY_HMAC_KEY`: `/api/ask` then returns an HMAC `sig` over each answer,
+  the client echoes it back with the turn, and the handler drops any turn whose
+  signature does not verify. Off by default for the demo; the `conversation`
+  eval suite's `conv-forged-*` cases assert the assistant re-grounds even when
+  history is fabricated.
 
 ## Known accepted risks
 
@@ -62,7 +80,9 @@ The demo defaults are safe, but a real deployment should confirm each of these.
   turns supplied by the client. This is context, not a trust boundary: the output
   guard polices every new answer regardless of history, and there is no user
   state to escalate against. A deployment that wants to remove the vector can
-  echo only prior questions, not client-provided answer text.
+  echo only prior questions, not client-provided answer text, or set
+  `FPA_HISTORY_HMAC_KEY` to restrict history to server-signed turns (see the
+  deployment hardening checklist above).
 - **The corpus is trusted input.** Manifest URLs and snapshots are operator
   controlled and committed. Document ingestion (HTML and PDF) is not hardened
   against a hostile corpus; do not point the manifest at untrusted sources.

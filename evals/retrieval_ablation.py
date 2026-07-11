@@ -52,13 +52,23 @@ def main() -> None:
     by_lang = {
         "en": [c for c in cases if c.get("language", "en") == "en"],
         "es": [c for c in cases if c.get("language") == "es"],
+        "tl": [c for c in cases if c.get("language") == "tl"],
     }
 
     bm25 = Retriever(chunks, config.RetrievalConfig(use_dense=False))
     hybrid = Retriever(chunks, config.RetrievalConfig(use_dense=True))
 
     print(f"{'segment':<10} {'n':>4} {'BM25':>8} {'hybrid':>8} {'delta':>7}")
-    for label, subset in [("all", cases), ("english", by_lang["en"]), ("spanish", by_lang["es"])]:
+    for label, subset in [
+        ("all", cases),
+        ("english", by_lang["en"]),
+        ("spanish", by_lang["es"]),
+        # Stretch suite (evals/suites/stretch_tagalog.yaml, docs/ROADMAP.md
+        # P3-3): no Tagalog source document exists, so this recall number is
+        # entirely a test of the query-side lexicon in
+        # assistant.retrieve._TL_EN_LEXICON, not of a translated page.
+        ("tagalog", by_lang["tl"]),
+    ]:
         if not subset:
             continue
         b_hits, n = _recall(bm25, subset)

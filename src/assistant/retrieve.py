@@ -9,6 +9,7 @@ When a question names a known agency, retrieval is filtered to that agency.
 from __future__ import annotations
 
 import re
+import statistics
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -35,6 +36,34 @@ def __getattr__(name: str) -> dict[str, str]:
 class ScoredChunk:
     chunk: Chunk
     score: float
+
+
+@dataclass
+class ConfidenceSignals:
+    """Normalized, corpus-size-independent decline signals (FIX-07 / ADR
+    0009), replacing the absolute BM25 constant `min_confidence` used to gate
+    on. Absolute BM25 scores drift with the corpus (every new agency changes
+    IDF for every existing chunk); these three do not, because each is a
+    ratio or a distributional position rather than a raw score.
+
+    - z_score: how far the top result's score sits above the score
+      distribution of the *entire corpus* for this same query. As the corpus
+      grows, both the top score and the background distribution move
+      together, so the top result's position in that distribution stays
+      stable even though the raw numbers do not.
+    - margin: the normalized gap between the top and second-ranked
+      candidates actually returned. A genuinely on-topic question usually has
+      one clearly-best chunk; an off-topic one has several similarly weak
+      matches with no real winner.
+    - term_coverage: the fraction of the (lexicon-expanded) query terms that
+      literally appear in the top chunk. Catches the case a bare score
+      z-score can miss: a short, low-IDF query that happens to land on a
+      chunk sharing almost none of its actual words.
+    """
+
+    z_score: float
+    margin: float
+    term_coverage: float
 
 
 def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> list[str]:
@@ -151,6 +180,78 @@ _TL_EN_LEXICON: dict[str, str] = {
 }
 
 
+# "Close the loop" retrieval (persona research R1-2). A rider who asks about a
+# reduced fare almost always needs the *next step* — where to apply for the
+# discount ID and what it costs — even when they don't spell that out. These two
+# patterns let search() append the agency's application/ID-card passage when the
+# top-ranked passages are the fare/eligibility tables and the where-to-apply
+# passage fell out of top_k.
+#
+# The query trigger is the reduced-fare vocabulary riders use; the companion
+# signal is keyed on the real section titles and phrasings in the corpus
+# (grep of corpus/processed/chunks.jsonl): MST "Courtesy Cards", SBMTD
+# "Mobility Pass: Reduced Fare and Medicare ID Cards", Yolobus reduced-fare-id
+# ("obtain a reduced fare photo ID by visiting …").
+_REDUCED_FARE_QUERY = re.compile(
+    r"\b(senior|seniors|disabled|disabilit\w*|medicare|discount|reduced|reduced[- ]fare"
+    r"|youth|id card|photo id|courtesy card|mobility pass|apply|application|obtain)\b",
+    re.I,
+)
+_APPLICATION_PASSAGE = re.compile(
+    r"obtain (an?|the)? ?(application|reduced[- ]fare|photo id|mtd photo id|courtesy card)"
+    r"|download an application"
+    r"|application completed"
+    r"|reduced[- ]fare (mtd )?photo id card"
+    r"|reduced[- ]fare photo id"
+    r"|courtesy card"
+    r"|mobility pass"
+    r"|obtenga (una? )?solicitud"
+    r"|tarjetas? de cortes[ií]a"
+    r"|solicitud en persona",
+    re.I,
+)
+
+
+def _is_reduced_fare_query(question: str) -> bool:
+    return bool(_REDUCED_FARE_QUERY.search(question))
+
+
+def _is_application_passage(chunk: Chunk) -> bool:
+    """A passage that tells the rider how to apply for / obtain a reduced-fare
+    program or ID card (where, cost, hours) — the 'close the loop' next step."""
+    return bool(_APPLICATION_PASSAGE.search(f"{chunk.section} {chunk.text}"))
+
+
+_RIDER_CLASS_PATTERNS = {
+    "veteran": re.compile(r"\b(veteran\w*|veteran[oa]s?)\b", re.I),
+    "senior": re.compile(
+        r"\b(senior\w*|adulto mayor|personas mayores|nakatatanda|6[25]\s*(años|years)?)\b",
+        re.I,
+    ),
+    "disabled": re.compile(r"\b(disab\w*|discapac\w*|wheelchair|kapansanan)\b", re.I),
+}
+
+
+def _rider_classes(text: str) -> set[str]:
+    return {name for name, pattern in _RIDER_CLASS_PATTERNS.items() if pattern.search(text)}
+
+
+def _application_matches_question(question: str, chunk: Chunk) -> bool:
+    """Do not attach one rider class's application process to another.
+
+    Several agency pages reuse labels such as "Courtesy Card" while publishing
+    locations or proof rules only for disabled riders. Appending that chunk to a
+    senior or veteran query encouraged the answer model to extend those rules
+    across classes. A generic application passage still matches every query;
+    only an explicitly class-bound, disjoint passage is excluded.
+    """
+    query_classes = _rider_classes(question)
+    if not query_classes:
+        return True
+    passage_classes = _rider_classes(f"{chunk.section} {chunk.text}")
+    return not passage_classes or bool(query_classes & passage_classes)
+
+
 def _expand_query(tokens: list[str]) -> list[str]:
     expanded = list(tokens)
     for tok in tokens:
@@ -184,10 +285,13 @@ class Retriever:
         )
         return model, embeddings
 
-    def search(self, question: str, agency: str | None = None) -> list[ScoredChunk]:
+    def _rank_all(self, question: str) -> list[ScoredChunk]:
+        """Every chunk in the corpus, scored against `question` and sorted
+        best-first — unfiltered by agency. Shared by `search()` (which then
+        filters/truncates it) and `confidence_signals()` (which needs the
+        full-corpus score distribution as background, not just the top-k)."""
         from assistant.guards import detect_language
 
-        agencies = [agency] if agency else detect_agencies(question)
         q_lang = detect_language(question)
         scores = self._bm25.get_scores(_expand_query(_tokenize(question)))
         if self._dense is not None:
@@ -206,15 +310,19 @@ class Retriever:
             float(s) * (self.cfg.language_boost if c.language == q_lang else 1.0)
             for c, s in zip(self.chunks, scores, strict=True)
         )
-        ranked = sorted(
+        return sorted(
             (ScoredChunk(chunk=c, score=s) for c, s in zip(self.chunks, boosted, strict=True)),
             key=lambda sc: sc.score,
             reverse=True,
         )
+
+    def search(self, question: str, agency: str | None = None) -> list[ScoredChunk]:
+        agencies = [agency] if agency else detect_agencies(question)
+        ranked = self._rank_all(question)
         if len(agencies) == 1:
-            ranked = [sc for sc in ranked if sc.chunk.agency == agencies[0]]
-            return ranked[: self.cfg.top_k]
-        if agencies:
+            scoped = [sc for sc in ranked if sc.chunk.agency == agencies[0]]
+            results = scoped[: self.cfg.top_k]
+        elif agencies:
             # A question comparing agencies needs passages from each; a plain
             # union lets one agency's stronger lexical matches take every slot
             # (eval cases edge-004, edge-011). Give each agency an equal quota.
@@ -222,12 +330,86 @@ class Retriever:
             picked: list[ScoredChunk] = []
             for ag in agencies:
                 picked.extend([sc for sc in ranked if sc.chunk.agency == ag][:quota])
-            return sorted(picked, key=lambda sc: sc.score, reverse=True)
-        return ranked[: self.cfg.top_k]
+            results = sorted(picked, key=lambda sc: sc.score, reverse=True)
+        else:
+            results = ranked[: self.cfg.top_k]
+        # Remove application instructions explicitly scoped to a different
+        # rider class before the model sees them; ordinary policy passages stay.
+        results = [
+            sc
+            for sc in results
+            if not _is_application_passage(sc.chunk)
+            or _application_matches_question(question, sc.chunk)
+        ]
+        return self._close_the_loop(question, agencies, results, ranked)
 
-    def confident(self, results: list[ScoredChunk]) -> bool:
-        """Low confidence → the assistant declines and redirects instead of guessing."""
-        return bool(results) and results[0].score >= self.cfg.min_confidence
+    def _close_the_loop(
+        self,
+        question: str,
+        agencies: list[str],
+        results: list[ScoredChunk],
+        ranked: list[ScoredChunk],
+    ) -> list[ScoredChunk]:
+        """R1-2: on a reduced-fare/eligibility query, make sure the answer prompt
+        also receives the agency's where-to-apply passage. If the fare and
+        eligibility passages already won the top slots but the application/ID-card
+        passage fell out of top_k, append the best-ranked one per relevant agency
+        so the answer can state where to apply, the ID cost, and office hours."""
+        if not _is_reduced_fare_query(question):
+            return results
+        targets = list(agencies)
+        if not targets and results:
+            targets = [results[0].chunk.agency]
+        present = {sc.chunk.chunk_id for sc in results}
+        additions: list[ScoredChunk] = []
+        for ag in targets:
+            if any(_is_application_passage(sc.chunk) for sc in results if sc.chunk.agency == ag):
+                continue  # the where-to-apply passage is already in hand
+            for sc in ranked:
+                if (
+                    sc.chunk.agency == ag
+                    and sc.chunk.chunk_id not in present
+                    and _is_application_passage(sc.chunk)
+                    and _application_matches_question(question, sc.chunk)
+                ):
+                    additions.append(sc)
+                    break
+        return results + additions
+
+    def confidence_signals(self, question: str, results: list[ScoredChunk]) -> ConfidenceSignals:
+        """The three normalized signals `confident()` decides on. Exposed
+        separately so evals/decline_calibration.py can sweep thresholds
+        against them without re-deciding, and so `answer.py` can derive the
+        rider-facing confidence band from the same numbers `confident()`
+        used (never a second, disagreeing computation)."""
+        if not results:
+            return ConfidenceSignals(z_score=0.0, margin=0.0, term_coverage=0.0)
+        background = [sc.score for sc in self._rank_all(question)]
+        top = results[0].score
+        mean = statistics.fmean(background)
+        stdev = statistics.pstdev(background) or 1e-9
+        z = (top - mean) / stdev
+        second = results[1].score if len(results) > 1 else 0.0
+        margin = (top - second) / (top + 1e-9)
+        q_tokens = set(_expand_query(_tokenize(question)))
+        top_chunk = results[0].chunk
+        chunk_tokens = set(_tokenize(f"{top_chunk.section} {top_chunk.text}"))
+        coverage = (len(q_tokens & chunk_tokens) / len(q_tokens)) if q_tokens else 0.0
+        return ConfidenceSignals(z_score=z, margin=margin, term_coverage=coverage)
+
+    def confident(self, question: str, results: list[ScoredChunk]) -> bool:
+        """Low confidence → the assistant declines and redirects instead of
+        guessing (FIX-07 / ADR 0013). Calibrated against a labeled
+        should-answer/should-decline question set by
+        evals/decline_calibration.py rather than an absolute BM25 constant,
+        which silently re-tuned itself every time the corpus grew."""
+        if not results:
+            return False
+        sig = self.confidence_signals(question, results)
+        return (
+            sig.z_score >= self.cfg.decline_z_threshold
+            and sig.term_coverage >= self.cfg.decline_coverage_floor
+        )
 
 
 @lru_cache(maxsize=4)

@@ -45,8 +45,25 @@ def _passages_block(result: AnswerResult) -> str:
     )
 
 
-def judge_groundedness(model: Model, result: AnswerResult, cfg: config.Config) -> JudgeVerdict:
+def _history_block(history: list[tuple[str, str]] | None) -> str:
+    """Render prior (user, assistant) turns for the judge. Mirrors the format
+    src/assistant/answer.py::_history_block feeds the answer model. Empty string
+    when there is no history, so single-turn cases are byte-identical to before."""
+    if not history:
+        return ""
+    turns = [f"Rider: {user_q}\nAssistant answered: {answer_a}" for user_q, answer_a in history]
+    joined = "\n\n".join(turns)
+    return f"Prior conversation turns:\n{joined}\n\n"
+
+
+def judge_groundedness(
+    model: Model,
+    result: AnswerResult,
+    cfg: config.Config,
+    history: list[tuple[str, str]] | None = None,
+) -> JudgeVerdict:
     user = (
+        f"{_history_block(history)}"
         f"Question: {result.question}\n\n"
         f"Retrieved passages:\n{_passages_block(result)}\n\n"
         f"Assistant answer:\n{result.answer}"
@@ -70,11 +87,19 @@ def judge_groundedness(model: Model, result: AnswerResult, cfg: config.Config) -
 
 
 def judge_helpfulness(
-    model: Model, result: AnswerResult, expected_behavior: str, cfg: config.Config
+    model: Model,
+    result: AnswerResult,
+    expected_behavior: str,
+    cfg: config.Config,
+    history: list[tuple[str, str]] | None = None,
+    rationale: str = "",
 ) -> JudgeVerdict:
+    rationale_line = f"Case rationale: {rationale}\n\n" if rationale else ""
     user = (
+        f"{_history_block(history)}"
         f"Question: {result.question}\n\n"
         f"Expected behavior: {expected_behavior}\n\n"
+        f"{rationale_line}"
         f"Assistant answer:\n{result.answer}"
     )
     completion = model.complete(

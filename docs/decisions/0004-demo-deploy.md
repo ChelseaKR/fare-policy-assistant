@@ -1,7 +1,8 @@
 # 0004 — Demo deploy: one Lambda behind a Function URL
 
-Date: 2026-06-12. Status: amended 2026-06-12 (see bottom): the public
-endpoint is an HTTP API, not a Function URL.
+Date: 2026-06-12. Status: amended 2026-06-12 (the public endpoint is an HTTP
+API, not a Function URL) and 2026-07-08 (the gateway throttle is now the
+documented, tuned, tested cross-container rate limit; see bottom).
 
 ## Decision
 
@@ -28,12 +29,18 @@ special-cased for Lambda except the handler module itself.
 The URL is public and unauthenticated, so spend is bounded by layers rather
 than identity:
 
-1. Reserved concurrency 2 on the function. This is the hard ceiling; Lambda
-   throttles everything beyond it before any code runs.
-2. A per-container budget of 8 answer requests per minute in the handler
-   (page loads are not counted). With the concurrency cap this bounds
-   Bedrock calls to roughly 16 per minute no matter who is asking.
-3. Questions are capped at 500 characters; answers at the pinned 1024
+1. An API Gateway stage throttle (rate and burst derived from the
+   concurrency figure below in `infra/deploy.sh`). This is the true
+   cross-container rate limit: AWS enforces it before any container runs, so
+   it holds identically across cold starts and concurrent containers. See
+   the 2026-07-08 amendment below.
+2. Reserved concurrency 2 on the function. This is the hard ceiling on
+   parallelism; Lambda throttles everything beyond it before any code runs.
+3. A per-container budget of 8 answer requests per minute in the handler
+   (page loads are not counted), as defense in depth within a single warm
+   container. It is not itself cross-container: it resets on cold start and
+   is invisible to sibling containers, which is why it is not layer 1.
+4. Questions are capped at 500 characters; answers at the pinned 1024
    max_tokens, temperature 0.
 
 Worst case sustained abuse is therefore a few dollars per hour of Haiku
@@ -88,3 +95,56 @@ What changed and what did not:
 The lesson recorded for adapters of this harness: in managed AWS accounts,
 prefer the HTTP API path from the start; auth-NONE Function URLs are
 commonly blocked by organization policy.
+
+## Amendment (2026-07-08): a true cross-container rate limit (roadmap P1 item 4)
+
+The June amendment above added a gateway throttle mostly as a side effect of
+switching to an HTTP API. `docs/ROADMAP.md` kept item 4 open afterward
+because that throttle was never tuned against a documented figure, never
+named anywhere as *the* cross-container ceiling, and had no test — someone
+editing `infra/deploy.sh` could delete or weaken it without anything
+noticing. Meanwhile the per-container budget in `web/handler.py` (layer 3
+above) was written about, and read, as if it were the real limit, when it is
+not: it lives in one container's memory, so it resets on cold start and a
+burst spread across several warm containers never trips it.
+
+What changed:
+
+- `infra/deploy.sh` now declares `RESERVED_CONCURRENCY=2` once and derives
+  both the Lambda concurrency setting and the gateway throttle's
+  `ThrottlingRateLimit` / `ThrottlingBurstLimit` from it (rate equals
+  concurrency; burst is `concurrency * 2 + 1`), so the two can no longer
+  drift out of sync the way two independent hardcoded numbers could.
+- `tests/test_deploy_rate_limit.py` parses the script and fails if the
+  throttle is removed, hardcoded back to independent numbers, or the
+  rate/burst relationship stops being sane (burst below rate).
+- `web/handler.py`'s module docstring, the `REQUESTS_PER_MINUTE` comment, and
+  `_over_budget`'s docstring now say plainly that the gateway throttle is the
+  cross-container guarantee and the in-process budget is a backstop, not the
+  other way around. No behavior in the handler changed.
+- This doc's "Abuse and cost guards" list above is reordered so the gateway
+  throttle is layer 1.
+
+What did not change, and why: this still does not add per-caller (even
+coarse-signal) tracking in a shared store. The roadmap item's second option
+("a token-bucket keyed on a coarse, non-PII signal") was considered again —
+concretely, a DynamoDB item keyed on the caller's IP truncated to its /24
+network, with a short TTL so nothing outlives the window — and rejected for
+the same reason the original "Rejected alternatives" section rejected
+per-IP rate limiting: it is a shared datastore that persists a
+request-derived signal, however coarse, which works against the
+no-persistence rule this repo holds to elsewhere (CLAUDE.md, ADR privacy
+sections). The gateway throttle achieves the roadmap item's actual "Done"
+criterion — a documented, tested request ceiling that holds across
+containers without persisting anything identifying — more strictly than a
+DIY token bucket would: we never see, store, or key on any signal at all: no
+IP, truncated or otherwise. AWS enforces the ceiling internally and reports
+back only "throttled" or "not."
+
+Trade-off accepted: the gateway throttle is a single account-wide ceiling,
+not per-caller, so one abusive source can still consume the whole budget for
+everyone during its window. That trade-off already existed before this
+change (the per-container budget was likewise global, not per-caller) and is
+judged acceptable at this project's traffic and stakes: reserved concurrency
+still caps worst-case spend, and a spend or error spike still pages someone
+per the P1 item 3 observability work.

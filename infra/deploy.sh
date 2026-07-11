@@ -16,6 +16,25 @@ BUILD="$ROOT/infra/build"
 BUNDLE="$BUILD/bundle"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 
+# Hard ceiling on parallel Bedrock spend: at most this many containers run at
+# once, no matter how many requests arrive. Every other rate figure below is
+# derived from it so the two never drift out of sync (see ADR 0004 amendment,
+# "a true cross-container rate limit" / roadmap P1 item 4).
+RESERVED_CONCURRENCY=2
+# API Gateway stage throttle, tuned to that ceiling: sustained rate equals the
+# concurrency ceiling (a container answers a request in a few seconds, so
+# admitting more than RESERVED_CONCURRENCY requests/sec would just queue and
+# eventually 429/timeout at the Lambda layer instead of the gateway layer);
+# burst allows one short spike above steady-state (e.g. two riders loading the
+# page and asking at the same moment) to queue briefly rather than bounce.
+# This is the actual cross-container ceiling: it is enforced by API Gateway
+# before any container runs, so it holds identically whether the request lands
+# on a warm container, a cold start, or a container that no longer exists by
+# the time the next request arrives -- unlike the handler's in-memory budget
+# (web/handler.py), which resets per container and is not shared across them.
+THROTTLE_RATE_LIMIT="$RESERVED_CONCURRENCY"
+THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
+
 # ── bundle ───────────────────────────────────────────────────────────────────
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
@@ -88,9 +107,11 @@ fi
 aws lambda wait function-updated --function-name "$FN" --region "$REGION"
 
 # Hard ceiling on parallel Bedrock spend; the handler adds a per-container
-# request budget on top (web/handler.py).
+# request budget on top (web/handler.py) as defense in depth within a warm
+# container, but the true cross-container ceiling is the gateway throttle set
+# below, derived from this same RESERVED_CONCURRENCY value.
 aws lambda put-function-concurrency --function-name "$FN" --region "$REGION" \
-  --reserved-concurrent-executions 2 >/dev/null
+  --reserved-concurrent-executions "$RESERVED_CONCURRENCY" >/dev/null
 
 # Public endpoint: an HTTP API in front of the function. The first deploy
 # used a Function URL with auth NONE; this account denies anonymous
@@ -116,10 +137,13 @@ aws lambda add-permission --function-name "$FN" --region "$REGION" \
   --principal apigateway.amazonaws.com \
   --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT:$API_ID/*" \
   >/dev/null 2>&1 || true
-# Gateway-level throttle, ahead of the handler's own request budget.
+# Gateway-level throttle: the true cross-container rate limit (roadmap P1
+# item 4), ahead of the handler's own per-container request budget. Values are
+# derived from RESERVED_CONCURRENCY above, not restated here, so a future
+# change to one cannot silently leave the other untuned.
 aws apigatewayv2 update-stage --region "$REGION" --api-id "$API_ID" \
   --stage-name '$default' \
-  --default-route-settings '{"ThrottlingRateLimit": 2, "ThrottlingBurstLimit": 5}' \
+  --default-route-settings "{\"ThrottlingRateLimit\": $THROTTLE_RATE_LIMIT, \"ThrottlingBurstLimit\": $THROTTLE_BURST_LIMIT}" \
   >/dev/null
 
 # Short log retention: logs hold counts and timings, never rider questions.
@@ -177,9 +201,69 @@ aws cloudwatch put-metric-alarm --region "$REGION" \
 # demo traffic and trips before spend runs away (concurrency caps it anyway).
 _alarm bedrock-surge "$FN" BedrockAnswerCalls Sum 300 500
 
+# ── dashboard: per-day cost proxy, live traffic, and alarm status ────────────
+# put-dashboard creates or overwrites by name, so this is idempotent. The
+# BedrockAnswerCalls widget uses a 1-day period so per-day call volume (the
+# cost proxy) is legible; a second widget shows 5-minute traffic. The alarm
+# widget surfaces the five alarms above without leaving the dashboard.
+_alarm_arn() { echo "arn:aws:cloudwatch:$REGION:$ACCOUNT:alarm:$FN-$1"; }
+DASHBOARD_BODY=$(cat <<EOF
+{
+  "widgets": [
+    {
+      "type": "metric", "x": 0, "y": 0, "width": 12, "height": 6,
+      "properties": {
+        "title": "Bedrock answer calls per day (cost proxy)",
+        "region": "$REGION", "view": "timeSeries", "stat": "Sum", "period": 86400,
+        "metrics": [["$FN", "BedrockAnswerCalls"]]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 0, "width": 12, "height": 6,
+      "properties": {
+        "title": "Traffic (5-minute)",
+        "region": "$REGION", "view": "timeSeries", "stat": "Sum", "period": 300,
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "$FN"],
+          ["AWS/Lambda", "Errors", "FunctionName", "$FN"],
+          ["AWS/Lambda", "Throttles", "FunctionName", "$FN"],
+          ["$FN", "HandlerErrors"],
+          ["$FN", "FeedbackDown"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Duration p99 (ms)",
+        "region": "$REGION", "view": "timeSeries", "stat": "p99", "period": 300,
+        "metrics": [["AWS/Lambda", "Duration", "FunctionName", "$FN"]]
+      }
+    },
+    {
+      "type": "alarm", "x": 12, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Alarms",
+        "alarms": [
+          "$(_alarm_arn handler-errors)",
+          "$(_alarm_arn lambda-errors)",
+          "$(_alarm_arn lambda-throttles)",
+          "$(_alarm_arn latency-p99)",
+          "$(_alarm_arn bedrock-surge)"
+        ]
+      }
+    }
+  ]
+}
+EOF
+)
+aws cloudwatch put-dashboard --region "$REGION" --dashboard-name "$FN" \
+  --dashboard-body "$DASHBOARD_BODY" >/dev/null
+
 # An account-level AWS Budget is the spend backstop beneath these; it needs
 # billing permissions this role may lack, so it stays a one-time manual step:
 #   aws budgets create-budget --account-id <id> --budget '{...}'  (see infra/README.md)
 
 echo "deployed: https://$API_ID.execute-api.$REGION.amazonaws.com/"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
+echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

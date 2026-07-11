@@ -36,6 +36,7 @@ its history on every pass and pays for it every pass.
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import math
 import os
@@ -49,6 +50,7 @@ from pathlib import Path
 import yaml
 
 from assistant import config, corpus
+from assistant import facts as facts_module
 from assistant.answer import AnswerResult, answer_question
 from assistant.ingest import load_chunks
 from assistant.models import Model, get_model
@@ -59,12 +61,32 @@ from evals.checks import run_checks
 from evals.stats import wilson_interval
 
 
+def _flatten_pairs(data: dict) -> list[dict]:
+    """A sensitivity suite is written as `pairs:` of minimal-pair `variants:`.
+
+    Flatten each variant into an ordinary case dict carrying a `pair_id` (the
+    parent pair's id) and the pair's `boundary`, so every downstream consumer —
+    validation, checks.py grading, credential gating, scoring — treats it as a
+    normal case. The variants are re-grouped by `pair_id` only for the
+    pair-level verdict (`pair_verdicts`), never for scoring.
+    """
+    cases = []
+    for pair in data["pairs"]:
+        for variant in pair["variants"]:
+            variant["pair_id"] = pair["id"]
+            variant.setdefault("boundary", pair.get("boundary"))
+            cases.append(variant)
+    return cases
+
+
 def load_suites(only: str | None = None) -> list[dict]:
     suites = []
     for path in sorted(config.EVAL_SUITES_DIR.glob("*.yaml")):
         if only and path.stem != only:
             continue
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if "pairs" in data and "cases" not in data:
+            data["cases"] = _flatten_pairs(data)
         for case in data["cases"]:
             case["suite"] = path.stem
         suites.append(data)
@@ -75,7 +97,27 @@ def validate_cases(suites: list[dict]) -> None:
     seen: set[str] = set()
     required = {"id", "expected_behavior", "rationale"}
     for suite in suites:
-        for case in suite["cases"]:
+        # Sensitivity suites carry minimal pairs that are flattened into cases.
+        for pair in suite.get("pairs", []):
+            if not pair.get("id"):
+                raise SystemExit("sensitivity pair missing `id`")
+            if not pair.get("boundary"):
+                raise SystemExit(f"pair {pair['id']}: missing `boundary`")
+            if len(pair.get("variants", [])) < 2:
+                raise SystemExit(f"pair {pair['id']}: needs at least two variants")
+        cases = suite.get("cases")
+        if cases is None and "pairs" in suite:
+            cases = _flatten_pairs(suite)
+        for case in cases or []:
+            # Auto-drafted skeletons (assistant.scaffold_agency) carry
+            # `draft: true`. They have TODO questions and empty required_facts,
+            # so they must never run or land in results: a human fills the facts
+            # and removes the flag first. Refuse the whole run if any survive.
+            if case.get("draft"):
+                raise SystemExit(
+                    f"case {case.get('id', '?')}: `draft: true` — fill it in and "
+                    "remove the draft flag before running (see the scaffold checklist)"
+                )
             missing = required - case.keys()
             if missing:
                 raise SystemExit(f"case {case.get('id', '?')}: missing fields {sorted(missing)}")
@@ -85,11 +127,51 @@ def validate_cases(suites: list[dict]) -> None:
                 raise SystemExit(f"case {case['id']}: needs `question` or `turns`")
             if case.get("turns") and len(case["turns"]) < 2:
                 raise SystemExit(f"case {case['id']}: `turns` needs at least two questions")
+            # `history`: a literal list of {q, a} pairs injected directly as the
+            # follow-up's context (forged-history cases). It combines with a
+            # single-turn `question` and is mutually exclusive with `turns`.
+            if case.get("history") is not None:
+                history = case["history"]
+                if not isinstance(history, list) or not history:
+                    raise SystemExit(f"case {case['id']}: `history` must be a non-empty list")
+                for pair in history:
+                    if not (
+                        isinstance(pair, dict)
+                        and isinstance(pair.get("q"), str)
+                        and isinstance(pair.get("a"), str)
+                    ):
+                        raise SystemExit(
+                            f"case {case['id']}: each `history` entry needs string `q` and `a`"
+                        )
+                if case.get("turns"):
+                    raise SystemExit(
+                        f"case {case['id']}: `history` combines with `question`, not `turns`"
+                    )
+                if "question" not in case:
+                    raise SystemExit(f"case {case['id']}: `history` requires a `question`")
             if case["id"] in seen:
                 raise SystemExit(f"duplicate case id: {case['id']}")
             seen.add(case["id"])
             if case["expected_behavior"] not in ("answer", "partial", "refuse_redirect"):
                 raise SystemExit(f"case {case['id']}: bad expected_behavior")
+
+
+def pair_verdicts(records: list[dict]) -> dict[str, bool]:
+    """Group scored records by `pair_id` and return {pair_id: passed}.
+
+    A minimal-pair boundary case only counts as distinguished if *every*
+    variant passed — the per-variant required_facts / forbidden_content prove
+    the answer actually changed (or held) across the boundary. One variant
+    passing on boilerplate is not evidence of discrimination, so a mixed
+    pass/fail pair reports failed.
+    """
+    grouped: dict[str, list[bool]] = {}
+    for r in records:
+        pid = r.get("pair_id")
+        if not pid:
+            continue
+        grouped.setdefault(pid, []).append(bool(r["passed"]))
+    return {pid: all(v) for pid, v in grouped.items()}
 
 
 def _have_credentials(provider: str) -> bool:
@@ -109,6 +191,18 @@ def _have_credentials(provider: str) -> bool:
             or (Path.home() / ".aws" / "config").exists()
             or (Path.home() / ".aws" / "credentials").exists()
         )
+    if provider == "local":
+        # No credentials to check — the analogous question is "is the Ollama
+        # server up." A quick, short-timeout probe; any failure (not
+        # running, wrong FPA_OLLAMA_HOST) reads as "not available" so the
+        # normal --offline fallback below applies instead of hanging.
+        import httpx
+
+        host = os.environ.get("FPA_OLLAMA_HOST", "http://localhost:11434")
+        try:
+            return httpx.get(f"{host}/api/version", timeout=2.0).status_code == 200
+        except httpx.HTTPError:
+            return False
     return provider == "mock"
 
 
@@ -157,12 +251,14 @@ def _run_case(
     retriever: Retriever,
     cfg: config.Config,
     corpus_doc_ids: set[str],
+    facts_by_doc: dict[str, list] | None,
     run_judges: bool,
 ) -> tuple[dict, dict[str, list[int]]]:
     """Execute one case (including its multi-turn history replay, sequentially
     within this call so turns are never interleaved with another case's) and
     return its trace record plus the token usage it spent."""
     usage = {"answer": [0, 0], "judge": [0, 0]}
+    judge_history: list[tuple[str, str]] | None = None
     if case.get("turns"):
         # Multi-turn: replay earlier turns to build history, then the final
         # turn is the one under test. Earlier turns' tokens count.
@@ -178,16 +274,33 @@ def _run_case(
         result: AnswerResult = answer_question(
             question, history=history or None, model=answer_model, retriever=retriever, cfg=cfg
         )
+        judge_history = history
+    elif case.get("history"):
+        injected = [(h["q"], h["a"]) for h in case["history"]]
+        question = case["question"]
+        result = answer_question(
+            question, history=injected, model=answer_model, retriever=retriever, cfg=cfg
+        )
+        judge_history = injected
     else:
         question = case["question"]
         result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
-    checks = run_checks(case, result, corpus_doc_ids)
+    checks = run_checks(case, result, corpus_doc_ids, facts_by_doc)
     verdicts = []
     if run_judges:
         if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
-            verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
+            verdicts.append(
+                judges.judge_groundedness(judge_model, result, cfg, history=judge_history)
+            )
         verdicts.append(
-            judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
+            judges.judge_helpfulness(
+                judge_model,
+                result,
+                case["expected_behavior"],
+                cfg,
+                history=judge_history,
+                rationale=case["rationale"],
+            )
         )
     passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
     usage["answer"][0] += result.input_tokens
@@ -198,11 +311,13 @@ def _run_case(
     record = {
         "case_id": case["id"],
         "suite": case["suite"],
+        "pair_id": case.get("pair_id"),
         "mirror_of": case.get("mirror_of"),
         "language": case.get("language", "en"),
         "expected_behavior": case["expected_behavior"],
         "question": question,
         "turns": case.get("turns"),
+        "history": case.get("history"),
         "rationale": case["rationale"],
         "answer": result.answer,
         "kind": result.kind,
@@ -286,6 +401,9 @@ def run(
     chunks = load_chunks()
     corpus_doc_ids = {c.doc_id for c in chunks}
     corpus_version = corpus.corpus_version(chunks)
+    facts_by_doc: dict[str, list] = collections.defaultdict(list)
+    for fact in facts_module.load_facts(config.FACTS_PATH):
+        facts_by_doc[fact.doc_id].append(fact)
     retriever = Retriever(chunks, cfg.retrieval)
     run_judges = have_key and cfg.models.provider != "mock"
 
@@ -383,6 +501,7 @@ def run(
                 retriever=retriever,
                 cfg=cfg,
                 corpus_doc_ids=corpus_doc_ids,
+                facts_by_doc=facts_by_doc,
                 run_judges=run_judges,
             )
             for kind in ("answer", "judge"):
@@ -486,6 +605,15 @@ def run(
     }
     if replicates > 1:
         summary["replicates"] = replicates
+
+    # Counterfactual sensitivity: fold the pair-level verdict into the
+    # sensitivity suite's summary. A pair is distinguished only if every one of
+    # its variants passed (see `pair_verdicts`).
+    verdicts = pair_verdicts(records)
+    if verdicts and "sensitivity" in summary["suites"]:
+        summary["suites"]["sensitivity"]["pairs_passed"] = sum(verdicts.values())
+        summary["suites"]["sensitivity"]["pairs_total"] = len(verdicts)
+
     (run_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )

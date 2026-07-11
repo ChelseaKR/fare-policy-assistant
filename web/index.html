@@ -50,11 +50,12 @@
     min-height: 4.5rem;
     font: inherit;
     padding: 0.6rem;
-    border: 1px solid var(--line);
+    border: 1px solid #767676;
     border-radius: 6px;
-    background: #fff;
-    color: var(--ink);
+    background: #ffffff;
+    color: #1a1f24;
   }
+  .field-help { color: var(--muted); margin: 0.35rem 0 0; font-size: 0.9rem; }
   textarea:focus-visible, button:focus-visible, a:focus-visible {
     outline: 3px solid #1d4ed8;
     outline-offset: 2px;
@@ -133,6 +134,7 @@
     color: var(--muted);
   }
   footer a, .sources a { color: #1d4ed8; }
+  .noscript-note { max-width: 44rem; margin: 1rem auto; padding: 0 1rem; }
   @media (max-width: 480px) {
     h1 { font-size: 1.3rem; }
     .row { flex-direction: column; align-items: stretch; }
@@ -180,14 +182,14 @@
     <h2 id="ask">Ask a question</h2>
     <form id="form">
       <label for="q">Your question</label>
-      <textarea id="q" name="question" maxlength="500" required
-        placeholder="Example: What proof do I need for the veteran fare on MST?"></textarea>
+      <textarea id="q" name="question" maxlength="500" required aria-describedby="q-help"></textarea>
+      <p class="field-help" id="q-help">Example: What proof do I need for the veteran fare on MST?</p>
       <div class="row">
         <button type="submit" class="primary" id="submit">Ask</button>
         <span class="asof">Answers cite their sources.</span>
       </div>
     </form>
-    <div class="examples" aria-label="Example questions">
+    <div class="examples" role="group" aria-label="Example questions">
       <button type="button" data-q="Am I eligible for a senior discount on SBMTD?">Senior discount, SBMTD</button>
       <button type="button" data-q="¿Cuánto cuesta el pasaje reducido en Yolobus?">Pasaje reducido, Yolobus</button>
       <button type="button" data-q="Does MST cap how much I pay per day?">Daily fare cap, MST</button>
@@ -320,6 +322,71 @@
     return html;
   }
 
+  // EXP-04 (structured answer contract): when the server could parse the
+  // answer into the typed shape (docs/answer-contract.schema.json), render it
+  // as labeled regions instead of one prose block — semantic headings a
+  // screen reader can jump between (persona F-9), not just a text wall. Only
+  // used for kind "answered"; refusals stay a single prose paragraph, since
+  // there is nothing to section. `data.structured` is null whenever the
+  // deterministic parse failed validation server-side, so this always has a
+  // real prose fallback below it, never a silent gap.
+  function renderStructured(structured) {
+    var frag = document.createDocumentFragment();
+
+    if (structured.criterion) {
+      var critH = document.createElement("h3");
+      critH.textContent = "Published criteria";
+      frag.appendChild(critH);
+      var crit = document.createElement("p");
+      crit.textContent = structured.criterion;
+      frag.appendChild(crit);
+    }
+
+    if (structured.prices.length) {
+      var priceH = document.createElement("h3");
+      priceH.textContent = "Prices";
+      frag.appendChild(priceH);
+      var priceUl = document.createElement("ul");
+      structured.prices.forEach(function (p) {
+        var li = document.createElement("li");
+        li.textContent = "$" + p.amount + " — " + p.context;
+        priceUl.appendChild(li);
+      });
+      frag.appendChild(priceUl);
+    }
+
+    if (structured.proof_docs.length) {
+      var proofH = document.createElement("h3");
+      proofH.textContent = "Proof you may need";
+      frag.appendChild(proofH);
+      var proofUl = document.createElement("ul");
+      structured.proof_docs.forEach(function (pd) {
+        var li = document.createElement("li");
+        li.textContent = pd.context;
+        proofUl.appendChild(li);
+      });
+      frag.appendChild(proofUl);
+    }
+
+    if (structured.next_step) {
+      var stepH = document.createElement("h3");
+      stepH.textContent = "Next step";
+      frag.appendChild(stepH);
+      var step = document.createElement("p");
+      step.textContent = structured.next_step;
+      frag.appendChild(step);
+    }
+
+    if (structured.decision_owner) {
+      var owner = document.createElement("p");
+      owner.className = "asof";
+      owner.textContent = "Who decides: " + structured.decision_owner + ", not this assistant.";
+      frag.appendChild(owner);
+    }
+
+    return frag;
+  }
+
   // Privacy-safe feedback: sends only the verdict, the response kind, and the
   // language. Never the question or the answer.
   function feedbackRow(data) {
@@ -356,7 +423,11 @@
     turn.appendChild(q);
 
     var ans = document.createElement("div");
-    ans.innerHTML = render(data.answer);
+    if (data.kind === "answered" && data.structured) {
+      ans.appendChild(renderStructured(data.structured));
+    } else {
+      ans.innerHTML = render(data.answer);
+    }
     ans.setAttribute("lang", data.language || "en");
     turn.appendChild(ans);
 
@@ -421,7 +492,11 @@
       }
       status.textContent = "";
       appendTurn(question, r.data);
-      conversation.push({ q: question, a: r.data.answer });
+      // Store the whole turn, including the server's optional HMAC `sig` when
+      // present, so it is echoed back verbatim with the next follow-up. When the
+      // server issues no sig (default demo) the field is simply undefined and
+      // JSON.stringify drops it.
+      conversation.push({ q: question, a: r.data.answer, sig: r.data.sig });
       input.value = "";
     }).catch(function () {
       submit.disabled = false;
@@ -431,7 +506,7 @@
   });
 })();
 </script>
-<noscript><p style="max-width:44rem;margin:1rem auto;padding:0 1rem;">
+<noscript><p class="noscript-note">
   This demo needs JavaScript to send your question. The project, including every answer the
   evaluation suite produced, can be read without JavaScript in the
   <a href="https://github.com/ChelseaKR/fare-policy-assistant">source repository</a>.

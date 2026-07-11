@@ -222,6 +222,36 @@ AS_OF_RE = re.compile(
 )
 
 
+# A positive verification handoff routes an eligibility-adjacent answer to where
+# the decision actually happens — the agency or Cal-ITP Benefits — and how the
+# rider starts (verify, apply, or contact). This is the constructive other half
+# of the no-determination rule: the assistant never rules on the rider, and an
+# eligibility answer never stops at the criterion; it names the next step toward
+# an official decision. English and Spanish, mirrored, so the eval check that
+# enforces it (evals/checks.py) reads both languages.
+VERIFICATION_HANDOFF_RE = re.compile(
+    r"(verif(y|ies|ication)\b|to verify|"
+    r"eligibility (is |can be )?(verified|determined|decided)|"
+    r"appl(y|ication|ies)\b|courtesy card|mobility pass|reduced[- ]fare (photo )?id|"
+    r"cal-itp|customer service|"
+    r"contact (the )?(agency|mst|sbmtd|yolobus|sacrt|humboldt|hta|transit)|"
+    r"the agency (decides|determines|will decide|verifies)|"
+    r"verificar|verificaci[óo]n|elegibilidad (se )?(verifica|determina|decide)|"
+    r"solicit(ar|e|ud|a)\b|tarjeta de cortesía|pase de movilidad|"
+    r"servicio al cliente|comun[ií]quese|la agencia (decide|determina|verifica))",
+    re.I,
+)
+
+
+def find_verification_handoff(text: str) -> bool:
+    """True if `text` routes the rider toward an official eligibility decision —
+    verify, apply, get the card/ID, or contact the agency or Cal-ITP. Used by the
+    RR4 eval check so an eligibility answer is never allowed to end on the bare
+    criterion; see VERIFICATION_HANDOFF_RE for the patterns and rationale.
+    """
+    return bool(VERIFICATION_HANDOFF_RE.search(text))
+
+
 @dataclass
 class OutputCheck:
     ok: bool

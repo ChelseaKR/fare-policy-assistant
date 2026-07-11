@@ -19,6 +19,10 @@ RAW_DIR = CORPUS_DIR / "raw"
 PROCESSED_DIR = CORPUS_DIR / "processed"
 INDEX_DIR = CORPUS_DIR / "index"
 CHUNKS_PATH = PROCESSED_DIR / "chunks.jsonl"
+# Retained corpus history (EXP-05): one subdirectory per distinct corpus_version,
+# written by assistant.corpus.archive_version and never overwritten in place.
+VERSIONS_DIR = CORPUS_DIR / "versions"
+FACTS_PATH = PROCESSED_DIR / "facts.jsonl"
 PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"
 EVAL_RUNS_DIR = REPO_ROOT / "evals" / "runs"
@@ -62,6 +66,11 @@ _DEFAULT_MODELS = {
         "us.anthropic.claude-sonnet-4-6",
     ),
     "anthropic": ("claude-haiku-4-5", "claude-sonnet-4-6"),
+    # Two distinct small models so the judge-must-differ-from-answer rule
+    # holds standalone (`FPA_PROVIDER=local`), same as the hosted backends.
+    # Both are small enough to be kiosk-appropriate; pull with
+    # `ollama pull llama3.2:3b && ollama pull qwen2.5:3b`. See ADR 0010.
+    "local": ("llama3.2:3b", "qwen2.5:3b"),
     "mock": ("mock", "mock"),
 }
 
@@ -90,13 +99,25 @@ class RetrievalConfig:
     top_k: int = 8
     # Mild preference for chunks in the question's language.
     language_boost: float = 1.2
-    # Below this top BM25 score the assistant declines rather than guessing.
-    min_confidence: float = 4.0
+    # FIX-07 / ADR 0013: the decline rule reads normalized, corpus-size-
+    # independent signals (assistant.retrieve.ConfidenceSignals) instead of
+    # an absolute BM25 score. An absolute score drifts every time the corpus
+    # grows (every new agency changes IDF for every existing chunk), so the
+    # old `min_confidence = 4.0` was an untracked moving floor. Below this
+    # z-score (top result vs the full-corpus score distribution for the same
+    # query) *or* below this fraction of query terms actually present in the
+    # top chunk, the assistant declines rather than guessing. Calibrated by
+    # evals/decline_calibration.py against a labeled should-answer/
+    # should-decline question set — see the ablation table in ADR 0013.
+    # Re-run the calibration after every corpus change.
+    decline_z_threshold: float = 1.75
+    decline_coverage_floor: float = 0.10
     # Operational confidence band for the answered path (not a tuned eval
-    # parameter): a top score at or above this reads as "high", between
-    # min_confidence and this as "medium". Surfaced to integrators and staff
-    # who want a graded signal, never used to gate or alter an answer.
-    confidence_high: float = 8.0
+    # parameter, and not itself calibrated by the ablation): a top z-score at
+    # or above this reads as "high", between decline_z_threshold and this as
+    # "medium". Surfaced to integrators and staff who want a graded signal,
+    # never used to gate or alter an answer.
+    confidence_high_z: float = 3.5
     use_dense: bool = os.environ.get("FPA_DENSE", "") == "1"
     dense_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     # Hybrid mixing weight when dense retrieval is enabled.

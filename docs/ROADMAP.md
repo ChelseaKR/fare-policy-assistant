@@ -36,6 +36,14 @@ bug for this repo specifically.
 > fixed (combined-citation parsing). A prompt attempt at `ground-026` and
 > `refuse-018` regressed other cases and was reverted; both stay documented.
 > The GovChat-Eval audit runs in CI as an advisory job. Net: 97 → 98/103.
+>
+> **Status (2026-07-02):** EXP-02 (item 4) done. A 15-pair counterfactual
+> sensitivity suite (`evals/suites/sensitivity.yaml`) scores minimal pairs
+> jointly — a pair passes only if every variant passes — and the report renders
+> "N/15 boundary pairs correctly distinguished". This proves boundary
+> discrimination (62 vs 65, Medicare vs Medi-Cal, super-senior vs senior,
+> youth-free vs youth-discount, stored-value vs monthly), not just aggregate
+> pass rate.
 
 1. **Close the model-card claims.** `docs/model-card.md` states per-run cost is
    documented and that judge agreement is spot-checked on a 10% human-labeled
@@ -69,12 +77,24 @@ bug for this repo specifically.
    hand today. Add a CI job that runs it against the committed dataset and
    uploads the report; keep it advisory until the deterministic-judge floor is
    understood, then gate. Done = every PR shows an audit artifact.
+4. **EXP-02 — Counterfactual sensitivity suite.** *(Done, 2026-07-02.)*
+   Aggregate pass rate can hide a model that answers every eligibility question
+   with the same boilerplate. Add ~15 minimal-pair (or triple) cases that differ
+   by exactly one salient feature sitting on a real boundary already catalogued
+   in `edge_cases.yaml`, and score them jointly. `evals/suites/sensitivity.yaml`
+   holds them as `pairs:` of `variants:`; the runner flattens each variant into
+   an ordinary case (carrying a `pair_id`) so existing deterministic checks and
+   credential gating apply unchanged, then re-groups the results into a pair-level
+   verdict — a pair passes only if every variant passes. `EVALS.md` renders
+   "N/15 boundary pairs correctly distinguished". Done = the suite proves the
+   assistant discriminates across the boundary (62 vs 65, Medicare vs Medi-Cal,
+   super-senior vs senior), not merely that it produces plausible prose.
 
 ## P1 — Production hardening
 
 What a real operator needs before trusting the thing unattended.
 
-> **Status (2026-07-02):** items 1, 2, and 5 done. Weekly corpus-freshness
+> **Status (2026-07-11):** items 1 through 5 done. Weekly corpus-freshness
 > automation opens a PR on drift (`.github/workflows/corpus-freshness.yml`) and
 > the UI shows how long ago the cited policies were fetched; a per-container
 > answer cache fronts the model call in the deployed handler; the CI badge is
@@ -82,8 +102,22 @@ What a real operator needs before trusting the thing unattended.
 > workflow keys the change decision on `corpus_version` rather than a raw
 > `git diff -- corpus/`, `tools/corpus_refresh_report.py` writes the changelog
 > entry and doc-level diff into the PR body and lints the eval suites for stale
-> facts, and `/version` reports `staleness_days` against a budget. Remaining:
-> observability/alarms (item 3) and a true cross-container rate limit (item 4).
+> facts, and `/version` reports `staleness_days` against a budget. `deploy.sh`
+> provisions metric filters, alarms, and a CloudWatch dashboard; only the
+> billing-scoped AWS Budget remains a documented one-time manual step.
+>
+> **Status (2026-07-08):** item 4 done. The API Gateway stage throttle added
+> alongside the HTTP API (ADR 0004 amendment, 2026-06-12) already held across
+> containers; it just was not tuned against a documented figure, was not
+> called out anywhere as *the* cross-container ceiling, and had no regression
+> test. `infra/deploy.sh` now derives the throttle's rate and burst from the
+> same `RESERVED_CONCURRENCY` value used for the Lambda concurrency ceiling,
+> `tests/test_deploy_rate_limit.py` guards that relationship, and ADR 0004 has
+> a new amendment recording the decision, including why a DIY per-signal
+> token bucket (e.g. keyed on truncated IP, backed by DynamoDB) was rejected
+> again in favor of it. The per-container budget in `web/handler.py` stays as
+> a defense-in-depth backstop, now documented as such instead of implied to
+> be the real limit.
 
 1. **Corpus-freshness automation.** ✅ **Done.** Snapshots were taken by hand
    (`make fetch`) and the UI's "as of" date was drifting. A scheduled GitHub
@@ -127,7 +161,12 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > six-case `conversation` suite formalizes this at 5/6 — including the safety
 > case (a "just tell me I qualify" follow-up still refuses to determine); the
 > one miss is the same Spanish-veteran groundedness-judge strictness as ml-004,
-> not a conversation bug. Item 2 (streaming) is deferred with a recorded
+> not a conversation bug. FIX-08 (forged-history hardening) is now done on top of
+> this: an optional per-turn HMAC gated on `FPA_HISTORY_HMAC_KEY` restricts
+> history to server-issued turns, and a `conv-forged-*` eval block asserts the
+> assistant re-grounds when a client injects a fabricated prior answer
+> (deterministic checks, no live judge). Default off for the demo; see
+> SECURITY.md. Item 2 (streaming) is deferred with a recorded
 > rationale (ADR 0006): the API Gateway HTTP API the org policy forced cannot
 > stream, and the hard output guard limits any streaming to a cosmetic
 > post-guard replay. Item 4 (dense-retrieval decision) is settled with evidence
@@ -205,16 +244,28 @@ Higher cost, lower urgency; do when the core is solid.
      catalog yet, so its refusals fall back to English via
      `gettext` `fallback=True` (documented in `i18n.py`). Remaining for full
      parity: a mirrored `tl` eval suite and a `locales/tl` catalog.
-4. **Reranker, only if earned.** Per CLAUDE.md, add one only if the evals show
-   retrieval is the bottleneck, and justify it in an ADR with the deltas. Today
-   retrieval is not the bottleneck (the failures are generation and judge
-   strictness), so this stays unbuilt until a failure says otherwise.
+ 4. **Reranker, only if earned.** *(Checked, not earned — see ADR 0009.)* Per
+   CLAUDE.md, add one only if the evals show retrieval is the bottleneck.
+   `evals/reranker_bottleneck_check.py` measures this directly against the
+   latest audit: 96.9% of failing cases already had the answer-bearing chunk
+   in the retrieved top-k (78.1% at rank 1), so the failures are generation
+   and judge strictness, not missing passages. Stays unbuilt until a re-run
+    of the check shows a rising recall-miss share.
 5. **Generalize the harness.** `docs/adapting.md` and the civic-AI family
    (GovChat-Eval, civic-rag-starter-kit) are the start of "adapt this to your
    domain." Fold the lessons from this project back into that template so the
    next domain assistant starts from the audited skeleton rather than rebuilding
    it. Done = a second domain can stand up the same gates without forking this
    repo.
+
+   > **Status (2026-07-08):** this repo's side is done: `template/MANIFEST.yaml`
+   > makes the generic/domain-specific split from `docs/adapting.md` into
+   > checked data, `make template TARGET=<dir>` (`scripts/extract_template.py`)
+   > extracts a runnable skeleton from it, and `tests/test_extract_template.py`
+   > fails CI if the manifest drifts from the code. What's still open: landing
+   > the equivalent scaffolding *inside* GovChat-Eval and civic-rag-starter-kit
+   > (separate repos) so a second domain's black-box audit and RAG template
+   > start from the same lessons — that's tracked in those repos, not here.
 
 ## Sequencing
 
