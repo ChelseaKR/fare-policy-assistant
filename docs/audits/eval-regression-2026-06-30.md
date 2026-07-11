@@ -3,10 +3,11 @@
 **Filed:** 2026-07-05, during standards-conformance remediation (P0-3 in
 `audit-2026-07-05/fare-assistant-REMEDIATION.md`; original finding in
 `audit-2026-07-05/fare-assistant-AUDIT.md`, AIEV-26).
-**Status: open. The regression gate is red and is being left red** — see
-"What this pass did and did not do" below. This is a deliberate choice, not an
-oversight: silently re-baselining to make the gate pass would launder the
-regression rather than fix or honestly track it.
+**Status: resolved 2026-07-11.** System prompt v7 was validated in a full live
+128-case run. `ml-015` passed and multilingual recovered to **20/21 (95.2%)**,
+matching the committed baseline. The baseline and regression thresholds were
+not changed. The original investigation remains below as a historical record;
+see the resolution addendum at the end.
 
 ## The finding
 
@@ -211,3 +212,58 @@ this pass did not make unilaterally) or a maintainer decision on the corpus
 question. The exact commands are `make fetch` (after a manifest decision),
 `make eval` (full, live), and `python -m evals.runner --update-baseline` (only
 after 1-2 are resolved, with a rationale in the PR).
+
+## Addendum — 2026-07-09 (both halves acted on; gate still red at that time)
+
+Status remains **open**: the gate stays red until a live `make eval` confirms
+a fix (or a maintainer re-baselines with a written rationale). What changed:
+
+1. **The corpus question (ml-012) is now answered, with evidence.** The
+   candidate Spanish counterpart `https://mst.org/es/fares/benefits/` was
+   fetched once through the repo's own polite pipeline
+   (`python -m assistant.ingest fetch`, identified UA, crawl delay honored).
+   It exists — HTTP 200, no redirect, `<html lang="es">` — but its article
+   body is **byte-identical to the English page** (untranslated /es/ shell;
+   snapshot sha256
+   `67c3c4a9a292547247b479a6ec762bc1ce31537b67798663ff86b1be54b37802`,
+   115,239 bytes, fetch date 2026-07-09). Contrast `mst-fares-es`, whose body
+   really is rendered in Spanish. **MST publishes no genuinely
+   Spanish-language Cal-ITP Benefits content today.** The snapshot was NOT
+   ingested: cataloging English content under `language: es` would pollute
+   Spanish retrieval and fabricate a source. The parity ceiling is documented
+   in `docs/I18N.md`; a dated exclusion note sits next to `mst-fares-es` in
+   `corpus/manifest.yaml`. ⛔ Remaining human decision: whether ml-012's
+   expectation is adjusted **with a written rationale** (per step 1 above) or
+   left red as a standing measure of the ceiling.
+2. **The ml-015 prompt tightening is drafted** (`prompts/system.txt` v7,
+   header-tagged `NOT YET LIVE-VALIDATED`): never state a fee/payment
+   consequence beyond what the passage supports, naming the exact
+   "sin pagar tarifa adicional" failure shape. ⛔ It must not be trusted —
+   and `EVALS.md`/`evals/baseline.json` must not be regenerated or moved —
+   until a maintainer runs a live `make eval` (cost + credentials decision).
+   Note: PRs #33/#34/#35 also claim a v7 system prompt; whichever lands first
+   keeps v7 and the rest renumber, batched into one live-validation cycle per
+   the 2026-07-06 roadmap's merge-order discipline.
+
+Nothing in this addendum moves a baseline, a threshold, or a scoreboard
+number; no live model call was made.
+
+## Resolution — 2026-07-11
+
+The credential-gated validation cycle is complete. A full live Bedrock run
+under the final v7 prompt processed 128 cases with both answer and judge models.
+The run restored multilingual from 18/21 to **20/21**, matching the committed
+baseline; `ml-015` passed its groundedness judge. `ml-012` remains the single
+multilingual failure, honestly measuring the documented source-content ceiling.
+
+The first validation run used the draft header and scored 121/128 overall at an
+estimated $1.7814. Because the header is model input, the final header was then
+changed to record validation and the complete suite was rerun rather than
+claiming that different prompt bytes had been tested. The final run also scored
+121/128, cost an estimated $1.7730, and is the one published in `EVALS.md` and
+`docs/eval-report.html`.
+
+No baseline, threshold, expected behavior, or judge score was changed. The
+committed-report regression gate passes. Remaining failures are published in
+the report, including the stale human-label calibration warning; resolving
+those requires human relabeling and is outside this model-validation fix.

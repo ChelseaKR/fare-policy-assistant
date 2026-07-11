@@ -9,6 +9,9 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- Restored the `checks`, i18n, and advisory browser-accessibility jobs on pull
+  requests after a CI-minutes optimization accidentally made them push-only.
+  The committed-report regression check runs on every pull request again.
 - Reformatted the codebase with `ruff format` and made it a blocking `make
   verify` / CI gate (was check-only).
 - `docs/ROADMAP.md` P2 item 5 (a11y wiring) was stale: it still listed feeding
@@ -37,11 +40,23 @@ rather than tied to a published tag.
   `evals/stale_acknowledged.json` with written reasons — declared, not
   stamped current. `evals/govchat_export.py` now emits a dataset-level
   `# provenance:` header on every regeneration.
-- Root-caused (not yet fixed) the multilingual eval regression flagged in the
-  2026-06-30 report (18/21 vs the committed 20/21 baseline). The regression is
-  open: the gate is red and is deliberately being left red until a live re-run
-  resolves it. See `docs/audits/eval-regression-2026-06-30.md` for the
-  root-cause writeup and current status.
+- Root-caused and fixed the multilingual eval regression flagged in the
+  2026-06-30 report (18/21 vs the committed 20/21 baseline). The 2026-07-11
+  full live run recovered to 20/21 without changing the baseline or gate.
+  See `docs/audits/eval-regression-2026-06-30.md`.
+- System prompt **v7, live-validated 2026-07-11**: never
+  state a fee/payment consequence beyond what the passage supports — targets
+  the `ml-015` cross-lingual assertiveness gap. A full live run passed
+  `ml-015` and restored multilingual to 20/21; no baseline or threshold was
+  changed.
+- Documented the **MST Spanish-content parity ceiling** behind `ml-012`
+  (2026-07-09): `mst.org/es/fares/benefits/` exists but is an untranslated
+  English shell, verified once via the polite fetch pipeline and deliberately
+  not ingested. See `docs/I18N.md` and the addendum in
+  `docs/audits/eval-regression-2026-06-30.md`.
+- Re-recorded the 122-item independent GovChat-Eval dataset under the validated
+  v7 prompt and regenerated its report. The advisory deterministic audit still
+  reports its known groundedness and multilingual gaps; they remain visible.
 - Standards conformance declaration table in `README.md`.
 - Blocking dependency-vulnerability scan (`pip-audit`) in `security.yml`.
 - `CODEOWNERS`, `.python-version`, `.standards-version`, this `CHANGELOG.md`.

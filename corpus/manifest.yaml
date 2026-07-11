@@ -52,6 +52,17 @@ documents:
     url: https://mst.org/es/fares/
     language: es
     license_note: "Public agency fare information; Content-Signal search=yes, ai-train=no."
+  # Note (checked 2026-07-09, ml-012 corpus-gap follow-up — see
+  # docs/audits/eval-regression-2026-06-30.md and docs/I18N.md): the candidate
+  # Spanish counterpart of mst-fares-benefits, https://mst.org/es/fares/benefits/,
+  # exists (HTTP 200, no redirect, <html lang="es">) but its article body is
+  # byte-identical to the ENGLISH page — an untranslated /es/ shell, unlike
+  # mst-fares-es whose body really is rendered in Spanish. Excluded: cataloging
+  # English content as `language: es` would pollute Spanish retrieval and
+  # misrepresent the source. Evidence: fetch via this pipeline's polite UA,
+  # sha256 67c3c4a9a292547247b479a6ec762bc1ce31537b67798663ff86b1be54b37802,
+  # 115239 bytes; trailing 1500 chars of extracted main content identical to
+  # mst-fares-benefits. Re-check if MST ever publishes a real translation.
 
   # ── Santa Barbara MTD ─────────────────────────────────────────────────────
   - id: sbmtd-fares-passes
