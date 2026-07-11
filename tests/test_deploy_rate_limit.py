@@ -12,6 +12,7 @@ with concurrency.
 
 from __future__ import annotations
 
+import ast
 import re
 
 from assistant import config
@@ -87,6 +88,21 @@ class TestBundleRuntimeDependencies:
         assert '"jsonschema>=4.20"' in text
         assert 'mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs"' in text
         assert 'cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"' in text
+
+    def test_rider_bundle_includes_every_local_web_import(self):
+        text = _script_text()
+        handler = (config.REPO_ROOT / "web" / "handler.py").read_text(encoding="utf-8")
+        imported_modules = {
+            node.module
+            for node in ast.walk(ast.parse(handler))
+            if isinstance(node, ast.ImportFrom)
+            and node.module is not None
+            and node.module.startswith("web.")
+        }
+        assert imported_modules, "expected the rider handler to import local web modules"
+        for module in imported_modules:
+            bundled_path = f'"$ROOT/{module.replace(".", "/")}.py"'
+            assert bundled_path in text, f"rider bundle omits local import {module}"
 
     def test_console_bundle_includes_ingest_import_dependencies(self):
         text = DEPLOY_CONSOLE_SH.read_text(encoding="utf-8")
