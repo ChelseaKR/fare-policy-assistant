@@ -54,7 +54,12 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false
+      # No cache here either: this job gates the artifact build below, so a
+      # poisoned cache hit would taint the release path just as directly
+      # (zizmor cache-poisoning audit; same reasoning as the build job).
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: false
       - name: Install gettext (msgfmt, required by `make i18n`)
         run: sudo apt-get update && sudo apt-get install -y gettext
       - name: Verify uv.lock is current
