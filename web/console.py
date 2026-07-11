@@ -17,11 +17,14 @@ to that one rider function's ARN. No rider data exists to expose here (no
 question or answer text ever reaches this module); the actions are config
 reads/writes only.
 
-Authentication fails closed: every request must carry
+Authentication fails closed on every data and action API: requests must carry
 `Authorization: Bearer <token>` matching `FPA_CONSOLE_TOKEN`, and if that
-variable is unset the console refuses every request rather than defaulting
-open. A shared bearer token is adequate for a single-operator pilot deploy but
-is not real identity — anyone holding it has full access. Production
+variable is unset the APIs refuse every request rather than defaulting open.
+The static `/console` HTML shell is public so an ordinary browser can render
+the token-entry form; it contains no corpus data or configuration, and cannot
+read or change anything until the operator supplies the token. A shared bearer
+token is adequate for a single-operator pilot deploy but is not real identity
+— anyone holding it has full console access. Production
 deployments must put an API Gateway JWT or IAM authorizer in front, backed by
 the agency's own SSO/IdP, exactly as `infra/deploy-console.sh` documents; that
 step needs a live identity provider to wire up and is intentionally left as a
@@ -321,8 +324,6 @@ def console_handler(event: dict, context: object = None) -> dict:
     path = event.get("rawPath", "/")
 
     if path == "/console" and method == "GET":
-        if not _authorized(event):
-            return _json(401, {"error": "Unauthorized."})
         return _response(200, CONSOLE_HTML, "text/html; charset=utf-8")
 
     route = _ROUTES.get((method, path))
