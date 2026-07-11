@@ -163,7 +163,7 @@ Grouped content counts:
 Audit scope notes:
 
 - Generated sites, deployed app routes, raw third-party HTML captures, and golden fixture websites were inventoried as product or data surfaces but excluded from authored-doc link failure counts.
-- Grouped content directories are counted so they stay visible without making the audit readable without hiding them.
+- Grouped content directories are counted rather than listed file by file, so they stay visible without bloating the audit.
 
 ## Validation Notes
 
