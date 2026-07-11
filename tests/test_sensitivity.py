@@ -65,29 +65,52 @@ def test_committed_sensitivity_suite_validates():
 
 
 def test_validate_rejects_pair_with_a_single_variant():
-    bad = [{
-        "pairs": [{
-            "id": "sens-x", "boundary": "b",
-            "variants": [{"id": "sens-xa", "question": "q?",
-                          "expected_behavior": "answer", "rationale": "r"}],
-        }],
-    }]
+    bad = [
+        {
+            "pairs": [
+                {
+                    "id": "sens-x",
+                    "boundary": "b",
+                    "variants": [
+                        {
+                            "id": "sens-xa",
+                            "question": "q?",
+                            "expected_behavior": "answer",
+                            "rationale": "r",
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
     with pytest.raises(SystemExit, match="at least two variants"):
         runner.validate_cases(bad)
 
 
 def test_validate_rejects_pair_missing_boundary():
-    bad = [{
-        "pairs": [{
-            "id": "sens-y",
-            "variants": [
-                {"id": "sens-ya", "question": "q?", "expected_behavior": "answer",
-                 "rationale": "r"},
-                {"id": "sens-yb", "question": "q?", "expected_behavior": "answer",
-                 "rationale": "r"},
+    bad = [
+        {
+            "pairs": [
+                {
+                    "id": "sens-y",
+                    "variants": [
+                        {
+                            "id": "sens-ya",
+                            "question": "q?",
+                            "expected_behavior": "answer",
+                            "rationale": "r",
+                        },
+                        {
+                            "id": "sens-yb",
+                            "question": "q?",
+                            "expected_behavior": "answer",
+                            "rationale": "r",
+                        },
+                    ],
+                }
             ],
-        }],
-    }]
+        }
+    ]
     with pytest.raises(SystemExit, match="missing `boundary`"):
         runner.validate_cases(bad)
 
@@ -117,8 +140,8 @@ def test_pair_verdicts_groups_multiple_pairs_and_ignores_unpaired_records():
         {"pair_id": "sens-001", "passed": True},
         {"pair_id": "sens-002", "passed": True},
         {"pair_id": "sens-002", "passed": False},
-        {"pair_id": None, "passed": False},        # ordinary (non-pair) case
-        {"suite": "refusal", "passed": True},       # no pair_id key at all
+        {"pair_id": None, "passed": False},  # ordinary (non-pair) case
+        {"suite": "refusal", "passed": True},  # no pair_id key at all
     ]
     verdicts = runner.pair_verdicts(records)
     assert verdicts == {"sens-001": True, "sens-002": False}
@@ -148,11 +171,23 @@ def test_offline_sensitivity_run_writes_pairs_passed_and_total(tmp_runs):
 
 def test_report_renders_boundary_pairs_line():
     summary = {
-        "run_at": "2026-07-02T00:00:00+00:00", "mode": "full", "offline": True,
-        "judges_ran": False, "answer_model": "mock", "judge_model": "mock",
-        "prompt_versions": {"system": "v1"}, "duration_seconds": 1.0,
-        "suites": {"sensitivity": {"passed": 24, "total": 30, "pass_rate": 80.0,
-                                   "pairs_passed": 12, "pairs_total": 15}},
+        "run_at": "2026-07-02T00:00:00+00:00",
+        "mode": "full",
+        "offline": True,
+        "judges_ran": False,
+        "answer_model": "mock",
+        "judge_model": "mock",
+        "prompt_versions": {"system": "v1"},
+        "duration_seconds": 1.0,
+        "suites": {
+            "sensitivity": {
+                "passed": 24,
+                "total": 30,
+                "pass_rate": 80.0,
+                "pairs_passed": 12,
+                "pairs_total": 15,
+            }
+        },
         "total": {"passed": 24, "total": 30},
     }
     md = report.generate_markdown(summary, [])
@@ -161,9 +196,14 @@ def test_report_renders_boundary_pairs_line():
 
 def test_report_omits_sensitivity_line_when_no_pair_stats():
     summary = {
-        "run_at": "2026-07-02T00:00:00+00:00", "mode": "full", "offline": True,
-        "judges_ran": False, "answer_model": "mock", "judge_model": "mock",
-        "prompt_versions": {"system": "v1"}, "duration_seconds": 1.0,
+        "run_at": "2026-07-02T00:00:00+00:00",
+        "mode": "full",
+        "offline": True,
+        "judges_ran": False,
+        "answer_model": "mock",
+        "judge_model": "mock",
+        "prompt_versions": {"system": "v1"},
+        "duration_seconds": 1.0,
         "suites": {"refusal": {"passed": 1, "total": 1, "pass_rate": 100.0}},
         "total": {"passed": 1, "total": 1},
     }

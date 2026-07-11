@@ -230,6 +230,9 @@ class TestAnswerClaimParsing:
     def test_parses_multiple_prices(self):
         assert parse_price_claims("It's $2.00 regular or $1.00 discount.") == [2.00, 1.00]
 
+    def test_ignores_large_financial_context_as_non_fare(self):
+        assert parse_price_claims("The agency lost $3.0 million, but the fare is $2.50.") == [2.50]
+
     def test_parses_age_plus_and_and_older_phrasings(self):
         claims = parse_age_claims("Seniors (age 65+) and riders 62 years and older both qualify.")
         assert (65, None) in claims

@@ -113,24 +113,16 @@ class TestCloseTheLoopRetrieval:
         # step — the exact condition R1-2 fixes.
         return Retriever(cfg=config.RetrievalConfig(use_dense=False, top_k=3))
 
-    def test_companion_application_chunk_appears_for_reduced_fare_query(
-        self, corpus_retriever
-    ):
-        results = corpus_retriever.search(
-            "I am 65 and disabled, what do I pay on Yolobus?"
-        )
+    def test_companion_application_chunk_appears_for_reduced_fare_query(self, corpus_retriever):
+        results = corpus_retriever.search("I am 65 and disabled, what do I pay on Yolobus?")
         ids = [sc.chunk.chunk_id for sc in results]
         # The where-to-apply passage (Woodland office, hours) is appended.
         assert "yolobus-reduced-fare-id#0" in ids
         assert any(_is_application_passage(sc.chunk) for sc in results)
 
     def test_companion_respects_agency_scope(self, corpus_retriever):
-        results = corpus_retriever.search(
-            "How do I get the SBMTD reduced-fare Mobility Pass ID?"
-        )
-        assert any(
-            sc.chunk.chunk_id == "sbmtd-fares-passes#3" for sc in results
-        )
+        results = corpus_retriever.search("How do I get the SBMTD reduced-fare Mobility Pass ID?")
+        assert any(sc.chunk.chunk_id == "sbmtd-fares-passes#3" for sc in results)
         # No cross-agency application passage leaks in.
         assert all(sc.chunk.agency == "SBMTD" for sc in results)
 
@@ -140,8 +132,18 @@ class TestCloseTheLoopRetrieval:
 
     def test_companion_not_duplicated_when_already_present(self, corpus_retriever):
         # When the application passage already ranks in top_k, it is not added twice.
-        results = corpus_retriever.search(
-            "How do I get a reduced-fare photo ID for Yolobus?"
-        )
+        results = corpus_retriever.search("How do I get a reduced-fare photo ID for Yolobus?")
         ids = [sc.chunk.chunk_id for sc in results]
         assert ids.count("yolobus-reduced-fare-id#0") == 1
+
+    def test_veteran_query_excludes_disabled_courtesy_card_process(self, corpus_retriever):
+        results = corpus_retriever.search(
+            "¿Qué prueba de servicio necesito para la tarifa de veterano en MST?"
+        )
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert "mst-fares-es#6" not in ids
+        assert "mst-fares-es#2" in ids
+
+    def test_senior_query_excludes_disabled_courtesy_card_process(self, corpus_retriever):
+        results = corpus_retriever.search("How do I use the MST senior discount?")
+        assert "mst-fares#6" not in [sc.chunk.chunk_id for sc in results]

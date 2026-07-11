@@ -132,7 +132,10 @@ class TestHelpfulness:
     def test_rationale_is_passed_into_the_prompt(self):
         judge = ScriptedJudge('{"helpful": true, "score": 3}')
         judges.judge_helpfulness(
-            judge, _result(), "answer", _cfg(),
+            judge,
+            _result(),
+            "answer",
+            _cfg(),
             rationale="Rider already stated their age; do not re-ask.",
         )
         assert "Case rationale: Rider already stated their age; do not re-ask." in judge.last_user

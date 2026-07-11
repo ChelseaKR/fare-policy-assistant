@@ -4,14 +4,26 @@
     {
       "artifact": "baseline.json",
       "field": "prompt_versions.system",
-      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under system prompt v5; a baseline legitimately lags HEAD (that is what makes it a reference). The 2026-07-11 BUG-01 full live-validation cycle matched its 20/21 multilingual score, so no owner-approved re-baseline was needed. See docs/audits/eval-regression-2026-06-30.md.",
+      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under system prompt v5; a baseline legitimately lags HEAD. The 2026-07-11 consolidation run under system v9 passed the regression gate (freshness 10/10, multilingual 20/22), so no owner-approved re-baseline was needed.",
       "added": "2026-07-09"
     },
     {
       "artifact": "baseline.json",
       "field": "prompt_versions.answer_user",
-      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under answer_user prompt v2; a baseline legitimately lags HEAD (that is what makes it a reference). The 2026-07-11 BUG-01 full live-validation cycle matched its 20/21 multilingual score, so no owner-approved re-baseline was needed. See docs/audits/eval-regression-2026-06-30.md.",
+      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under answer_user prompt v2; a baseline legitimately lags HEAD. The 2026-07-11 consolidation run under answer_user v6 passed the regression gate, so no owner-approved re-baseline was needed.",
       "added": "2026-07-09"
+    },
+    {
+      "artifact": "baseline.json",
+      "field": "prompt_versions.judge_groundedness",
+      "reason": "The historical baseline used groundedness judge v1. Judge v2 adds conversation history context without changing the answer configuration; the 2026-07-11 full live consolidation run passed the existing baseline gate, so the reference remains intentionally historical.",
+      "added": "2026-07-11"
+    },
+    {
+      "artifact": "baseline.json",
+      "field": "prompt_versions.judge_helpfulness",
+      "reason": "The historical baseline used helpfulness judge v2. Judge v3 adds conversation history and case rationale; the 2026-07-11 full live consolidation run passed the existing baseline gate, so the reference remains intentionally historical.",
+      "added": "2026-07-11"
     }
   ]
 }

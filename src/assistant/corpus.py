@@ -268,6 +268,7 @@ def version_history(limit: int = 20) -> list[dict]:
 def main(argv: list[str] | None = None) -> int:
     args = argv if argv is not None else sys.argv[1:]
     cmd = args[0] if args else "summary"
+    payload: object
     if cmd == "history":
         payload = {"generated_at": datetime.now(UTC).isoformat(), "versions": version_history()}
     elif cmd == "summary":
@@ -277,7 +278,11 @@ def main(argv: list[str] | None = None) -> int:
     elif cmd == "changelog":
         payload = changelog()
     else:
-        raise SystemExit(f"unknown command: {cmd} (expected summary|versions|changelog|history)")
+        print(
+            f"unknown command: {cmd} (expected summary|versions|changelog|history)",
+            file=sys.stderr,
+        )
+        return 2
     print(json.dumps(payload, indent=2))
     return 0
 

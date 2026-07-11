@@ -1,4 +1,4 @@
-# ADR 0009: Calibrated decline threshold, not an absolute BM25 score
+# ADR 0013: Calibrated decline threshold, not an absolute BM25 score
 
 Date: 2026-07-08. Status: accepted. Resolves FIX-07
 (`docs/ideation/02-large-scale-fixes.md`); extends the known weakness ADR

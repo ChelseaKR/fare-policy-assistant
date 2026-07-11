@@ -6,7 +6,7 @@ disagreement ("web page says $2.50, feed says $3.00") is exactly the
 wrong-fare liability scenario this project cares about, caught mechanically
 instead of by luck: agency web pages and GTFS feeds drift at different
 speeds. See docs/ideation/03-expansions.md EXP-06 and
-docs/decisions/0009-gtfs-cross-validation.md.
+docs/decisions/0011-gtfs-cross-validation.md.
 
 Design constraint: the feed is a *tripwire*, never a source of truth. The
 published prose remains the citable policy — nothing here overrides an

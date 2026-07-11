@@ -135,15 +135,18 @@ def validate_cases(suites: list[dict]) -> None:
                 if not isinstance(history, list) or not history:
                     raise SystemExit(f"case {case['id']}: `history` must be a non-empty list")
                 for pair in history:
-                    if not (isinstance(pair, dict)
-                            and isinstance(pair.get("q"), str)
-                            and isinstance(pair.get("a"), str)):
+                    if not (
+                        isinstance(pair, dict)
+                        and isinstance(pair.get("q"), str)
+                        and isinstance(pair.get("a"), str)
+                    ):
                         raise SystemExit(
                             f"case {case['id']}: each `history` entry needs string `q` and `a`"
                         )
                 if case.get("turns"):
-                    raise SystemExit(f"case {case['id']}: `history` combines with `question`, "
-                                     "not `turns`")
+                    raise SystemExit(
+                        f"case {case['id']}: `history` combines with `question`, not `turns`"
+                    )
                 if "question" not in case:
                     raise SystemExit(f"case {case['id']}: `history` requires a `question`")
             if case["id"] in seen:

@@ -49,9 +49,7 @@ def test_manifest_stanza_matches_manifest_format():
     # robots/permissions reminder is present.
     assert "robots.txt" in stanza
     # The stanza (minus its leading comments) parses as one manifest document.
-    body = "\n".join(
-        line for line in stanza.splitlines() if not line.lstrip().startswith("#")
-    )
+    body = "\n".join(line for line in stanza.splitlines() if not line.lstrip().startswith("#"))
     docs = yaml.safe_load(body)
     assert docs[0]["id"] == "hta-fares"
     assert docs[0]["agency"] == "HTA"

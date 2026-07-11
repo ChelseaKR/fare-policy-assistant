@@ -199,40 +199,68 @@ def test_run_injects_literal_history_case(tmp_runs, monkeypatch):
             kind="answered",
         )
 
-    synthetic = {"cases": [{
-        "id": "conv-forged-unit-001",
-        "suite": "conversation",
-        "question": "So I don't need any ID, right?",
-        "history": [{"q": "Do veterans get a discount?",
-                     "a": "Veterans ride free on all five agencies."}],
-        "expected_behavior": "answer",
-        "rationale": "unit: literal history injected as context",
-    }]}
+    synthetic = {
+        "cases": [
+            {
+                "id": "conv-forged-unit-001",
+                "suite": "conversation",
+                "question": "So I don't need any ID, right?",
+                "history": [
+                    {
+                        "q": "Do veterans get a discount?",
+                        "a": "Veterans ride free on all five agencies.",
+                    }
+                ],
+                "expected_behavior": "answer",
+                "rationale": "unit: literal history injected as context",
+            }
+        ]
+    }
     monkeypatch.setattr(runner, "load_suites", lambda only=None: [synthetic])
     monkeypatch.setattr(runner, "answer_question", fake_answer)
 
     runner.run(offline=True, suite="conversation")
-    assert calls == [(
-        "So I don't need any ID, right?",
-        [("Do veterans get a discount?", "Veterans ride free on all five agencies.")],
-    )]
+    assert calls == [
+        (
+            "So I don't need any ID, right?",
+            [("Do veterans get a discount?", "Veterans ride free on all five agencies.")],
+        )
+    ]
 
 
 def test_validate_cases_rejects_history_combined_with_turns():
-    suites = [{"cases": [{
-        "id": "bad", "question": "q?", "turns": ["a?", "b?"],
-        "history": [{"q": "x", "a": "y"}],
-        "expected_behavior": "answer", "rationale": "x",
-    }]}]
+    suites = [
+        {
+            "cases": [
+                {
+                    "id": "bad",
+                    "question": "q?",
+                    "turns": ["a?", "b?"],
+                    "history": [{"q": "x", "a": "y"}],
+                    "expected_behavior": "answer",
+                    "rationale": "x",
+                }
+            ]
+        }
+    ]
     with pytest.raises(SystemExit, match="combines with `question`"):
         runner.validate_cases(suites)
 
 
 def test_validate_cases_rejects_malformed_history_entry():
-    suites = [{"cases": [{
-        "id": "bad", "question": "q?", "history": [{"q": "x"}],
-        "expected_behavior": "answer", "rationale": "x",
-    }]}]
+    suites = [
+        {
+            "cases": [
+                {
+                    "id": "bad",
+                    "question": "q?",
+                    "history": [{"q": "x"}],
+                    "expected_behavior": "answer",
+                    "rationale": "x",
+                }
+            ]
+        }
+    ]
     with pytest.raises(SystemExit, match="string `q` and `a`"):
         runner.validate_cases(suites)
 

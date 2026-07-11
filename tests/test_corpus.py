@@ -268,5 +268,4 @@ class TestVersionHistory:
     def test_unknown_command_errors(self):
         from assistant.corpus import main
 
-        with pytest.raises(SystemExit):
-            main(["bogus"])
+        assert main(["bogus"]) == 2

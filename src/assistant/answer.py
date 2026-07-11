@@ -112,7 +112,7 @@ def _history_block(history: list[tuple[str, str]] | None) -> str:
 
 
 def _confidence_band(signals: ConfidenceSignals, rcfg: config.RetrievalConfig) -> str:
-    """Map the calibrated retrieval signals (FIX-07 / ADR 0009) to a coarse
+    """Map the calibrated retrieval signals (FIX-07 / ADR 0013) to a coarse
     band. Below the decline thresholds the pipeline declines, so an answered
     response is never "low"."""
     low_z = signals.z_score < rcfg.decline_z_threshold

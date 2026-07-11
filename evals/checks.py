@@ -194,8 +194,9 @@ def run_checks(
                 CheckResult(
                     "verification_handoff_present",
                     guards.find_verification_handoff(answer),
-                    "no verify/apply/contact next step found" if not
-                    guards.find_verification_handoff(answer) else "",
+                    "no verify/apply/contact next step found"
+                    if not guards.find_verification_handoff(answer)
+                    else "",
                 )
             )
 

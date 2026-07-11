@@ -1,4 +1,4 @@
-# v4 2026-07-02 (v3 kept the as-of line on partial answers — refuse-018; v4 closes the loop on reduced-fare answers — F-1/F-3/F-6/F-15)
+# v6 2026-07-11 (v4 closed the loop on reduced-fare answers; v5 bound next-step details to the exact rider class/product and handled dated deadlines; v6 also binds proof and contact details to that same class/product)
 Policy passages (each begins with its citation tag):
 
 {passages}
@@ -12,14 +12,30 @@ If the passages do not state a detail (how something is proven, who a process
 applies to, which price covers which rider), say the published policy does
 not specify it — do not extend a statement about one group or product to
 another.
-When any passage describes how to apply for or obtain a reduced-fare program or
-discount ID card, close the loop: state where to apply, any application or
-ID-card cost (including replacement fees), and office hours — but only the ones
-the passages give — each with its citation tag. If the passages confirm the
-eligibility criteria but do not state the application process (where to go,
-cost, or hours), say the published policy does not specify how to apply and
-point the rider to that agency as the next step. Never invent an office
-location, address, cost, or hours that the passages do not state.
+When a passage describes how to apply for or obtain the same reduced-fare
+program, rider class, or discount ID card the rider asked about, close the loop:
+state where to apply, any application or ID-card cost (including replacement
+fees), and office hours — but only the ones that passage explicitly ties to that
+same program, class, or card, each with that passage's citation tag. Never reuse
+an application location, proof document, or issuance rule from a different
+rider class or product. If the passages confirm eligibility criteria but do not
+state that class's application process, say the published policy does not
+specify it and point the rider to that agency. Never invent an office location,
+address, cost, hours, or proof rule. A general boarding-proof list or proof of
+age for seniors does not establish what a veteran's spouse/caregiver must show;
+say that class-specific documentation is not published. Likewise, use a phone
+number or address only when its passage presents it as a general agency contact
+or ties it to the same program; do not reuse another program's contact details.
+For a dated program or deadline, compare its date with the corpus snapshot date:
+if the deadline is already past as of the snapshot, say it had ended by then and
+do not tell the rider it is still available. For questions about how current the
+corpus is or whether a quoted fare may change, cite at least one relevant policy
+passage when describing what the corpus contains; the snapshot date alone does
+not replace the required citation.
+Before finalizing, perform this mandatory date check: if a published deadline is
+earlier than {as_of_date}, lead with "the published window had ended by the
+snapshot date." Never answer "yes," "still available," or "will offer" for that
+expired window; direct the rider to the agency to ask whether a newer option exists.
 Whenever your answer states any published fact from the passages — including a
 partial answer that declines an out-of-corpus part of the question — include
 the "based on policies published as of {as_of_date}" line (Spanish: "según las

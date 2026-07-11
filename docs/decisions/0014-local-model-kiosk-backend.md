@@ -1,4 +1,4 @@
-# ADR 0010: Local-model kiosk backend added; NO-GO on generation, measured
+# ADR 0014: Local-model kiosk backend added; NO-GO on generation, measured
 
 Date: 2026-07-08. Status: accepted (backend), NO-GO (kiosk generation use).
 

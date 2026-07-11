@@ -417,9 +417,16 @@ def write_facts(facts: list[FareFact], path: Path) -> None:
 
 
 def parse_price_claims(answer_text: str) -> list[float]:
-    """Every `$amount` a rider-facing answer states, as floats."""
+    """Every fare-like `$amount` a rider-facing answer states, as floats.
+
+    Large financial figures such as "$3.0 million in funding" are context,
+    not rider prices, and must not be checked against the fare-fact table.
+    """
     out = []
     for m in _PRICE_RE.finditer(answer_text):
+        suffix = answer_text[m.end() : m.end() + 16]
+        if re.match(r"(?:\.\d+)?\s*(million|billion)\b", suffix, re.I):
+            continue
         price = _parse_price(m.group())
         if price is not None:
             out.append(price)

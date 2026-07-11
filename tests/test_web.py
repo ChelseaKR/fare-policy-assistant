@@ -359,9 +359,9 @@ class TestHistoryHmac:
         monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
         good = web_handler._sign_turn("on MST?", "The fare is $2.")
         raw = [
-            {"q": "on MST?", "a": "The fare is $2."},              # unsigned → dropped
+            {"q": "on MST?", "a": "The fare is $2."},  # unsigned → dropped
             {"q": "on MST?", "a": "The fare is $2.", "sig": "0" * 64},  # wrong sig → dropped
-            {"q": "on MST?", "a": "The fare is $2.", "sig": good},      # valid → kept
+            {"q": "on MST?", "a": "The fare is $2.", "sig": good},  # valid → kept
         ]
         out = web_handler._parse_history(raw)
         assert out == [("on MST?", "The fare is $2.")]

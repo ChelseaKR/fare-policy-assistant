@@ -204,7 +204,10 @@ _APPLICATION_PASSAGE = re.compile(
     r"|reduced[- ]fare (mtd )?photo id card"
     r"|reduced[- ]fare photo id"
     r"|courtesy card"
-    r"|mobility pass",
+    r"|mobility pass"
+    r"|obtenga (una? )?solicitud"
+    r"|tarjetas? de cortes[ií]a"
+    r"|solicitud en persona",
     re.I,
 )
 
@@ -217,6 +220,36 @@ def _is_application_passage(chunk: Chunk) -> bool:
     """A passage that tells the rider how to apply for / obtain a reduced-fare
     program or ID card (where, cost, hours) — the 'close the loop' next step."""
     return bool(_APPLICATION_PASSAGE.search(f"{chunk.section} {chunk.text}"))
+
+
+_RIDER_CLASS_PATTERNS = {
+    "veteran": re.compile(r"\b(veteran\w*|veteran[oa]s?)\b", re.I),
+    "senior": re.compile(
+        r"\b(senior\w*|adulto mayor|personas mayores|nakatatanda|6[25]\s*(años|years)?)\b",
+        re.I,
+    ),
+    "disabled": re.compile(r"\b(disab\w*|discapac\w*|wheelchair|kapansanan)\b", re.I),
+}
+
+
+def _rider_classes(text: str) -> set[str]:
+    return {name for name, pattern in _RIDER_CLASS_PATTERNS.items() if pattern.search(text)}
+
+
+def _application_matches_question(question: str, chunk: Chunk) -> bool:
+    """Do not attach one rider class's application process to another.
+
+    Several agency pages reuse labels such as "Courtesy Card" while publishing
+    locations or proof rules only for disabled riders. Appending that chunk to a
+    senior or veteran query encouraged the answer model to extend those rules
+    across classes. A generic application passage still matches every query;
+    only an explicitly class-bound, disjoint passage is excluded.
+    """
+    query_classes = _rider_classes(question)
+    if not query_classes:
+        return True
+    passage_classes = _rider_classes(f"{chunk.section} {chunk.text}")
+    return not passage_classes or bool(query_classes & passage_classes)
 
 
 def _expand_query(tokens: list[str]) -> list[str]:
@@ -300,6 +333,14 @@ class Retriever:
             results = sorted(picked, key=lambda sc: sc.score, reverse=True)
         else:
             results = ranked[: self.cfg.top_k]
+        # Remove application instructions explicitly scoped to a different
+        # rider class before the model sees them; ordinary policy passages stay.
+        results = [
+            sc
+            for sc in results
+            if not _is_application_passage(sc.chunk)
+            or _application_matches_question(question, sc.chunk)
+        ]
         return self._close_the_loop(question, agencies, results, ranked)
 
     def _close_the_loop(
@@ -322,17 +363,14 @@ class Retriever:
         present = {sc.chunk.chunk_id for sc in results}
         additions: list[ScoredChunk] = []
         for ag in targets:
-            if any(
-                _is_application_passage(sc.chunk)
-                for sc in results
-                if sc.chunk.agency == ag
-            ):
+            if any(_is_application_passage(sc.chunk) for sc in results if sc.chunk.agency == ag):
                 continue  # the where-to-apply passage is already in hand
             for sc in ranked:
                 if (
                     sc.chunk.agency == ag
                     and sc.chunk.chunk_id not in present
                     and _is_application_passage(sc.chunk)
+                    and _application_matches_question(question, sc.chunk)
                 ):
                     additions.append(sc)
                     break
@@ -361,7 +399,7 @@ class Retriever:
 
     def confident(self, question: str, results: list[ScoredChunk]) -> bool:
         """Low confidence → the assistant declines and redirects instead of
-        guessing (FIX-07 / ADR 0009). Calibrated against a labeled
+        guessing (FIX-07 / ADR 0013). Calibrated against a labeled
         should-answer/should-decline question set by
         evals/decline_calibration.py rather than an absolute BM25 constant,
         which silently re-tuned itself every time the corpus grew."""

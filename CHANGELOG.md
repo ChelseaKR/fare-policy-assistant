@@ -14,7 +14,7 @@ rather than tied to a published tag.
   (`assistant.retrieve.ConfidenceSignals`: a z-score against the full-corpus
   score distribution and query-term coverage), calibrated by the new
   `evals/decline_calibration.py` against a labeled should-answer/
-  should-decline question set. See `docs/decisions/0009` (FIX-07).
+  should-decline question set. See `docs/decisions/0013` (FIX-07).
 - Roadmap P1 item 4, "a true rate limit": `infra/deploy.sh` now derives the
   API Gateway stage throttle's rate and burst from the same
   `RESERVED_CONCURRENCY` value used for the Lambda concurrency ceiling, so
@@ -80,7 +80,7 @@ rather than tied to a published tag.
   not resolve to a discoverable feed this pass) and `make gtfs-check`
   cross-checks feed fares against the prose corpus, flagging disagreement as
   `feed_agrees: yes|no|no_feed` in `corpus/processed/gtfs_cross_check.json`.
-   Never overrides an answer; see `docs/decisions/0009-gtfs-cross-validation.md`
+   Never overrides an answer; see `docs/decisions/0011-gtfs-cross-validation.md`
    for the design, the live survey, and the real coverage gap the first run
    found (SBMTD's Downtown-Waterfront Shuttle fare has no citable prose page).
 - Structured fare-fact layer (EXP-01, `docs/ideation/03-expansions.md`):

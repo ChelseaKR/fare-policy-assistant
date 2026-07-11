@@ -1,6 +1,6 @@
 # Model Card — Transit Fare Policy Assistant
 
-Reference implementation, not a product. Last updated 2026-06-12.
+Reference implementation, not a product. Last updated 2026-07-11.
 
 ## Purpose
 
@@ -44,16 +44,17 @@ agency.
 Detection patterns, not just the refusal text, are mirrored across languages so
 a guard trips regardless of the question's language. The `guard_parity` block in
 `evals/suites/refusal.yaml` asserts an English *and* a Spanish case per family.
-Tagalog is pending FIX-11 (language detection).
+Tagalog language detection is implemented, but fixed guard copy has no Tagalog
+catalog and language-specific guard phrases have not reached EN/ES parity.
 
 | Guard family        | English | Spanish | Tagalog        |
 | ------------------- | :-----: | :-----: | :------------: |
 | PII — SSN/email/phone/Medicare ID | ✅ | ✅ (locale-independent) | ✅ (locale-independent) |
-| PII — date of birth | ✅ | ✅ | pending FIX-11 |
-| Scope — medical advice | ✅ | ✅ | pending FIX-11 |
-| Scope — immigration | ✅ | ✅ | pending FIX-11 |
-| Scope — legal advice | ✅ | ✅ | pending FIX-11 |
-| Prompt injection    | ✅ | ✅ | pending FIX-11 |
+| PII — date of birth | ✅ | ✅ | not yet mirrored |
+| Scope — medical advice | ✅ | ✅ | not yet mirrored |
+| Scope — immigration | ✅ | ✅ | not yet mirrored |
+| Scope — legal advice | ✅ | ✅ | not yet mirrored |
+| Prompt injection    | ✅ | ✅ | not yet mirrored |
 
 Number- and symbol-based PII (SSN, email, phone, Medicare ID) is inherently
 language-independent; the date-of-birth guard needs per-language lead-in phrases
@@ -75,8 +76,9 @@ in the system.
 
 ## Evaluation
 
-133 cases across groundedness, refusal, edge-case, multilingual, freshness,
-multi-turn conversation, and stretch-language (Tagalog) suites; method and
+201 cases across groundedness, refusal, edge-case, multilingual, freshness,
+multi-turn conversation, cross-agency, counterfactual sensitivity, and
+stretch-language (Tagalog) suites; method and
 current scores in [EVALS.md](../EVALS.md). Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
 also records its exact token usage and an estimated cost, and checks the LLM
@@ -92,7 +94,7 @@ Known limits found by the harness so far:
   independent signals (a z-score against the full-corpus score distribution,
   the top-1/top-2 margin, query-term coverage) calibrated against a labeled
   should-answer/should-decline set instead of a raw score threshold (see
-  `docs/decisions/0001` and `docs/decisions/0009`). The system prompt and the
+  `docs/decisions/0001` and `docs/decisions/0013`). The system prompt and the
   missing-citation guard remain the second and third layer regardless.
 - Spanish coverage is strongest for MST, which publishes a Spanish fares
   page. For the other agencies Spanish answers depend on cross-lingual
@@ -104,9 +106,9 @@ Known limits found by the harness so far:
   honest, mirrored, all-cross-lingual test: a fare-vocabulary lexicon
   (`assistant.retrieve._TL_EN_LEXICON`) bridges a Tagalog query to the
   English corpus at retrieval time, but nothing downstream generates a
-  Tagalog answer or reliably detects a Tagalog question —
-  `assistant.guards.detect_language` currently returns only `en`/`es` — so
-  the suite's own `language_match` check is expected to fail on every case.
+  Tagalog answer; `assistant.guards.detect_language` can identify Tagalog, but
+  the answer model and fixed-string catalogs do not yet provide parity, so
+  the suite's language and content checks currently fail on every case.
   That failure is the parity gap this suite exists to make visible in the
   "Stretch-language parity (Tagalog)" table in EVALS.md, not a bug to
   silence. Chinese, Vietnamese, and Korean remain unaddressed; Tagalog was
@@ -115,7 +117,7 @@ Known limits found by the harness so far:
 - The overall pass count moves by a couple of cases run to run. A handful of
   cases sit at the LLM judge's groundedness/helpfulness decision boundary (and
   the answer model is not perfectly deterministic at temperature 0 on Bedrock),
-  so the headline is a band (~113 of 118) rather than a fixed number. The
+  so the headline is a band (the consolidation run was 160 of 201) rather than a fixed number. The
   deterministic safety checks — no determination language, citation present,
   PII not echoed — do not vary. The regression gate ignores single-case suite
   moves for this reason and trips only on a drop of two cases or more.

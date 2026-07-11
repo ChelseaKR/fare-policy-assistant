@@ -52,9 +52,7 @@ def build_manifest_stanza(
     doc_id = f"{agency_id.lower()}-fares"
     return "\n".join(
         [
-            f"  # ── {agency_full} "
-            + "─" * max(0, 60 - len(agency_full))
-            + "─",
+            f"  # ── {agency_full} " + "─" * max(0, 60 - len(agency_full)) + "─",
             "  # TODO: before merging, record this agency's robots.txt and any",
             "  #       Content-Signal / permissions reading in the manifest header",
             "  #       comment block above, dated, as the other agencies do.",
@@ -75,9 +73,7 @@ def append_manifest_stanza(stanza: str, manifest_path: Path) -> None:
     It is written commented so the corpus a committed eval run saw never changes
     silently: the contributor uncomments it, then runs fetch/ingest deliberately.
     """
-    commented = "\n".join(
-        f"# {line}" if line.strip() else "#" for line in stanza.splitlines()
-    )
+    commented = "\n".join(f"# {line}" if line.strip() else "#" for line in stanza.splitlines())
     block = (
         "\n"
         "# ── scaffolded by assistant.scaffold_agency ── "
@@ -106,9 +102,7 @@ def render_draft_suite(agency_id: str, chunks: list[dict]) -> str:
     lid = agency_id.lower()
     # Prefer the agency's real casing as ingested (e.g. "SacRT"); fall back to
     # the id upper-cased when a chunk omits it.
-    scope = next(
-        (c.get("agency") for c in chunks if c.get("agency")), agency_id.upper()
-    )
+    scope = next((c.get("agency") for c in chunks if c.get("agency")), agency_id.upper())
     lines = [
         f"# DRAFT suite for {scope} — auto-generated skeletons, one per ingested chunk.",
         "#",

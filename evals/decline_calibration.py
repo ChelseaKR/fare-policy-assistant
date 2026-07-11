@@ -1,4 +1,4 @@
-"""Decline-threshold calibration (FIX-07 / ADR 0009).
+"""Decline-threshold calibration (FIX-07 / ADR 0013).
 
 The old `RetrievalConfig.min_confidence` was an absolute BM25 score, and BM25
 scores are not calibrated against anything — they drift every time the corpus

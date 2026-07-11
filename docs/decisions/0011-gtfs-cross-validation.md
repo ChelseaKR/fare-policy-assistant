@@ -1,4 +1,4 @@
-# ADR 0009: GTFS(-Fares) cross-validation channel
+# ADR 0011: GTFS(-Fares) cross-validation channel
 
 Date: 2026-07-08. Status: accepted. Implements EXP-06 in
 `docs/ideation/03-expansions.md`.

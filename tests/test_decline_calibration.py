@@ -1,4 +1,4 @@
-"""Decline-threshold calibration helpers (FIX-07 / ADR 0009).
+"""Decline-threshold calibration helpers (FIX-07 / ADR 0013).
 
 The labeling and decision logic is what the calibrated threshold rests on, so
 it is tested directly, offline, against the small fixture corpus — the same

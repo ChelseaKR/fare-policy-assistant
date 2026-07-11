@@ -1,4 +1,4 @@
-# ADR 0009: Longitudinal, time-versioned corpus retention
+# ADR 0010: Longitudinal, time-versioned corpus retention
 
 Date: 2026-07-08. Status: accepted. Resolves ideation EXP-05
 (`docs/ideation/03-expansions.md`).

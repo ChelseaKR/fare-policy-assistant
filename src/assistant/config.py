@@ -99,7 +99,7 @@ class RetrievalConfig:
     top_k: int = 8
     # Mild preference for chunks in the question's language.
     language_boost: float = 1.2
-    # FIX-07 / ADR 0009: the decline rule reads normalized, corpus-size-
+    # FIX-07 / ADR 0013: the decline rule reads normalized, corpus-size-
     # independent signals (assistant.retrieve.ConfidenceSignals) instead of
     # an absolute BM25 score. An absolute score drifts every time the corpus
     # grows (every new agency changes IDF for every existing chunk), so the
@@ -108,7 +108,7 @@ class RetrievalConfig:
     # query) *or* below this fraction of query terms actually present in the
     # top chunk, the assistant declines rather than guessing. Calibrated by
     # evals/decline_calibration.py against a labeled should-answer/
-    # should-decline question set — see the ablation table in ADR 0009.
+    # should-decline question set — see the ablation table in ADR 0013.
     # Re-run the calibration after every corpus change.
     decline_z_threshold: float = 1.75
     decline_coverage_floor: float = 0.10

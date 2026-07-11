@@ -134,7 +134,7 @@ documents:
 # mechanically instead of by luck. The feed is a tripwire, never a source of
 # truth: `src/assistant/gtfs.py` only flags disagreement, it never overrides
 # an answer or prefers the feed price over the cited prose. See
-# docs/decisions/0009-gtfs-cross-validation.md.
+# docs/decisions/0011-gtfs-cross-validation.md.
 #
 # Survey (live-fetched 2026-07-08): MST and SBMTD both resolve to a working
 # static GTFS feed with fare data. Yolobus, SacRT, and HTA did not resolve to

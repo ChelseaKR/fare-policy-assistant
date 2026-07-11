@@ -30,6 +30,12 @@ generic:
   - evals/calibration.py
   - evals/provenance.py
   - evals/retrieval_ablation.py
+  - evals/backend_comparison.py
+  - evals/cache.py
+  - evals/compare.py
+  - evals/history.py
+  - evals/reranker_bottleneck_check.py
+  - evals/stats.py
   - src/assistant/__init__.py
   - src/assistant/guards.py
   - src/assistant/config.py
@@ -40,10 +46,13 @@ generic:
   - src/assistant/corpus.py
   - src/assistant/ingest.py
   - src/assistant/cli.py
+  - src/assistant/contract.py
+  - src/assistant/langid.py
   - web/a11y.py
   - web/handler.py
   - web/embed.py
   - web/offline.py
+  - web/csp.py
   - web/__init__.py
   - .github/workflows/ci.yml
   - .github/workflows/security.yml
@@ -72,6 +81,11 @@ generic_edit:
 
 domain_specific:
   - src/assistant/domain.py          # the DomainProfile instance itself
+  - src/assistant/facts.py           # typed fare/age facts
+  - src/assistant/gtfs.py            # transit feed cross-checking
+  - src/assistant/scaffold_agency.py # transit-agency contribution kit
+  - evals/decline_calibration.py     # calibrated against this corpus/questions
+  - web/console.py                   # transit-agency operator surface
   - corpus/                          # manifest.yaml + raw/ snapshots
   - evals/suites/                    # case content written from this corpus
   - evals/govchat/                   # exported golden.jsonl + baseline

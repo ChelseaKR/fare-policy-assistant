@@ -75,9 +75,8 @@ def _sign_turn(q: str, a: str) -> str:
     the `|` delimiter cannot be shifted between the two fields (a plain `q|a`
     join would collide for `("x|y", "z")` and `("x", "y|z")`)."""
     key = _history_hmac_key()
-    return hmac.new(
-        key.encode(), f"{len(q)}:{q}|{a}".encode(), hashlib.sha256
-    ).hexdigest()
+    return hmac.new(key.encode(), f"{len(q)}:{q}|{a}".encode(), hashlib.sha256).hexdigest()
+
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 # The index page's CSP, computed once from its own markup: the inline <style> and
@@ -231,9 +230,7 @@ def _embed_response(body: str) -> dict:
     same default-src 'none' base with the widget's inline blocks hashed in.
     """
     ancestors = os.environ.get("FPA_EMBED_ANCESTORS", "'self'")
-    return _html_response(
-        body, html_csp(body, frame_ancestors=ancestors), frameable=True
-    )
+    return _html_response(body, html_csp(body, frame_ancestors=ancestors), frameable=True)
 
 
 def _make_cfg() -> config.Config:

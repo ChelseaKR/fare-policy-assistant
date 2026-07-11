@@ -1,4 +1,4 @@
-# ADR 0009: structured answer contract — deterministic-parse scope, not a prompt change
+# ADR 0012: structured answer contract — deterministic-parse scope, not a prompt change
 
 Date: 2026-07-08. Status: accepted.
 
