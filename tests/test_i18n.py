@@ -31,6 +31,15 @@ def test_get_translation_loads_spanish_catalog() -> None:
     )
 
 
+def test_get_translation_loads_tagalog_catalog() -> None:
+    assert (
+        refusal_message(get_translation("tl"), "injection")
+        == "Maaari lamang akong sumagot sa mga tanong tungkol sa mga inilathalang "
+        "patakaran sa pamasahe. Kung kailangan mo ng ibang tulong, makipag-ugnayan "
+        "sa customer service ng transit agency."
+    )
+
+
 def test_get_translation_english_is_source_text() -> None:
     msg = refusal_message(get_translation("en"), "injection")
     assert msg.startswith("I can only answer questions about published transit fare policies.")
@@ -49,6 +58,9 @@ def test_get_translation_unknown_tag_falls_back_to_source() -> None:
         ("es", "pii", "datos personales"),
         ("es", "scope", "asuntos médicos"),
         ("es", "injection", "tarifas publicadas"),
+        ("tl", "pii", "personal na detalye"),
+        ("tl", "scope", "usaping medikal"),
+        ("tl", "injection", "inilathalang patakaran"),
         ("en", "pii", "personal details"),
         ("en", "scope", "medical, immigration, or legal"),
         ("en", "injection", "published transit fare policies"),
@@ -88,6 +100,8 @@ def test_no_support_message_spanish_preserves_no_determination_stance() -> None:
         ("es", "es"),
         ("ES", "es"),
         ("es-MX", "es"),  # primary-subtag fallback
+        ("tl", "tl"),
+        ("tl-PH", "tl"),
         ("fr", "en"),  # unsupported → default
         ("*", "en"),  # wildcard → default
         ("en-US,es;q=0.9", "en"),  # highest-q primary matches en

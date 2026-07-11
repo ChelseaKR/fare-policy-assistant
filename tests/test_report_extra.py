@@ -173,12 +173,15 @@ def _write_run(run_dir, summary, records):
 def test_generate_writes_markdown_and_html(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "REPO_ROOT", tmp_path)
     (tmp_path / "docs").mkdir()
-    run_dir = _write_run(tmp_path / "run1", SUMMARY_WITH_COST, [_rec()])
+    record = _rec()
+    record["answer"] = "A line with model-added spaces.  \nA clean line."
+    run_dir = _write_run(tmp_path / "run1", SUMMARY_WITH_COST, [record])
     report.generate(run_dir)
     md = (tmp_path / "EVALS.md").read_text()
     html = (tmp_path / "docs" / "eval-report.html").read_text()
     assert "# Evaluation Report" in md
     assert "<!doctype html>" in html and "Evaluation Report" in html
+    assert all(line == line.rstrip() for line in md.splitlines())
 
 
 def test_latest_run_dir_picks_the_newest(tmp_path, monkeypatch):

@@ -23,13 +23,15 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
     "email": re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b"),
     "phone": re.compile(r"\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b"),
-    # Multilingual parity (FIX-05): the lead-ins are English *and* Spanish, but
+    # Multilingual parity (FIX-05): the lead-ins are English, Spanish, and
+    # Tagalog, but
     # the digit tail is unchanged, so "nací el 3 de mayo de 1961" trips (the "3"
     # falls within 20 chars of the lead-in) while a bare Spanish phrase with no
     # date does not. Detection must not weaken as we add languages.
     "dob": re.compile(
         r"(?:\b(?:born on|date of birth|birthday is|dob)\b"
-        r"|nac[íi] el|fecha de nacimiento|mi cumplea[ñn]os es|naci[óo] el)"
+        r"|nac[íi] el|fecha de nacimiento|mi cumplea[ñn]os es|naci[óo] el"
+        r"|ipinanganak ako noong|petsa ng kapanganakan|kaarawan ko ay)"
         r".{0,20}\d",
         re.I,
     ),
@@ -56,7 +58,8 @@ INJECTION_PATTERNS = re.compile(
     r"(ignore (all |your |previous |prior )*(instructions|rules|prompts)|"
     r"system prompt|you are now|pretend (you are|to be)|jailbreak|"
     r"disregard.{0,20}(instructions|guidelines)|"
-    r"(ignora|olvida|descarta).{0,20}(instrucciones|reglas)|di exactamente)",
+    r"(ignora|olvida|descarta).{0,20}(instrucciones|reglas)|di exactamente|"
+    r"kalimutan.{0,30}(tagubilin|panuto)|balewalain.{0,30}(tagubilin|panuto))",
     re.I,
 )
 
@@ -157,6 +160,8 @@ DETERMINATION_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\bI (can )?(confirm|guarantee) (that )?you\b", re.I),
     re.compile(r"\busted (sí )?(califica|es elegible)\b", re.I),
     re.compile(r"\busted no (califica|es elegible)\b", re.I),
+    re.compile(r"\b(kwalipikado|karapat-dapat) ka\b", re.I),
+    re.compile(r"\bmay (?:senior )?(?:diskwento|discount) para sa iyo\b", re.I),
 ]
 
 # Contexts that legitimize an otherwise-matching phrase when they directly
@@ -176,6 +181,8 @@ _HEDGE_BEFORE = re.compile(
     r"( whether| if| that)?\s+"
     rf"|no puedo (decirle?|confirmarle?|garantizarle?)( que)?[:,]?\s*{_QUOTE}"
     r"|no (significa|garantiza) que\s+"
+    rf"|hindi ko (masasabi|makukumpirma|matitiyak)( na)?[:,]?\s*{_QUOTE}"
+    r"|hindi (awtomatikong )?(nangangahulugan|tumitiyak) na\s+"
     r")$",
     re.I,
 )
@@ -212,12 +219,14 @@ def redact_determination_language(text: str) -> str:
 # single-id-only pattern saw zero citations there and tripped the missing-
 # citation guard on a perfectly grounded answer (eval case fresh-001).
 CITATION_RE = re.compile(r"doc:([a-z0-9-]+)")
-# English and Spanish renderings of the "as of <date>" disclosure. The model
+# English, Spanish, and Tagalog renderings of the "as of <date>" disclosure. The model
 # phrases the Spanish one several ways ("políticas publicadas al 12 de junio…"),
 # all anchored on "publicado/publicadas" (eval cases ml-003…ml-012).
 AS_OF_RE = re.compile(
     r"\b(as of|published as of|publicad[oa]s?|a partir del?|"
-    r"vigente[s]? (al|desde)|actualizad[oa]s? (al|el))\b",
+    r"vigente[s]? (al|desde)|actualizad[oa]s? (al|el)|"
+    r"inilathala noong|(?:mga )?patakaran(?:g)? (?:na )?inilathala noong|"
+    r"batay sa (?:mga )?patakaran(?:g)? (?:na )?inilathala)\b",
     re.I,
 )
 

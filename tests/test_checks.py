@@ -129,6 +129,17 @@ class TestAnswerChecks:
         checks = _by_name(run_checks(case, result, DOC_IDS))
         assert not checks["language_match"].passed
 
+    def test_uncertain_taglish_uses_classifier_top_language_for_parity(self):
+        case = {"expected_behavior": "answer", "language": "tl"}
+        result = _answered(
+            "Batay sa mga patakaran na inilathala noong 2026-06-12, ang Regular "
+            "Fixed Route Single Ride fare ay $2.00 [doc:mst-fares]."
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert checks["language_match"].passed
+        assert "got tl" in checks["language_match"].detail
+        assert "unsure=true" in checks["language_match"].detail
+
     def test_forbidden_content_match_is_case_insensitive(self):
         # A forbidden phrase must be caught regardless of casing; otherwise an
         # answer could slip a banned claim past the gate just by capitalizing it.

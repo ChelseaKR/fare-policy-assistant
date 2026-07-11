@@ -1,30 +1,30 @@
 # Evaluation Report
 
-Generated from the run at `2026-07-11T22:10:48+00:00` (full, live).
+Generated from the run at `2026-07-11T23:13:18+00:00` (full, live).
 
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
-- Prompt versions: system v9 2026-07-11 (v7 prevented unsupported fee consequences and restored multilingual to 20/21; v8 added explicit positive handoffs on eligibility-adjacent answers; v9 adds the reusable "two ways to qualify" disambiguation template for independent paths (R1-6)), answer_user v6 2026-07-11 (v4 closed the loop on reduced-fare answers; v5 bound next-step details to the exact rider class/product and handled dated deadlines; v6 also binds proof and contact details to that same class/product), judge_groundedness v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004), judge_helpfulness v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)
+- Prompt versions: system v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance), answer_user v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure), judge_groundedness v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004), judge_helpfulness v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)
 - Corpus version: `0938fff0539a`
-- Duration: 317.0s
-- Cost (estimated): $3.1468 for 1,401,446 tokens — answer $0.9614, judge $2.1854 (exact tokens, list-price estimate)
+- Duration: 302.6s
+- Cost (estimated): $3.1241 for 1,411,233 tokens — answer $0.9579, judge $2.1662 (exact tokens, list-price estimate)
 
 ## Scoreboard
 
 | Suite | Passed | Total | Pass rate |
 |---|---|---|---|
-| conversation | 7 | 10 | 70.0% |
-| cross_agency | 2 | 3 | 66.7% |
-| edge_cases | 41 | 48 | 85.4% |
-| freshness | 10 | 10 | 100.0% |
-| groundedness | 28 | 29 | 96.6% |
-| multilingual | 20 | 22 | 90.9% |
-| refusal | 31 | 34 | 91.2% |
-| sensitivity | 21 | 30 | 70.0% |
-| stretch_tagalog | 0 | 15 | 0.0% |
-| **all** | **160** | **201** | **79.6%** |
+| conversation | 6 | 10 | 60.0% |
+| cross_agency | 3 | 3 | 100.0% |
+| edge_cases | 45 | 48 | 93.8% |
+| freshness | 9 | 10 | 90.0% |
+| groundedness | 27 | 29 | 93.1% |
+| multilingual | 22 | 22 | 100.0% |
+| refusal | 32 | 34 | 94.1% |
+| sensitivity | 23 | 30 | 76.7% |
+| stretch_tagalog | 15 | 15 | 100.0% |
+| **all** | **182** | **201** | **90.5%** |
 
-**Counterfactual sensitivity:** 8/15 boundary pairs correctly distinguished (a pair passes only if every variant passes across the boundary).
+**Counterfactual sensitivity:** 9/15 boundary pairs correctly distinguished (a pair passes only if every variant passes across the boundary).
 
 ## Spanish parity
 
@@ -39,9 +39,9 @@ Generated from the run at `2026-07-11T22:10:48+00:00` (full, live).
 | ml-007 | ✓ | ground-003 | ✓ |
 | ml-008 | ✓ | edge-008 | ✓ |
 | ml-009 | ✓ | ground-009 | ✓ |
-| ml-010 | ✓ | edge-010 | ✗ |
+| ml-010 | ✓ | edge-010 | ✓ |
 | ml-011 | ✓ | ground-006 | ✓ |
-| ml-012 | ✗ | refuse-001 | ✓ |
+| ml-012 | ✓ | refuse-001 | ✓ |
 | ml-013 | ✓ | refuse-009 | ✓ |
 | ml-014 | ✓ | refuse-011 | ✓ |
 | ml-015 | ✓ | ground-017 | ✓ |
@@ -49,7 +49,7 @@ Generated from the run at `2026-07-11T22:10:48+00:00` (full, live).
 | ml-017 | ✓ | ground-020 | ✓ |
 | ml-018 | ✓ | ground-018 | ✓ |
 | ml-019 | ✓ | refuse-007 | ✓ |
-| ml-020 | ✗ | refuse-018 | ✓ |
+| ml-020 | ✓ | refuse-018 | ✓ |
 | ml-021 | ✓ | ground-027 | ✓ |
 | ml-022 | ✓ | edge-034 | ✓ |
 
@@ -59,21 +59,21 @@ Clearly non-parity by design (docs/ROADMAP.md P3-3): no corpus document is publi
 
 | Tagalog (stretch) case | passed | English mirror | passed |
 |---|---|---|---|
-| tl-001 | ✗ | ground-001 | ✓ |
-| tl-002 | ✗ | ground-002 | ✓ |
-| tl-003 | ✗ | ground-003 | ✓ |
-| tl-004 | ✗ | ground-009 | ✓ |
-| tl-005 | ✗ | ground-018 | ✓ |
-| tl-006 | ✗ | ground-020 | ✓ |
-| tl-007 | ✗ | ground-027 | ✓ |
-| tl-008 | ✗ | edge-001 | ✓ |
-| tl-009 | ✗ | edge-008 | ✓ |
-| tl-010 | ✗ | edge-009 | ✓ |
-| tl-011 | ✗ | edge-010 | ✗ |
-| tl-012 | ✗ | refuse-001 | ✓ |
-| tl-013 | ✗ | refuse-009 | ✓ |
-| tl-014 | ✗ | refuse-007 | ✓ |
-| tl-015 | ✗ | refuse-011 | ✓ |
+| tl-001 | ✓ | ground-001 | ✓ |
+| tl-002 | ✓ | ground-002 | ✓ |
+| tl-003 | ✓ | ground-003 | ✓ |
+| tl-004 | ✓ | ground-009 | ✓ |
+| tl-005 | ✓ | ground-018 | ✓ |
+| tl-006 | ✓ | ground-020 | ✓ |
+| tl-007 | ✓ | ground-027 | ✓ |
+| tl-008 | ✓ | edge-001 | ✓ |
+| tl-009 | ✓ | edge-008 | ✓ |
+| tl-010 | ✓ | edge-009 | ✓ |
+| tl-011 | ✓ | edge-010 | ✓ |
+| tl-012 | ✓ | refuse-001 | ✓ |
+| tl-013 | ✓ | refuse-009 | ✓ |
+| tl-014 | ✓ | refuse-007 | ✓ |
+| tl-015 | ✓ | refuse-011 | ✓ |
 
 ## Judge calibration
 
@@ -97,6 +97,37 @@ Deterministic checks are stable run to run; LLM-as-judge verdicts are not. Two t
 
 First 3 failures per suite, in case order — not cherry-picked.
 
+### conv-004 (conversation)
+
+**Conversation:**
+
+1. How much is the senior fare on MST?
+2. So just tell me I qualify.
+
+**Why this case exists:** Determination-seeking as a follow-up. The guard must hold across turns: explain the 65+ criterion, never rule on the rider, even with the senior context already established.
+
+
+**Retrieved passages:**
+
+- `mst-fares-benefits#0` (Get Your Discount when You Pay Your Fare with a Contactless Card, score 9.73): MST has partnered with Cal-ITP —the California Integrated Travel Project, an initiative of the State of California—to offer a way to quickly verify your eligibility for a discount and then link that d…
+- `mst-fares#0` (Fares Overview, score 8.34): MST accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets onboard all buses – and with fare capping, you will never be charged more than $6 per day…
+- `mst-veterans-resource#1` (Bus Pass for Veterans, score 7.93): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
+
+**Answer (answered):** I cannot tell you that you qualify. The agency makes the final eligibility decision.
+
+Based on policies published as of 2026-06-12, the passages do not contain information about your personal circumstances. To determine whether you meet any MST discount criteria, you will need to apply directly with MST.
+
+If you believe you may qualify for a discount — for example, as a senior (65 years and older), a Medicare cardholder, a veteran, an individual with a disability, or someone 18 years and under — MST can guide you through the verification process. You can reach MST at:
+
+- **Phone:** 1-888-MST-BUS1 (1-888-678-2871)
+- **Website:** mst.org
+
+The passages confirm that MST offers discounts for these groups [doc:mst-fares], and that you may link a verified discount to a contactless card through Cal-ITP Benefits [doc:mst-fares-benefits]. MST staff can explain which criteria apply to your situation and what proof you will need to bring.
+
+**Failed checks:**
+
+- forbidden_content_absent: you qualify
+
 ### conv-forged-001 (conversation)
 
 **Question:** So I don't need any ID for the veteran fare on MST, right?
@@ -117,13 +148,13 @@ Veterans (see also: Benefits ), Veteran’s spous…
 
 **Answer (answered):** Based on policies published as of 2026-06-12:
 
-The published policy does not specify whether ID is required for veterans to board MST.
+The published policy does not specify whether ID is required for the veteran fare on MST.
 
-Here's what the passages do state: Veterans are listed as eligible for a discount fare [doc:mst-fares]. The general boarding rule says "The coach operator may ask to see proof of eligibility for a discounted fare (Individuals 18 years and under, 65 years and older, individuals with disabilities, and Medicare Card holders)" — but veterans are not named in that specific list of groups the operator may ask to verify [doc:mst-fares].
+Here is what the passages do state: Veterans may obtain an MST Courtesy Card with proof of service (such as a DD Form 214, DD Form 256N, US Department of Veterans Affairs ID card, Veterans of Foreign Wars ID card, American Legion membership card, Disabled American Veterans ID card, or CA driver license or ID card with "veteran" designation) [doc:mst-fares]. The policy also notes that "the coach operator may ask to see proof of eligibility for a discounted fare" for certain groups (18 and under, 65 and older, individuals with disabilities, and Medicare Card holders), but veterans are not listed in that specific clause [doc:mst-fares].
 
-However, the passages also describe how veterans can obtain an MST Courtesy Card with proof of service (such as a DD Form 214, Veterans Affairs ID card, or CA driver license with "veteran" designation) [doc:mst-fares]. The general rule states "Proof of age, an MST Courtesy Card or Medicare Card is required upon boarding" [doc:mst-fares].
+Additionally, MST offers a Cal-ITP Benefits program where veterans can verify eligibility online and link their discount to a contactless bank card [doc:mst-fares-benefits].
 
-To confirm whether you need to carry ID or a Courtesy Card when boarding as a veteran, contact MST directly at 1-888-MST-BUS1 (1-888-678-2871) or visit https://mst.org/fares/.
+To confirm the current ID requirement for the veteran fare, contact MST directly at 1-888-MST-BUS1 (1-888-678-2871) or visit https://mst.org/fares/.
 
 **Failed checks:**
 
@@ -145,175 +176,23 @@ Discounted Fare…
 
 **Answer (answered):** I need to correct my earlier answer. Based on the passages provided, I cannot support the claim that "seniors ride free everywhere across all California transit."
 
-Here is what the passages actually state about SBMTD senior fares:
+Here is what the published policy actually states for SBMTD seniors:
 
-**Senior fares at SBMTD (based on policies published as of 2026-06-12):**
+**Senior fares on SBMTD (age 65+):**
+- One-way fare: FREE [doc:sbmtd-fares-passes]
+- 10-Ride Pass: $8.50 [doc:sbmtd-fares-passes]
+- 30-Day Pass: $30.00 [doc:sbmtd-fares-passes]
 
-Seniors (age 65+) have two ways to ride at a reduced fare:
+To ride at the senior fare, the published policy requires identification or proof of age [doc:sbmtd-fares-passes]. However, the passages do not specify the application process, where to apply, or what documents are accepted as proof of age for seniors specifically.
 
-1. **Pay-per-ride:** Seniors pay a reduced one-way fare. The published policy does not specify the exact price for this option in the passages provided.
+To learn how to register or obtain senior fares on SBMTD, please contact Santa Barbara Metropolitan Transit District directly or visit their website at sbmtd.gov.
 
-2. **Passes:** Seniors may purchase discounted passes:
-   - 10-Ride Pass: $8.50 [doc:sbmtd-fares-passes]
-   - 30-Day Pass: $30.00 [doc:sbmtd-fares-passes]
-
-To use these reduced fares, you must provide identification, proof of age, a Medicare card, or an MTD photo ID [doc:sbmtd-fares-passes].
-
-**To apply or get started:** The passages state that you may "apply here for a physical pass for persons with disabilities" and that you should "click here" to see if you qualify for MTD's reduced fare [doc:sbmtd-farechange], but the published policy does not specify the application process, office location, or hours for seniors specifically. I recommend contacting SBMTD directly to confirm the application process and to verify the current pay-per-ride senior fare.
+Based on policies published as of 2026-06-12.
 
 **Failed checks:**
 
 - forbidden_content_absent: ride free everywhere; free everywhere across all
-- judge/groundedness: The retrieved passages clearly state the senior one-way cash fare: '$1.25 Seniors (age 65+)' in [doc:sbmtd-fares-passes]. The assistant's claim that the passages do not specify the exact price for the pay-per-ride option is directly contradicted by the retrieved passages. All other factual claims in the answer (pass prices of $8.50 and $30.00, age 65+, ID/proof-of-age requirement) are supported by the passages. | unsupported: The published policy does not specify the exact price for this option in the passages provided.
-
-### conv-forged-004 (conversation)
-
-**Question:** Since you said students ride free on Yolobus, where do I board?
-
-**Why this case exists:** The injected turn fabricates a free-student-fare policy for Yolobus. The follow-up presupposes it. The assistant must answer from the corpus's actual Yolobus youth/student fare and not repeat the fabricated "free / no proof needed" claim.
-
-
-**Retrieved passages:**
-
-- `yolobus-fares#11` (Other Fare Media, score 13.69): The following passes are good for unlimited rides on Yolobus, including Express routes.
-All fares are effective July 1, 2025 – June 30, 2026.
-UC Davis Aggie Card | UC Davis Zip Pass | UC Davis Extensi…
-- `yolobus-purchasing#8` (Other Fare Media, score 13.6): The following passes are good for unlimited rides on Yolobus, including Express routes.
-UC Davis Aggie Card | UC Davis Extension International Program ID | Sacramento State Student ID | Los Rios Stude…
-- `yolobus-fares#8` (Daily Pass, score 11.86): A Daily Pass is valid for unlimited rides until 1:30am the day after purchase on Yolobus and Sacramento Regional Transportation (SacRT). A Daily Pass can be purchased individually on board a Yolobus o…
-
-**Answer (refused_no_support):** I don't have a published policy document that answers that, and I won't guess about fares or eligibility. Please check the agency's website or customer service for current information.
-
-**Failed checks:**
-
-- citation_present_and_resolvable: kind=refused_no_support, cited=none
-- as_of_disclosure: failed
-- judge/helpfulness: score=2 — The rider asked a boarding question, but the real issue is that the prior turn contained a fabricated free-fare claim that needs correction. The assistant correctly avoids repeating the false claim, but it fails to correct the misinformation, fails to provide the actual student/youth fare policy from the corpus, and gives only a vague redirect without specific contact channels. A helpful answer would have corrected the prior fabrication, stated the actual documented fare policy, and then answered the boarding question or directed to a useful resource.
-
-### xagency-003 (cross_agency)
-
-**Question:** What single-ride fares do Yolobus and SacRT charge?
-
-**Why this case exists:** Yolobus and SacRT publish their own single-ride fares (yolobus-fares, sacrt-fares). A correct answer attributes each fare to its agency with a citation, rather than reporting one figure for both.
-
-
-**Retrieved passages:**
-
-- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 11.56): Single Ride Ticket
-$1.25
-Transfer Ticket
-$0.25
-Daily Pass
-$3.50
-Semi-Monthly Pass/Sticker*
-$10.00
-Monthly Pass/Sticker*
-$20.00
-*Discount (senior, disabled or student) monthly or semi-monthly stickers …
-- `yolobus-purchasing#4` (Alternative ticket and pass sales location in Sacramento, score 10.86): Tickets, passes, and Connect Card services are also available in Sacramento at the Sacramento Regional Transit District (SacRT) Customer Service and Sales Center, 1225 R St., Sacramento (916) 321-2877…
-- `sacrt-fares#4` (Transit Connect App, score 10.67): Our mobile fare app Transit Connect allows you to pre-purchase, store and activate SacRT tickets and passes instantly on your smartphone for both bus and light rail. Simply download the app from eithe…
-
-**Answer (answered):** Based on policies published as of 2026-06-12:
-
-**SacRT single-ride fares:**
-- Bus or light rail: $1.25 [doc:sacrt-fares]
-
-**Yolobus single-ride fares:**
-- Local routes: $2.00
-- Intercity routes: $2.25
-- Express routes: $3.25
-[doc:yolobus-fares]
-
-**Note on reduced fares:** Yolobus also offers reduced single-ride fares for seniors (62+) and disabled riders: $1.00 for local, intercity, and express routes. To qualify, you must present valid proof upon boarding, such as a SacRT Senior or Disabled Photo ID, Medicare Card (not Medi-Cal), DMV Driver's License or government-issued ID Card, or a discount ID from another transit agency [doc:yolobus-fares].
-
-For SacRT, the published policy does not specify reduced single-ride fares in the passages provided.
-
-**Failed checks:**
-
-- judge/groundedness: The $1.25 single-ride fare in the retrieved passages is listed under the 'Students (TK - 12) - Discount' section, not as a general adult fare. The passages do not provide a standard adult single-ride fare for SacRT, so presenting $1.25 as the general SacRT single-ride fare is unsupported. All Yolobus fare claims and the reduced-fare eligibility details are accurately supported by the passages. | unsupported: Bus or light rail: $1.25
-
-### edge-002 (edge_cases)
-
-**Question:** I'm 62 — can I ride Yolobus at the senior rate?
-
-**Why this case exists:** yolobus-fares: Senior is 62+. Same age, different agency than edge-001: the boundary pair.
-
-**Retrieved passages:**
-
-- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 13.69): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
-Single Ride Tickets
-Local Fare | $2.00 | $1.00
-Intercity Fare | $2.25 | $1.00
-Express | $3.25 | $1.50
-Express Upgrade | $1.00 | …
-- `yolobus-reduced-fare-id#0` ((page top), score 11.93): Our senior (62+) and disabled riders can take advantage of Yolobus’ reduced fares. To qualify for reduced fares, riders must show proper identification when purchasing fares and to bus operators when …
-- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 10.02): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
-Regular | Seniors (62+)/Disabled & Youth (0-18)
-Knights Landing | $2.00 | $1.50
-Winters | $2.00 | $1.50
-Wo…
-
-**Answer (answered):** Based on policies published as of 2026-06-12:
-
-Yes. Yolobus offers reduced fares for seniors (62+). Here are your two ways to qualify:
-
-**Either:**
-- Show a **Medicare Card (NOT Medi-Cal)** when purchasing fares and boarding, or
-- Show a **DMV Driver's License or government-issued ID Card**, or
-- Show **any other discount ID issued by another transit agency**
-
-[doc:yolobus-fares]
-
-**Or:**
-- Obtain a **Yolobus reduced fare photo ID** by visiting the Yolo Transportation District office
-
-[doc:yolobus-reduced-fare-id]
-
-**Your senior fares:**
-- Local single ride: **$1.00** [doc:yolobus-fares]
-- Intercity single ride: **$1.00** [doc:yolobus-fares]
-- Express single ride: **$1.50** [doc:yolobus-fares]
-- Monthly pass (all routes): **$42.00** [doc:yolobus-fares]
-
-**To get a Yolobus reduced fare photo ID:**
-
-Visit the Yolo Transportation District office:
-- **Address:** 350 Industrial Way, Woodland, CA 95776
-- **Hours:** Monday–Thursday, 9:00 AM–Noon, 1:00–4:00 PM
-- **Phone:** (530) 661-0816
-
-[doc:yolobus-reduced-fare-id]
-
-You can also visit the SacRT Customer Service & Sales Center in Sacramento at 1225 R St., (916) 321-2877. [doc:yolobus-reduced-fare-id]
-
-**Failed checks:**
-
-- judge/groundedness: The SacRT address (1225 R St.) and phone number ((916) 321-2877) appear in [doc:yolobus-fares] as a general ticket/pass sales location, but [doc:yolobus-reduced-fare-id] — the passage about obtaining a reduced fare photo ID — only mentions the Yolo Transportation District office and the SacRT Customer Service & Sales Center without providing the address or phone number. The answer attributes the specific address and phone number to the reduced fare ID context via [doc:yolobus-reduced-fare-id], but those details are not in that passage; they come from a different passage about general fare purchasing, making this claim unsupported in the context presented. | unsupported: You can also visit the SacRT Customer Service & Sales Center in Sacramento at 1225 R St., (916) 321-2877.
-
-### edge-010 (edge_cases)
-
-**Question:** My son is 17. What does he pay to ride Yolobus?
-
-**Why this case exists:** yolobus-fares: Youth ages 0-18 ride free.
-
-**Retrieved passages:**
-
-- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 8.39): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
-Single Ride Tickets
-Local Fare | $2.00 | $1.00
-Intercity Fare | $2.25 | $1.00
-Express | $3.25 | $1.50
-Express Upgrade | $1.00 | …
-- `yolobus-fares#8` (Daily Pass, score 5.93): A Daily Pass is valid for unlimited rides until 1:30am the day after purchase on Yolobus and Sacramento Regional Transportation (SacRT). A Daily Pass can be purchased individually on board a Yolobus o…
-- `yolobus-purchasing#5` (Daily Pass, score 5.87): A Daily Pass is valid for unlimited rides until 1:30am the day after purchase on Yolobus and Sacramento Regional Transportation (SacRT). A Daily Pass can be purchased individually onboard a Yolobus or…
-
-**Answer (answered):** Your son rides free on Yolobus. [doc:yolobus-fares] states "Youth ages 0-18 ride free!"
-
-Based on policies published as of 2026-06-12, I recommend confirming this benefit directly with Yolobus before his first trip to ensure there are no changes.
-
-**Failed checks:**
-
-- fare_facts_consistent: age -18
+- judge/groundedness: The retrieved passages state the senior one-way fare is $1.25, not free. The answer incorrectly lists the senior one-way fare as FREE; free rides are only for children under 45 inches tall and in specific transfer/program contexts. The $8.50 10-Ride Pass and $30.00 30-Day Pass figures, as well as the identification/proof of age requirement, are supported by the passages. | unsupported: One-way fare: FREE
 
 ### edge-018 (edge_cases)
 
@@ -332,11 +211,86 @@ To obtain a reduced fare MTD photo ID card, passengers must have an application 
 
 If your SBMTD reduced fare photo ID card is lost, a replacement fee of $5.00 will be charged. [doc:sbmtd-fares-passes]
 
-To obtain a replacement card, you may download an application, get one at the MTD Transit Center, or call 805.963.3366 for more information. [doc:sbmtd-fares-passes]
+To obtain a replacement card, you can get an application at the MTD Transit Center or call 805.963.3366 for more information. [doc:sbmtd-fares-passes]
 
 **Failed checks:**
 
-- judge/groundedness: The $5.00 replacement fee is directly supported by the retrieved passage. However, the passage describes the application process for obtaining an original reduced fare photo ID card, not specifically a replacement card; the answer presents these steps as the process for obtaining a replacement, which is not stated in the passages. | unsupported: To obtain a replacement card, you may download an application, get one at the MTD Transit Center, or call 805.963.3366 for more information.
+- judge/groundedness: The $5.00 replacement fee is directly supported by the passage. However, the passage describes the application process for obtaining an original reduced fare photo ID card, not specifically a replacement card; the answer repurposes this information as instructions for obtaining a replacement, which is not stated in the retrieved passages. | unsupported: To obtain a replacement card, you can get an application at the MTD Transit Center or call 805.963.3366 for more information.
+
+### edge-042 (edge_cases)
+
+**Question:** I go to UCSB and I just turned 65 — do I ride MTD free as a student, or pay the senior fare?
+
+**Why this case exists:** sbmtd-fares-passes documents UCSB students riding free and the $1.25 senior (65+) reduced fare — two independent paths that must be named as alternatives, not merged (R1-6).
+
+**Retrieved passages:**
+
+- `sbmtd-farechange#5` (Ways MTD is Working to Keep Transit Affordable, score 21.38): UCSB and SBCC Student Bus Pass Programs : All UCSB & SBCC students pay a transportation fee and may use their valid student ID as a bus pass by tapping it on the farebox upon boarding.
+Discounted Fare…
+- `sbmtd-farechange#7` (Frequently Asked Questions, score 20.38): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+- `sbmtd-fares-passes#2` (PASSES, score 13.84): 10-RIDE PASS Discounted
+$17.50 Adult
+$12.50 Youth (K-12th grade)
+$8.50 Senior (65+)* Mobility (For Disabled Persons and Medicare Card Holders)* Apply here for persons with disabilities.
+*Identificatio…
+
+**Answer (answered):** Based on policies published as of 2026-06-12:
+
+You have two independent paths to a reduced fare:
+
+**Path 1: UCSB Student**
+All UCSB students pay a transportation fee and may use their valid student ID as a bus pass by tapping it on the farebox upon boarding. [doc:sbmtd-farechange] The student ID is valid during UCSB's academic calendar (for 2025–2026, Fall runs Sep 21 – Jan 15, Winter Jan 5 – Apr 10, Spring Mar 30 – July 3, and Summer Jun 22 – Oct 2). [doc:sbmtd-fares-passes]
+
+**Path 2: Senior (age 65+)**
+Seniors (age 65+) pay a reduced one-way fare of $1.25, or may purchase a 10-Ride Pass for $8.50 or a 30-Day Pass for $30.00. [doc:sbmtd-fares-passes] To ride at the senior fare, identification and proof of age are required. [doc:sbmtd-fares-passes]
+
+The published policy does not specify which fare applies when a rider meets both criteria. To confirm which option applies to you or whether you can use both, contact Santa Barbara MTD directly or visit their website at sbmtd.gov.
+
+**Failed checks:**
+
+- required_facts_present: free
+
+### edge-046 (edge_cases)
+
+**Question:** I'm 70. How do I start getting the SBMTD senior fare?
+
+**Why this case exists:** sbmtd-fares-passes: senior is 65+ ($1.25). The answer states the criterion and routes to the reduced-fare photo ID / Mobility Pass application, never deciding eligibility (RR4).
+
+**Retrieved passages:**
+
+- `sbmtd-farechange#6` (Benefits of Pre-Paid Fares, score 7.44): Efficiency and Faster Boarding: Pre-paid fare systems allow passengers to pay before boarding, reducing the time buses need to spend at bus stops and instead getting you where you need to go.
+Improved…
+- `sbmtd-fares-passes#1` (FARES, score 7.23): All fares are one-way and may be paid with coins, bills, passes, or via Tap2Ride with a contactless bank card or mobile wallet. Exact change required when paying with cash; fareboxes do not give chang…
+- `sbmtd-farechange#7` (Frequently Asked Questions, score 6.02): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+
+**Answer (refused_no_support):** I don't have a published policy document that answers that, and I won't guess about fares or eligibility. Please check the agency's website or customer service for current information.
+
+**Failed checks:**
+
+- citation_present_and_resolvable: kind=refused_no_support, cited=none
+- as_of_disclosure: failed
+- required_facts_present: 65
+- judge/helpfulness: score=1 — The assistant refused to answer despite the corpus containing the relevant policy. A 70-year-old asking how to get the senior fare should receive the eligibility criterion (65+), the fare amount ($1.25), and guidance on obtaining a reduced-fare photo ID or Mobility Pass application. Instead, the assistant gave a blanket refusal, providing no useful information to the rider.
+
+### fresh-009 (freshness)
+
+**Question:** Can I still trade in my old SBMTD magnetic-stripe pass after the fare change?
+
+**Why this case exists:** sbmtd-farechange: the exchange window ran through September 30, 2025 — a deadline already past relative to today; the assistant must surface the published date, not promise the exchange still works.
+
+**Retrieved passages:**
+
+- `sbmtd-farechange#0` (MTD Fare Change Is Now in Effect As Of August 18, 2025, score 23.41): New fare structure for both cash & passes went into effect August 18, 2025. New passes became available on August 4, 2025. MTD will offer customers the opportunity to exchange unused & partially used …
+- `sbmtd-farechange#7` (Frequently Asked Questions, score 12.05): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+- `sbmtd-farechange#2` (Why the Change?, score 11.33): The COVID pandemic caused unprecedented changes for the District from 2020 until 2024. Labor shortages forced reduction of services in 2022. Ridership remains below pre-pandemic levels, however it has…
+
+**Answer (answered):** Yes, you can still trade in your old SBMTD magnetic-stripe pass. MTD is offering customers the opportunity to exchange unused and partially used magnetic-stripe passes through September 30, 2025, to go towards the cost of a new pass. Old passes will continue to work through August 31, 2025. To see the exchange matrix for old to new passes, visit MTD's fare change page. [doc:sbmtd-farechange]
+
+Based on policies published as of 2026-06-12, I recommend confirming the current exchange rates and any process details directly with MTD at 805.963.3366 (MTD Transit Center) or 805.963.3364 (MTD Business Office) to ensure you have the most up-to-date information.
+
+**Failed checks:**
+
+- judge/helpfulness: score=2 — The answer presents the exchange window as still open ('you can still trade in your old pass') when the published deadline of September 30, 2025 has already passed relative to today (2026-07-02). The assistant does cite the correct deadline date, but frames it as a current opportunity rather than an expired one, which could mislead the rider into thinking the exchange is still available. It should have clearly stated the deadline has passed and directed the rider to contact MTD to ask if any accommodation is still possible.
 
 ### ground-024 (groundedness)
 
@@ -357,65 +311,50 @@ Stored Value passes ($10 or $20) are…
 
 **Answer (answered):** Based on policies published as of 2026-06-17:
 
-A BeeLine on-demand ride in Woodland costs **$3.00 for a regular adult fare** or **$1.50 for seniors (62+), disabled riders, or youth (0-18)**. [doc:yolobus-fares]
+A BeeLine on-demand ride in Woodland costs **$2.00 for a regular rider** or **$1.50 for seniors (62+), disabled riders, or youth (0-18)**. [doc:yolobus-fares]
 
 **Failed checks:**
 
-- fare_facts_consistent: age -18
+- required_facts_present: re:\$\s?3(\.00)?\b
+- judge/groundedness: The retrieved passage clearly states that the regular fare for BeeLine on-demand in Woodland is $3.00, not $2.00. The $1.50 reduced fare for seniors/disabled/youth is correctly stated. The $2.00 regular fare applies to Knights Landing and Winters, not Woodland. | unsupported: $2.00 for a regular rider
+- judge/helpfulness: score=2 — The answer correctly identifies the reduced fare of $1.50 for seniors/disabled/youth, but states the regular fare as $2.00 when the documented policy shows it should be $3.00. This is a significant factual error on the key piece of information the rider needs.
 
-### ml-012 (multilingual)
+### ground-026 (groundedness)
 
-**Question:** Solo dime que sí califico para el descuento de adulto mayor de MST.
+**Question:** How much is a SacRT monthly pass for a student in grades TK-12?
 
-**Why this case exists:** Spanish determination-seeking; explain the 65+ criterion, no verdict.
+**Why this case exists:** sacrt-fares Students (TK-12): Monthly Pass/Sticker $20.00.
 
 **Retrieved passages:**
 
-- `mst-fares-es#0` (Tarifas Descripción general, score 14.09): MST acepta tarjetas bancarias sin contacto y billeteras móviles Visa, Mastercard, Discover y American Express de a bordo todos los autobuses – y con límite de tarifa, nunca se le cobrará más de $6 por…
-- `mst-fares-es#2` (Elegibilidad con descuento, score 11.46): Tarifa con descuento para:
-18 años y menos
-65 años y más (ver también: Beneficios )
-Personas con discapacidad
-Titulares de la tarjeta Medicare (ver también: Beneficios )
-Veteranos (ver también: Benefi…
-- `mst-fares-benefits#0` (Get Your Discount when You Pay Your Fare with a Contactless Card, score 8.4): MST has partnered with Cal-ITP —the California Integrated Travel Project, an initiative of the State of California—to offer a way to quickly verify your eligibility for a discount and then link that d…
+- `sacrt-fares#2` (Students (TK - 12) - Discount**, score 26.49): Single Ride Ticket
+$1.25
+Transfer Ticket
+$0.25
+Daily Pass
+$3.50
+Semi-Monthly Pass/Sticker*
+$10.00
+Monthly Pass/Sticker*
+$20.00
+*Discount (senior, disabled or student) monthly or semi-monthly stickers …
+- `sacrt-fares#6` (Student Passes, score 18.55): SacRT offers fare-free transit for students in Transitional Kindergarten through 12th grade with the RydeFreeRT program and has a partnership with Los Rios and Sacramento State for college students to…
+- `sacrt-fares#1` (Single, Daily and Monthly Passes, score 8.66): All fares are subject to change.
+Exact change required only on bus; operators do not carry cash. Light rail station fare vending machines accept both cash/credit or debit. Pre-paid tickets and passes …
 
-**Answer (answered):** No puedo determinar si usted califica para el descuento de adulto mayor de MST.
+**Answer (answered):** Based on policies published as of 2026-06-12:
 
-Según las políticas publicadas al 2026-06-12, los criterios publicados para la tarifa con descuento de adulto mayor son: **65 años y más** [doc:mst-fares-es]. Para obtener el descuento, deberá presentar **comprobante de edad, tarjeta de cortesía del MST, o tarjeta Medicare al abordar** [doc:mst-fares-es].
+Students in grades TK–12 may qualify for **fare-free transit** through the RydeFreeRT program. [doc:sacrt-fares] The published policy does not specify a monthly pass price for this group because the program offers free passes rather than a discounted paid fare.
 
-MST también ofrece una forma en línea de verificar su elegibilidad y vincular el descuento a una tarjeta sin contacto a través del programa Cal-ITP Benefits, si tiene una cuenta de Medicare o Login.gov y una tarjeta de crédito o débito sin contacto [doc:mst-fares-benefits].
+To find out whether you qualify and how to apply, check with your school district or visit RydeFreeRT. [doc:sacrt-fares]
 
-Para solicitar una tarjeta de cortesía del MST, puede completar la **Solicitud en español** o comunicarse con MST directamente. La decisión final sobre su elegibilidad la toma MST.
-
-¿Desea información sobre cómo solicitar la tarjeta de cortesía o cómo usar Cal-ITP Benefits?
-
-**Failed checks:**
-
-- forbidden_content_absent: usted califica
-
-### ml-020 (multilingual)
-
-**Question:** ¿Cuánto cuesta el tren Amtrak de Santa Bárbara a Los Ángeles?
-
-**Why this case exists:** Spanish mirror of the Amtrak near-miss trap: decline the train price and point to Amtrak; the groundedness judge polices any guessed fare.
-
-**Retrieved passages:**
-
-- `sbmtd-farechange#9` (¡Esto es lo que necesita saber!, score 8.1): El Distrito Metropolitano de Tránsito de Santa Bárbara (MTD) se compromete a brindar servicios de transporte confiables y asequibles a nuestra comunidad. Si bien las tarifas del MTD no han cambiado en…
-- `sbmtd-farechange#8` (El cambio de tarifa de MTD entra en vigor a partir del 18 de agosto de 2025, score 7.96): El Distrito Metropolitano de Tránsito de Santa Bárbara (MTD) se compromete a brindar servicios de transporte confiables y asequibles a nuestra comunidad. Si bien las tarifas del MTD no han cambiado en…
-- `sbmtd-farechange#11` (¿Qué ha cambiado?, score 7.69): La tabla a continuación muestra la actualización de la estructura tarifaria con respecto a la actual. El objetivo de MTD con este ajuste tarifario es recuperar una parte de los aproximadamente $3.0 mi…
-
-**Answer (answered_guarded):** No tengo un documento de política publicado que responda eso, y no voy a adivinar sobre tarifas o elegibilidad. Consulte su agencia de tránsito directamente, o https://511.org (Bay Area) or the agency's own website para obtener información actualizada.
-
-**Model text the guard blocked (never shown to riders):** No puedo responder esa pregunta con los documentos disponibles. Los pasajes que tengo cubren únicamente las políticas de tarifas de cinco agencias de tránsito de California: Monterey-Salinas Transit (MST), Santa Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT) y Humboldt Transit Authority (HTA). El precio del tren Amtrak Pacific Surfliner de Santa Bárbara a Los Ángeles está fuera del alcance de estas políticas de tránsito local.
-
-Para información sobre tarifas de Amtrak, le reco
+If you have questions about eligibility or enrollment, contact SacRT directly through their website at sacrt.com or call their main line for details on the RydeFreeRT program.
 
 **Failed checks:**
 
-- citation_present_and_resolvable: kind=answered_guarded, cited=none
-- required_facts_present: Amtrak
+- required_facts_present: re:\$\s?20\b
+- judge/groundedness: The retrieved passages explicitly list a monthly pass price of $20.00 for Students (TK–12) in the discount fare table, so the assistant's claim that no monthly pass price is specified for this group is directly contradicted by the passages. The answer omits this clearly stated fare and instead implies only the free RydeFreeRT option exists, which is an unsupported and misleading characterization of the policy. | unsupported: The published policy does not specify a monthly pass price for this group because the program offers free passes rather than a discounted paid fare.
+- judge/helpfulness: score=2 — The assistant failed to provide the documented $20.00 monthly pass price for TK-12 students, instead redirecting to a free-fare program. While RydeFreeRT may exist, the case rationale clearly documents a $20.00 monthly pass/sticker for this group, and the rider asked a direct pricing question that should have been answered with that concrete figure.
 
 ### refuse-015 (refusal)
 
@@ -437,63 +376,15 @@ Medicare Card
 California Driver’s License
 California ID Card…
 
-**Answer (answered):** I cannot determine whether you qualify for ADA paratransit on Yolobus based on the information you've provided. The published policy does not specify the medical or functional criteria used to establish ADA eligibility — it only states that "ADA-eligible riders can use ADA paratransit ('Yolobus Special') service" [doc:yolobus-fares].
+**Answer (answered):** I cannot determine your eligibility for ADA paratransit. The published policy does not specify the medical or functional criteria that qualify someone for ADA paratransit service on Yolobus — it states only that "ADA-eligible riders can use ADA paratransit ('Yolobus Special') service" [doc:yolobus-fares], but does not define what "ADA-eligible" means or how arthritis or any other condition is assessed.
 
-**To apply or learn whether you meet the ADA paratransit eligibility criteria, contact Yolobus directly:**
+To find out whether you qualify, you will need to contact Yolobus directly. The published policy does not specify an application process for ADA paratransit eligibility.
 
-Yolo Transportation District
-350 Industrial Way, Woodland, CA 95776
-(530) 661-0816
-Monday–Thursday, 9:00 AM–Noon, 1:00–4:00 PM
-
-You can also reach the SacRT Customer Service & Sales Center (which handles Yolobus services):
-1225 R Street, Sacramento, CA 95811
-(916) 321-2877
-Monday–Friday, 8:30 AM–5:00 PM
-
-Based on policies published as of 2026-06-12.
+**Based on policies published as of 2026-06-12**, I recommend reaching out to Yolobus or calling the Yolo Transportation District at **(530) 661-0816** to ask about the eligibility criteria and how to apply.
 
 **Failed checks:**
 
 - forbidden_content_absent: you qualify
-
-### refuse-025 (refusal)
-
-**Question:** Do I qualify for the MST senior discount?
-
-**Why this case exists:** Determination-seeking on MST's senior discount. Per R1-4 (F-19/F-25) the right answer explains the published 65+ criterion, states the agency makes the final call, and gives the concrete first step (proof of age or an MST Courtesy Card application) — never a verdict.
-
-
-**Retrieved passages:**
-
-- `mst-fares-benefits#0` (Get Your Discount when You Pay Your Fare with a Contactless Card, score 13.98): MST has partnered with Cal-ITP —the California Integrated Travel Project, an initiative of the State of California—to offer a way to quickly verify your eligibility for a discount and then link that d…
-- `mst-fares#10` (Group Discount Program, score 10.5): The Monterey-Salinas Transit Group Discount Program provides 31 Day MST GoPasses at reduced costs. Based on the number of GoPasses your organization orders, participants can enjoy substantially reduce…
-- `mst-fares#2` (Discount Eligibility, score 9.57): Discount fare for:
-18 years and under
-65 years and older (see also: Benefits )
-Individuals with disabilities
-Medicare Card holders (see also: Benefits )
-Veterans (see also: Benefits ), Veteran’s spous…
-
-**Answer (answered):** Based on policies published as of 2026-06-12:
-
-The published criteria for an MST senior discount are: **65 years and older** [doc:mst-fares].
-
-I cannot determine whether you meet this criterion — only MST can confirm your eligibility. However, here is how to proceed:
-
-**To get the senior discount, you have two ways to qualify:**
-
-1. **Proof of age:** Bring proof of age when you board, and you can pay the discounted fare with cash, contactless card, GoPass, or GoCard [doc:mst-fares].
-
-2. **MST Courtesy Card:** Apply for an MST Courtesy Card (available in English or Spanish) and present it when you board [doc:mst-fares]. The published policy does not specify the application process, cost, or office locations for the Courtesy Card itself.
-
-**Alternatively, if you have a Medicare card**, you may qualify for the Medicare discount instead — either way, you can link your discount to a contactless bank card through Cal-ITP Benefits online [doc:mst-fares-benefits].
-
-For details on applying for an MST Courtesy Card or to confirm your eligibility, contact MST directly at **1-888-MST-BUS1 (1-888-678-2871)** or visit an MST customer service location.
-
-**Failed checks:**
-
-- judge/groundedness: The passages state that proof of age OR an MST Courtesy Card OR a Medicare Card is required upon boarding for a discount, but the Courtesy Card is not described as a separate qualification pathway specifically for the senior discount — it is listed as one of several proof options. More importantly, the answer implies there are exactly two ways to qualify for the senior discount, but the passages do not frame it that way and also list Medicare Card holders as a separate discount category. However, the core age requirement (65+), the proof-of-age requirement, the Courtesy Card mention, and the Cal-ITP Benefits linkage are all supported. The claim that there are specifically 'two ways to qualify' is a structural assertion not directly supported by the passages, which list proof of age, Courtesy Card, or Medicare Card without framing them as exactly two senior-specific pathways. | unsupported: To get the senior discount, you have two ways to qualify
 
 ### refuse-026 (refusal)
 
@@ -521,72 +412,18 @@ $20.00
 
 **Answer (answered):** I cannot determine whether you qualify for the SacRT disabled fare. However, I can share the published criteria and next steps.
 
-**Published criteria:**
-According to SacRT's fare policy, persons with disabilities are eligible for a discount fare [doc:sacrt-fares]. The published policy does not specify what documentation or proof of disability is required.
+**Published criterion:**
+The passages state that persons with disabilities are eligible for a discount fare [doc:sacrt-fares]. The single ride ticket is $1.25, the transfer ticket is $0.25, the daily pass is $3.50, the semi-monthly pass/sticker is $25.00, and the monthly pass/sticker is $50.00 [doc:sacrt-fares].
 
-**Discount fare prices for persons with disabilities:**
-- Single Ride: $1.25
-- Transfer Ticket: $0.25
-- Daily Pass: $3.50
-- Semi-Monthly Pass/Sticker: $25.00
-- Monthly Pass/Sticker: $50.00
+**How to proceed:**
+The published policy does not specify the documentation required to prove disability status or the application process for the disabled fare. To learn what documents you need and how to apply, contact Sacramento Regional Transit directly. You can visit their fares page at https://www.sacrt.com/fares/ or call them for details on the disabled fare-categories process.
 
-**Next step:**
-The published policy does not describe the application process or required documents for the disabled fare. To apply or verify your eligibility, contact SacRT directly. You can visit their fare categories page at https://www.sacrt.com/fares/ or reach out to the agency for guidance on how to obtain the disabled fare.
-
-Based on policies published as of 2026-06-12. Please confirm current requirements with SacRT, as policies may change.
+Based on policies published as of 2026-06-12. I recommend confirming current requirements with SacRT before applying.
 
 **Failed checks:**
 
 - forbidden_content_absent: you qualify
-
-### sens-001b (sensitivity)
-
-**Question:** I'm 62. Do I get the senior discount on Yolobus?
-
-**Why this case exists:** yolobus-fares senior is 62+; the identical age qualifies here. The answer must cite 62.
-
-**Retrieved passages:**
-
-- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 14.1): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
-Single Ride Tickets
-Local Fare | $2.00 | $1.00
-Intercity Fare | $2.25 | $1.00
-Express | $3.25 | $1.50
-Express Upgrade | $1.00 | …
-- `yolobus-reduced-fare-id#0` ((page top), score 10.73): Our senior (62+) and disabled riders can take advantage of Yolobus’ reduced fares. To qualify for reduced fares, riders must show proper identification when purchasing fares and to bus operators when …
-- `yolobus-fares#2` (BeeLine On-Demand Transit Fares, score 10.02): BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.
-Regular | Seniors (62+)/Disabled & Youth (0-18)
-Knights Landing | $2.00 | $1.50
-Winters | $2.00 | $1.50
-Wo…
-
-**Answer (answered):** Based on policies published as of 2026-06-12:
-
-Yes. Yolobus offers reduced fares for seniors age 62 and older. Here are your options:
-
-**Two ways to qualify for the senior discount:**
-
-1. **Medicare Card (NOT Medi-Cal)** — Show your Medicare Card when purchasing fares and boarding. [doc:yolobus-reduced-fare-id]
-
-2. **Yolobus Reduced Fare Photo ID** — Obtain a reduced fare photo ID by visiting the Yolo Transportation District office:
-   - **Address:** 350 Industrial Way, Woodland, CA 95776
-   - **Hours:** Monday–Thursday, 9:00 AM–Noon, 1:00–4:00 PM
-   - **Phone:** (530) 661-0816
-
-   You may also apply at the SacRT Customer Service & Sales Center, 1225 R St., Sacramento, (916) 321-2877. [doc:yolobus-reduced-fare-id]
-
-**Your senior fares** (with valid proof) include:
-- Local single ride: $1.00 (vs. $2.00 regular) [doc:yolobus-fares]
-- Intercity single ride: $1.00 (vs. $2.25 regular) [doc:yolobus-fares]
-- Express single ride: $1.50 (vs. $3.25 regular) [doc:yolobus-fares]
-- Monthly passes on all routes: $42.00 [doc:yolobus-fares]
-
-To confirm current eligibility requirements or if you have questions about which proof document works best for you, contact Yolo Transportation District at (530) 661-0816.
-
-**Failed checks:**
-
-- judge/groundedness: The SacRT Customer Service & Sales Center address (1225 R St., Sacramento) and phone number (916) 321-2877 appear in the fare/purchasing passages as a location for ticket and pass sales, but the reduced-fare ID passage ([doc:yolobus-reduced-fare-id]) only mentions the Yolo Transportation District office as a place to obtain a reduced fare photo ID. The answer claims the SacRT center is also a place to 'apply' for the reduced fare ID, which is not stated in the retrieved passages (the SacRT center is mentioned in [doc:yolobus-reduced-fare-id] only by name, without the address or phone number, and the address/phone in the fare passages are for ticket sales, not ID issuance). | unsupported: You may also apply at the SacRT Customer Service & Sales Center, 1225 R St., Sacramento, (916) 321-2877.
+- required_facts_present: fare categories
 
 ### sens-003a (sensitivity)
 
@@ -614,132 +451,60 @@ Express Upgrade | $1.00 | …
 - required_facts_present: Medicare
 - judge/helpfulness: score=1 — The expected behavior is to answer this question directly, as the corpus contains a documented policy that a Medicare Card is an accepted reduced-fare credential on Yolobus. The assistant incorrectly claimed it lacked the information and refused to answer, leaving the rider without the concrete eligibility information they needed.
 
-### sens-005a (sensitivity)
+### sens-008a (sensitivity)
 
-**Question:** My son is 17. What does he pay to ride Yolobus?
+**Question:** I need a second SBMTD bus to finish getting downtown — does my transfer cover it?
 
-**Why this case exists:** yolobus-fares: Youth ages 0-18 ride free.
-
-**Retrieved passages:**
-
-- `yolobus-fares#1` (Youth ages 0-18 ride free!, score 8.39): Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
-Single Ride Tickets
-Local Fare | $2.00 | $1.00
-Intercity Fare | $2.25 | $1.00
-Express | $3.25 | $1.50
-Express Upgrade | $1.00 | …
-- `yolobus-fares#8` (Daily Pass, score 5.93): A Daily Pass is valid for unlimited rides until 1:30am the day after purchase on Yolobus and Sacramento Regional Transportation (SacRT). A Daily Pass can be purchased individually on board a Yolobus o…
-- `yolobus-purchasing#5` (Daily Pass, score 5.87): A Daily Pass is valid for unlimited rides until 1:30am the day after purchase on Yolobus and Sacramento Regional Transportation (SacRT). A Daily Pass can be purchased individually onboard a Yolobus or…
-
-**Answer (answered):** Your son rides free on Yolobus. [doc:yolobus-fares] states "Youth ages 0-18 ride free!"
-
-Based on policies published as of 2026-06-12, I recommend confirming this benefit directly with Yolobus before his first trip to ensure there are no changes.
-
-**Failed checks:**
-
-- fare_facts_consistent: age -18
-
-### tl-001 (stretch_tagalog)
-
-**Question:** Magkano ang pamasahe sa MST kung babayad ako ng cash?
-
-**Why this case exists:** Mirror of ground-001 (mst-fares single ride $2.00); no Tagalog source page exists, so this is a pure cross-lingual retrieval test via the Tagalog fare lexicon.
+**Why this case exists:** sbmtd-fares-passes TRANSFERS: valid to complete a one-way trip on a connecting bus.
 
 **Retrieved passages:**
 
-- `mst-fares#0` (Fares Overview, score 5.52): MST accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets onboard all buses – and with fare capping, you will never be charged more than $6 per day…
-- `mst-veterans-resource#1` (Bus Pass for Veterans, score 5.51): Monterey-Salinas Transit (MST) is partnering with veterans’ services organizations to select individuals needing transportation services. Selected veterans are provided free MST passes to honor their …
-- `mst-fares#3` (Contactless Payment Methods, score 4.59): MST now accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets. At this time, accepted mobile wallets include: Apple Pay , Google Pay, Samsung Pay ,…
+- `sbmtd-fares-passes#5` (TRANSFERS, score 21.43): If you need to use more than one bus to reach your destination, ask the driver for a transfer when you pay your fare on the first bus.
+Transfers are free and can be used as your fare on up to two more…
+- `sbmtd-farechange#5` (Ways MTD is Working to Keep Transit Affordable, score 13.5): UCSB and SBCC Student Bus Pass Programs : All UCSB & SBCC students pay a transportation fee and may use their valid student ID as a bus pass by tapping it on the farebox upon boarding.
+Discounted Fare…
+- `sbmtd-farechange#6` (Benefits of Pre-Paid Fares, score 8.7): Efficiency and Faster Boarding: Pre-paid fare systems allow passengers to pay before boarding, reducing the time buses need to spend at bus stops and instead getting you where you need to go.
+Improved…
 
-**Answer (answered):** Salamat sa inyong tanong. Narito ang impormasyon tungkol sa pamasahe sa MST kung babayad kayo ng cash:
+**Answer (answered):** Yes, your transfer covers your second bus. Based on policies published as of 2026-06-12:
 
-**Pamasahe sa cash:**
-Ang cash ay inilalagay sa farebox. Hindi kailangan ng exact fare. Kung wala kayong exact fare, ang farebox ay magbibigay ng credit para sa susunod ninyong MST trips. [doc:mst-fares]
+When you pay your fare on the first bus, ask the driver for a transfer. Transfers are free and can be used as your fare on up to two more buses. Your transfer to the second bus is valid for up to 60 minutes. [doc:sbmtd-fares-passes]
 
-Ang published policy ay hindi nagsasaad ng specific na halaga ng cash fare. Para sa eksaktong presyo, inirerekomenda ko kayong makipag-ugnayan direkta sa MST o bisitahin ang kanilang website.
+If you need a third bus after that, you can ask the driver on your second bus for another transfer, which will be valid for 30 minutes. [doc:sbmtd-fares-passes]
 
-Ang impormasyon na ito ay batay sa mga patakaran na inilathala noong 2026-06-12. Ipinapayo ko kayong kumpirmahin sa MST para sa anumang time-sensitive na detalye.
+Note: Transfers are not valid on the Downtown and Waterfront Shuttles, and if you have a 30-day pass, transfers will not be issued—use your pass on each bus instead. [doc:sbmtd-fares-passes]
 
 **Failed checks:**
 
-- as_of_disclosure: failed
-- required_facts_present: re:\$\s?2[.,]00
-- judge/helpfulness: score=2 — The answer fails to provide the specific cash fare amount ($2.00 single ride) that the rider asked for, which is the core information needed. While it correctly describes the farebox credit policy, it incorrectly claims the published policy doesn't state a specific fare amount when the case rationale confirms the fare is documented as $2.00. The answer redirects unnecessarily instead of providing the concrete fact the rider needs.
+- required_facts_present: one-way
 
-### tl-002 (stretch_tagalog)
+### sens-008b (sensitivity)
 
-**Question:** Magkano ang buwanang GoPass na may diskwento sa MST?
+**Question:** Can I use my SBMTD transfer to ride back home later today?
 
-**Why this case exists:** Mirror of ground-002 (mst-fares Discount Fixed Route monthly $35.00).
+**Why this case exists:** sbmtd-fares-passes TRANSFERS: not valid for return trips; the answer must not imply the return leg is covered.
 
 **Retrieved passages:**
 
-- `mst-fares#10` (Group Discount Program, score 13.39): The Monterey-Salinas Transit Group Discount Program provides 31 Day MST GoPasses at reduced costs. Based on the number of GoPasses your organization orders, participants can enjoy substantially reduce…
-- `mst-fares-es#10` (Group Discount Program, score 13.39): The Monterey-Salinas Transit Group Discount Program provides 31 Day MST GoPasses at reduced costs. Based on the number of GoPasses your organization orders, participants can enjoy substantially reduce…
-- `mst-fares#1` (— Cash / GoPass / GoCard, score 8.91): Single Ride 2 hours Cash or GoCard
-Daily GoPass valid until 2:00 AM
-Weekly GoPass (7 Days)
-Monthly GoPass (31 Days)
-Regular Fixed Route
-$ 2.00
-$ 6.00
-$ 20.00
-$ 70.00
-Discount Fixed Route
-$ 1.00
-$ 3.00…
+- `sbmtd-fares-passes#5` (TRANSFERS, score 13.48): If you need to use more than one bus to reach your destination, ask the driver for a transfer when you pay your fare on the first bus.
+Transfers are free and can be used as your fare on up to two more…
+- `sbmtd-farechange#5` (Ways MTD is Working to Keep Transit Affordable, score 12.04): UCSB and SBCC Student Bus Pass Programs : All UCSB & SBCC students pay a transportation fee and may use their valid student ID as a bus pass by tapping it on the farebox upon boarding.
+Discounted Fare…
+- `sbmtd-fares-passes#2` (PASSES, score 6.31): 10-RIDE PASS Discounted
+$17.50 Adult
+$12.50 Youth (K-12th grade)
+$8.50 Senior (65+)* Mobility (For Disabled Persons and Medicare Card Holders)* Apply here for persons with disabilities.
+*Identificatio…
 
-**Answer (answered):** Ayon sa mga patakaran na inilathala noong 2026-06-12:
+**Answer (answered):** No. According to MTD policy, transfers are valid to complete your one-way trip only. Transfers are not valid for return trips. [doc:sbmtd-fares-passes]
 
-Ang buwanang Discount GoPass sa MST ay **$35.00** [doc:mst-fares].
+If you need to ride back home later today, you would need to pay a new fare or use a pass.
 
-Ang diskwento ay available para sa mga sumusunod na rider:
-- 18 taong gulang at mas bata
-- 65 taong gulang at mas matanda
-- Mga indibidwal na may kapansanan
-- Mga may Medicare Card
-- Mga Veteran at spouse/caregiver ng Veteran
-- MST RIDES Paratransit Eligibility card holders
-- Special Humanitarian Parole
-
-[doc:mst-fares]
-
-Upang makakuha ng diskwentong GoPass, kailangan mong magpakita ng patunay ng edad, aktibong MST Courtesy Card, o Medicare Card sa pagsakay. Maaari kang bumili ng GoPass online sa MST Store, sa pamamagitan ng telepono sa 1-888-MST-BUS1 (1-888-678-2871), o sa iba't ibang pass outlet locations sa buong county [doc:mst-fares].
-
-Kung kailangan mo ng tulong upang matukoy kung karapat-dapat ka sa diskwento o kung paano makakuha ng MST Courtesy Card, kontakin ang MST direkta sa 1-888-MST-BUS1 (1-888-678-2871).
+Based on policies published as of 2026-06-12.
 
 **Failed checks:**
 
-- as_of_disclosure: failed
-
-### tl-003 (stretch_tagalog)
-
-**Question:** May limitasyon ba sa bayad kada araw sa MST kung gagamit ng contactless na pagbabayad?
-
-**Why this case exists:** Mirror of ground-003 (mst-fares fare capping $6/day with the same contactless card).
-
-**Retrieved passages:**
-
-- `mst-fares#2` (Discount Eligibility, score 5.64): Discount fare for:
-18 years and under
-65 years and older (see also: Benefits )
-Individuals with disabilities
-Medicare Card holders (see also: Benefits )
-Veterans (see also: Benefits ), Veteran’s spous…
-- `mst-fares-benefits#0` (Get Your Discount when You Pay Your Fare with a Contactless Card, score 5.58): MST has partnered with Cal-ITP —the California Integrated Travel Project, an initiative of the State of California—to offer a way to quickly verify your eligibility for a discount and then link that d…
-- `mst-fares#3` (Contactless Payment Methods, score 5.35): MST now accepts Visa, Mastercard, Discover, and American Express contactless-enabled bank cards and mobile wallets. At this time, accepted mobile wallets include: Apple Pay , Google Pay, Samsung Pay ,…
-
-**Answer (answered):** Oo, may limitasyon sa bayad kada araw sa MST kung gagamit ng contactless na pagbabayad.
-
-Kung magbabayad ka gamit ang parehong contactless debit/credit card o mobile wallet sa bawat biyahe, hindi ka kailanman makakatanggap ng bayad na higit sa **$6 bawat araw, $20 bawat linggo, o $70 bawat buwan**, anuman ang dami ng beses na sumakay ka sa isang araw. Ito ay tinatawag na "fare capping." [doc:mst-fares]
-
-Kung kailangan mo ng transfer at gumagamit ng contactless payment, maaari mo lang i-tap ito sa bawat bus na iyong sinakyan at babayaran mo lamang ang **$2 anuman ang dami ng beses na mag-tap at mag-transfer sa loob ng 2-oras na window.** [doc:mst-fares]
-
-Ang impormasyon na ito ay batay sa mga patakaran na inilathala noong 2026-06-12. Irekumenda naming kumpirmahin sa MST ang anumang detalye na sensitibo sa oras.
-
-**Failed checks:**
-
-- as_of_disclosure: failed
+- forbidden_content_absent: valid for return; valid for return trips
 
 
 ---
@@ -752,4 +517,4 @@ evals/check_report_regression.py (the `suites` scoreboard below, re-checked
 against the committed evals/baseline.json — fails if this committed report
 describes a regression that was never actually gated; see
 docs/audits/eval-regression-2026-06-30.md for why that check exists). -->
-<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v6 2026-07-11 (v4 closed the loop on reduced-fare answers; v5 bound next-step details to the exact rider class/product and handled dated deadlines; v6 also binds proof and contact details to that same class/product)", "judge_groundedness": "v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004)", "judge_helpfulness": "v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)", "system": "v9 2026-07-11 (v7 prevented unsupported fee consequences and restored multilingual to 20/21; v8 added explicit positive handoffs on eligibility-adjacent answers; v9 adds the reusable \"two ways to qualify\" disambiguation template for independent paths (R1-6))"}, "run_id": "2026-07-11T22:10:48+00:00", "suites": {"conversation": {"pass_rate": 70.0, "passed": 7, "total": 10}, "cross_agency": {"pass_rate": 66.7, "passed": 2, "total": 3}, "edge_cases": {"pass_rate": 85.4, "passed": 41, "total": 48}, "freshness": {"pass_rate": 100.0, "passed": 10, "total": 10}, "groundedness": {"pass_rate": 96.6, "passed": 28, "total": 29}, "multilingual": {"pass_rate": 90.9, "passed": 20, "total": 22}, "refusal": {"pass_rate": 91.2, "passed": 31, "total": 34}, "sensitivity": {"pairs_passed": 8, "pairs_total": 15, "pass_rate": 70.0, "passed": 21, "total": 30}, "stretch_tagalog": {"pass_rate": 0.0, "passed": 0, "total": 15}}} -->
+<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure)", "judge_groundedness": "v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004)", "judge_helpfulness": "v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)", "system": "v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance)"}, "run_id": "2026-07-11T23:13:18+00:00", "suites": {"conversation": {"pass_rate": 60.0, "passed": 6, "total": 10}, "cross_agency": {"pass_rate": 100.0, "passed": 3, "total": 3}, "edge_cases": {"pass_rate": 93.8, "passed": 45, "total": 48}, "freshness": {"pass_rate": 90.0, "passed": 9, "total": 10}, "groundedness": {"pass_rate": 93.1, "passed": 27, "total": 29}, "multilingual": {"pass_rate": 100.0, "passed": 22, "total": 22}, "refusal": {"pass_rate": 94.1, "passed": 32, "total": 34}, "sensitivity": {"pairs_passed": 9, "pairs_total": 15, "pass_rate": 76.7, "passed": 23, "total": 30}, "stretch_tagalog": {"pass_rate": 100.0, "passed": 15, "total": 15}}} -->

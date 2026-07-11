@@ -332,7 +332,11 @@ def generate_html(markdown: str, summary: dict) -> str:
 def generate(run_dir: Path | None = None) -> None:
     run_dir = run_dir or latest_run_dir()
     summary, records = load_run(run_dir)
-    markdown = generate_markdown(summary, records)
+    # Model answers occasionally contain Markdown hard-break spaces. The report
+    # is rendered inside a preformatted block, so those spaces add no value and
+    # make the committed artifacts fail git's whitespace check.
+    markdown = "\n".join(line.rstrip() for line in generate_markdown(summary, records).splitlines())
+    markdown += "\n"
     (config.REPO_ROOT / "EVALS.md").write_text(markdown, encoding="utf-8")
     (config.REPO_ROOT / "docs" / "eval-report.html").write_text(
         generate_html(markdown, summary), encoding="utf-8"

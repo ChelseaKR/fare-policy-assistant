@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""G6 EN/ES key-parity + G5 completeness/placeholder gate (merge-blocking).
+"""G6 supported-language key-parity + G5 completeness gate (merge-blocking).
 
 Enforces, over ``src/assistant/locales``:
 
-* **G6 key-parity** -- the msgid set of ``en`` and ``es`` is identical (empty
-  symmetric difference), and both cover every msgid in ``messages.pot``. A key
-  present in one catalog but not the other fails the build.
+* **G6 key-parity** -- every supported catalog has the same msgid set and covers
+  every msgid in ``messages.pot``. A key missing from any language fails the build.
 * **G5 completeness** -- every msgstr (each plural form) is non-empty. The
-  Spanish here is real, pre-existing human translation migrated verbatim from the
-  retired bespoke EN/ES dict, so completeness is enforced as a hard gate rather
-  than deferred: there is no untranslated-ES backlog to wave through.
+  translations are complete, so completeness is enforced as a hard gate rather
+  than deferred.
 * **G5 placeholder parity** -- the set of ``{...}`` fields is identical between
   each msgid and its translation, so a rename or dropped ``{statewide}`` /
   ``{where}`` cannot ship (a broken placeholder would raise at ``.format`` time
@@ -29,7 +27,7 @@ from babel.messages.pofile import read_po
 
 LOCALES = Path(__file__).resolve().parent.parent / "src" / "assistant" / "locales"
 POT = LOCALES / "messages.pot"
-CATALOGS = {"en", "es"}
+CATALOGS = ("en", "es", "tl")
 
 _FIELD = re.compile(r"\{[^{}]*\}")
 
@@ -56,21 +54,20 @@ def main() -> int:
     errors: list[str] = []
 
     pot = _load(POT, None)
-    en = _load(LOCALES / "en" / "LC_MESSAGES" / "messages.po", "en")
-    es = _load(LOCALES / "es" / "LC_MESSAGES" / "messages.po", "es")
+    catalogs = {
+        name: _load(LOCALES / name / "LC_MESSAGES" / "messages.po", name) for name in CATALOGS
+    }
+    pot_ids = _ids(pot)
+    ids_by_name = {name: _ids(catalog) for name, catalog in catalogs.items()}
 
-    pot_ids, en_ids, es_ids = _ids(pot), _ids(en), _ids(es)
-
-    # G6: EN/ES key-parity (symmetric difference must be empty).
-    only_en = en_ids - es_ids
-    only_es = es_ids - en_ids
-    if only_en:
-        errors.append(f"G6: msgids in en but not es: {sorted(only_en)}")
-    if only_es:
-        errors.append(f"G6: msgids in es but not en: {sorted(only_es)}")
+    # G6: every supported catalog has exactly the template's key set.
+    for name, ids in ids_by_name.items():
+        extra = ids - pot_ids
+        if extra:
+            errors.append(f"G6: {name} has msgids absent from the template: {sorted(extra)}")
 
     # Structural completeness: every template msgid present in each catalog.
-    for name, ids in (("en", en_ids), ("es", es_ids)):
+    for name, ids in ids_by_name.items():
         missing = pot_ids - ids
         if missing:
             errors.append(
@@ -78,7 +75,7 @@ def main() -> int:
             )
 
     # G5: every msgstr (each plural form) non-empty, placeholders preserved.
-    for name, catalog in (("en", en), ("es", es)):
+    for name, catalog in catalogs.items():
         for message in catalog:
             if not message.id:
                 continue
@@ -112,7 +109,8 @@ def main() -> int:
             print(f"  - {err}", file=sys.stderr)
         return 1
     print(
-        f"catalog parity OK: {len(pot_ids)} msgids, en/es key-parity + completeness + "
+        f"catalog parity OK: {len(pot_ids)} msgids across {', '.join(CATALOGS)}, "
+        "key-parity + completeness + "
         "placeholder parity hold."
     )
     return 0

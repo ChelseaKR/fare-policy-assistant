@@ -1,0 +1,72 @@
+# Tagalog translations for fare-policy-assistant.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the fare-policy-assistant project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: fare-policy-assistant 0.1.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-30 00:00+0000\n"
+"PO-Revision-Date: 2026-07-11 00:00+0000\n"
+"Last-Translator: fare-policy-assistant contributors\n"
+"Language: tl\n"
+"Language-Team: tl <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+msgid ""
+"I can only answer questions about published transit fare policies. If you "
+"need other help, please contact the transit agency's customer service."
+msgstr ""
+"Maaari lamang akong sumagot sa mga tanong tungkol sa mga inilathalang "
+"patakaran sa pamasahe. Kung kailangan mo ng ibang tulong, makipag-ugnayan "
+"sa customer service ng transit agency."
+
+#, python-brace-format
+msgid ""
+"I wasn't sure which language you were using, so I'm answering in English. If"
+" you'd like a different language, please ask again in that language."
+msgstr ""
+"Hindi ako nakatiyak kung anong wika ang ginagamit mo, kaya sasagot ako sa "
+"Ingles. Kung gusto mo ng ibang wika, magtanong muli gamit ang wikang iyon."
+
+#, python-brace-format
+msgid ""
+"I don't have a published policy document that answers that, and I won't "
+"guess about fares or eligibility. Please check {where} for current "
+"information."
+msgstr ""
+"Wala akong inilathalang dokumento ng patakaran na sumasagot diyan, at hindi "
+"ako manghuhula tungkol sa pamasahe o pagiging karapat-dapat. Tingnan ang "
+"{where} para sa kasalukuyang impormasyon."
+
+msgid ""
+"Please don't share personal details like ID numbers, contact information, or"
+" birth dates — I don't need them to explain fare policy. Ask again without "
+"the personal details, or contact the transit agency's customer service "
+"directly."
+msgstr ""
+"Huwag magbahagi ng personal na detalye gaya ng mga ID number, contact "
+"information, o petsa ng kapanganakan—hindi ko kailangan ang mga ito upang "
+"ipaliwanag ang patakaran sa pamasahe. Magtanong muli nang walang personal na "
+"detalye, o direktang makipag-ugnayan sa customer service ng transit agency."
+
+msgid ""
+"That's outside what I can help with. I can explain published fare and "
+"reduced-fare policies; for medical, immigration, or legal matters, please "
+"contact the transit agency directly or a qualified professional."
+msgstr ""
+"Wala iyan sa saklaw ng maitutulong ko. Maaari kong ipaliwanag ang mga "
+"inilathalang patakaran sa pamasahe at diskwentong pamasahe; para sa usaping "
+"medikal, imigrasyon, o legal, direktang makipag-ugnayan sa transit agency o "
+"sa isang kwalipikadong propesyonal."
+
+msgid "the agency's website or customer service"
+msgstr "website o customer service ng agency"
+
+#, python-brace-format
+msgid "your transit agency directly, or {statewide}"
+msgstr "iyong transit agency nang direkta, o {statewide}"
