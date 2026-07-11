@@ -17,6 +17,7 @@ import re
 from assistant import config
 
 DEPLOY_SH = config.REPO_ROOT / "infra" / "deploy.sh"
+DEPLOY_CONSOLE_SH = config.REPO_ROOT / "infra" / "deploy-console.sh"
 
 
 def _script_text() -> str:
@@ -71,3 +72,23 @@ class TestGatewayThrottleConfigured:
         burst = concurrency * 2 + 1
         assert rate >= 1
         assert burst >= rate
+
+
+class TestBundleRuntimeDependencies:
+    """Imports that succeed in the checkout must also succeed in Lambda.
+
+    The deploy scripts build intentionally small bundles instead of installing
+    the whole project, so keep their explicit dependency/file lists aligned
+    with the modules imported by each handler.
+    """
+
+    def test_rider_bundle_includes_structured_contract_runtime(self):
+        text = _script_text()
+        assert '"jsonschema>=4.20"' in text
+        assert 'mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs"' in text
+        assert 'cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"' in text
+
+    def test_console_bundle_includes_ingest_import_dependencies(self):
+        text = DEPLOY_CONSOLE_SH.read_text(encoding="utf-8")
+        assert '"httpx>=0.27"' in text
+        assert '"beautifulsoup4>=4.12"' in text
