@@ -22,6 +22,13 @@ rather than tied to a published tag.
   something this pass fabricates.
 
 ### Added
+- Tag-triggered release workflow (`.github/workflows/release.yml`, STANDARDS
+  conformance REL-14): on a `v*` tag it checks the tag matches
+  `pyproject.toml`'s version, re-runs `make verify` at the tagged commit,
+  builds sdist+wheel, generates a CycloneDX SBOM, attests SLSA build
+  provenance, and creates a GitHub Release with the matching CHANGELOG
+  section as notes. No tag has been pushed yet, so the note above ("does not
+  yet cut tagged releases") still holds until the first one is.
 - **Provenance gate promoted to blocking** (FIX-01/M-2, 2026-07-09): `make
   verify` and CI's `checks` job now run `evals/provenance.py`; the three
   published artifacts declare their **true** generation-time prompt/corpus
