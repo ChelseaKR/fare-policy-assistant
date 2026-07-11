@@ -22,6 +22,9 @@ def tmp_runs(tmp_path, monkeypatch):
     """Redirect eval-run output (and the baseline next to it) into a temp dir."""
     runs = tmp_path / "runs"
     monkeypatch.setattr(config, "EVAL_RUNS_DIR", runs)
+    # Isolate the answer/judge cache too, so tests never read or write the
+    # real repo's evals/cache/.
+    monkeypatch.setattr(config, "EVAL_CACHE_DIR", tmp_path / "cache")
     return runs
 
 
@@ -206,6 +209,92 @@ def test_no_credentials_falls_back_to_offline(tmp_runs, monkeypatch):
     monkeypatch.setattr(config, "_provider", "bedrock", raising=False)
     run_dir = runner.run(offline=False, suite="refusal")
     assert _summary(run_dir)["offline"] is True
+
+
+# ── cache + concurrency (FIX-12) ──────────────────────────────────────────────
+
+
+def test_cache_is_cold_on_first_run_and_warm_on_second(tmp_runs):
+    first = runner.run(offline=True, suite="refusal")
+    assert _summary(first)["execution"]["cache"]["answer_hits"] == 0
+
+    second = runner.run(offline=True, suite="refusal")
+    stats = _summary(second)["execution"]["cache"]
+    assert stats["answer_hits"] == stats["answer_calls"] > 0
+    # Same underlying pipeline, so a warm cache reproduces identical verdicts.
+    assert _summary(second)["total"] == _summary(first)["total"]
+
+
+def test_no_cache_flag_disables_caching(tmp_runs):
+    run_dir = runner.run(offline=True, suite="refusal", use_cache=False)
+    summary = _summary(run_dir)
+    assert summary["execution"]["cache"]["enabled"] is False
+    assert not (config.EVAL_CACHE_DIR).exists()
+
+
+def test_serial_and_concurrent_execution_agree(tmp_runs):
+    serial = runner.run(offline=True, suite="refusal", jobs=1, use_cache=False)
+    concurrent = runner.run(offline=True, suite="refusal", jobs=8, use_cache=False)
+    assert _summary(serial)["total"] == _summary(concurrent)["total"]
+    serial_ids = [
+        json.loads(x)["case_id"] for x in (serial / "results.jsonl").read_text().splitlines()
+    ]
+    conc_ids = [
+        json.loads(x)["case_id"] for x in (concurrent / "results.jsonl").read_text().splitlines()
+    ]
+    # Concurrent execution still reassembles results in the original suite order.
+    assert serial_ids == conc_ids
+
+
+def test_only_failed_reruns_only_the_prior_failures(tmp_runs):
+    first = runner.run(offline=True, suite="refusal")
+    failed_ids = {
+        r["case_id"]
+        for r in (json.loads(x) for x in (first / "results.jsonl").read_text().splitlines())
+        if not r["passed"]
+    }
+    assert failed_ids, "expected the mock offline refusal run to have some failures"
+
+    second = runner.run(offline=True, suite="refusal", only_failed=True)
+    ran_ids = {
+        r["case_id"]
+        for r in (json.loads(x) for x in (second / "results.jsonl").read_text().splitlines())
+    }
+    assert ran_ids == failed_ids
+    assert _summary(second)["execution"]["only_failed"] is True
+
+
+def test_only_failed_with_no_prior_run_raises(tmp_runs):
+    with pytest.raises(SystemExit, match="only-failed"):
+        runner.run(offline=True, suite="refusal", only_failed=True)
+
+
+def test_since_reuses_unchanged_cases_and_runs_the_rest(tmp_runs):
+    first = runner.run(offline=True, suite="refusal")
+    second = runner.run(offline=True, suite="refusal", since=first.name)
+    summary = _summary(second)
+    all_cases = sum(len(s["cases"]) for s in runner.load_suites(only="refusal"))
+    assert summary["execution"]["reused_cases"] == all_cases
+    assert summary["execution"]["executed_cases"] == 0
+    # Reused records are byte-identical to the source run's, not recomputed.
+    assert (second / "results.jsonl").read_text() == (first / "results.jsonl").read_text()
+    assert summary["total"] == _summary(first)["total"]
+
+
+def test_since_unknown_run_raises(tmp_runs):
+    with pytest.raises(SystemExit, match="no such run"):
+        runner.run(offline=True, suite="refusal", since="does-not-exist")
+
+
+def test_since_reexecutes_a_case_whose_content_changed(tmp_runs, monkeypatch):
+    first = runner.run(offline=True, suite="refusal")
+    # A corpus change invalidates every case's content key without touching
+    # the suite files on disk.
+    monkeypatch.setattr(runner.corpus, "corpus_version", lambda chunks=None: "changed-version")
+    second = runner.run(offline=True, suite="refusal", since=first.name)
+    summary = _summary(second)
+    assert summary["execution"]["reused_cases"] == 0
+    assert summary["execution"]["executed_cases"] > 0
 
 
 # ── regression gate ──────────────────────────────────────────────────────────

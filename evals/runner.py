@@ -4,11 +4,24 @@
     python -m evals.runner --full               # everything, then regenerate reports
     python -m evals.runner --offline            # mock model, deterministic checks only
     python -m evals.runner --suite refusal      # one suite
+    python -m evals.runner --jobs 8              # bounded-concurrency case execution
+    python -m evals.runner --no-cache            # skip the answer/judge cache (FIX-04 runs)
+    python -m evals.runner --only-failed          # rerun only cases that failed last time
+    python -m evals.runner --since 20260701T000000Z  # reuse unchanged cases from that run
 
 Each run writes evals/runs/<timestamp>/ with results.jsonl (full traces) and
 summary.json (scoreboard + versions). Judges run only when provider
 credentials are available (AWS chain for bedrock, ANTHROPIC_API_KEY for
 anthropic); otherwise judge verdicts are recorded as skipped, never as passes.
+
+Cases execute under a bounded-concurrency ThreadPoolExecutor (`--jobs`,
+default 4 — the pipeline is pure functions over an immutable retriever, and
+4-8 workers fits Bedrock rate limits). Each case's multi-turn history replay
+still runs sequentially within its own worker, so turns are never interleaved.
+Answer and judge model calls are served from a content-keyed on-disk cache
+(evals/cache.py) by default, so an incremental re-run after a one-prompt or
+one-corpus change only pays for the cases that actually changed; `--no-cache`
+disables this for runs that need to measure real model variance (FIX-04).
 """
 
 from __future__ import annotations
@@ -18,6 +31,7 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,11 +39,12 @@ from pathlib import Path
 import yaml
 
 from assistant import config, corpus
-from assistant.answer import answer_question
+from assistant.answer import AnswerResult, answer_question
 from assistant.ingest import load_chunks
-from assistant.models import get_model
+from assistant.models import Model, get_model
 from assistant.retrieve import Retriever
 from evals import judges
+from evals.cache import CachingModel, EvalCache, case_content_key
 from evals.checks import run_checks
 
 
@@ -100,11 +115,116 @@ def _cost_block(cfg: config.Config, usage: dict[str, list[int]]) -> dict:
     }
 
 
+def _resolve_reference_run(name: str | None) -> Path | None:
+    """The run directory `--since`/`--only-failed` compares against: the named
+    run, or (name omitted) the most recent existing run. `None` if there is no
+    prior run to compare against yet."""
+    if name:
+        run_dir = config.EVAL_RUNS_DIR / name
+        if not run_dir.exists():
+            raise SystemExit(f"no such run: {run_dir}")
+        return run_dir
+    if not config.EVAL_RUNS_DIR.exists():
+        return None
+    candidates = sorted(p for p in config.EVAL_RUNS_DIR.iterdir() if p.is_dir())
+    return candidates[-1] if candidates else None
+
+
+def _load_records(run_dir: Path) -> dict[str, dict]:
+    results_path = run_dir / "results.jsonl"
+    if not results_path.exists():
+        return {}
+    records = (json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines())
+    return {r["case_id"]: r for r in records}
+
+
+def _run_case(
+    case: dict,
+    *,
+    answer_model: Model,
+    judge_model: Model,
+    retriever: Retriever,
+    cfg: config.Config,
+    corpus_doc_ids: set[str],
+    run_judges: bool,
+) -> tuple[dict, dict[str, list[int]]]:
+    """Execute one case (including its multi-turn history replay, sequentially
+    within this call so turns are never interleaved with another case's) and
+    return its trace record plus the token usage it spent."""
+    usage = {"answer": [0, 0], "judge": [0, 0]}
+    if case.get("turns"):
+        # Multi-turn: replay earlier turns to build history, then the final
+        # turn is the one under test. Earlier turns' tokens count.
+        history: list[tuple[str, str]] = []
+        for q in case["turns"][:-1]:
+            prior = answer_question(
+                q, history=history or None, model=answer_model, retriever=retriever, cfg=cfg
+            )
+            usage["answer"][0] += prior.input_tokens
+            usage["answer"][1] += prior.output_tokens
+            history.append((q, prior.answer))
+        question = case["turns"][-1]
+        result: AnswerResult = answer_question(
+            question, history=history or None, model=answer_model, retriever=retriever, cfg=cfg
+        )
+    else:
+        question = case["question"]
+        result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
+    checks = run_checks(case, result, corpus_doc_ids)
+    verdicts = []
+    if run_judges:
+        if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
+            verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
+        verdicts.append(
+            judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
+        )
+    passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
+    usage["answer"][0] += result.input_tokens
+    usage["answer"][1] += result.output_tokens
+    for v in verdicts:
+        usage["judge"][0] += v.input_tokens
+        usage["judge"][1] += v.output_tokens
+    record = {
+        "case_id": case["id"],
+        "suite": case["suite"],
+        "mirror_of": case.get("mirror_of"),
+        "language": case.get("language", "en"),
+        "expected_behavior": case["expected_behavior"],
+        "question": question,
+        "turns": case.get("turns"),
+        "rationale": case["rationale"],
+        "answer": result.answer,
+        "kind": result.kind,
+        "guard_flags": result.guard_flags,
+        "input_tokens": result.input_tokens,
+        "output_tokens": result.output_tokens,
+        "raw_model_answer": result.raw_model_answer,
+        "citations": [asdict(c) for c in result.citations],
+        "passages": [
+            {
+                "chunk_id": sc.chunk.chunk_id,
+                "section": sc.chunk.section,
+                "score": round(sc.score, 2),
+                "text": sc.chunk.text[:600],
+            }
+            for sc in result.passages
+        ],
+        "checks": [asdict(c) for c in checks],
+        "judges": [asdict(v) for v in verdicts],
+        "passed": passed,
+    }
+    return record, usage
+
+
 def run(
     *,
     smoke: bool = False,
     offline: bool = False,
     suite: str | None = None,
+    jobs: int = 4,
+    use_cache: bool = True,
+    only_failed: bool = False,
+    since: str | None = None,
 ) -> Path:
     cfg = config.Config()
     if offline:
@@ -123,7 +243,15 @@ def run(
             "--offline (deterministic checks only).",
             file=sys.stderr,
         )
-        return run(smoke=smoke, offline=True, suite=suite)
+        return run(
+            smoke=smoke,
+            offline=True,
+            suite=suite,
+            jobs=jobs,
+            use_cache=use_cache,
+            only_failed=only_failed,
+            since=since,
+        )
 
     suites = load_suites(suite)
     if not suites:
@@ -132,10 +260,72 @@ def run(
 
     chunks = load_chunks()
     corpus_doc_ids = {c.doc_id for c in chunks}
+    corpus_version = corpus.corpus_version(chunks)
     retriever = Retriever(chunks, cfg.retrieval)
-    answer_model = get_model(cfg.models.provider, cfg.models.answer_model)
-    judge_model = get_model(cfg.models.provider, cfg.models.judge_model)
     run_judges = have_key and cfg.models.provider != "mock"
+
+    cache = EvalCache(config.EVAL_CACHE_DIR, enabled=use_cache)
+    answer_model: Model = get_model(cfg.models.provider, cfg.models.answer_model)
+    judge_model: Model = get_model(cfg.models.provider, cfg.models.judge_model)
+    if use_cache:
+        answer_model = CachingModel(
+            answer_model, cache, provider=cfg.models.provider, kind="answer"
+        )
+        judge_model = CachingModel(judge_model, cache, provider=cfg.models.provider, kind="judge")
+
+    prompt_versions = {
+        name: config.prompt_version(name)
+        for name in ("system", "answer_user", "judge_groundedness", "judge_helpfulness")
+    }
+
+    # Flatten to an ordered case list (respecting --smoke) once, so
+    # --only-failed / --since filtering and the concurrent executor both work
+    # off the same sequence.
+    ordered_cases = [
+        case for s in suites for case in s["cases"] if not (smoke and not case.get("smoke"))
+    ]
+
+    reference_dir = None
+    reference_records: dict[str, dict] = {}
+    if only_failed or since:
+        reference_dir = _resolve_reference_run(since)
+        if reference_dir is not None:
+            reference_records = _load_records(reference_dir)
+
+    if only_failed:
+        failed_ids = {cid for cid, r in reference_records.items() if not r.get("passed", True)}
+        ordered_cases = [c for c in ordered_cases if c["id"] in failed_ids]
+        if not ordered_cases:
+            raise SystemExit(
+                "--only-failed: no failed cases in reference run "
+                f"({reference_dir or 'none found'}); nothing to do"
+            )
+
+    def _case_key(case: dict) -> str:
+        content = json.dumps(case["turns"]) if case.get("turns") else case["question"]
+        return case_content_key(
+            case_id=case["id"],
+            question_or_turns=content,
+            expected_behavior=case["expected_behavior"],
+            provider=cfg.models.provider,
+            answer_model=cfg.models.answer_model,
+            judge_model=cfg.models.judge_model,
+            corpus_version=corpus_version,
+            prompt_versions=prompt_versions,
+            run_judges=run_judges,
+        )
+
+    to_run: list[dict] = []
+    reused: list[dict] = []
+    if since and reference_dir is not None:
+        for case in ordered_cases:
+            prior = reference_records.get(case["id"])
+            if prior and prior.get("case_key") == _case_key(case):
+                reused.append(prior)
+            else:
+                to_run.append(case)
+    else:
+        to_run = ordered_cases
 
     run_dir = config.EVAL_RUNS_DIR / datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -144,93 +334,59 @@ def run(
     totals: dict[str, dict[str, int]] = {}
     # Exact token usage, split by model (answer vs judge) since they price
     # differently. Aggregated into an estimated per-run cost in the summary.
+    # Reused (--since) cases spent no tokens this run, so they contribute 0.
     usage = {"answer": [0, 0], "judge": [0, 0]}  # [input_tokens, output_tokens]
-    records = []
     started = time.monotonic()
 
-    for s in suites:
-        for case in s["cases"]:
-            if smoke and not case.get("smoke"):
-                continue
-            if case.get("turns"):
-                # Multi-turn: replay earlier turns to build history, then the
-                # final turn is the one under test. Earlier turns' tokens count.
-                history: list[tuple[str, str]] = []
-                for q in case["turns"][:-1]:
-                    prior = answer_question(
-                        q,
-                        history=history or None,
-                        model=answer_model,
-                        retriever=retriever,
-                        cfg=cfg,
-                    )
-                    usage["answer"][0] += prior.input_tokens
-                    usage["answer"][1] += prior.output_tokens
-                    history.append((q, prior.answer))
-                question = case["turns"][-1]
-                result = answer_question(
-                    question,
-                    history=history or None,
-                    model=answer_model,
-                    retriever=retriever,
-                    cfg=cfg,
-                )
-            else:
-                question = case["question"]
-                result = answer_question(question, model=answer_model, retriever=retriever, cfg=cfg)
-            checks = run_checks(case, result, corpus_doc_ids)
-            verdicts = []
-            if run_judges:
-                if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
-                    verdicts.append(judges.judge_groundedness(judge_model, result, cfg))
-                verdicts.append(
-                    judges.judge_helpfulness(judge_model, result, case["expected_behavior"], cfg)
-                )
-            passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
-            usage["answer"][0] += result.input_tokens
-            usage["answer"][1] += result.output_tokens
-            for v in verdicts:
-                usage["judge"][0] += v.input_tokens
-                usage["judge"][1] += v.output_tokens
-            record = {
-                "case_id": case["id"],
-                "suite": case["suite"],
-                "mirror_of": case.get("mirror_of"),
-                "language": case.get("language", "en"),
-                "expected_behavior": case["expected_behavior"],
-                "question": question,
-                "turns": case.get("turns"),
-                "rationale": case["rationale"],
-                "answer": result.answer,
-                "kind": result.kind,
-                "guard_flags": result.guard_flags,
-                "input_tokens": result.input_tokens,
-                "output_tokens": result.output_tokens,
-                "raw_model_answer": result.raw_model_answer,
-                "citations": [asdict(c) for c in result.citations],
-                "passages": [
-                    {
-                        "chunk_id": sc.chunk.chunk_id,
-                        "section": sc.chunk.section,
-                        "score": round(sc.score, 2),
-                        "text": sc.chunk.text[:600],
-                    }
-                    for sc in result.passages
-                ],
-                "checks": [asdict(c) for c in checks],
-                "judges": [asdict(v) for v in verdicts],
-                "passed": passed,
-            }
-            records.append(record)
-            t = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
-            t["total"] += 1
-            t["passed"] += int(passed)
-            status = "PASS" if passed else "FAIL"
-            print(f"{status}  {case['id']}")
+    def _execute(case: dict) -> dict:
+        record, case_usage = _run_case(
+            case,
+            answer_model=answer_model,
+            judge_model=judge_model,
+            retriever=retriever,
+            cfg=cfg,
+            corpus_doc_ids=corpus_doc_ids,
+            run_judges=run_judges,
+        )
+        record["case_key"] = _case_key(case)
+        return record, case_usage
+
+    fresh_by_id: dict[str, tuple[dict, dict]] = {}
+    if jobs <= 1:
+        for case in to_run:
+            fresh_by_id[case["id"]] = _execute(case)
+    else:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = {pool.submit(_execute, case): case["id"] for case in to_run}
+            for fut in as_completed(futures):
+                fresh_by_id[futures[fut]] = fut.result()
+
+    # Reassemble in the original suite order regardless of execution/reuse
+    # path, so results.jsonl is stable run to run for the same case set.
+    reused_by_id = {r["case_id"]: r for r in reused}
+    records = []
+    for case in ordered_cases:
+        if case["id"] in fresh_by_id:
+            record, case_usage = fresh_by_id[case["id"]]
+            usage["answer"][0] += case_usage["answer"][0]
+            usage["answer"][1] += case_usage["answer"][1]
+            usage["judge"][0] += case_usage["judge"][0]
+            usage["judge"][1] += case_usage["judge"][1]
+            status = "PASS" if record["passed"] else "FAIL"
+        else:
+            record = reused_by_id[case["id"]]
+            status = ("PASS" if record["passed"] else "FAIL") + " (reused)"
+        records.append(record)
+        t = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
+        t["total"] += 1
+        t["passed"] += int(record["passed"])
+        print(f"{status}  {case['id']}")
 
     with results_path.open("w", encoding="utf-8") as f:
         for r in records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    cache.save()
 
     summary = {
         "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -239,15 +395,20 @@ def run(
         "judges_ran": run_judges,
         "answer_model": cfg.models.answer_model,
         "judge_model": cfg.models.judge_model,
-        "prompt_versions": {
-            name: config.prompt_version(name)
-            for name in ("system", "answer_user", "judge_groundedness", "judge_helpfulness")
-        },
+        "prompt_versions": prompt_versions,
         # Pinned so the provenance gate (evals/provenance.py) can prove EVALS.md,
         # the baseline, and the audit dataset describe the same corpus HEAD ships.
-        "corpus_version": corpus.corpus_version(chunks),
+        "corpus_version": corpus_version,
         "duration_seconds": round(time.monotonic() - started, 1),
         "cost": _cost_block(cfg, usage),
+        "execution": {
+            "jobs": jobs,
+            "cache": cache.stats(),
+            "only_failed": only_failed,
+            "since": since or (reference_dir.name if only_failed and reference_dir else None),
+            "reused_cases": len(reused),
+            "executed_cases": len(to_run),
+        },
         "suites": {
             name: {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
             for name, t in sorted(totals.items())
@@ -345,9 +506,39 @@ def main() -> None:
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--suite")
     parser.add_argument("--update-baseline", action="store_true")
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=4,
+        help="bounded-concurrency workers for case execution (default 4)",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="disable the answer/judge cache — use for FIX-04 variance-measurement runs",
+    )
+    parser.add_argument(
+        "--only-failed",
+        action="store_true",
+        help="only run cases that failed in the reference run (--since, or the latest run)",
+    )
+    parser.add_argument(
+        "--since",
+        metavar="RUN",
+        help="reuse cases unchanged (by content key) from evals/runs/RUN; also the reference "
+        "run for --only-failed if given",
+    )
     args = parser.parse_args()
 
-    run_dir = run(smoke=args.smoke, offline=args.offline, suite=args.suite)
+    run_dir = run(
+        smoke=args.smoke,
+        offline=args.offline,
+        suite=args.suite,
+        jobs=args.jobs,
+        use_cache=not args.no_cache,
+        only_failed=args.only_failed,
+        since=args.since,
+    )
     if args.full:
         from evals.report import generate
 
