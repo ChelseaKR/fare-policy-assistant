@@ -22,6 +22,14 @@ rather than tied to a published tag.
   something this pass fabricates.
 
 ### Added
+- **Provenance gate promoted to blocking** (FIX-01/M-2, 2026-07-09): `make
+  verify` and CI's `checks` job now run `evals/provenance.py`; the three
+  published artifacts declare their **true** generation-time prompt/corpus
+  versions (baseline: v5/v2 from the 2026-06-17 run; golden dataset: v4/v2
+  from commit `3901855`) and their staleness vs HEAD is acknowledged loudly in
+  `evals/stale_acknowledged.json` with written reasons — declared, not
+  stamped current. `evals/govchat_export.py` now emits a dataset-level
+  `# provenance:` header on every regeneration.
 - Root-caused (not yet fixed) the multilingual eval regression flagged in the
   2026-06-30 report (18/21 vs the committed 20/21 baseline). The regression is
   open: the gate is red and is deliberately being left red until a live re-run
