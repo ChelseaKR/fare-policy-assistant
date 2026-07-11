@@ -53,7 +53,8 @@ cp -R "$ROOT/prompts" "$BUNDLE/prompts"
 cp "$ROOT/corpus/processed/chunks.jsonl" "$BUNDLE/corpus/processed/"
 cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"
 cp "$ROOT/web/__init__.py" "$ROOT/web/handler.py" "$ROOT/web/index.html" \
-   "$ROOT/web/offline.py" "$ROOT/web/embed.py" "$ROOT/web/csp.py" "$BUNDLE/web/"
+   "$ROOT/web/offline.py" "$ROOT/web/guide.py" "$ROOT/web/embed.py" \
+   "$ROOT/web/csp.py" "$BUNDLE/web/"
 
 (cd "$BUNDLE" && zip -qr "$BUILD/bundle.zip" . -x '*__pycache__*' -x '*.dist-info/RECORD')
 

@@ -69,7 +69,7 @@ class TestRouting:
             csp = resp["headers"].get("content-security-policy", "")
             assert "unsafe-inline" not in csp, f"{path} CSP allows unsafe-inline: {csp}"
 
-    @pytest.mark.parametrize("path", ["/", "/offline", "/embed"])
+    @pytest.mark.parametrize("path", ["/", "/offline", "/guide", "/embed"])
     def test_inline_block_hashes_appear_in_csp(self, path):
         # Drift guard: recompute the sha256 of every inline <script>/<style>
         # block from the *served* body and assert each token is in the CSP. If

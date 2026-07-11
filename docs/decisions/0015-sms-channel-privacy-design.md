@@ -1,4 +1,4 @@
-# ADR 0009: SMS access channel — privacy design (gate before build)
+# ADR 0015: SMS access channel — privacy design (gate before build)
 
 Date: 2026-07-08. Status: proposed — design only, pending privacy review. No SMS
 code ships in this ADR; per EXP-08 (`docs/ideation/03-expansions.md`), nothing
