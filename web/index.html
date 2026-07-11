@@ -55,7 +55,7 @@
     background: #fff;
     color: var(--ink);
   }
-  textarea::placeholder { color: var(--muted); opacity: 1; }
+  .field-help { color: var(--muted); margin: 0.35rem 0 0; font-size: 0.9rem; }
   textarea:focus-visible, button:focus-visible, a:focus-visible {
     outline: 3px solid #1d4ed8;
     outline-offset: 2px;
@@ -182,8 +182,8 @@
     <h2 id="ask">Ask a question</h2>
     <form id="form">
       <label for="q">Your question</label>
-      <textarea id="q" name="question" maxlength="500" required
-        placeholder="Example: What proof do I need for the veteran fare on MST?"></textarea>
+      <textarea id="q" name="question" maxlength="500" required aria-describedby="q-help"></textarea>
+      <p class="field-help" id="q-help">Example: What proof do I need for the veteran fare on MST?</p>
       <div class="row">
         <button type="submit" class="primary" id="submit">Ask</button>
         <span class="asof">Answers cite their sources.</span>
