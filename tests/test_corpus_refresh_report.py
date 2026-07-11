@@ -80,17 +80,23 @@ def test_lint_flags_removed_required_fact_and_respects_scope():
 
 
 def test_lint_passes_when_regex_fact_present_in_scope():
-    suites = [{"suite": "s", "cases": [
-        {"id": "ok", "agency_scope": "MST", "required_facts": ["re:\\$\\s?2\\.00"]}
-    ]}]
+    suites = [
+        {
+            "suite": "s",
+            "cases": [{"id": "ok", "agency_scope": "MST", "required_facts": ["re:\\$\\s?2\\.00"]}],
+        }
+    ]
     chunks = [_chunk("mst-fares#0", "MST", "Cash single ride is $ 2.00 flat.")]
     assert crr.lint_stale_cases(suites, chunks) == []
 
 
 def test_lint_flags_forbidden_content_now_present():
-    suites = [{"suite": "s", "cases": [
-        {"id": "f-1", "agency_scope": "SBMTD", "forbidden_content": ["free ride"]}
-    ]}]
+    suites = [
+        {
+            "suite": "s",
+            "cases": [{"id": "f-1", "agency_scope": "SBMTD", "forbidden_content": ["free ride"]}],
+        }
+    ]
     chunks = [_chunk("sbmtd#0", "SBMTD", "Everyone gets a free ride on Sundays.")]
     viol = crr.lint_stale_cases(suites, chunks)
     assert len(viol) == 1

@@ -64,8 +64,7 @@ def run_checks(case: dict, result: AnswerResult, corpus_doc_ids: set[str]) -> li
 
     # 2. Case-specific forbidden content.
     forbidden = [
-        phrase for phrase in case.get("forbidden_content", [])
-        if phrase_present(phrase, answer)
+        phrase for phrase in case.get("forbidden_content", []) if phrase_present(phrase, answer)
     ]
     out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
 
