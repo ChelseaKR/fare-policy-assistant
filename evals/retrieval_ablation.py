@@ -49,8 +49,10 @@ def main() -> None:
         for c in s["cases"]
         if c.get("required_facts") and (c.get("question") or c.get("turns"))
     ]
-    by_lang = {"en": [c for c in cases if c.get("language", "en") == "en"],
-               "es": [c for c in cases if c.get("language") == "es"]}
+    by_lang = {
+        "en": [c for c in cases if c.get("language", "en") == "en"],
+        "es": [c for c in cases if c.get("language") == "es"],
+    }
 
     bm25 = Retriever(chunks, config.RetrievalConfig(use_dense=False))
     hybrid = Retriever(chunks, config.RetrievalConfig(use_dense=True))

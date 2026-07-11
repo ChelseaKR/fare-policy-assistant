@@ -25,17 +25,31 @@ def _write_run(run_dir, cases, *, suites=None):
 
 
 def test_compare_counts_concordant_and_discordant(tmp_path):
-    a = _write_run(tmp_path / "A", {
-        "c1": ("s", True), "c2": ("s", True), "c3": ("s", False), "c4": ("s", False),
-    }, suites={"s": {"pass_rate": 50.0}})
-    b = _write_run(tmp_path / "B", {
-        "c1": ("s", True), "c2": ("s", False), "c3": ("s", True), "c4": ("s", False),
-    }, suites={"s": {"pass_rate": 50.0}})
+    a = _write_run(
+        tmp_path / "A",
+        {
+            "c1": ("s", True),
+            "c2": ("s", True),
+            "c3": ("s", False),
+            "c4": ("s", False),
+        },
+        suites={"s": {"pass_rate": 50.0}},
+    )
+    b = _write_run(
+        tmp_path / "B",
+        {
+            "c1": ("s", True),
+            "c2": ("s", False),
+            "c3": ("s", True),
+            "c4": ("s", False),
+        },
+        suites={"s": {"pass_rate": 50.0}},
+    )
     result = compare.compare(a, b)
     assert result["n_cases"] == 4
-    assert result["concordant"] == 2           # c1 (TT), c4 (FF)
+    assert result["concordant"] == 2  # c1 (TT), c4 (FF)
     assert result["b"] == 1 and result["flips_regressed"] == ["c2"]  # A pass, B fail
-    assert result["c"] == 1 and result["flips_improved"] == ["c3"]   # A fail, B pass
+    assert result["c"] == 1 and result["flips_improved"] == ["c3"]  # A fail, B pass
     assert result["mcnemar_p"] == pytest.approx(1.0)  # b==c==1
 
 
@@ -49,10 +63,16 @@ def test_compare_reports_significant_one_sided_shift(tmp_path):
 
 
 def test_compare_per_suite_deltas(tmp_path):
-    a = _write_run(tmp_path / "A", {"c1": ("x", True), "c2": ("y", False)},
-                   suites={"x": {"pass_rate": 80.0}, "y": {"pass_rate": 40.0}})
-    b = _write_run(tmp_path / "B", {"c1": ("x", True), "c2": ("y", True)},
-                   suites={"x": {"pass_rate": 90.0}, "y": {"pass_rate": 55.0}})
+    a = _write_run(
+        tmp_path / "A",
+        {"c1": ("x", True), "c2": ("y", False)},
+        suites={"x": {"pass_rate": 80.0}, "y": {"pass_rate": 40.0}},
+    )
+    b = _write_run(
+        tmp_path / "B",
+        {"c1": ("x", True), "c2": ("y", True)},
+        suites={"x": {"pass_rate": 90.0}, "y": {"pass_rate": 55.0}},
+    )
     deltas = {d["suite"]: d["delta"] for d in compare.compare(a, b)["suite_deltas"]}
     assert deltas == {"x": 10.0, "y": 15.0}
 
@@ -60,13 +80,20 @@ def test_compare_per_suite_deltas(tmp_path):
 def test_compare_binarizes_pass_fraction_from_replicated_runs(tmp_path):
     # A replicated run records pass_fraction, not a boolean passed. 0.6 → pass,
     # 0.2 → fail. (A record still carries a boolean too, but fraction wins.)
-    a = _write_run(tmp_path / "A", {
-        "c1": ("s", False, {"pass_fraction": 0.6, "replicates": 5}),
-        "c2": ("s", True, {"pass_fraction": 0.2, "replicates": 5}),
-    })
-    b = _write_run(tmp_path / "B", {
-        "c1": ("s", True), "c2": ("s", True),
-    })
+    a = _write_run(
+        tmp_path / "A",
+        {
+            "c1": ("s", False, {"pass_fraction": 0.6, "replicates": 5}),
+            "c2": ("s", True, {"pass_fraction": 0.2, "replicates": 5}),
+        },
+    )
+    b = _write_run(
+        tmp_path / "B",
+        {
+            "c1": ("s", True),
+            "c2": ("s", True),
+        },
+    )
     result = compare.compare(a, b)
     # c1: A pass(0.6) / B pass → concordant. c2: A fail(0.2) / B pass → improvement.
     assert result["concordant"] == 1
@@ -103,8 +130,10 @@ def test_compare_exits_nonzero_on_duplicate_case_id(tmp_path):
     dup.mkdir()
     (dup / "summary.json").write_text("{}", encoding="utf-8")
     (dup / "results.jsonl").write_text(
-        json.dumps({"case_id": "c1", "suite": "s", "passed": True}) + "\n"
-        + json.dumps({"case_id": "c1", "suite": "s", "passed": False}) + "\n",
+        json.dumps({"case_id": "c1", "suite": "s", "passed": True})
+        + "\n"
+        + json.dumps({"case_id": "c1", "suite": "s", "passed": False})
+        + "\n",
         encoding="utf-8",
     )
     other = _write_run(tmp_path / "B", {"c1": ("s", True)})

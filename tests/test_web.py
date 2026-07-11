@@ -66,7 +66,7 @@ class TestRouting:
         assert 'aria-label="Display settings"' in body
         for control_id in ("tsize-normal", "tsize-large", "tsize-xlarge", "contrast"):
             assert f'id="{control_id}"' in body
-        assert 'aria-pressed' in body
+        assert "aria-pressed" in body
 
 
 class TestOfflineReference:
@@ -264,21 +264,27 @@ class TestMultiTurn:
 
     def test_history_distinguishes_cache_entries(self):
         web_handler.handler(_event(body={"question": "What is the fare?", "history": []}))
-        web_handler.handler(_event(body={
-            "question": "What is the fare?",
-            "history": [{"q": "on MST?", "a": "yes"}],
-        }))
+        web_handler.handler(
+            _event(
+                body={
+                    "question": "What is the fare?",
+                    "history": [{"q": "on MST?", "a": "yes"}],
+                }
+            )
+        )
         # Same question, different history → two distinct cache entries.
         assert len(web_handler._ANSWER_CACHE) == 2
 
 
 class TestFeedback:
     def _fb(self, body):
-        return web_handler.handler({
-            "requestContext": {"http": {"method": "POST"}},
-            "rawPath": "/api/feedback",
-            "body": json.dumps(body) if body is not None else None,
-        })
+        return web_handler.handler(
+            {
+                "requestContext": {"http": {"method": "POST"}},
+                "rawPath": "/api/feedback",
+                "body": json.dumps(body) if body is not None else None,
+            }
+        )
 
     def test_valid_feedback_accepted(self):
         resp = self._fb({"verdict": "up", "kind": "answered", "language": "en"})
@@ -290,14 +296,25 @@ class TestFeedback:
 
     def test_feedback_logs_no_content(self, capsys):
         # Even if a client sends question/answer text, the handler must not log it.
-        self._fb({"verdict": "down", "kind": "answered", "language": "es",
-                  "question": "SECRET-Q", "answer": "SECRET-A"})
+        self._fb(
+            {
+                "verdict": "down",
+                "kind": "answered",
+                "language": "es",
+                "question": "SECRET-Q",
+                "answer": "SECRET-A",
+            }
+        )
         out = capsys.readouterr().out
         assert "SECRET-Q" not in out and "SECRET-A" not in out
         assert '"feedback": "down"' in out
 
     def test_feedback_get_405(self):
-        resp = web_handler.handler({
-            "requestContext": {"http": {"method": "GET"}}, "rawPath": "/api/feedback", "body": None,
-        })
+        resp = web_handler.handler(
+            {
+                "requestContext": {"http": {"method": "GET"}},
+                "rawPath": "/api/feedback",
+                "body": None,
+            }
+        )
         assert resp["statusCode"] == 405

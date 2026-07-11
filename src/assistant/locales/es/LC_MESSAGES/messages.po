@@ -29,6 +29,13 @@ msgstr ""
 
 #, python-brace-format
 msgid ""
+"I wasn't sure which language you were using, so I'm answering in English. If"
+" you'd like a different language, please ask again in that language."
+msgstr ""
+"No estaba seguro de qué idioma estaba usando, así que respondo en inglés. Si"
+" desea otro idioma, vuelva a preguntar en ese idioma."
+
+msgid ""
 "I don't have a published policy document that answers that, and I won't "
 "guess about fares or eligibility. Please check {where} for current "
 "information."

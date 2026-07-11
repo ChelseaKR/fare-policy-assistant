@@ -39,6 +39,27 @@ class TestInputGuards:
         assert not check.ok
         assert "datos personales" in (check.message or "")
 
+    def test_spanish_dob_refused_with_spanish_message(self):
+        # Multilingual guard parity (FIX-05): the Spanish lead-in "nací el"
+        # trips the dob PII guard just like the English "born on", and the
+        # rider-facing refusal comes back in Spanish.
+        check = guards.check_input(
+            "Nací el 3 de mayo de 1961, ¿soy elegible para la tarifa de personas mayores?"
+        )
+        assert not check.ok
+        assert "pii:dob" in check.flags
+        assert "datos personales" in (check.message or "")
+
+    def test_spanish_fecha_de_nacimiento_refused(self):
+        check = guards.check_input("Mi fecha de nacimiento es 03/05/1961, ¿tengo descuento?")
+        assert not check.ok
+        assert "pii:dob" in check.flags
+
+    def test_benign_spanish_fare_question_passes(self):
+        # No false positive: an ordinary reduced-fare question in Spanish must
+        # not trip any input guard (FIX-05 parity without over-refusal).
+        assert guards.check_input("¿Cuánto cuesta el pasaje reducido para personas mayores?").ok
+
 
 class TestLanguageDetection:
     def test_english(self):
@@ -46,6 +67,16 @@ class TestLanguageDetection:
 
     def test_spanish(self):
         assert guards.detect_language("¿Cuánto cuesta el pasaje reducido?") == "es"
+
+    def test_tagalog(self):
+        # FIX-11: the n-gram classifier adds Tagalog as a third language.
+        assert guards.detect_language("Magkano ang pamasahe?") == "tl"
+
+    def test_short_ambiguous_never_blocks(self):
+        # An uncertain detection must proceed (never refuse) and attach a note.
+        check = guards.check_input("hi")
+        assert check.ok
+        assert check.notice
 
 
 class TestDeterminationLanguage:
@@ -56,9 +87,7 @@ class TestDeterminationLanguage:
         assert guards.find_determination_language("Sorry, you are not eligible.")
 
     def test_hedged_form_allowed(self):
-        assert not guards.find_determination_language(
-            "You may qualify if you are 65 or older."
-        )
+        assert not guards.find_determination_language("You may qualify if you are 65 or older.")
 
     def test_conditional_allowed(self):
         assert not guards.find_determination_language(
@@ -84,9 +113,7 @@ class TestDeterminationLanguage:
         )
 
     def test_positive_meta_statement_still_caught(self):
-        assert guards.find_determination_language(
-            "Good news: I can tell you that you qualify."
-        )
+        assert guards.find_determination_language("Good news: I can tell you that you qualify.")
 
     def test_spanish_negated_meta_allowed(self):
         assert not guards.find_determination_language(
@@ -117,9 +144,7 @@ class TestOutputCheck:
         assert "missing_citation" in check.flags
 
     def test_cited_grounded_answer_ok(self):
-        check = guards.check_output(
-            "The regular fare is $2.00 [doc:mst-fares], as of 2026-06-12."
-        )
+        check = guards.check_output("The regular fare is $2.00 [doc:mst-fares], as of 2026-06-12.")
         assert check.ok
 
     def test_spanish_as_of_disclosure_recognized(self):

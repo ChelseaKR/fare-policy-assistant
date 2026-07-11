@@ -1,9 +1,10 @@
 name: security
 
-# SAST (Semgrep) + secret scanning (gitleaks) — backlog #4 of the
-# SECURITY-AND-SUPPLY-CHAIN-STANDARD. Both gates are blocking: a finding fails
-# the build. These run alongside, and are independent of, the assistant's
-# no-determination / citation / PII gates enforced in ci.yml.
+# SAST (Semgrep) + secret scanning (gitleaks) + dependency-vulnerability
+# scanning (pip-audit) — backlog #4 of the SECURITY-AND-SUPPLY-CHAIN-STANDARD.
+# All three gates are blocking: a finding fails the build. These run
+# alongside, and are independent of, the assistant's no-determination /
+# citation / PII gates enforced in ci.yml.
 
 on:
   push:
@@ -30,6 +31,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 0  # gitleaks scans the whole history, not just the tip
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: gitleaks
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2.3.9
         env:
@@ -46,6 +48,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
       - name: Semgrep scan (blocking on ERROR severity)
@@ -58,3 +62,61 @@ jobs:
           --severity ERROR
           --error
           --metrics off
+
+  dep-scan:
+    name: Dependency scan (pip-audit)
+    # SEC-11/SEC-13: the committed uv.lock (358 KB of pinned transitive deps,
+    # installed from broad lower-bound ranges like anthropic>=0.100) was never
+    # scanned for known vulnerabilities anywhere. Renovate proposes updates on
+    # a schedule but nothing previously blocked a merge that introduced or kept
+    # a known-vulnerable dependency; this closes that gap.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
+      - name: Set up uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+      - name: Lockfile drift check
+        # Fails if uv.lock is stale relative to pyproject.toml (CQ-09) before
+        # auditing a lockfile that might not even describe what CI installs.
+        run: uv sync --frozen --all-groups
+      - name: Export locked dependencies (excluding the root project itself)
+        # pip-audit resolves every audited name against PyPI; the root project
+        # itself (fare-policy-assistant) is not published there and would be
+        # misreported as an audit failure ("distribution marked as editable" /
+        # "not found on PyPI") rather than skipped. Exporting to a plain
+        # requirements file (uv's own lock format isn't one pip-audit reads
+        # natively) sidesteps that false positive without excluding any real
+        # third-party dependency, including the dev/mutation groups.
+        run: >
+          uv export --frozen --no-emit-project --all-groups
+          --format requirements-txt -o /tmp/requirements-audit.txt
+      - name: pip-audit over the locked, resolved dependency set (blocking, no mute)
+        run: uv run --with pip-audit pip-audit --strict --desc -r /tmp/requirements-audit.txt
+
+  zizmor:
+    name: Workflow security (zizmor)
+    # CICD-19/20/21: static analysis of the workflow files themselves (this
+    # repo's 5 workflows), not the application code. Verified 2026-07-05 to
+    # find real, fixable findings (11x "artipacked": actions/checkout steps
+    # not setting persist-credentials: false) — the audit's assumption that
+    # this would start clean was wrong; those were fixed in the same pass that
+    # added this job, so it starts clean going forward, not by coincidence.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
+      - name: Set up uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+      - name: zizmor (blocking; no mute)
+        # Pinned tool version, like the Semgrep job above. No --fix here (fixes
+        # are for a human/author to apply and review, not to auto-commit in CI).
+        run: uvx --from zizmor==1.16.3 zizmor --format plain --no-progress .github/workflows/

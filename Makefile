@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile
+.PHONY: fetch index ingest eval smoke report audit a11y offline test lint typecheck check verify cov mutation i18n i18n-compile dep-scan report-regression provenance
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -53,11 +53,20 @@ cov: test     ## Alias for the coverage-gated test run
 
 lint:
 	uv run ruff check src tests evals web
+	uv run ruff format --check src tests evals web
 
 typecheck:
 	uv run mypy src web
 
 check: lint typecheck test
+
+dep-scan:     ## Dependency-vulnerability scan over the locked deps (pip-audit; needs network — not part of `verify`)
+	uv sync --frozen --all-groups
+	uv export --frozen --no-emit-project --all-groups --format requirements-txt -o /tmp/requirements-audit.txt
+	uv run --with pip-audit pip-audit --strict --desc -r /tmp/requirements-audit.txt
+
+provenance:   ## BLOCKING: EVALS.md/baseline.json/golden.jsonl must declare the prompt+corpus versions HEAD ships, or carry a documented waiver in evals/stale_acknowledged.json (promoted from advisory 2026-07-09, FIX-01/M-2 — a baseline may legitimately lag HEAD, but only loudly)
+	uv run python -m evals.provenance
 
 i18n:         ## i18n catalog gate: POT current + EN/ES parity + PO compiles + BCP-47
 	# G2-lite -- regenerate the extraction template and fail if it drifts from the
@@ -85,7 +94,10 @@ i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .p
 	msgfmt -o $(LOCALES)/es/LC_MESSAGES/messages.mo $(LOCALES)/es/LC_MESSAGES/messages.po
 	@echo "i18n-compile: refreshed messages.mo for en, es."
 
-verify: check i18n  ## Full offline gate: lint + typecheck + coverage-gated tests + i18n
+verify: check i18n a11y report-regression provenance  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate
+
+report-regression:  ## Committed EVALS.md must not regress vs evals/baseline.json (see docs/audits/eval-regression-2026-06-30.md)
+	uv run python -m evals.check_report_regression
 
 mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; never a merge gate)
 	# Scoped in [tool.mutmut] to evals/checks.py + evals/judges.py, run against

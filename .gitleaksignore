@@ -1,0 +1,17 @@
+# gitleaks false-positive allowlist (fingerprint-pinned; rules stay at full strength).
+# All 11 entries are third-party client-side tokens inside scraped public transit-agency
+# pages stored as corpus fixtures under corpus/raw/ (a ConveyThis publishable widget key
+# on mst.org pages; a Google reCAPTCHA site key on yolobus.com pages). They are public
+# by design on those agencies own live sites and do not belong to this project.
+# Verified during the 2026-07-10 pre-visibility-flip full-history scan (gitleaks 8.30.1).
+1aa33275b192e133d7c4ec8f3779f707de53d56f:corpus/raw/mst-fares-benefits.html:generic-api-key:885
+1aa33275b192e133d7c4ec8f3779f707de53d56f:corpus/raw/mst-fares-es.html:generic-api-key:1177
+1aa33275b192e133d7c4ec8f3779f707de53d56f:corpus/raw/mst-fares.html:generic-api-key:1140
+1aa33275b192e133d7c4ec8f3779f707de53d56f:corpus/raw/mst-veterans-resource.html:generic-api-key:943
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/mst-fares-benefits.html:generic-api-key:885
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/mst-fares-es.html:generic-api-key:1177
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/mst-fares.html:generic-api-key:1140
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/mst-veterans-resource.html:generic-api-key:943
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/yolobus-fares.html:generic-api-key:598
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/yolobus-purchasing.html:generic-api-key:380
+4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/yolobus-reduced-fare-id.html:generic-api-key:286

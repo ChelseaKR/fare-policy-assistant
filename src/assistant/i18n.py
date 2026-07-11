@@ -38,6 +38,14 @@ LOCALEDIR = Path(__file__).resolve().parent / "locales"
 
 #: BCP 47 tags the assistant ships a fixed-string catalog for. English is the
 #: source language and the fallback for any unsupported request.
+#:
+#: The language *classifier* (:mod:`assistant.langid`) additionally recognizes
+#: Tagalog ("tl"), but no ``tl`` fixed-string catalog ships yet. That is
+#: deliberate and safe: :func:`get_translation` is called with ``fallback=True``,
+#: so a ``tl`` request resolves to a :class:`gettext.NullTranslations` that
+#: returns the English source strings unchanged — the rider gets a graceful
+#: English refusal, never an error or a blank. Add "tl" here only when a
+#: ``locales/tl`` catalog exists (the G6 parity gate then holds it to EN/ES).
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "es")
 DEFAULT_LANGUAGE = "en"
 
@@ -128,6 +136,24 @@ def refusal_message(translation: gettext.NullTranslations, kind: str) -> str:
     return messages[kind]
 
 
+def language_uncertain_notice(translation: gettext.NullTranslations) -> str:
+    """Localized "I wasn't sure of your language, answering in English" note.
+
+    Attached by :func:`assistant.guards.check_input` when the n-gram classifier
+    (:mod:`assistant.langid`) could not confidently identify the question's
+    language — a short, ambiguous, or code-switched input. It is a *note*, not a
+    refusal: the answer proceeds in English. Because detection was unsure the
+    note itself is rendered in English (the fallback language); a caller that
+    surfaces it keeps the rider informed that we guessed.
+    """
+    _ = translation.gettext
+    return _(
+        "I wasn't sure which language you were using, so I'm answering in "
+        "English. If you'd like a different language, please ask again in that "
+        "language."
+    )
+
+
 def no_support_message(
     translation: gettext.NullTranslations,
     *,
@@ -146,9 +172,7 @@ def no_support_message(
     if agency_hint:
         where = _("the agency's website or customer service")
     else:
-        where = _("your transit agency directly, or {statewide}").format(
-            statewide=statewide_info
-        )
+        where = _("your transit agency directly, or {statewide}").format(statewide=statewide_info)
     return _(
         "I don't have a published policy document that answers that, and I "
         "won't guess about fares or eligibility. Please check {where} for "

@@ -17,9 +17,18 @@ from rank_bm25 import BM25Okapi
 from assistant import config, domain
 from assistant.ingest import Chunk, load_chunks
 
-# Aliases users actually type, mapped to scope keys. Sourced from the active
-# domain profile (src/assistant/domain.py).
-AGENCY_ALIASES: dict[str, str] = domain.get_profile().aliases
+
+# Aliases users actually type, mapped to scope keys, are sourced from the active
+# domain profile (src/assistant/domain.py) at call time (see detect_agencies)
+# rather than pinned at import — the active profile is chosen by FPA_DOMAIN,
+# which may switch at runtime.
+#
+# Backward-compat: AGENCY_ALIASES resolves to the live profile's aliases on each
+# access for callers/tests that import it as a constant.
+def __getattr__(name: str) -> dict[str, str]:
+    if name == "AGENCY_ALIASES":
+        return domain.get_profile().aliases
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @dataclass
@@ -34,7 +43,7 @@ def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> lis
     domain, or a test) without touching this logic."""
     q = question.lower()
     found: list[str] = []
-    for alias, agency in (aliases or AGENCY_ALIASES).items():
+    for alias, agency in (aliases or domain.get_profile().aliases).items():
         if agency not in found and re.search(rf"\b{re.escape(alias)}\b", q):
             found.append(agency)
     return found
@@ -50,23 +59,52 @@ def detect_agency(question: str) -> str | None:
 # mirrored into English for BM25 to stand a chance (eval cases ml-009/010/011;
 # see ADR 0001 — dense multilingual retrieval is the heavier alternative).
 _ES_EN_LEXICON: dict[str, str] = {
-    "pasaje": "fare", "tarifa": "fare", "tarifas": "fares", "boleto": "ticket",
-    "mensual": "monthly", "semanal": "weekly",
-    "diario": "daily", "descuento": "discount", "reducido": "reduced",
-    "reducida": "reduced", "mayores": "seniors senior", "mayor": "senior",
-    "niños": "children youth kids", "jóvenes": "youth", "gratis": "free",
-    "edad": "age", "años": "years", "veterano": "veteran", "veteranos": "veterans",
-    "discapacidad": "disability disabled", "estudiante": "student",
-    "estudiantes": "students", "autobús": "bus", "viajan": "ride",
-    "viajar": "ride", "cuesta": "cost costs", "costo": "cost", "precio": "price",
-    "sencillo": "single", "tarjeta": "card", "prueba": "proof",
-    "esposa": "spouse", "esposo": "spouse", "cónyuge": "spouse",
-    "mes": "month", "identificación": "identification id",
-    "pagan": "pay fare", "paga": "pay fare", "pagar": "pay fare",
-    "viaje": "ride trip", "viajes": "rides trips", "personas": "persons",
+    "pasaje": "fare",
+    "tarifa": "fare",
+    "tarifas": "fares",
+    "boleto": "ticket",
+    "mensual": "monthly",
+    "semanal": "weekly",
+    "diario": "daily",
+    "descuento": "discount",
+    "reducido": "reduced",
+    "reducida": "reduced",
+    "mayores": "seniors senior",
+    "mayor": "senior",
+    "niños": "children youth kids",
+    "jóvenes": "youth",
+    "gratis": "free",
+    "edad": "age",
+    "años": "years",
+    "veterano": "veteran",
+    "veteranos": "veterans",
+    "discapacidad": "disability disabled",
+    "estudiante": "student",
+    "estudiantes": "students",
+    "autobús": "bus",
+    "viajan": "ride",
+    "viajar": "ride",
+    "cuesta": "cost costs",
+    "costo": "cost",
+    "precio": "price",
+    "sencillo": "single",
+    "tarjeta": "card",
+    "prueba": "proof",
+    "esposa": "spouse",
+    "esposo": "spouse",
+    "cónyuge": "spouse",
+    "mes": "month",
+    "identificación": "identification id",
+    "pagan": "pay fare",
+    "paga": "pay fare",
+    "pagar": "pay fare",
+    "viaje": "ride trip",
+    "viajes": "rides trips",
+    "personas": "persons",
     # GoPass is MST's product name for passes; the fare tables say "GoPass"
     # where a rider says "pase" (eval case ml-002).
-    "pases": "passes gopass", "pase": "pass gopass",
+    "pases": "passes gopass",
+    "pase": "pass gopass",
 }
 
 
@@ -75,10 +113,7 @@ def _tokenize(text: str) -> list[str]:
     score unrelated chunks on articles alone. Digits, "$", and "id" stay —
     ages, prices, and ID cards are exactly what riders ask about."""
     raw = re.findall(r"[a-záéíóúüñ0-9$]+", text.lower())
-    return [
-        t for t in raw
-        if len(t) > 2 or t == "id" or any(ch.isdigit() for ch in t) or "$" in t
-    ]
+    return [t for t in raw if len(t) > 2 or t == "id" or any(ch.isdigit() for ch in t) or "$" in t]
 
 
 # English variants BM25 can't bridge without stemming: riders say "disabled",
@@ -87,8 +122,10 @@ def _tokenize(text: str) -> list[str]:
 _EN_SYNONYMS: dict[str, str] = {
     "disabled": "disabilities disability",
     "disability": "disabled disabilities",
-    "kid": "youth child", "kids": "youth children",
-    "teen": "youth", "teenager": "youth",
+    "kid": "youth child",
+    "kids": "youth children",
+    "teen": "youth",
+    "teenager": "youth",
 }
 
 # Stretch language: Tagalog, a high-demand California language that, unlike
@@ -98,11 +135,19 @@ _EN_SYNONYMS: dict[str, str] = {
 # (R2-3); answering *in* Tagalog and a parity suite need a live model and a
 # detect_language extension, and are tracked as live-gated work.
 _TL_EN_LEXICON: dict[str, str] = {
-    "pamasahe": "fare", "magkano": "how much cost price", "diskwento": "discount reduced",
-    "nakatatanda": "senior seniors", "matatanda": "seniors senior", "libre": "free",
-    "bata": "youth child children", "estudyante": "student students",
-    "beterano": "veteran veterans", "kapansanan": "disability disabled",
-    "buwanang": "monthly", "tiket": "ticket", "pasahero": "rider passenger",
+    "pamasahe": "fare",
+    "magkano": "how much cost price",
+    "diskwento": "discount reduced",
+    "nakatatanda": "senior seniors",
+    "matatanda": "seniors senior",
+    "libre": "free",
+    "bata": "youth child children",
+    "estudyante": "student students",
+    "beterano": "veteran veterans",
+    "kapansanan": "disability disabled",
+    "buwanang": "monthly",
+    "tiket": "ticket",
+    "pasahero": "rider passenger",
 }
 
 
@@ -162,10 +207,7 @@ class Retriever:
             for c, s in zip(self.chunks, scores, strict=True)
         )
         ranked = sorted(
-            (
-                ScoredChunk(chunk=c, score=s)
-                for c, s in zip(self.chunks, boosted, strict=True)
-            ),
+            (ScoredChunk(chunk=c, score=s) for c, s in zip(self.chunks, boosted, strict=True)),
             key=lambda sc: sc.score,
             reverse=True,
         )
@@ -188,6 +230,13 @@ class Retriever:
         return bool(results) and results[0].score >= self.cfg.min_confidence
 
 
-@lru_cache(maxsize=1)
-def default_retriever() -> Retriever:
+@lru_cache(maxsize=4)
+def _retriever_for(profile_name: str) -> Retriever:
     return Retriever()
+
+
+def default_retriever() -> Retriever:
+    """The process-wide retriever for the active domain profile. Keyed on the
+    profile name so switching FPA_DOMAIN yields a distinct cached retriever
+    rather than one pinned to whatever profile was active at first call."""
+    return _retriever_for(domain.get_profile().name)

@@ -36,8 +36,10 @@ def test_summary_reports_agencies_and_counts(chunks):
 
 def test_main_prints_summary_json(capsys):
     from assistant.corpus import main
+
     assert main() == 0
     import json
+
     out = json.loads(capsys.readouterr().out)
     assert "corpus_version" in out and out["chunks"] >= 1
 

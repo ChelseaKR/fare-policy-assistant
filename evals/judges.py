@@ -60,8 +60,9 @@ def judge_groundedness(model: Model, result: AnswerResult, cfg: config.Config) -
     tok = {"input_tokens": completion.input_tokens, "output_tokens": completion.output_tokens}
     data = _parse_json(completion.text)
     if data is None or "grounded" not in data:
-        return JudgeVerdict("groundedness", None, "judge returned unparseable output",
-                            raw=completion.text, **tok)
+        return JudgeVerdict(
+            "groundedness", None, "judge returned unparseable output", raw=completion.text, **tok
+        )
     detail = data.get("reasoning", "")
     if data.get("unsupported_claims"):
         detail += " | unsupported: " + "; ".join(data["unsupported_claims"])
@@ -85,7 +86,8 @@ def judge_helpfulness(
     tok = {"input_tokens": completion.input_tokens, "output_tokens": completion.output_tokens}
     data = _parse_json(completion.text)
     if data is None or "helpful" not in data:
-        return JudgeVerdict("helpfulness", None, "judge returned unparseable output",
-                            raw=completion.text, **tok)
+        return JudgeVerdict(
+            "helpfulness", None, "judge returned unparseable output", raw=completion.text, **tok
+        )
     detail = f"score={data.get('score')} — {data.get('reasoning', '')}"
     return JudgeVerdict("helpfulness", bool(data["helpful"]), detail, raw=completion.text, **tok)

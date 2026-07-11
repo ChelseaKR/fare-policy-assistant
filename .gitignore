@@ -21,6 +21,9 @@ html/
 corpus/index/
 # Per-run eval artifacts (committed reports live in docs/)
 evals/runs/
+# Content-keyed answer/judge cache (evals/cache.py, FIX-12); local speed/cost
+# optimization, not an artifact.
+evals/cache/
 # Lambda bundle staging (infra/deploy.sh)
 infra/build/
 # Generated offline fare reference (served at runtime from the corpus; make offline)

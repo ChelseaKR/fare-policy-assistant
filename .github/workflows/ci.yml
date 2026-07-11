@@ -11,14 +11,25 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+      - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
+        run: uv sync --frozen --all-groups
       - name: Lint
         run: uv run ruff check src tests evals web
+      - name: Format check
+        run: uv run ruff format --check src tests evals web
       - name: Typecheck
         run: uv run mypy src web
       - name: Tests (with branch-coverage gate)
@@ -27,12 +38,29 @@ jobs:
           --cov-report=term-missing --cov-fail-under=90
       - name: Accessibility (structural gate)
         run: uv run python -m web.a11y
+      - name: Committed-report regression check
+        if: github.event_name == 'schedule'
+        # Offline, no model calls: re-checks the *committed* EVALS.md's
+        # scoreboard against the *committed* baseline, so a regressed report
+        # that slipped past a local `make eval` run's exit code (see
+        # docs/audits/eval-regression-2026-06-30.md) now fails PR-time CI too,
+        # not just a nightly job that only uploads an artifact.
+        run: uv run python -m evals.check_report_regression
+      - name: Provenance gate (published artifacts vs HEAD)
+        # Offline, no model calls: EVALS.md, evals/baseline.json, and
+        # evals/govchat/golden.jsonl must declare the prompt+corpus versions
+        # HEAD actually ships, or carry a documented, reasoned waiver in
+        # evals/stale_acknowledged.json (FIX-01/M-2; promoted from advisory).
+        run: uv run python -m evals.provenance
 
   i18n:
     name: i18n (gettext catalog gate)
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
       # msgfmt (the G7 PO-compilation gate) is a system gettext binary, not a
       # uv/pip dependency — installed here like any non-uv tool. babel/pybabel
@@ -40,6 +68,8 @@ jobs:
       # target. `make i18n` is exactly what runs locally, so no local/CI drift:
       # G2-lite (POT committed & current), G7 (msgfmt --check), G6/G5 (EN/ES
       # key-parity + completeness + placeholder parity), G3 (BCP 47 validity).
+      - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
+        run: uv sync --frozen --all-groups
       - name: Install gettext (msgfmt)
         run: sudo apt-get update && sudo apt-get install -y gettext
       - name: i18n catalog gate (make i18n)
@@ -49,15 +79,21 @@ jobs:
     # Advisory axe/pa11y pass over the served page — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
     # Non-blocking: the structural gate in `checks` is the merge gate.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: "20"
       - name: Run pa11y on the static page (WCAG2AA)
-        run: npx --yes pa11y@8 --standard WCAG2AA --runner axe ./web/index.html
+        continue-on-error: true
+        run: |
+          printf '%s\n' '{"chromeLaunchConfig":{"args":["--no-sandbox"]}}' > /tmp/pa11y-ci.json
+          npx --yes pa11y@8 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html
 
   smoke-evals:
     # 25-case smoke suite on every PR. AWS access comes from GitHub OIDC
@@ -66,12 +102,15 @@ jobs:
     # bedrock:InvokeModel on the pinned models. Forks and repos without the
     # variable run offline: deterministic checks only, judges recorded as
     # skipped.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
       - name: Configure AWS credentials via OIDC
         if: ${{ vars.AWS_OIDC_ROLE_ARN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -82,6 +121,8 @@ jobs:
         # Fork PRs never assume the AWS role (defence in depth on top of the IAM
         # trust policy): they run the smoke suite offline. Only same-repo PRs,
         # pushes, and the schedule reach Bedrock.
+      - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
+        run: uv sync --frozen --all-groups
       - name: Run smoke suite
         run: uv run python -m evals.runner --smoke
       - name: Upload run artifacts
@@ -99,6 +140,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
       - name: Configure AWS credentials via OIDC
         if: ${{ vars.AWS_OIDC_ROLE_ARN != '' }}
@@ -119,13 +162,16 @@ jobs:
 
   independent-audit:
     # Advisory (not a merge gate): replay the committed GovChat-Eval dataset
-    # through the external harness and publish the report. Runs on PRs and
-    # nightly; needs no AWS — the dataset is recorded answers, scored offline by
-    # the deterministic judge. See docs/audits/methodology.md.
+    # through the external harness and publish the report. It is skipped on PRs
+    # while GovChat-Eval remains private; the dataset is recorded answers,
+    # scored offline by the deterministic judge. See docs/audits/methodology.md.
+    if: github.event_name == 'schedule' && vars.ENABLE_INDEPENDENT_AUDIT == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
       - name: Clone GovChat-Eval
         run: git clone --depth 1 https://github.com/ChelseaKR/govchat-eval.git ../govchat-eval

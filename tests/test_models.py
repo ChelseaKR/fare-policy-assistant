@@ -57,8 +57,11 @@ def fake_anthropic(monkeypatch):
     """
     recorder: dict = {}
     resp = _Resp(
-        [_Block("text", "Senior fare is $1.00 "), _Block("thinking", "ignore me"),
-         _Block("text", "[doc:mst-fares].")],
+        [
+            _Block("text", "Senior fare is $1.00 "),
+            _Block("thinking", "ignore me"),
+            _Block("text", "[doc:mst-fares]."),
+        ],
         _Usage(42, 13),
     )
     fake = types.ModuleType("anthropic")
@@ -88,8 +91,9 @@ def test_mock_declines_without_passages():
 def test_get_model_dispatches_each_provider(fake_anthropic):
     assert isinstance(models.get_model("mock", "mock"), models.MockModel)
     assert isinstance(models.get_model("anthropic", "claude-haiku-4-5"), models.AnthropicModel)
-    assert isinstance(models.get_model("bedrock", "us.anthropic.claude-haiku-4-5"),
-                      models.BedrockModel)
+    assert isinstance(
+        models.get_model("bedrock", "us.anthropic.claude-haiku-4-5"), models.BedrockModel
+    )
 
 
 def test_get_model_rejects_unknown_provider():

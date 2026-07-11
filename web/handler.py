@@ -74,17 +74,38 @@ def _version_payload() -> dict:
     signal, not an error: the corpus is whatever was deployed, and this surfaces
     when that differs from what was approved."""
     summary = dict(_corpus_summary())
+
+    # Staleness budget: how old the freshest cited snapshot is, against a
+    # configurable budget (FPA_STALENESS_BUDGET_DAYS, default 90). The UI already
+    # shows the "as of" age; this surfaces the same signal as a machine-readable
+    # over-budget flag for operators and the freshness automation.
+    as_of = summary.get("as_of")
+    if as_of:
+        from datetime import UTC, date, datetime
+
+        budget = int(os.environ.get("FPA_STALENESS_BUDGET_DAYS", "90"))
+        age = (datetime.now(UTC).date() - date.fromisoformat(as_of)).days
+        summary["staleness_days"] = age
+        summary["staleness_budget_days"] = budget
+        summary["stale"] = age > budget
+
     pinned = os.environ.get("FPA_PINNED_CORPUS_VERSION")
     if pinned:
         summary["pinned"] = pinned
         summary["matches_pin"] = pinned == summary["corpus_version"]
         if not summary["matches_pin"]:
-            print(json.dumps({
-                "warning": "corpus_version_mismatch",
-                "serving": summary["corpus_version"],
-                "pinned": pinned,
-            }))
+            print(
+                json.dumps(
+                    {
+                        "warning": "corpus_version_mismatch",
+                        "serving": summary["corpus_version"],
+                        "pinned": pinned,
+                    }
+                )
+            )
     return summary
+
+
 _RECENT: deque[float] = deque()
 # Per-container answer cache: identical questions return the recorded payload
 # without a model call, since the corpus is fixed and the model runs at
@@ -105,6 +126,7 @@ def _cache_put(key: str, payload: dict) -> None:
     _ANSWER_CACHE.move_to_end(key)
     while len(_ANSWER_CACHE) > ANSWER_CACHE_SIZE:
         _ANSWER_CACHE.popitem(last=False)
+
 
 # Build the BM25 index once per container, not per request.
 default_retriever()
@@ -208,7 +230,7 @@ def _ask(event: dict) -> dict:
     except (ValueError, AttributeError):
         question, data = None, {}
     if not isinstance(question, str) or not question.strip():
-        return _json(400, {"error": "Send JSON like {\"question\": \"...\"}."})
+        return _json(400, {"error": 'Send JSON like {"question": "..."}.'})
     question = question.strip()
     if len(question) > MAX_QUESTION_CHARS:
         return _json(
@@ -222,8 +244,17 @@ def _ask(event: dict) -> dict:
     key = question.casefold() + "".join(f"|{q}>{a}" for q, a in history)
     cached = _cache_get(key)
     if cached is not None:
-        print(json.dumps({"kind": cached["kind"], "language": cached["language"],
-                          "question_chars": len(question), "turns": len(history), "cache": "hit"}))
+        print(
+            json.dumps(
+                {
+                    "kind": cached["kind"],
+                    "language": cached["language"],
+                    "question_chars": len(question),
+                    "turns": len(history),
+                    "cache": "hit",
+                }
+            )
+        )
         return _json(200, cached)
 
     if _over_budget(time.monotonic()):

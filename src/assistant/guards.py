@@ -14,8 +14,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from assistant import domain
-from assistant.i18n import get_translation, refusal_message
+from assistant import domain, langid
+from assistant.i18n import get_translation, language_uncertain_notice, refusal_message
 
 # ── input guards ─────────────────────────────────────────────────────────────
 
@@ -23,17 +23,34 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
     "email": re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b"),
     "phone": re.compile(r"\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b"),
+    # Multilingual parity (FIX-05): the lead-ins are English *and* Spanish, but
+    # the digit tail is unchanged, so "nací el 3 de mayo de 1961" trips (the "3"
+    # falls within 20 chars of the lead-in) while a bare Spanish phrase with no
+    # date does not. Detection must not weaken as we add languages.
     "dob": re.compile(
-        r"\b(?:born on|date of birth|birthday is|dob)\b.{0,20}\d", re.I
+        r"(?:\b(?:born on|date of birth|birthday is|dob)\b"
+        r"|nac[íi] el|fecha de nacimiento|mi cumplea[ñn]os es|naci[óo] el)"
+        r".{0,20}\d",
+        re.I,
     ),
     "medicare_id": re.compile(r"\b\d[A-Z]\d{2}-?[A-Z]\d{2}-?[A-Z]{2}\d{2}\b", re.I),
 }
 
-# Topics adjacent to the domain that the assistant must redirect, not answer.
-# Domain-specific, so sourced from the active profile (src/assistant/domain.py);
-# the PII, injection, and determination guards below stay here because they are
+
+# Topics adjacent to the domain that the assistant must redirect, not answer,
+# are domain-specific, so sourced from the active profile at call time (see
+# check_input below and src/assistant/domain.py) rather than pinned at import —
+# the active profile is chosen by FPA_DOMAIN, which may switch at runtime. The
+# PII, injection, and determination guards below stay here because they are
 # cross-domain safety, not domain content.
-OUT_OF_SCOPE_PATTERNS: dict[str, re.Pattern[str]] = domain.get_profile().scope_topics
+#
+# Backward-compat: OUT_OF_SCOPE_PATTERNS resolves to the live profile's
+# scope_topics on each access for callers/tests that read it as a constant.
+def __getattr__(name: str):
+    if name == "OUT_OF_SCOPE_PATTERNS":
+        return domain.get_profile().scope_topics
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 INJECTION_PATTERNS = re.compile(
     r"(ignore (all |your |previous |prior )*(instructions|rules|prompts)|"
@@ -43,24 +60,34 @@ INJECTION_PATTERNS = re.compile(
     re.I,
 )
 
-# Lightweight language detection; enough to answer refusals in the rider's
-# language and to power the eval language-match check.
-_ES_MARKERS = re.compile(
-    r"\b(el|la|los|las|un|una|de|del|que|para|por|con|usted|cu[áa]nto|c[óo]mo|"
-    r"tarifa|pasaje|descuento|reducida?|años|puede|debe|gratis|cuesta|necesito)\b",
-    re.I,
-)
-_EN_MARKERS = re.compile(
-    r"\b(the|a|an|of|that|for|with|you|is|do|how|what|fare|discount|reduced|"
-    r"years|may|must|free|costs?)\b",
-    re.I,
-)
+# Language detection now delegates to the confidence-bearing character-n-gram
+# classifier in :mod:`assistant.langid` (en/es/tl + an honest "unsure"). The old
+# two-regex EN/ES word-count heuristic could not represent uncertainty and
+# silently misclassified short or code-switched questions; the classifier returns
+# a confidence and an "unsure" verdict that :func:`check_input` acts on. This
+# still only *picks the rider's language*; it never blocks an answer.
 
 
 def detect_language(text: str) -> str:
-    es = len(_ES_MARKERS.findall(text))
-    en = len(_EN_MARKERS.findall(text))
-    return "es" if es > en else "en"
+    """Best-guess BCP-47 language tag for ``text`` (``str`` for existing callers).
+
+    Delegates to :func:`assistant.langid.detect`, which maps an uncertain input
+    to :data:`~assistant.langid.DEFAULT_LANGUAGE` ("en"). Callers that need the
+    confidence or the uncertainty flag use :func:`detect_language_confident`.
+    """
+    lang, _confidence = langid.detect(text)
+    return lang
+
+
+def detect_language_confident(text: str) -> tuple[str, float, bool]:
+    """Return ``(lang, confidence, unsure)`` for callers that want the margin.
+
+    ``lang`` is the classifier's best guess (a real tag, e.g. ``"tl"``, even when
+    unsure), ``confidence`` is the top-two margin in ``[0, 1]``, and ``unsure`` is
+    ``True`` when that margin is below :data:`assistant.langid.UNSURE_MARGIN`.
+    """
+    result = langid.classify(text)
+    return result.lang, result.confidence, result.unsure
 
 
 # The rider-facing refusal *text* now lives in the gettext catalogs behind
@@ -75,11 +102,26 @@ class InputCheck:
     ok: bool
     flags: list[str] = field(default_factory=list)
     message: str | None = None
+    #: A short rider-facing note, in the answer language, set only when language
+    #: detection was *unsure* and the pipeline fell back to English. It never
+    #: blocks the answer — a caller may surface it alongside the answer so the
+    #: rider knows we guessed. ``None`` whenever detection was confident.
+    notice: str | None = None
 
 
 def check_input(question: str) -> InputCheck:
-    lang = detect_language(question)
-    translation = get_translation(lang)
+    lang, _confidence, unsure = detect_language_confident(question)
+    # An uncertain detection must never block an answer: we proceed in English
+    # (the assistant's source language) and attach a translated note rather than
+    # refuse or silently pick a language. Refusal *messages* below still render in
+    # the detected language when detection was confident.
+    if unsure:
+        answer_lang = langid.DEFAULT_LANGUAGE
+        notice: str | None = language_uncertain_notice(get_translation(answer_lang))
+    else:
+        answer_lang = lang
+        notice = None
+    translation = get_translation(answer_lang)
     flags = [name for name, pat in PII_PATTERNS.items() if pat.search(question)]
     if flags:
         return InputCheck(
@@ -87,7 +129,9 @@ def check_input(question: str) -> InputCheck:
             flags=[f"pii:{f}" for f in flags],
             message=refusal_message(translation, "pii"),
         )
-    flags = [name for name, pat in OUT_OF_SCOPE_PATTERNS.items() if pat.search(question)]
+    flags = [
+        name for name, pat in domain.get_profile().scope_topics.items() if pat.search(question)
+    ]
     if flags:
         return InputCheck(
             ok=False,
@@ -98,7 +142,7 @@ def check_input(question: str) -> InputCheck:
         return InputCheck(
             ok=False, flags=["injection"], message=refusal_message(translation, "injection")
         )
-    return InputCheck(ok=True)
+    return InputCheck(ok=True, flags=["lang:unsure"] if unsure else [], notice=notice)
 
 
 # ── output guards ────────────────────────────────────────────────────────────

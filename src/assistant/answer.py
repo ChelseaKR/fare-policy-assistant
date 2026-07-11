@@ -82,7 +82,7 @@ def _no_support_message(agency_hint: str | None, lang: str = "en") -> str:
     return i18n.no_support_message(
         i18n.get_translation(lang),
         agency_hint=agency_hint,
-        statewide_info=config.STATEWIDE_TRANSIT_INFO,
+        statewide_info=config.statewide_transit_info(),
     )
 
 
@@ -106,7 +106,7 @@ def _history_block(history: list[tuple[str, str]] | None) -> str:
     joined = "\n\n".join(turns)
     return (
         "Earlier in this conversation (context only — re-ground every claim in "
-        "the passages below, and resolve references like \"it\" or \"my spouse\" "
+        'the passages below, and resolve references like "it" or "my spouse" '
         f"against these turns):\n\n{joined}\n\n"
     )
 

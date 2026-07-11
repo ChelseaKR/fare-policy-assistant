@@ -14,6 +14,7 @@ import pytest
 
 from assistant import config
 from evals import report
+from evals.calibration import answer_hash
 
 SUMMARY_WITH_COST = {
     "run_at": "2026-06-12T01:00:00+00:00",
@@ -40,10 +41,19 @@ SUMMARY_WITH_COST = {
 
 def _rec(**kw):
     base = {
-        "case_id": "x", "suite": "groundedness", "mirror_of": None, "passed": True,
-        "question": "q?", "rationale": "r", "answer": "a [doc:mst-fares]",
-        "kind": "answered", "passages": [], "checks": [], "judges": [],
-        "raw_model_answer": "", "turns": None,
+        "case_id": "x",
+        "suite": "groundedness",
+        "mirror_of": None,
+        "passed": True,
+        "question": "q?",
+        "rationale": "r",
+        "answer": "a [doc:mst-fares]",
+        "kind": "answered",
+        "passages": [],
+        "checks": [],
+        "judges": [],
+        "raw_model_answer": "",
+        "turns": None,
     }
     base.update(kw)
     return base
@@ -74,10 +84,30 @@ def test_spanish_parity_table_pairs_mirror():
 def test_calibration_section_present_on_live_run():
     # A judge verdict that matches a committed human label drives the calibration
     # block; load_labels() reads the real evals/calibration/judge_labels.jsonl.
+    # Each label is bound (answer_sha256) to the exact answer it graded, so the
+    # fixture record must carry that same answer text or calibrate() correctly
+    # reports it as stale rather than scoring it (see evals/calibration.py).
     from evals.calibration import load_labels
+
     labeled = next(lab for lab in load_labels() if lab.judge == "groundedness")
-    records = [_rec(case_id=labeled.case_id,
-                    judges=[{"name": "groundedness", "passed": labeled.human_passed}])]
+    answer = (
+        "A single ride on an MST bus costs **$2.00** if you pay cash for a regular "
+        "fixed-route fare [doc:mst-fares]. If you qualify for a discount fare, a "
+        "single ride is **$1.00** [doc:mst-fares].\n\nBased on policies published as "
+        "of 2026-06-12, I'd recommend confirming current fares with MST before your "
+        "trip, as fares can change."
+    )
+    assert answer_hash(answer) == labeled.answer_sha256, (
+        "fixture answer text drifted from the committed label's bound answer; "
+        "update it to match evals/calibration/judge_labels.jsonl's ground-001 row"
+    )
+    records = [
+        _rec(
+            case_id=labeled.case_id,
+            answer=answer,
+            judges=[{"name": "groundedness", "passed": labeled.human_passed}],
+        )
+    ]
     md = report.generate_markdown(SUMMARY_WITH_COST, records)
     assert "## Judge calibration" in md
     assert "Raw agreement" in md
@@ -91,11 +121,12 @@ def test_calibration_section_skipped_when_judges_did_not_run():
 def test_multiturn_failure_renders_conversation_and_blocked_text():
     records = [
         _rec(
-            case_id="conv-001", suite="groundedness", passed=False,
+            case_id="conv-001",
+            suite="groundedness",
+            passed=False,
             turns=["First question?", "Follow-up?"],
             raw_model_answer="Yes, you qualify — blocked by the guard.",
-            checks=[{"name": "citation_present_and_resolvable", "passed": False,
-                     "detail": "none"}],
+            checks=[{"name": "citation_present_and_resolvable", "passed": False, "detail": "none"}],
         )
     ]
     md = report.generate_markdown(SUMMARY_WITH_COST, records)
@@ -106,8 +137,10 @@ def test_multiturn_failure_renders_conversation_and_blocked_text():
 
 
 def test_no_failures_message():
-    summary = {**SUMMARY_WITH_COST, "suites": {"groundedness": {"passed": 1, "total": 1,
-                                                                "pass_rate": 100.0}}}
+    summary = {
+        **SUMMARY_WITH_COST,
+        "suites": {"groundedness": {"passed": 1, "total": 1, "pass_rate": 100.0}},
+    }
     md = report.generate_markdown(summary, [_rec(passed=True)])
     assert "No failures in this run." in md
 

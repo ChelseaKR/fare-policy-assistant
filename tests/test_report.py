@@ -39,9 +39,7 @@ RECORDS = [
         "passages": [
             {"chunk_id": "mst-fares#1", "section": "Fares", "score": 9.1, "text": "x" * 300}
         ],
-        "checks": [
-            {"name": "citation_present_and_resolvable", "passed": False, "detail": "none"}
-        ],
+        "checks": [{"name": "citation_present_and_resolvable", "passed": False, "detail": "none"}],
         "judges": [],
     },
 ]
@@ -75,8 +73,12 @@ def test_scoreboard_renders_wilson_interval_when_replicated():
         "replicates": 3,
         "suites": {
             "groundedness": {
-                "passed": 1, "total": 2, "pass_rate": 50.0,
-                "ci_low": 23.7, "ci_high": 76.3, "replicates": 3,
+                "passed": 1,
+                "total": 2,
+                "pass_rate": 50.0,
+                "ci_low": 23.7,
+                "ci_high": 76.3,
+                "replicates": 3,
             }
         },
     }
