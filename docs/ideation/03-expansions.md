@@ -67,6 +67,11 @@ runs.
 
 ### EXP-03 — Eval-history trend artifact
 
+**Status:** Done. `evals/history.py` renders `evals/runs/*/summary.json` into
+`docs/eval-history.md` + a hand-built `docs/eval-history.svg` (stdlib only,
+grouped by instrument so mock/offline and live runs never share a series),
+wired into `make report` and covered by `tests/test_history.py`.
+
 **Pitch:** render the 31 committed run directories under `evals/runs/` into
 a single trajectory page — per-suite pass rates, cost, and duration over
 time, annotated with prompt/corpus version changes.
