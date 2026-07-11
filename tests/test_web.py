@@ -10,6 +10,7 @@ import json
 
 import pytest
 
+from assistant.answer import AnswerResult, Citation
 from web import handler as web_handler
 
 
@@ -271,6 +272,33 @@ class TestAnswers:
         data = json.loads(resp["body"])
         assert data["kind"] == "refused_input"
         assert data["language"] == "es"
+
+    def test_uncertain_taglish_reports_top_language_and_uncertainty(self, monkeypatch):
+        def taglish_answer(question, **kwargs):
+            return AnswerResult(
+                question=question,
+                answer=(
+                    "Batay sa mga patakaran na inilathala noong 2026-06-12, ang Regular "
+                    "Fixed Route Single Ride fare ay $2.00 [doc:mst-fares]."
+                ),
+                kind="answered",
+                as_of_date="2026-06-12",
+                citations=[
+                    Citation(
+                        doc_id="mst-fares",
+                        agency="MST",
+                        title="Fares",
+                        url="https://mst.org/fares/",
+                        fetch_date="2026-06-12",
+                    )
+                ],
+            )
+
+        monkeypatch.setattr(web_handler, "answer_question", taglish_answer)
+        data = json.loads(_post("Magkano ang pamasahe sa MST?")["body"])
+        assert data["language"] == "tl"
+        assert data["language_uncertain"] is True
+        assert 0 < data["language_confidence"] < 1
 
 
 class TestBudget:
