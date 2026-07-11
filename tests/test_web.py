@@ -56,12 +56,20 @@ class TestRouting:
     def test_no_route_allows_unsafe_inline(self):
         # The CSP hashes inline blocks instead of blanket-allowing them; no
         # response may fall back to 'unsafe-inline' (FIX-10).
-        for path in ("/", "/offline", "/embed", "/version", "/api/ask", "/api/feedback"):
+        for path in (
+            "/",
+            "/offline",
+            "/guide",
+            "/embed",
+            "/version",
+            "/api/ask",
+            "/api/feedback",
+        ):
             resp = web_handler.handler(_event(method="GET", path=path))
             csp = resp["headers"].get("content-security-policy", "")
             assert "unsafe-inline" not in csp, f"{path} CSP allows unsafe-inline: {csp}"
 
-    @pytest.mark.parametrize("path", ["/", "/offline", "/embed"])
+    @pytest.mark.parametrize("path", ["/", "/offline", "/guide", "/embed"])
     def test_inline_block_hashes_appear_in_csp(self, path):
         # Drift guard: recompute the sha256 of every inline <script>/<style>
         # block from the *served* body and assert each token is in the CSP. If
@@ -113,6 +121,40 @@ class TestOfflineReference:
 
         body = web_handler.handler(_event(method="GET", path="/offline"))["body"]
         assert check_html(body) == []
+
+
+class TestGuidedFareFinder:
+    def test_guide_page_served(self):
+        resp = web_handler.handler(_event(method="GET", path="/guide"))
+        assert resp["statusCode"] == 200
+        assert "text/html" in resp["headers"]["content-type"]
+        body = resp["body"]
+        for agency_full in ("Monterey-Salinas Transit", "Humboldt Transit Authority"):
+            assert agency_full in body
+        assert "published as of" in body
+        assert "Reference implementation" in body
+        assert "https://" in body and "[doc:" not in body
+
+    def test_guide_page_passes_structural_a11y(self):
+        from web.a11y import check_html
+
+        body = web_handler.handler(_event(method="GET", path="/guide"))["body"]
+        assert check_html(body) == []
+
+    def test_guide_page_has_no_input_fields(self):
+        # EXP-07's excellence bar: zero input fields, even though a form-like
+        # walkthrough invites collecting rider attributes.
+        body = web_handler.handler(_event(method="GET", path="/guide"))["body"]
+        for tag in ("<input", "<textarea", "<select"):
+            assert tag not in body
+
+    def test_guide_page_never_claims_to_decide_eligibility(self):
+        body = web_handler.handler(_event(method="GET", path="/guide"))["body"]
+        assert "does not decide whether you qualify" in body
+
+    def test_guide_page_reachable_from_index(self):
+        body = web_handler.handler(_event(method="GET", path="/"))["body"]
+        assert 'href="/guide"' in body
 
 
 class TestVersion:

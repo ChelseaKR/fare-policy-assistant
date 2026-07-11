@@ -180,7 +180,7 @@ how to report a vulnerability, and a deployment hardening checklist are in
 ## Live demo
 
 Try it at <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>. The page
-states what the assistant will not do, answers in English or Spanish, and
+states what the assistant will not do, answers in English, Spanish, or Tagalog, and
 cites the policy snapshot behind every answer. Questions are answered and
 discarded; nothing you type is stored. The serving path is one Lambda behind
 an HTTP API with layered cost guards (ADR 0004), deployed by
@@ -189,6 +189,14 @@ an HTTP API with layered cost guards (ADR 0004), deployed by
 For riders with no signal at the stop, `/offline` renders every agency's dated
 policy text on one printable page, built from the committed corpus with no model
 call (`make offline` writes it locally for inspection).
+
+For riders who would rather browse than type — low signal, low literacy, or a
+preference for forms over chat — `/guide` is a zero-model-call, statically
+pre-rendered "which fare applies to me" walkthrough: choose an agency, then a
+published fare category, to reach the criteria, price, proof, and next step.
+It has no input fields on purpose and never determines eligibility; it only
+shows the agency's own published text, verbatim, with a source link
+(`make guide` writes it locally for inspection).
 
 An agency can embed the assistant in its own fare page with one iframe pointing
 at `/embed`:

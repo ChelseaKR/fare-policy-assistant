@@ -85,6 +85,7 @@ _INDEX_CSP = html_csp(_INDEX_HTML)
 # Rendered once per container from the committed corpus; it changes only when the
 # corpus does, which means a new deploy.
 _OFFLINE_HTML: str | None = None
+_GUIDE_HTML: str | None = None
 
 
 def _offline_html() -> str:
@@ -95,6 +96,16 @@ def _offline_html() -> str:
 
         _OFFLINE_HTML = render_offline_reference(load_chunks())
     return _OFFLINE_HTML
+
+
+def _guide_html() -> str:
+    global _GUIDE_HTML
+    if _GUIDE_HTML is None:
+        from assistant.ingest import load_chunks
+        from web.guide import render_guide
+
+        _GUIDE_HTML = render_guide(load_chunks())
+    return _GUIDE_HTML
 
 
 # Corpus identity, computed once per container.
@@ -450,6 +461,9 @@ def handler(event: dict, context: object = None) -> dict:
         return _html_response(_INDEX_HTML, _INDEX_CSP)
     if path == "/offline" and method == "GET":
         body = _offline_html()
+        return _html_response(body, html_csp(body))
+    if path == "/guide" and method == "GET":
+        body = _guide_html()
         return _html_response(body, html_csp(body))
     if path == "/embed" and method == "GET":
         from web.embed import EMBED_HTML

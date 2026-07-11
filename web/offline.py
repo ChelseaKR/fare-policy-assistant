@@ -64,6 +64,20 @@ def _group_by_agency(chunks: list[Chunk]) -> dict[str, list[Chunk]]:
     return {ag: cs for ag, cs in by_agency.items() if cs}
 
 
+def _group_by_doc(chunks: list[Chunk]) -> list[tuple[str, list[Chunk]]]:
+    """A single agency's chunks grouped by document, in corpus order. Shared by
+    `/offline` (flat reference) and `/guide` (progressive-disclosure walkthrough)
+    so the two pages never drift on how a document's sections are assembled."""
+    seen_docs: list[str] = []
+    doc_chunks: dict[str, list[Chunk]] = {}
+    for c in chunks:
+        if c.doc_id not in doc_chunks:
+            doc_chunks[c.doc_id] = []
+            seen_docs.append(c.doc_id)
+        doc_chunks[c.doc_id].append(c)
+    return [(doc_id, doc_chunks[doc_id]) for doc_id in seen_docs]
+
+
 def render_offline_reference(chunks: list[Chunk], as_of: str | None = None) -> str:
     from assistant.corpus import corpus_version
 
@@ -77,16 +91,7 @@ def render_offline_reference(chunks: list[Chunk], as_of: str | None = None) -> s
         full = cs[0].agency_full
         parts.append(f'<section aria-label="{_esc(full)}">')
         parts.append(f"<h2>{_esc(full)} ({_esc(agency)})</h2>")
-        # Group this agency's chunks by document, preserving order.
-        seen_docs: list[str] = []
-        doc_chunks: dict[str, list[Chunk]] = {}
-        for c in cs:
-            if c.doc_id not in doc_chunks:
-                doc_chunks[c.doc_id] = []
-                seen_docs.append(c.doc_id)
-            doc_chunks[c.doc_id].append(c)
-        for doc_id in seen_docs:
-            dcs = doc_chunks[doc_id]
+        for _doc_id, dcs in _group_by_doc(cs):
             head = dcs[0]
             parts.append(f"<h3>{_esc(head.doc_title)}</h3>")
             parts.append(

@@ -86,6 +86,7 @@ domain_specific:
   - src/assistant/scaffold_agency.py # transit-agency contribution kit
   - evals/decline_calibration.py     # calibrated against this corpus/questions
   - web/console.py                   # transit-agency operator surface
+  - web/guide.py                     # transit-specific guided fare finder
   - corpus/                          # manifest.yaml + raw/ snapshots
   - evals/suites/                    # case content written from this corpus
   - evals/govchat/                   # exported golden.jsonl + baseline

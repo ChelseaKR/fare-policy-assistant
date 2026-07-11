@@ -205,6 +205,10 @@ taps.
 
 ### EXP-08 — SMS access channel (design-gated)
 
+The pre-build privacy design is recorded in
+[`ADR 0015`](../decisions/0015-sms-channel-privacy-design.md); its gate remains
+proposed and no SMS code or infrastructure ships with it.
+
 **Pitch:** the same guarded pipeline over SMS for riders without smartphones
 or data plans.
 
