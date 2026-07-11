@@ -15,7 +15,6 @@ from assistant import guards
 from assistant.answer import AnswerResult
 from assistant.contract import build_structured_answer
 from assistant.facts import FareFact
-from assistant.guards import detect_language
 
 _REDIRECT_RE = re.compile(
     r"(511|contact|customer service|agency('s)? (website|office)|call|visit|"
@@ -115,12 +114,13 @@ def run_checks(
 
     # 3. Response language matches the question language.
     expected_lang = case.get("language", "en")
-    actual_lang = detect_language(answer)
+    actual_lang, confidence, unsure = guards.detect_language_confident(answer)
     out.append(
         CheckResult(
             "language_match",
             actual_lang == expected_lang,
-            f"expected {expected_lang}, got {actual_lang}",
+            f"expected {expected_lang}, got {actual_lang} "
+            f"(confidence={confidence:.3f}, unsure={str(unsure).lower()})",
         )
     )
 

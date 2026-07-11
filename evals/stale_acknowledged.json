@@ -4,13 +4,13 @@
     {
       "artifact": "baseline.json",
       "field": "prompt_versions.system",
-      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under system prompt v5; a baseline legitimately lags HEAD. The 2026-07-11 consolidation run under system v9 passed the regression gate (freshness 10/10, multilingual 20/22), so no owner-approved re-baseline was needed.",
+      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under system prompt v5; a baseline legitimately lags HEAD. The 2026-07-11 v10 full live run passed the regression gate at 182/201 (multilingual 22/22, Tagalog stretch 15/15), so no owner-approved re-baseline was needed.",
       "added": "2026-07-09"
     },
     {
       "artifact": "baseline.json",
       "field": "prompt_versions.answer_user",
-      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under answer_user prompt v2; a baseline legitimately lags HEAD. The 2026-07-11 consolidation run under answer_user v6 passed the regression gate, so no owner-approved re-baseline was needed.",
+      "reason": "The committed regression baseline was measured on the 2026-06-17 live run under answer_user prompt v2; a baseline legitimately lags HEAD. The 2026-07-11 v7 full live run passed the regression gate at 182/201, so no owner-approved re-baseline was needed.",
       "added": "2026-07-09"
     },
     {

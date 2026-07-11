@@ -149,6 +149,7 @@ def _tokenize(text: str) -> list[str]:
 # the policies say "Persons with Disabilities" (eval cases refuse-002,
 # edge-011).
 _EN_SYNONYMS: dict[str, str] = {
+    "cash": "single ride fare",
     "disabled": "disabilities disability",
     "disability": "disabled disabilities",
     "kid": "youth child",

@@ -71,6 +71,10 @@ class TestRetriever:
         assert results[0].chunk.agency == "MST"
         assert results[0].chunk.chunk_id == "mst-fares#0"
 
+    def test_cash_fare_query_keeps_single_ride_price_ahead_of_cash_handling(self, retriever):
+        results = retriever.search("Magkano ang pamasahe sa MST kung babayad ako ng cash?")
+        assert results[0].chunk.chunk_id == "mst-fares#0"
+
 
 class TestCloseTheLoopTriggers:
     """R1-2 heuristics: the query trigger and the application-passage signal."""

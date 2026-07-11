@@ -103,8 +103,9 @@ What a real operator needs before trusting the thing unattended.
 > `git diff -- corpus/`, `tools/corpus_refresh_report.py` writes the changelog
 > entry and doc-level diff into the PR body and lints the eval suites for stale
 > facts, and `/version` reports `staleness_days` against a budget. `deploy.sh`
-> provisions metric filters, alarms, and a CloudWatch dashboard; only the
-> billing-scoped AWS Budget remains a documented one-time manual step.
+> provisions metric filters, alarms, and a CloudWatch dashboard. The deployed
+> account also has the documented $20/month `fare-demo` AWS Budget; subscribing
+> a human email endpoint to the alerts topic remains an operator-specific step.
 >
 > **Status (2026-07-08):** item 4 done. The API Gateway stage throttle added
 > alongside the HTTP API (ADR 0004 amendment, 2026-06-12) already held across

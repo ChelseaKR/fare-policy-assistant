@@ -35,9 +35,9 @@ toward, not that they all pass yet — see the linked gap for current state.
 | CI/CD | Applies | Partial. OIDC-only credentials, SHA-pinned actions, per-job least-privilege permissions (including `corpus-freshness.yml`, fixed 2026-07-05). No branch-ruleset artifact, no CODEOWNERS-enforced review (`CODEOWNERS` file added 2026-07-05; the hosted branch-protection setting itself is a manual, human action — see the 2026-07-05 execution log in the audit folder). No tracking issue filed yet. |
 | Release & Versioning | Applies | Partial. `.github/workflows/release.yml` (added 2026-07-10) is tag-triggered on `v*`: checks the tag matches `pyproject.toml`'s version, re-runs `make verify` at the tagged commit, builds sdist+wheel, generates a CycloneDX 1.7 SBOM, attests SLSA build provenance, and creates a GitHub Release with the matching `CHANGELOG.md` section as notes. Nothing is published to a package index (no PyPI project registered, no other repo pins this one), so the GitHub Release is the publish target, not Trusted Publishing — the pipeline still exists so the deployed artifact is traceable to a signed, tested, tagged build. No tracking issue filed yet. |
 | Accessibility | Applies | Partial. Merge-blocking structural and browser pa11y/axe gates are green; the manual screen-reader walkthrough is still pending (`docs/audits/a11y-walkthrough.md`). |
-| Observability | Applies (Tier: informational/low-traffic demo service — no SLO). JSON structured logs contain no rider content; deployment provisions CloudWatch metric filters, alarms, and a dashboard. The billing-scoped AWS Budget remains a documented one-time manual step. | — |
-| Internationalization | Applies | Best-conforming standard in this repo: gettext catalogs with 9 merge-blocking gates (`docs/I18N.md`). Known, tracked gap: the disaggregated EN/ES answer-quality delta (~14pp) exceeds the ≤5pp bar — root-caused in `docs/audits/eval-regression-2026-06-30.md`. |
-| AI Evaluation | Applies | This is the project's thesis. 201-case harness, versioned prompts, a committed regression baseline, and an independent GovChat-Eval audit. The 2026-07-11 consolidation run passed the baseline gate at 160/201 (freshness 10/10; multilingual 20/22). Calibration reports κ=1.0 on only four still-current labels; 12 answer-bound labels require human relabeling before that number is representative. |
+| Observability | Applies (Tier: informational/low-traffic demo service — no SLO). JSON structured logs contain no rider content; deployment provisions CloudWatch metric filters, alarms, a dashboard, and the deployed account has a $20/month `fare-demo` AWS Budget. An SNS email subscriber is still operator-supplied. | — |
+| Internationalization | Applies | Gettext catalogs for EN/ES/TL have 9 merge-blocking gates (`docs/I18N.md`). The current live white-box run passes multilingual 22/22 and Tagalog stretch 15/15, while the independent lexical multilingual proxy remains below threshold at 0.581; Tagalog still has no agency-authored source page. |
+| AI Evaluation | Applies | This is the project's thesis. 201-case harness, versioned prompts, a committed regression baseline, and an independent GovChat-Eval audit. The 2026-07-11 v10/v7 live run passed the baseline gate at 182/201 (90.5%; multilingual 22/22; Tagalog stretch 15/15). Calibration reports κ=1.0 on only four still-current labels; 12 answer-bound labels require human relabeling before that number is representative. |
 | Documentation | Applies | Partial. This table is new (2026-07-05); ADRs, model card, and CONTRIBUTING exist and are dated. `CHANGELOG.md` added 2026-07-05. No tracking issue filed yet. |
 | Responsible Tech Framework | Applies (civic domain touching age/disability/income/veteran status). Misuse-resistance is code-enforced and tested (`src/assistant/guards.py`). No DPIA, AI-risk register, or EU-AI-Act classification yet: the source material for all three already exists in ADR 0004, `SECURITY.md`, and the model card; writing them up is future work. | — |
 
@@ -145,21 +145,22 @@ for it.
 | Suite | Score | Threshold | |
 |---|---|---|---|
 | adversarial (prompt-injection resistance) | 1.000 | 0.95 | ✅ |
-| representational (no determination phrases / PII echoed) | 0.865 | 1.00 | ✕ |
+| representational (no determination phrases / PII echoed) | 0.892 | 1.00 | ✕ |
 | a11y (accessible chat transcripts) | 1.000 | 1.00 | ✅ |
-| accuracy (golden-fact coverage) | 0.880 | 0.90 | ✕ |
-| refusal | 0.938 | 0.95 | ✕ |
-| multilingual (cross-language anchor fidelity) | 0.677 | 0.85 | ✕ |
-| groundedness | 0.024 | 0.90 | ✕ |
+| accuracy (golden-fact coverage) | 0.920 | 0.90 | ✅ |
+| refusal | 0.923 | 0.95 | ✕ |
+| multilingual (cross-language anchor fidelity) | 0.581 | 0.85 | ✕ |
+| groundedness | 0.087 | 0.90 | ✕ |
 
 Read the misses as an independent floor and a visible expansion cost, not a contradiction of the
 white-box results. GovChat-Eval's committed run uses its **deterministic
 lexical judge**, which cannot tell paraphrase or redirect boilerplate from a
 fabricated claim — so groundedness floors near zero even though this repo's
-LLM-judge groundedness suite is at 96.6%, and cross-language anchor fidelity is
-held to a lexical proxy. Accuracy, refusal, and representational also fell below
-their prior thresholds when the audit expanded from 122 to 195 items;
-adversarial and accessibility remain green. The method, the suite mapping, and the
+LLM-judge groundedness suite is at 93.1%, and cross-language anchor fidelity is
+held to a lexical proxy. Accuracy now clears its threshold; refusal,
+multilingual, representational, and groundedness remain below theirs on the
+refreshed 195-item export. Adversarial and accessibility remain green. The method,
+the suite mapping, and the
 `--judge llm` path for real signal are in
 [`docs/audits/methodology.md`](docs/audits/methodology.md).
 

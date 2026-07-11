@@ -1,4 +1,4 @@
-# v6 2026-07-11 (v4 closed the loop on reduced-fare answers; v5 bound next-step details to the exact rider class/product and handled dated deadlines; v6 also binds proof and contact details to that same class/product)
+# v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure)
 Policy passages (each begins with its citation tag):
 
 {passages}
@@ -39,4 +39,5 @@ expired window; direct the rider to the agency to ask whether a newer option exi
 Whenever your answer states any published fact from the passages — including a
 partial answer that declines an out-of-corpus part of the question — include
 the "based on policies published as of {as_of_date}" line (Spanish: "según las
-políticas publicadas al {as_of_date}").
+políticas publicadas al {as_of_date}"; Tagalog: "batay sa mga patakaran na
+inilathala noong {as_of_date}").

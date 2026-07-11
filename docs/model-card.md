@@ -105,11 +105,14 @@ Known limits found by the harness so far:
   Spanish's `mst-fares-es`), so `evals/suites/stretch_tagalog.yaml` is an
   honest, mirrored, all-cross-lingual test: a fare-vocabulary lexicon
   (`assistant.retrieve._TL_EN_LEXICON`) bridges a Tagalog query to the
-  English corpus at retrieval time, but nothing downstream generates a
-  Tagalog answer; `assistant.guards.detect_language` can identify Tagalog, but
-  the answer model and fixed-string catalogs do not yet provide parity, so
-  the suite's language and content checks currently fail on every case.
-  That failure is the parity gap this suite exists to make visible in the
+  English corpus at retrieval time. The answer model can respond in Tagalog,
+  `assistant.guards.detect_language` identifies it, and fixed guard/no-support
+  copy plus core injection, PII lead-in, determination, and as-of patterns now
+  have Tagalog coverage. This strengthens the deterministic safety seam but
+  does not create source-language parity. The current live stretch suite is
+  15/15, but that measures cross-lingual retrieval and guarded output—not an
+  agency-authored Tagalog policy corpus or fluent-human translation review. The
+  remaining constraint stays visible in the
   "Stretch-language parity (Tagalog)" table in EVALS.md, not a bug to
   silence. Chinese, Vietnamese, and Korean remain unaddressed; Tagalog was
   chosen first because it is space-delimited Latin script, which the

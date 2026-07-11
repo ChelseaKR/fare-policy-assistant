@@ -39,14 +39,10 @@ LOCALEDIR = Path(__file__).resolve().parent / "locales"
 #: BCP 47 tags the assistant ships a fixed-string catalog for. English is the
 #: source language and the fallback for any unsupported request.
 #:
-#: The language *classifier* (:mod:`assistant.langid`) additionally recognizes
-#: Tagalog ("tl"), but no ``tl`` fixed-string catalog ships yet. That is
-#: deliberate and safe: :func:`get_translation` is called with ``fallback=True``,
-#: so a ``tl`` request resolves to a :class:`gettext.NullTranslations` that
-#: returns the English source strings unchanged — the rider gets a graceful
-#: English refusal, never an error or a blank. Add "tl" here only when a
-#: ``locales/tl`` catalog exists (the G6 parity gate then holds it to EN/ES).
-SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "es")
+#: Tagalog is a stretch language over an English-only policy corpus, but its
+#: safety/no-support strings have a complete catalog so a deterministic guard
+#: never falls back to English after confidently detecting a Tagalog question.
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "es", "tl")
 DEFAULT_LANGUAGE = "en"
 
 

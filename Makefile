@@ -8,6 +8,7 @@ EVAL_HARNESS ?= ../govchat-eval
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
 LOCALES := src/$(PACKAGE)/locales
+SUPPORTED_LOCALES := en es tl
 
 # Coverage floor for the first-party packages. Honest achieved is ~95%; the gate
 # sits a few points below to absorb Python-version / optional-extra drift in CI.
@@ -82,7 +83,7 @@ dep-scan:     ## Dependency-vulnerability scan over the locked deps (pip-audit; 
 provenance:   ## BLOCKING: EVALS.md/baseline.json/golden.jsonl must declare the prompt+corpus versions HEAD ships, or carry a documented waiver in evals/stale_acknowledged.json (promoted from advisory 2026-07-09, FIX-01/M-2 — a baseline may legitimately lag HEAD, but only loudly)
 	uv run python -m evals.provenance
 
-i18n:         ## i18n catalog gate: POT current + EN/ES parity + PO compiles + BCP-47
+i18n:         ## i18n catalog gate: POT current + supported-language parity + PO compiles + BCP-47
 	# G2-lite -- regenerate the extraction template and fail if it drifts from the
 	# committed one (a new/changed rider-facing string without a re-extract is a
 	# merge-blocker). The normalizer freezes volatile header/flag noise so this is
@@ -93,20 +94,22 @@ i18n:         ## i18n catalog gate: POT current + EN/ES parity + PO compiles + B
 	uv run python tools/i18n_normalize_pot.py $(LOCALES)/messages.pot
 	git diff --exit-code -- $(LOCALES)/messages.pot
 	# G7 -- every PO compiles cleanly (format + domain checks), no msgfmt errors.
-	msgfmt --check --check-format --check-domain -o /dev/null \
-		$(LOCALES)/en/LC_MESSAGES/messages.po
-	msgfmt --check --check-format --check-domain -o /dev/null \
-		$(LOCALES)/es/LC_MESSAGES/messages.po
-	# G6 EN/ES key-parity + G5 completeness/placeholder parity.
+	@for locale in $(SUPPORTED_LOCALES); do \
+		msgfmt --check --check-format --check-domain -o /dev/null \
+			$(LOCALES)/$$locale/LC_MESSAGES/messages.po || exit 1; \
+	done
+	# G6 supported-language key-parity + G5 completeness/placeholder parity.
 	uv run python tools/check_catalog_parity.py
 	# G3 -- BCP 47 / RFC 5646 validity of every authored locale tag.
 	uv run python tools/check_bcp47.py
-	@echo "i18n: POT current; EN/ES key-parity + completeness; PO compiles; BCP-47 valid."
+	@echo "i18n: POT current; supported-language parity + completeness; PO compiles; BCP-47 valid."
 
 i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .po)
-	msgfmt -o $(LOCALES)/en/LC_MESSAGES/messages.mo $(LOCALES)/en/LC_MESSAGES/messages.po
-	msgfmt -o $(LOCALES)/es/LC_MESSAGES/messages.mo $(LOCALES)/es/LC_MESSAGES/messages.po
-	@echo "i18n-compile: refreshed messages.mo for en, es."
+	@for locale in $(SUPPORTED_LOCALES); do \
+		msgfmt -o $(LOCALES)/$$locale/LC_MESSAGES/messages.mo \
+			$(LOCALES)/$$locale/LC_MESSAGES/messages.po || exit 1; \
+	done
+	@echo "i18n-compile: refreshed messages.mo for $(SUPPORTED_LOCALES)."
 
 verify: check i18n a11y report-regression provenance  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate
 

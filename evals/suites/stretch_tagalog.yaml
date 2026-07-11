@@ -14,13 +14,10 @@
 # no Tagalog analogue of the mst-fares-es page that lets the Spanish suite
 # claim genuine parity on MST.
 #
-# Two known, deliberate gaps, both tracked rather than hidden:
-#   1. `assistant.guards.detect_language` (FIX-11 territory, tracked
-#      separately) knows only en/es, so the `language_match` deterministic
-#      check will read "expected tl, got en" on every case here even when
-#      retrieval and content are otherwise sound — that mismatch is itself
-#      part of the honest parity gap this suite exists to show, not a bug in
-#      the suite.
+# Two deliberate constraints remain tracked rather than hidden:
+#   1. Language identification and fixed guard/no-support copy support Tagalog,
+#      but the answer model still works cross-lingually from English passages;
+#      no agency-authored Tagalog source exists in this corpus.
 #   2. No case is tagged `smoke: true`. The 25-case CI smoke gate is a
 #      pass/fail signal for regressions in tested behavior; a suite that is
 #      expected, by design, to score far below EN/ES parity does not belong
@@ -75,7 +72,7 @@ cases:
     rationale: "Mirror of ground-018 (mst-fares Weekly GoPass, 7 days, $20.00)."
 
   - id: tl-006
-    question: "Magkano ang 10-sakay na pass para sa matatanda sa SBMTD?"
+    question: "Magkano ang 10-sakay na pass para sa regular na adult sa SBMTD?"
     agency_scope: SBMTD
     language: tl
     expected_behavior: answer
@@ -106,7 +103,7 @@ cases:
     agency_scope: MST
     language: tl
     expected_behavior: answer
-    required_facts: ["DD 214"]
+    required_facts: ["re:DD(?: Form)? 214"]
     mirror_of: edge-008
     rationale: "Mirror of edge-008: MST accepts DD Form 214 (and other listed IDs) for the veteran discount."
 
@@ -115,7 +112,7 @@ cases:
     agency_scope: MST
     language: tl
     expected_behavior: answer
-    required_facts: ["re:spous"]
+    required_facts: ["re:(spous|asawa)"]
     mirror_of: edge-009
     rationale: "Mirror of edge-009: mst-fares lists veteran's spouse/caregiver under the same discount."
 
@@ -124,7 +121,7 @@ cases:
     agency_scope: Yolobus
     language: tl
     expected_behavior: answer
-    required_facts: ["free"]
+    required_facts: ["re:(free|libre)"]
     mirror_of: edge-010
     rationale: "Mirror of edge-010: yolobus-fares Youth ages 0-18 ride free."
 
