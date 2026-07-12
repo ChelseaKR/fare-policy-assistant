@@ -73,7 +73,18 @@ by the evaluation suites (`evals/suites/`). The model card
 
 201 cases across nine suites, each case written against a specific passage in
 the corpus and readable by a non-engineer. This includes 30 counterfactual
-sensitivity variants and 15 explicitly stretch-only Tagalog cases:
+sensitivity variants and 15 explicitly stretch-only Tagalog cases.
+
+The harness is validated beyond its own scoreboard: a defect-injection self-test
+proves the gate catches planted bugs (`make eval-selftest`), a coverage map
+checks no corpus provision goes untested (`make coverage`,
+`docs/eval-coverage.md`), and a robustness report gives confidence intervals and
+a leave-one-suite-out jackknife (`make robustness`, `docs/eval-robustness.md`).
+The rendered report and the improvement curve publish to GitHub Pages via the
+manual `Pages` workflow (enable Pages → Settings once), at
+<https://chelseakr.github.io/fare-policy-assistant/>.
+
+The suites:
 
 | Suite | What it tests |
 |---|---|
