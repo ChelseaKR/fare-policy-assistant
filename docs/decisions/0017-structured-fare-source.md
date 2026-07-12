@@ -53,3 +53,29 @@ prose. Roll it out in increments so each is separately verifiable:
   first piece of the "structured fare computation" expansion — the same typed
   store is what a future trip-aware fare answer ("A to B as a senior") would
   query.
+
+## Amendment — 2026-07-12: increment 2 (naive prompt injection) is net-negative
+
+Increment 2 as first drafted — prepend the full `render_fare_card` block to the
+answer prompt for every feed-agency answer — was measured on a full live run and
+**reverted**. It fixed its target (ground-024's Woodland fare passed) but the
+overall score dropped **192 → 181 (-11)**, tripping the gate on multilingual
+(-3) and sensitivity (-5). The cause is the same shared-context blast radius that
+sank the v11/v12 prompt edits (docs/audits/eval-remediation-2026-07-11.md):
+injecting a several-line English fares block into *every* answer's context
+perturbs unrelated answers — boundary (sensitivity) and non-English
+(multilingual) cases most.
+
+So injecting structured fares as free prompt context is the wrong mechanism. The
+typed store (increment 1) stands; the next attempt should be **surgical**, not
+broad — options, in rough order of promise:
+
+1. Inject the card only when the question is a fare-*amount* question (a narrow
+   classifier), and match the block to the answer language, so the blast radius
+   is confined to cases the amount actually matters for.
+2. Skip prompt injection entirely: a **post-hoc numeric pass** that, when the
+   answer states a fare for a category the feed knows, corrects or flags the
+   number against the typed store — deterministic, no context perturbation.
+   This is the most likely to be net-positive and is the recommended next probe.
+
+The store is the durable asset; the delivery mechanism is still open.
