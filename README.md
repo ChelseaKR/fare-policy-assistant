@@ -186,6 +186,13 @@ discarded; nothing you type is stored. The serving path is one Lambda behind
 an HTTP API with layered cost guards (ADR 0004), deployed by
 `infra/deploy.sh`.
 
+The page opens with a "How this assistant is tested" panel that links straight
+to the evaluation report, so the point of the project is the first thing a
+reviewer sees rather than a footer link. If you are walking someone through the
+project, `docs/DEMO-SCRIPT.md` is a three-minute script: the hook, a few
+rehearsed queries that show grounded citations and the refusal to determine
+eligibility, and the honest-failures move.
+
 For riders with no signal at the stop, `/offline` renders every agency's dated
 policy text on one printable page, built from the committed corpus with no model
 call (`make offline` writes it locally for inspection).
