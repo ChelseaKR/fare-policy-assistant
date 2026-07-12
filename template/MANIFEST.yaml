@@ -61,6 +61,13 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: evals/coverage.py
+    marker: "youth/student"
+    note: >
+      The coverage-matrix mechanism is generic; the PROGRAMS keyword map (senior,
+      disabled, medicare, veteran, youth/student, child free, regular) names this
+      domain's reduced-fare programs and must be re-stated as the new domain's
+      benefit categories.
   - path: evals/selftest.py
     marker: "DD Form 214"
     note: >
