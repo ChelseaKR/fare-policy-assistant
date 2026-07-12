@@ -342,7 +342,11 @@ def _ask(event: dict) -> dict:
     # Cache hits cost no model call, so they bypass the per-minute budget (which
     # exists to bound Bedrock spend) but are still logged. The key includes the
     # history, since a follow-up's answer depends on the turns before it.
-    key = question.casefold() + "".join(f"|{q}>{a}" for q, a in history)
+    # JSON-encoded so the key is unambiguous: a "|" or ">" inside the question
+    # or a history turn cannot shift the delimiters and make two different
+    # (question, history) pairs collide onto one cached answer (same class of
+    # ambiguity _sign_turn guards against with its length prefix).
+    key = json.dumps([question.casefold(), history], ensure_ascii=False)
     cached = _cache_get(key)
     if cached is not None:
         print(
