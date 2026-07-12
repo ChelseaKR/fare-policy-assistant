@@ -65,11 +65,63 @@ automation did not miss the real behavior.
       blocking axe/pa11y)
 - [ ] Target sizes are comfortable on a phone. (auto: 24px minimum in CSS)
 
+## Code-level pre-audit — 2026-07-11 (by source inspection, not a screen reader)
+
+This section is a head start for the human pass, not a substitute for it. It
+records what could be confirmed by reading `web/index.html` and running the
+static gate (`python -m web.a11y`, green on this commit). Every row a real
+screen reader must judge — whether an announcement is actually heard and makes
+sense — is left explicitly **for the human pass**. Do not promote any "needs
+human" row to pass without an actual screen-reader session.
+
+**Keyboard**
+
+- Verified by code: every control is a native `<button>`, `<textarea>`, or
+  `<a>` — focusable and Enter/Space-operable without extra ARIA. Focus order
+  follows DOM order, which matches the visual order (banner → h1 → display
+  settings → "will not do" → ask form → examples → status → transcript). The
+  focus ring is `outline: 3px solid #1d4ed8` via `:focus-visible`. No script
+  installs a focus trap. On each new answer the code sets `tabindex=-1` on the
+  turn and calls `focus()`, so a keyboard user is moved onto the response.
+- Needs human pass: confirm the focus *visibly* lands on the new turn and that
+  the ring is perceivable at 400% and in high-contrast mode.
+
+**Screen reader**
+
+- Verified by code (structure): one `<h1>`, card `<h2>`s, structured-answer
+  `<h3>`s — no skipped levels. The "What it will not do" `<section>` precedes
+  the ask form in the DOM. Status is `role=status aria-live=polite`. Answer
+  turns carry `lang` (`ans.setAttribute("lang", data.language)`) so a Spanish
+  answer can switch voice. Feedback buttons have `aria-label` ("Yes, helpful" /
+  "No, not helpful") beside a "Was this helpful?" label. Citations render as
+  `<a>AGENCY: Title</a> (fetched DATE)` inside a `<ul>`.
+- Minor finding (not a failure): the "Sources" caption is a `<strong>`, not a
+  heading, so it is not a screen-reader heading-nav target. It sits inside the
+  focused turn, so it is still reachable; consider an `<h3>` if the human pass
+  finds the sources hard to locate.
+- Needs human pass: whether the moved focus actually announces the new answer;
+  whether the citation list reads as usable references rather than a bracket
+  wall; whether the polite live region announces status without stealing focus;
+  and whether the Spanish `lang` actually flips the voice.
+
+**Low vision / zoom / contrast**
+
+- Verified by code: the page is rem/em-based with `html.tsize-large` (112.5%)
+  and `html.tsize-xlarge` (125%), toggled with `aria-pressed` and persisted in
+  `localStorage`; high contrast toggles `body.contrast` (which only deepens
+  colours), also `aria-pressed` and persisted. Viewport allows zoom
+  (no `user-scalable=no`). Target sizes: primary controls `min-height: 2.5rem`
+  (40px), secondary `1.75rem` (28px) — both ≥ the 24px 2.5.8 minimum. Static
+  contrast is covered by the blocking axe/pa11y gate.
+- Needs human pass: reflow with no horizontal scroll at 400%, and a subjective
+  contrast/readability check in both themes on a real device.
+
 ## Result log
 
 | Date | Tool + version | Platform | Pass / fail summary | Follow-ups |
 |---|---|---|---|---|
-| _pending_ | | | not yet performed | |
+| 2026-07-11 | source inspection + `web.a11y` static gate | n/a (code review) | Structure, keyboard wiring, ARIA, `lang`, target sizes, persistence all correct by inspection; static gate green. Screen-reader *listening* items not yet performed. | Human SR pass still required (rows above) |
+| _pending_ | NVDA/Firefox or VoiceOver/Safari | desktop + mobile | not yet performed | |
 
-Until a row here records a real pass, do not present the demo as
+Until a row here records a real screen-reader pass, do not present the demo as
 production-ready for accessibility.

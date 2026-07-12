@@ -141,3 +141,29 @@ discriminate is a property of *this* corpus's size and topical narrowness,
 not a general claim about z-scores; EXP-12-scale corpus growth is exactly the
 condition that would let it start pulling weight, and the calibration script
 exists specifically to re-measure that instead of assuming it.
+
+## Amendment — 2026-07-11 re-calibration (z 1.75 → 1.50)
+
+The corpus grew after this ADR was first written (SacRT and HTA were added),
+which is precisely the "re-run after every corpus change" trigger the
+Consequences section names. That re-run had not happened, so the shipped
+`decline_z_threshold=1.75` had gone stale: on the current corpus and labeled
+set, 1.75 keeps only **98.2%** should-answer coverage, wrongly declining
+on-topic natural-language *process* questions whose lexical overlap with a
+terse fare table is low —
+
+- edge-046 "I'm 70. How do I start getting the SBMTD senior fare?" (z=1.72)
+- sens-003a "I have a Medicare card. Does that get me the reduced fare on
+  Yolobus?" (z=1.67)
+- conv-forged-004 "…students ride free on Yolobus, where do I board?" (z=1.53)
+
+— each of which has the answering passage in its top-k. Re-running
+`python -m evals.decline_calibration` now recommends the tightest
+100%-should-answer-coverage pair **`decline_z_threshold=1.50,
+decline_coverage_floor=0.10`**, and `RetrievalConfig` was updated to match. The
+should-decline recall of the z/coverage gate is unchanged (still 0.0% at every
+100%-coverage row — the finding above, that z does not discriminate at this
+corpus size, still holds), so this strictly recovers wrongly-declined answers
+at no cost to the refusal behavior, which continues to rest on the system
+prompt and the missing-citation output guard. See
+`docs/audits/eval-remediation-2026-07-11.md`, class C.
