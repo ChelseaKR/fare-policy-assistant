@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
+.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -129,3 +129,6 @@ mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; n
 
 eval-selftest:  ## Plant known defects into clean answers and prove the deterministic gate catches each (offline; also enforced by tests/test_selftest.py in CI)
 	uv run python -m evals.selftest
+
+coverage:     ## Agency x program coverage matrix + corpus blind spots; --write regenerates docs/eval-coverage.md
+	uv run python -m evals.coverage --write
