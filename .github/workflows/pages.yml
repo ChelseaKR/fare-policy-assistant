@@ -33,6 +33,7 @@ jobs:
           cp docs/pages/index.html _site/index.html
           cp docs/eval-report.html _site/report.html
           cp docs/eval-history.svg _site/trend.svg
+          cp docs/pages/CNAME _site/CNAME
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
         with:
