@@ -79,3 +79,29 @@ broad — options, in rough order of promise:
    This is the most likely to be net-positive and is the recommended next probe.
 
 The store is the durable asset; the delivery mechanism is still open.
+
+## Amendment — 2026-07-12: a structured consistency check that is false-positive-free
+
+Increment 3 succeeded where the prose heuristic (ADR 0016) and the prompt
+injection (above) did not. `evals/checks.py::structured_fare_contradictions`
+flags a dollar amount an answer states for a **named rider class** when it
+disagrees with the agency's GTFS-Fares feed for that class. Two properties make
+it clean where ADR 0016 was not:
+
+- The source is the **typed feed**, not prose the parser guessed at.
+- It binds only on **unambiguous class words** (senior, reduced, disability,
+  medicare, child, youth). "standard"/"regular" are deliberately excluded — an
+  answer routinely writes "$1.25 for a standard one-way trip" to mean a regular
+  *trip* of the reduced fare, which a keyword match misreads as the standard
+  *class* (the exact false positives seen on fresh-002 / conv-forged-002 before
+  the exclusion).
+
+Measured over the promoted run: **0 flags** (no correct answer wrongly failed);
+the self-test plants a wrong-class fare and the check catches it. It is emitted
+only for answers citing a feed agency (MST, SBMTD) and is a PASS elsewhere, so it
+adds a real deterministic guard for the numbers a feed knows without touching the
+192/201 baseline. The residual — a misread for a *no-feed* agency, or a "FREE"
+claim that is not a dollar amount — stays the groundedness judge's, and the
+durable fix beyond that is the extractive / structured-composition architecture
+the civic-rag-starter-kit uses (grounded by construction), not a post-hoc patch
+on free generation.

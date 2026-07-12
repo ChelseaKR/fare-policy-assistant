@@ -166,6 +166,23 @@ def _scenarios() -> list[Scenario]:
             ),
         ),
         Scenario(
+            name="fare contradicts the agency's GTFS feed",
+            check="structured_fare_consistent",
+            case={"expected_behavior": "answer", "language": "en"},
+            # SBMTD's feed binds the senior (reduced) class to $1.25 and the
+            # standard class to $2.50; stating $2.50 for the senior class is the
+            # wrong-number-for-the-right-class misread.
+            clean=_clean(
+                "sbmtd-fares-passes",
+                f"The SBMTD senior fare is $1.25 [doc:sbmtd-fares-passes], as of {AS_OF}.",
+                agency="SBMTD",
+            ),
+            mutate=lambda r: replace(
+                r,
+                answer=r.answer.replace("$1.25", "$2.50"),  # a real feed amount, wrong class
+            ),
+        ),
+        Scenario(
             name="missing required fact",
             check="required_facts_present",
             case={

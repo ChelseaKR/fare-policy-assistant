@@ -398,3 +398,28 @@ class TestRefusalChecks:
         )
         checks = _by_name(run_checks(case, result, DOC_IDS))
         assert not checks["forbidden_content_absent"].passed
+
+
+class TestStructuredFareConsistent:
+    """ADR 0017: a dollar amount stated for a rider class must match the agency's
+    GTFS-Fares feed for that class — false-positive-free by tight binding
+    (unambiguous class keywords only; validated at 0 flags over the promoted run)."""
+
+    def test_correct_class_fare_is_consistent(self):
+        from evals.checks import structured_fare_contradictions
+
+        # SBMTD feed: senior/reduced one-way = $1.25.
+        assert structured_fare_contradictions({"SBMTD"}, "The SBMTD senior fare is $1.25.") == []
+
+    def test_wrong_number_for_the_class_is_flagged(self):
+        from evals.checks import structured_fare_contradictions
+
+        # $2.50 is the standard fare, not the senior one — a real feed amount on
+        # the wrong class, the misread this catches.
+        flags = structured_fare_contradictions({"SBMTD"}, "The SBMTD senior fare is $2.50.")
+        assert flags and "senior" in flags[0]
+
+    def test_dormant_for_agency_without_a_feed(self):
+        from evals.checks import structured_fare_contradictions
+
+        assert structured_fare_contradictions({"Yolobus"}, "Yolobus senior fare is $9.99.") == []
