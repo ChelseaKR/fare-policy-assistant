@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 
 from assistant import facts as facts_module
-from assistant import guards
+from assistant import fare_table, guards
 from assistant.answer import AnswerResult
 from assistant.contract import build_structured_answer
 from assistant.facts import FareFact
@@ -88,6 +88,56 @@ def phrase_asserted(phrase: str, text: str) -> bool:
             continue
         return True
     return False
+
+
+# Rider-class keywords that appear in both a GTFS rider-category label and the
+# way an answer names the class, used to bind a dollar amount in the answer to
+# the feed row it should match (ADR 0017).
+# Only unambiguous rider-class words. "standard"/"regular" are excluded on
+# purpose: an answer routinely says "$1.25 for a standard one-way trip" to mean a
+# regular *trip* of the reduced fare, which a keyword match misreads as the
+# standard rider *class* (a false positive — ADR 0016 / ADR 0017 amendment).
+_FARE_CLASS_KEYWORDS = (
+    "senior",
+    "reduced",
+    "disab",
+    "medicare",
+    "child",
+    "youth",
+)
+_PRICE_IN_TEXT = re.compile(r"\$\s?(\d+(?:\.\d{2})?)")
+
+
+def structured_fare_contradictions(agencies: set[str], answer: str) -> list[str]:
+    """Dollar amounts in `answer` that contradict the agency's GTFS-Fares feed
+    for a rider class the answer names (ADR 0017). Deterministic and
+    authoritative: it fires only when a class keyword sits beside a price, that
+    price is absent from the feed's amounts for that class, and it *is* a real
+    amount elsewhere in the feed — the tight binding that keeps this free of the
+    false positives a prose heuristic hits (ADR 0016). Empty for agencies with
+    no feed, so the check is dormant there rather than guessing."""
+    contradictions: list[str] = []
+    for agency in sorted(agencies):
+        by_kw: dict[str, set[float]] = {}
+        all_amounts: set[float] = set()
+        for fare in fare_table.structured_fares(agency):
+            amount = float(fare.amount)
+            all_amounts.add(amount)
+            label = (fare.rider_category.name if fare.rider_category else "").lower()
+            for kw in _FARE_CLASS_KEYWORDS:
+                if kw in label:
+                    by_kw.setdefault(kw, set()).add(amount)
+        if not by_kw:
+            continue
+        for m in _PRICE_IN_TEXT.finditer(answer):
+            price = round(float(m.group(1)), 2)
+            window = answer[max(0, m.start() - 60) : m.end() + 30].lower()
+            for kw, amounts in by_kw.items():
+                if kw in window and price not in amounts and price in all_amounts:
+                    contradictions.append(
+                        f"${price:.2f} for '{kw}' but the {agency} feed has {sorted(amounts)} there"
+                    )
+    return contradictions
 
 
 def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[FareFact]) -> bool:
@@ -233,6 +283,26 @@ def run_checks(
                 ]
                 out.append(
                     CheckResult("fare_facts_consistent", not unverified, "; ".join(unverified))
+                )
+
+        # 8b. Structured fare consistency against the agency's GTFS-Fares feed
+        # (ADR 0017). Where the cited agency publishes a machine-readable feed,
+        # a dollar amount the answer states for a named rider class must match
+        # the feed's amount for that class. Authoritative and false-positive-free
+        # by construction (validated at 0 flags over the promoted run); dormant
+        # for agencies with no feed. Catches the wrong-number-for-the-right-class
+        # misread the judge otherwise owns alone.
+        if result.kind == "answered":
+            cited_agencies = {c.agency for c in result.citations}
+            feed_agencies = {a for a in cited_agencies if fare_table.structured_fares(a)}
+            if feed_agencies:
+                feed_conflicts = structured_fare_contradictions(feed_agencies, answer)
+                out.append(
+                    CheckResult(
+                        "structured_fare_consistent",
+                        not feed_conflicts,
+                        "; ".join(feed_conflicts),
+                    )
                 )
 
         # 9. Positive verification handoff (RR4). An eligibility-adjacent answer
