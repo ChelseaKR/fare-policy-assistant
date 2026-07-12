@@ -36,6 +36,7 @@ generic:
   - evals/history.py
   - evals/reranker_bottleneck_check.py
   - evals/stats.py
+  - evals/robustness.py
   - src/assistant/__init__.py
   - src/assistant/guards.py
   - src/assistant/config.py
