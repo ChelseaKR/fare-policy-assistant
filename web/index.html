@@ -43,6 +43,15 @@
     margin: 1rem 0;
   }
   .card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  /* Highlighted eval-result line in the "How this is tested" card. Uses the
+     notice palette (AA contrast against black ink in both themes). */
+  .eval-figure {
+    background: var(--notice);
+    border: 1px solid var(--notice-line);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin: 0.5rem 0;
+  }
   ul { margin: 0.3rem 0 0.3rem 1.2rem; padding: 0; }
   label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
   textarea {
@@ -176,6 +185,21 @@
       <li>It does not collect personal information. Please leave ID numbers and birth dates
           out of your question.</li>
     </ul>
+  </section>
+
+  <!-- Eval headline: update the figure alongside EVALS.md on each promoted run.
+       The linked report is always the source of truth. -->
+  <section class="card" aria-labelledby="tested">
+    <h2 id="tested">How this assistant is tested</h2>
+    <p>The evaluation harness is the point of this project. Every release runs
+      <strong>201 test cases across nine suites</strong> — groundedness,
+      refusal, eligibility edge cases, Spanish parity, and freshness — scored by
+      deterministic checks and an independent LLM judge, one that differs from
+      the model writing the answers.</p>
+    <p class="eval-figure"><strong>Latest run: 192 of 201 passed (95.5%).</strong>
+      The harness is reproducible, and the failures are published in full rather
+      than hidden.</p>
+    <p><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/EVALS.md">Read the full evaluation report</a></p>
   </section>
 
   <section class="card" aria-labelledby="ask">

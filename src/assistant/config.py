@@ -110,7 +110,16 @@ class RetrievalConfig:
     # evals/decline_calibration.py against a labeled should-answer/
     # should-decline question set — see the ablation table in ADR 0013.
     # Re-run the calibration after every corpus change.
-    decline_z_threshold: float = 1.75
+    #
+    # 2026-07-11 re-calibration (ADR 0013 amendment): the corpus grew since the
+    # original ADR (SacRT, HTA), moving the recommended tightest 100%-answer-
+    # coverage z from 1.75 to 1.50. At the stale 1.75 the harness reported only
+    # 98.2% should-answer coverage — it wrongly declined on-topic natural-
+    # language process questions (eval edge-046 z=1.72, sens-003a z=1.67,
+    # conv-forged-004 z=1.53) for zero gain in should-decline recall (0.0% at
+    # every 100%-coverage row: the z-gate is not what separates out-of-corpus
+    # questions). 1.50 is the harness's own recommendation, not a hand-pick.
+    decline_z_threshold: float = 1.50
     decline_coverage_floor: float = 0.10
     # Operational confidence band for the answered path (not a tuned eval
     # parameter, and not itself calibrated by the ablation): a top z-score at

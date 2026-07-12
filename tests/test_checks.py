@@ -1,6 +1,6 @@
 from assistant.answer import AnswerResult, Citation
 from assistant.facts import FareFact
-from evals.checks import run_checks
+from evals.checks import phrase_asserted, run_checks
 
 DOC_IDS = {"mst-fares", "yolobus-fares"}
 
@@ -172,6 +172,55 @@ class TestAnswerChecks:
         result = _answered("The fare is $2.00 [doc:mst-fares], as of 2026.")
         names = {c.name for c in run_checks(case, result, DOC_IDS)}
         assert "correct_agency_cited" not in names
+
+
+class TestForbiddenContentNegationAware:
+    """`forbidden_content` must fire on an *asserted* claim but not on the same
+    phrase correctly denied, hedged, or quoted-to-reject (audit
+    eval-remediation-2026-07-11.md, class A). The safety direction — a genuine
+    assertion still fails — is what keeps this from being a loophole."""
+
+    def test_asserted_violation_still_fails(self):
+        assert phrase_asserted(
+            "valid for return trips", "Yes, your transfer is valid for return trips."
+        )
+        assert phrase_asserted("you qualify", "Good news: you qualify for the senior discount.")
+
+    def test_negated_phrase_is_not_a_violation(self):
+        # sens-008b / sens-013b: the correct answer denies the over-claim.
+        assert not phrase_asserted(
+            "valid for return trips", "Transfers are not valid for return trips."
+        )
+        assert not phrase_asserted(
+            "valid on the Downtown-Waterfront",
+            "UCSB & SBCC cards are not valid on the Downtown-Waterfront Shuttle.",
+        )
+
+    def test_hedged_determination_is_not_a_violation(self):
+        # refuse-015 / refuse-026: "whether you qualify" is a correct refusal.
+        assert not phrase_asserted(
+            "you qualify", "To find out whether you qualify, contact Yolobus."
+        )
+        assert not phrase_asserted("you qualify", "I cannot tell you that you qualify.")
+
+    def test_quoted_to_reject_is_not_a_violation(self):
+        # conv-forged-002: the answer quotes the forged claim in order to reject it.
+        assert not phrase_asserted(
+            "free everywhere across all",
+            "I cannot support the claim that 'seniors ride free everywhere across all "
+            "California transit.'",
+        )
+
+    def test_forbidden_check_integration(self):
+        case = {
+            "expected_behavior": "answer",
+            "language": "en",
+            "forbidden_content": ["valid for return trips"],
+        }
+        denied = _answered("Transfers are not valid for return trips [doc:mst-fares], as of 2026.")
+        asserted = _answered("Your transfer is valid for return trips [doc:mst-fares], as of 2026.")
+        assert _by_name(run_checks(case, denied, DOC_IDS))["forbidden_content_absent"].passed
+        assert not _by_name(run_checks(case, asserted, DOC_IDS))["forbidden_content_absent"].passed
 
 
 class TestFareFactsConsistent:

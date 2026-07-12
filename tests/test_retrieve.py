@@ -5,6 +5,7 @@ from assistant.retrieve import (
     Retriever,
     _expand_query,
     _is_application_passage,
+    _is_child_fare_query,
     _is_reduced_fare_query,
     detect_agencies,
     detect_agency,
@@ -151,3 +152,42 @@ class TestCloseTheLoopRetrieval:
     def test_senior_query_excludes_disabled_courtesy_card_process(self, corpus_retriever):
         results = corpus_retriever.search("How do I use the MST senior discount?")
         assert "mst-fares#6" not in [sc.chunk.chunk_id for sc in results]
+
+
+class TestChildFareCompanion:
+    """sens-010a: a child free-fare query must reach the provision passage even
+    when the child's age shares almost no vocabulary with the fare table (SBMTD
+    publishes it as "Children under 45 inches tall")."""
+
+    @pytest.fixture
+    def corpus_retriever(self):
+        return Retriever(cfg=config.RetrievalConfig(use_dense=False))
+
+    @pytest.mark.parametrize(
+        "question",
+        [
+            "Does my 3-year-old ride free on Santa Barbara MTD?",
+            "Is my toddler free on SBMTD?",
+            "does my baby ride free on SBMTD",
+        ],
+    )
+    def test_child_fare_queries_trigger(self, question):
+        assert _is_child_fare_query(question)
+
+    def test_senior_and_veteran_queries_do_not_trigger(self):
+        assert not _is_child_fare_query("How much is the senior fare on MST?")
+        assert not _is_child_fare_query("What proof do I need for the veteran fare on MST?")
+
+    def test_provision_passage_appended_for_child_query(self, corpus_retriever):
+        results = corpus_retriever.search("Does my 3-year-old ride free on Santa Barbara MTD?")
+        ids = [sc.chunk.chunk_id for sc in results]
+        # sbmtd-fares-passes#1 carries "FREE Children under 45 inches tall" and
+        # ranks ~#37 on this query without the companion step.
+        assert "sbmtd-fares-passes#1" in ids
+
+    def test_no_provision_appended_for_plain_adult_query(self, corpus_retriever):
+        results = corpus_retriever.search("What is the regular adult fare on SBMTD?")
+        # The plain fare query is not a child-fare query, so nothing is forced in
+        # beyond ordinary ranking; the companion step stays silent.
+        assert not _is_child_fare_query("What is the regular adult fare on SBMTD?")
+        assert results  # sanity: ordinary retrieval still returns passages

@@ -232,7 +232,10 @@ pairs:
         agency_scope: SBMTD
         language: en
         expected_behavior: answer
-        required_facts: ["re:same day|day of travel|same-day"]
+        # Corpus wording is "On the day you travel" (sbmtd-fares-passes); accept
+        # that alongside "same day"/"day of travel" (audit
+        # eval-remediation-2026-07-11.md, class B).
+        required_facts: ["re:same[- ]?day|day (of|you)( your)? travel"]
         forbidden_content: ["ride MTD free", "ride free with yesterday"]
         rationale: "sbmtd-fares-passes: the free ride is limited to the day of travel; a prior-day ticket does not qualify."
 

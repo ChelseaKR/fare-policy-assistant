@@ -217,6 +217,35 @@ def _is_reduced_fare_query(question: str) -> bool:
     return bool(_REDUCED_FARE_QUERY.search(question))
 
 
+# Child/youth free-fare "close the loop" (eval sens-010a). A rider asking
+# whether a young child rides free almost never uses the corpus's vocabulary for
+# the provision — SBMTD publishes "FREE Children under 45 inches tall", Yolobus
+# "Youth ages 0-18 ride free!" — so a bare age query ("does my 3-year-old ride
+# free?") scores the fare-schedule chunk far below the fare-change narrative and
+# it falls out of top_k. Same remedy as _close_the_loop: when the question is a
+# child-fare query and the provision passage is missing, append it so the answer
+# can state the actual rule (a height/age threshold) instead of declining.
+_CHILD_FARE_QUERY = re.compile(
+    r"\b(child|children|kid|kids|toddler|toddlers|infant|infants|baby|babies|"
+    r"son|daughter|\d+[- ]?year[- ]?olds?|years? old)\b",
+    re.I,
+)
+_CHILD_FARE_PROVISION = re.compile(
+    r"child(ren)?\s+under\s+\d+\s*inch"  # SBMTD: "Children under 45 inches tall"
+    r"|(child(ren)?|youth)[^.]{0,40}\brides?\s+free"  # "youth … ride free"
+    r"|youth\s+ages?\s+0",  # Yolobus: "Youth ages 0-18 ride free!"
+    re.I,
+)
+
+
+def _is_child_fare_query(question: str) -> bool:
+    return bool(_CHILD_FARE_QUERY.search(question))
+
+
+def _is_child_fare_provision(chunk: Chunk) -> bool:
+    return bool(_CHILD_FARE_PROVISION.search(f"{chunk.section} {chunk.text}"))
+
+
 def _is_application_passage(chunk: Chunk) -> bool:
     """A passage that tells the rider how to apply for / obtain a reduced-fare
     program or ID card (where, cost, hours) — the 'close the loop' next step."""
@@ -342,7 +371,37 @@ class Retriever:
             if not _is_application_passage(sc.chunk)
             or _application_matches_question(question, sc.chunk)
         ]
-        return self._close_the_loop(question, agencies, results, ranked)
+        results = self._close_the_loop(question, agencies, results, ranked)
+        return self._ensure_child_fare_passage(question, agencies, results, ranked)
+
+    def _ensure_child_fare_passage(
+        self,
+        question: str,
+        agencies: list[str],
+        results: list[ScoredChunk],
+        ranked: list[ScoredChunk],
+    ) -> list[ScoredChunk]:
+        """Append the child/youth free-fare provision passage for a child-fare
+        query when it fell out of top_k (see _CHILD_FARE_PROVISION, eval
+        sens-010a). Mirrors _close_the_loop: appends at most one best-ranked
+        passage per relevant agency and never removes anything."""
+        if not _is_child_fare_query(question):
+            return results
+        targets = list(agencies) or ([results[0].chunk.agency] if results else [])
+        present = {sc.chunk.chunk_id for sc in results}
+        additions: list[ScoredChunk] = []
+        for ag in targets:
+            if any(_is_child_fare_provision(sc.chunk) for sc in results if sc.chunk.agency == ag):
+                continue
+            for sc in ranked:
+                if (
+                    sc.chunk.agency == ag
+                    and sc.chunk.chunk_id not in present
+                    and _is_child_fare_provision(sc.chunk)
+                ):
+                    additions.append(sc)
+                    break
+        return results + additions
 
     def _close_the_loop(
         self,

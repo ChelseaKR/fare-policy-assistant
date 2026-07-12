@@ -45,8 +45,49 @@ def fact_matches(fact: str, text: str) -> bool:
 
 def phrase_present(phrase: str, text: str) -> bool:
     """True when a ``forbidden_content`` phrase appears in ``text`` (literal,
-    case-insensitive). Shared with the freshness staleness lint."""
+    case-insensitive). Shared with the freshness staleness lint
+    (`tools/corpus_refresh_report.py`), which scans *corpus* text for a phrase's
+    literal presence and therefore must stay negation-blind. The answer-side
+    forbidden-content check uses ``phrase_asserted`` below instead."""
     return bool(re.search(re.escape(phrase), text, re.I))
+
+
+# Negation / hedge cues that, appearing just before a forbidden phrase, mean the
+# answer is *denying* or *conditioning* the phrase rather than asserting it:
+# "transfers are NOT valid for return trips" (sens-008b), "cards are NOT valid
+# on the Downtown-Waterfront" (sens-013b), "I CANNOT support the claim that
+# 'seniors ride free everywhere…'" (conv-forged-002), "WHETHER you qualify"
+# (refuse-015/refuse-026). See docs/audits/eval-remediation-2026-07-11.md, class
+# A. This mirrors the hedge-awareness the determination guard already applies
+# (guards._HEDGE_BEFORE); `phrase_present` above stays literal for the corpus
+# lint.
+_NEGATION_CUES = re.compile(
+    r"\b(not|never|no|cannot|without|unable|nor|neither|"
+    r"whether|if|may|might|could|"  # hedges / conditionals
+    r"nunca|sin|ni|si|puede|podr[ií]a|"  # es
+    r"hindi|kung|maaaring)\b|n't\b",  # tl + contracted -n't
+    re.I,
+)
+_NEG_WINDOW_WORDS = 10
+
+
+def phrase_asserted(phrase: str, text: str) -> bool:
+    """True only when ``phrase`` is stated *as fact* in ``text`` — not negated,
+    hedged, or conditioned.
+
+    Used for ``forbidden_content``: the answer must not *assert* the forbidden
+    claim, but correctly *denying* it ("transfers are not valid for return
+    trips") or *quoting it to reject it* ("I cannot support the claim that …")
+    is exactly the behavior we want, and must not be counted as a violation. An
+    occurrence is treated as asserted only when no negation/hedge cue appears in
+    the preceding few words; a single plain occurrence is enough to fail.
+    """
+    for m in re.finditer(re.escape(phrase), text, re.I):
+        preceding = re.findall(r"\S+", text[: m.start()])[-_NEG_WINDOW_WORDS:]
+        if _NEGATION_CUES.search(" ".join(preceding)):
+            continue
+        return True
+    return False
 
 
 def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[FareFact]) -> bool:
@@ -106,9 +147,12 @@ def run_checks(
         )
     )
 
-    # 2. Case-specific forbidden content.
+    # 2. Case-specific forbidden content. Uses phrase_asserted (not
+    # phrase_present) so an answer that correctly *denies* or quotes-to-reject a
+    # forbidden claim is not miscounted as asserting it (class A of
+    # docs/audits/eval-remediation-2026-07-11.md).
     forbidden = [
-        phrase for phrase in case.get("forbidden_content", []) if phrase_present(phrase, answer)
+        phrase for phrase in case.get("forbidden_content", []) if phrase_asserted(phrase, answer)
     ]
     out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
 

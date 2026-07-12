@@ -1,34 +1,37 @@
 {
-  "from_run": "2026-06-17T03:11:14+00:00",
+  "from_run": "2026-07-12T05:01:17+00:00",
   "mode": "full",
   "offline": false,
   "answer_model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "provenance": {
-    "run_id": "2026-06-17T03:11:14+00:00",
-    "corpus_version": "0938fff0539a",
     "prompt_versions": {
-      "system": "v5 2026-06-16 (v4 added no-inferred-requirements for ml-005; v5 adds Humboldt Transit as the fifth agency)",
-      "answer_user": "v2 2026-06-12 (v1 2026-06-11; v2 adds the unstated-details reminder — eval cases ml-005, ml-011)",
-      "judge_groundedness": "v1 2026-06-11",
-      "judge_helpfulness": "v2 2026-06-12 (v1 2026-06-11; v2 stops the judge second-guessing documented policy — eval cases ml-010, fresh-007)"
+      "system": "v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance)",
+      "answer_user": "v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure)",
+      "judge_groundedness": "v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases \u2014 conv-004)",
+      "judge_helpfulness": "v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy \u2014 ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind \u2014 conv-004)"
     },
-    "declared": "retroactively, 2026-07-09: prompt versions read from the cached run summary evals/runs/20260617T025552Z/summary.json (the exact run behind from_run); corpus_version reconstructed from git history (corpus/processed unchanged since 27320af, which predates the run). The v5/v2-vs-HEAD staleness is acknowledged in evals/stale_acknowledged.json, not hidden."
+    "corpus_version": "0938fff0539a"
   },
   "suites": {
     "conversation": {
-      "passed": 4,
-      "total": 6,
-      "pass_rate": 66.7
+      "passed": 8,
+      "total": 10,
+      "pass_rate": 80.0
+    },
+    "cross_agency": {
+      "passed": 3,
+      "total": 3,
+      "pass_rate": 100.0
     },
     "edge_cases": {
-      "passed": 33,
-      "total": 33,
-      "pass_rate": 100.0
+      "passed": 46,
+      "total": 48,
+      "pass_rate": 95.8
     },
     "freshness": {
-      "passed": 10,
+      "passed": 9,
       "total": 10,
-      "pass_rate": 100.0
+      "pass_rate": 90.0
     },
     "groundedness": {
       "passed": 27,
@@ -36,14 +39,26 @@
       "pass_rate": 93.1
     },
     "multilingual": {
-      "passed": 20,
-      "total": 21,
-      "pass_rate": 95.2
+      "passed": 22,
+      "total": 22,
+      "pass_rate": 100.0
     },
     "refusal": {
-      "passed": 18,
-      "total": 19,
-      "pass_rate": 94.7
+      "passed": 34,
+      "total": 34,
+      "pass_rate": 100.0
+    },
+    "sensitivity": {
+      "passed": 28,
+      "total": 30,
+      "pass_rate": 93.3,
+      "pairs_passed": 13,
+      "pairs_total": 15
+    },
+    "stretch_tagalog": {
+      "passed": 15,
+      "total": 15,
+      "pass_rate": 100.0
     }
   }
 }
