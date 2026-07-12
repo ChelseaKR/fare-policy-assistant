@@ -59,6 +59,7 @@ generic:
   - .github/workflows/security.yml
   - .github/workflows/mutation.yml
   - .github/workflows/corpus-freshness.yml
+  - .github/workflows/pages.yml
   - docs/adapting.md
 
 generic_edit:

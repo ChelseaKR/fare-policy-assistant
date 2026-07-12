@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transit Fare Policy Assistant — evaluation</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; line-height: 1.55;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1f24; background: #fafaf7;
+  }
+  main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  h1 { font-size: 1.6rem; margin: 0.5rem 0 0.2rem; }
+  .sub { color: #4d5860; margin: 0 0 1.5rem; }
+  .banner {
+    background: #fff8e6; border: 1px solid #d9c27a; border-radius: 6px;
+    padding: 0.6rem 0.9rem; margin: 1rem 0; font-size: 0.95rem;
+  }
+  .card {
+    background: #fff; border: 1px solid #d6d3cb; border-radius: 8px;
+    padding: 1rem 1.1rem; margin: 1rem 0;
+  }
+  .card h2 { font-size: 1.1rem; margin: 0 0 0.4rem; }
+  a { color: #1d4ed8; }
+  a:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+  ul { margin: 0.4rem 0 0.2rem 1.2rem; padding: 0; }
+  li { margin: 0.25rem 0; }
+  .trend img { width: 100%; height: auto; max-width: 100%; border: 1px solid #d6d3cb; border-radius: 6px; }
+  footer { border-top: 1px solid #d6d3cb; margin-top: 2rem; padding-top: 1rem; font-size: 0.9rem; color: #4d5860; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e8e6e1; background: #16181c; }
+    .sub, footer { color: #a7adb4; }
+    .card { background: #1f2226; border-color: #3a3f45; }
+    .banner { background: #2a2716; border-color: #6b5d2a; }
+    a { color: #7aa2ff; }
+    .trend img { border-color: #3a3f45; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="banner" role="note">
+    <strong>Reference implementation.</strong> A portfolio demonstration of how to
+    test an AI assistant, not an official service of any transit agency.
+  </div>
+
+  <h1>Transit Fare Policy Assistant — evaluation</h1>
+  <p class="sub">
+    A narrow retrieval assistant for California transit fare policy, wrapped in a
+    public evaluation harness. The harness is the point; the assistant exists so
+    the harness has something to grade.
+  </p>
+
+  <section class="card" aria-labelledby="report-h">
+    <h2 id="report-h">The evaluation report</h2>
+    <p>The generated scoreboard, representative failures with full traces, and the
+      safety case.</p>
+    <ul>
+      <li><a href="report.html">Full evaluation report (HTML)</a></li>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/EVALS.md">EVALS.md on GitHub</a></li>
+    </ul>
+  </section>
+
+  <section class="card trend" aria-labelledby="trend-h">
+    <h2 id="trend-h">Improvement over time</h2>
+    <p>Per-suite pass rates across recorded runs, grouped by instrument (a mock
+      and a live run measure different things and are never plotted together).</p>
+    <img src="trend.svg" alt="Line chart of eval pass rates across recorded runs, grouped by run instrument.">
+    <p><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/eval-history.md">Full run history</a></p>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How the harness is validated</h2>
+    <ul>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/mutation-testing.md">Self-test and mutation testing</a> — proof the gate catches planted defects</li>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/eval-coverage.md">Coverage map</a> — tested vs untested fare provisions</li>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/eval-robustness.md">Score robustness</a> — confidence intervals and jackknife</li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="gov-h">
+    <h2 id="gov-h">Responsible-AI and governance</h2>
+    <ul>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/model-card.md">Model card</a></li>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/dpia.md">Data Protection Impact Assessment</a></li>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/ai-risk-register.md">AI risk register</a></li>
+      <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/eu-ai-act-classification.md">EU-AI-Act classification</a></li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><a href="https://github.com/ChelseaKR/fare-policy-assistant">Source code</a> ·
+       <a href="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/">Live demo</a></p>
+  </footer>
+</main>
+</body>
+</html>
