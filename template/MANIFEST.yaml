@@ -101,6 +101,7 @@ domain_specific:
   - src/assistant/domain.py          # the DomainProfile instance itself
   - src/assistant/facts.py           # typed fare/age facts
   - src/assistant/gtfs.py            # transit feed cross-checking
+  - src/assistant/fare_table.py      # GTFS-Fares structured fare table (ADR 0017)
   - src/assistant/scaffold_agency.py # transit-agency contribution kit
   - evals/decline_calibration.py     # calibrated against this corpus/questions
   - web/console.py                   # transit-agency operator surface
