@@ -102,3 +102,33 @@ verdict logic of `judges.py`. Ask: would this edit change a pass/fail decision o
 a recorded verdict? If yes, add the smallest test that asserts the real
 behavior. If it only changes a diagnostic string or unobservable prompt text,
 leave it — a surviving mutant is a prompt to think, not a number to force to 100.
+
+## Companion: the defect-injection self-test (a merge gate)
+
+Mutation testing asks "would a *unit test* notice if the check code were wrong?"
+The self-test (`evals/selftest.py`, `make eval-selftest`) asks the question a
+skeptic actually cares about: **"given a deliberately wrong *answer*, does the
+gate fail the right case?"**
+
+It takes an otherwise-clean, grounded answer and plants one known defect, then
+asserts that the specific check meant to catch it flips from pass to fail:
+
+| Planted defect | Check that must catch it |
+|---|---|
+| a fare that contradicts the corpus fact table | `fare_facts_consistent` |
+| a determination phrase ("you qualify") | `no_determination_language` |
+| a dropped / unresolvable citation | `citation_present_and_resolvable` |
+| a missing "as of" date | `as_of_disclosure` |
+| the wrong agency cited | `correct_agency_cited` |
+| an asserted forbidden over-claim | `forbidden_content_absent` |
+| a missing required fact | `required_facts_present` |
+
+The clean answer must also pass each check, so a scenario cannot pass by being
+broken in two directions at once. Unlike mutation testing, this **is** a merge
+gate — it makes no model calls, and `tests/test_selftest.py` runs it in CI. A
+defect that survives (the mutated answer still passes its check) is a hole in
+the harness, and it turns the run red.
+
+This is the "we test our tests" evidence the evaluation story leans on: the
+scoreboard says the assistant passes; the self-test says the scoreboard would
+have caught it if it hadn't.

@@ -61,6 +61,15 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: evals/selftest.py
+    marker: "DD Form 214"
+    note: >
+      The defect-injection mechanism is generic: it plants a wrong answer and
+      asserts the deterministic gate catches it. The planted scenarios quote
+      this domain's example values (a real fare doc_id, "DD Form 214", "valid
+      for return trips"), which must be re-stated as the new domain's required
+      facts, forbidden phrases, and a priced doc for the self-test to stay
+      meaningful.
   - path: evals/govchat_export.py
     marker: "Suite mapping (fare-policy-assistant"
     note: >
