@@ -77,3 +77,32 @@ answer-bearing chunk could in principle be misidentified by the substring
 match on some case. The check is deliberately the same cheap, model-free
 method ADR 0007 used, chosen so this decision rests on the same kind of
 evidence as the dense-retrieval one, not a fresh methodology per ADR.
+
+## Amendment — 2026-07-11 re-confirmation (fresh evidence)
+
+The 2026-07-11 remediation added a real retrieval case worth re-checking the
+decision against, and a fresh run to re-measure it on.
+
+**A genuine recall miss appeared — and a reranker was still the wrong fix.**
+`sens-010a` ("does my 3-year-old ride free?") failed because the passage
+carrying "Children under 45 inches tall" ranked #37, outside the top-k. That is
+exactly a recall miss: the fact-bearing chunk was never in the candidate set. It
+was fixed by *improving recall* — a child/youth free-fare "close the loop"
+companion that pulls the provision passage in (`src/assistant/retrieve.py`) —
+not by reordering, because reordering cannot recover a chunk retrieval never
+returned. The one case that looked like a retrieval problem confirmed the ADR's
+central point rather than undermining it.
+
+**On the promoted 192/201 run, retrieval is the bottleneck for none of the
+remaining failures.** Re-running the recall/rank check over that run's own
+failing cases (not the older audit): of the 7 checkable failures, **7/7 had the
+required fact retrieved in the top-k**, most at rank 0 — the first chunk the
+model saw. `ground-024` is the sharpest example: the model received the $3.00
+Woodland chunk at rank 0 and still answered $2.00. That is a generation error
+the model made while looking straight at the right passage; a reranker changes
+nothing.
+
+Decision unchanged: **no reranker.** The reopening trigger from the original ADR
+stands — a run where a material share of failures are recall misses of a chunk
+that a reranker could have surfaced from *within* the candidate set. This run is
+the opposite of that.
