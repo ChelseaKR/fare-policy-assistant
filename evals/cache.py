@@ -32,11 +32,11 @@ from assistant.models import Completion, Model
 
 
 def _digest(parts: list[str]) -> str:
-    h = hashlib.sha256()
-    for p in parts:
-        h.update(p.encode("utf-8"))
-        h.update(b"\x00")
-    return h.hexdigest()
+    # Canonical JSON array framing is injective for arbitrary Unicode strings,
+    # including U+0000. Separator bytes alone let adjacent fields collide when
+    # a prompt itself contains that separator.
+    framed = json.dumps(parts, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(framed.encode("utf-8")).hexdigest()
 
 
 def completion_key(

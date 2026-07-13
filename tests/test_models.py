@@ -21,6 +21,7 @@ import pytest
 from assistant import models
 from assistant._vendor.genai_telemetry.attributes import (
     GEN_AI_REQUEST_MODEL,
+    GEN_AI_RESPONSE_MODEL,
     GEN_AI_SYSTEM,
     GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS,
     GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
@@ -45,9 +46,11 @@ class _Usage:
 
 
 class _Resp:
-    def __init__(self, blocks, usage):
+    def __init__(self, blocks, usage, *, model=None):
         self.content = blocks
         self.usage = usage
+        if model is not None:
+            self.model = model
 
 
 class _FakeMessages:
@@ -150,6 +153,46 @@ def test_bedrock_uses_region_and_reads_usage(fake_anthropic, monkeypatch):
     out = model.complete(system="s", user="u", max_tokens=64, temperature=0.0)
     assert out.text == "Senior fare is $1.00 [doc:mst-fares]."
     assert out.input_tokens == 42 and out.output_tokens == 13
+
+
+@pytest.mark.parametrize(
+    ("model_class", "request_model"),
+    [
+        (models.AnthropicModel, "claude-haiku-4-5"),
+        (
+            models.BedrockModel,
+            "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        ),
+    ],
+)
+def test_hosted_completion_emits_actual_response_model_but_prices_request_model(
+    fake_anthropic,
+    caplog,
+    monkeypatch,
+    model_class,
+    request_model,
+):
+    response = _Resp(
+        [_Block("text", "answer")],
+        _Usage(4, 2),
+        model="provider-resolved-model",
+    )
+    priced_models: list[str] = []
+
+    def estimate(model, *args, **kwargs):
+        priced_models.append(model)
+        return 0.0
+
+    monkeypatch.setattr(models.config, "estimate_cost_usd", estimate)
+    model = model_class(request_model)
+    model._client = _FakeClient(response, {})
+    with caplog.at_level(logging.INFO, logger="fare_assistant"):
+        completion = model.complete("system", "question", 64, 0.0)
+    event = json.loads(caplog.records[-1].message)
+    assert completion.model == "provider-resolved-model"
+    assert event[GEN_AI_REQUEST_MODEL] == request_model
+    assert event[GEN_AI_RESPONSE_MODEL] == "provider-resolved-model"
+    assert priced_models == [request_model]
 
 
 @pytest.mark.parametrize(

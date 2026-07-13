@@ -9,6 +9,9 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Changed
+- Hosted completions now expose the SDK's actual served model while retaining
+  the requested model for pricing, and eval cache keys use collision-proof
+  canonical JSON framing even when prompts contain U+0000.
 - Replaced the absolute BM25 `min_confidence` decline threshold with
   normalized, corpus-size-independent retrieval signals
   (`assistant.retrieve.ConfidenceSignals`: a z-score against the full-corpus

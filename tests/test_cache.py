@@ -40,6 +40,20 @@ def test_completion_key_is_stable_and_content_sensitive():
     assert completion_key(**{**base, "model": "other"}) != completion_key(**base)
 
 
+def test_completion_key_cannot_collide_across_nul_containing_prompt_boundaries():
+    base = dict(
+        kind="answer",
+        provider="mock",
+        model="m",
+        system="alpha\0beta",
+        user="gamma",
+        max_tokens=10,
+        temperature=0.0,
+    )
+    shifted_boundary = {**base, "system": "alpha", "user": "beta\0gamma"}
+    assert completion_key(**base) != completion_key(**shifted_boundary)
+
+
 def test_case_content_key_changes_when_any_input_changes():
     base = dict(
         case_id="c1",

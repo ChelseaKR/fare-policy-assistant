@@ -60,6 +60,12 @@ def _completion_usage(usage: object) -> tuple[int, int, int, int]:
     return fresh + cache_creation + cache_read, output, cache_creation, cache_read
 
 
+def _response_model(response: object, requested_model: str) -> str:
+    """Use the SDK's served model identity, falling back only when absent."""
+    value = getattr(response, "model", None)
+    return value if isinstance(value, str) and value else requested_model
+
+
 class Model(Protocol):
     def complete(
         self, system: str, user: str, max_tokens: int, temperature: float
@@ -85,7 +91,7 @@ class AnthropicModel:
             input_tokens, output_tokens, cache_creation, cache_read = _completion_usage(resp.usage)
             completion = Completion(
                 text="".join(block.text for block in resp.content if block.type == "text"),
-                model=self.model,
+                model=_response_model(resp, self.model),
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 cache_creation_input_tokens=cache_creation,
@@ -96,7 +102,7 @@ class AnthropicModel:
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
                 cost_usd=config.estimate_cost_usd(
-                    completion.model,
+                    self.model,
                     completion.input_tokens,
                     completion.output_tokens,
                     provider="anthropic",
@@ -142,7 +148,7 @@ class BedrockModel:
             input_tokens, output_tokens, cache_creation, cache_read = _completion_usage(resp.usage)
             completion = Completion(
                 text="".join(block.text for block in resp.content if block.type == "text"),
-                model=self.model,
+                model=_response_model(resp, self.model),
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 cache_creation_input_tokens=cache_creation,
@@ -153,7 +159,7 @@ class BedrockModel:
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
                 cost_usd=config.estimate_cost_usd(
-                    completion.model,
+                    self.model,
                     completion.input_tokens,
                     completion.output_tokens,
                     provider="bedrock",
