@@ -26,8 +26,16 @@ SUMMARY_WITH_COST = {
     "prompt_versions": {"system": "v1 2026-06-11"},
     "duration_seconds": 2.0,
     "cost": {
-        "answer_model": {"est_usd": 0.0012},
-        "judge_model": {"est_usd": 0.0008},
+        "answer_model": {
+            "est_usd": 0.0012,
+            "cache_creation_input_tokens": 100,
+            "cache_read_input_tokens": 200,
+        },
+        "judge_model": {
+            "est_usd": 0.0008,
+            "cache_creation_input_tokens": 10,
+            "cache_read_input_tokens": 20,
+        },
         "total_tokens": 5000,
         "total_est_usd": 0.0020,
     },
@@ -63,12 +71,24 @@ def test_cost_line_rendered_when_present():
     md = report.generate_markdown(SUMMARY_WITH_COST, [_rec()])
     assert "Cost (estimated): $0.0020" in md
     assert "5,000 tokens" in md
+    assert "cache write/read 110/220" in md
 
 
 def test_cost_line_absent_is_labeled():
     summary = {**SUMMARY_WITH_COST}
     summary.pop("cost")
     assert "- Cost: not recorded for this run" in report._cost_line(summary)
+
+
+def test_unpriced_model_is_rendered_without_crashing_or_silent_zero():
+    summary = json.loads(json.dumps(SUMMARY_WITH_COST))
+    summary["cost"]["answer_model"]["est_usd"] = None
+    summary["cost"]["total_est_usd"] = None
+    summary["cost"]["unpriced_models"] = ["future-model"]
+    line = report._cost_line(summary)
+    assert "Cost (estimated): unavailable for 5,000 tokens" in line
+    assert "unpriced: future-model" in line
+    assert "$0" not in line
 
 
 def test_spanish_parity_table_pairs_mirror():

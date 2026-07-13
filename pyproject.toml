@@ -51,6 +51,10 @@ mutation = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Immutable vendored standards code is linted/formatted at its source commit.
+# Excluding it here prevents this repo's pinned Ruff version/config from
+# rewriting reviewed bytes while first-party code remains fully gated.
+extend-exclude = ["src/assistant/_vendor"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -108,6 +112,10 @@ branch = true
 # (dense retrieval, OCR) need extras not installed in CI, so the lines that load
 # them stay uncovered honestly rather than being mocked into a green number.
 source = ["assistant", "web", "evals"]
+# Vendored standards code is verified at its immutable source boundary and is
+# not first-party Fare code. Do not dilute this repository's coverage signal
+# with a copied dependency.
+omit = ["*/_vendor/*"]
 
 [tool.coverage.report]
 show_missing = true

@@ -126,7 +126,38 @@ def test_caching_model_serves_second_call_from_cache(tmp_path):
 
     assert inner.calls == 1  # the real model ran exactly once
     assert first.text == second.text == "reply to question one"
+    assert first.input_tokens == 10
+    assert second.input_tokens == second.output_tokens == 0
     assert cache.stats()["answer_hits"] == 1
+
+
+def test_cache_round_trips_cache_bucket_provenance_but_hits_spend_zero(tmp_path):
+    class CachedUsageModel(_FakeModel):
+        def complete(self, system, user, max_tokens, temperature):
+            self.calls += 1
+            return Completion(
+                text="answer",
+                model=self.model,
+                input_tokens=100,
+                output_tokens=5,
+                cache_creation_input_tokens=20,
+                cache_read_input_tokens=30,
+            )
+
+    cache = EvalCache(tmp_path)
+    wrapped = CachingModel(CachedUsageModel(), cache, provider="anthropic", kind="answer")
+    first = wrapped.complete("sys", "question", 100, 0.0)
+    second = wrapped.complete("sys", "question", 100, 0.0)
+    assert (first.cache_creation_input_tokens, first.cache_read_input_tokens) == (20, 30)
+    assert (
+        second.input_tokens,
+        second.cache_creation_input_tokens,
+        second.cache_read_input_tokens,
+    ) == (
+        0,
+        0,
+        0,
+    )
 
 
 def test_caching_model_misses_on_any_content_change(tmp_path):

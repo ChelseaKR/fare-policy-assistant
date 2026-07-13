@@ -27,6 +27,8 @@ class JudgeVerdict:
     raw: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
 
 
 def _parse_json(text: str) -> dict | None:
@@ -74,7 +76,12 @@ def judge_groundedness(
         max_tokens=512,
         temperature=0.0,
     )
-    tok = {"input_tokens": completion.input_tokens, "output_tokens": completion.output_tokens}
+    tok = {
+        "input_tokens": completion.input_tokens,
+        "output_tokens": completion.output_tokens,
+        "cache_creation_input_tokens": completion.cache_creation_input_tokens,
+        "cache_read_input_tokens": completion.cache_read_input_tokens,
+    }
     data = _parse_json(completion.text)
     if data is None or "grounded" not in data:
         return JudgeVerdict(
@@ -108,7 +115,12 @@ def judge_helpfulness(
         max_tokens=512,
         temperature=0.0,
     )
-    tok = {"input_tokens": completion.input_tokens, "output_tokens": completion.output_tokens}
+    tok = {
+        "input_tokens": completion.input_tokens,
+        "output_tokens": completion.output_tokens,
+        "cache_creation_input_tokens": completion.cache_creation_input_tokens,
+        "cache_read_input_tokens": completion.cache_read_input_tokens,
+    }
     data = _parse_json(completion.text)
     if data is None or "helpful" not in data:
         return JudgeVerdict(

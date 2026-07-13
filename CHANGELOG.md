@@ -26,6 +26,13 @@ rather than tied to a published tag.
   in `docs/decisions/0004-demo-deploy.md`.
 
 ### Fixed
+- Hosted-model usage and eval cost accounting now follow the reviewed
+  portfolio GenAI telemetry contract. Anthropic and Bedrock cache-write/read
+  buckets are normalized into canonical input totals once, priced at their
+  distinct rates, propagated through answer/judge traces, cache records, run
+  summaries, and reports, and exposed as PII-free structured fields. Invalid
+  provider counts fail closed; unknown models remain visibly unpriced; an eval
+  cache hit now correctly spends zero provider tokens for the current run.
 - Restored the `checks`, i18n, and advisory browser-accessibility jobs on pull
   requests after a CI-minutes optimization accidentally made them push-only.
   The committed-report regression check runs on every pull request again.

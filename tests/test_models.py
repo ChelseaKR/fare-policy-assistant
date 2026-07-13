@@ -11,6 +11,7 @@ place of a real HTTP call.
 from __future__ import annotations
 
 import json
+import logging
 import sys
 import types
 
@@ -18,6 +19,15 @@ import httpx
 import pytest
 
 from assistant import models
+from assistant._vendor.genai_telemetry.attributes import (
+    GEN_AI_REQUEST_MODEL,
+    GEN_AI_SYSTEM,
+    GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS,
+    GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
+    GEN_AI_USAGE_INPUT_TOKENS,
+    METRIC_OPERATION_DURATION,
+    PORTFOLIO_COST_USD,
+)
 
 
 class _Block:
@@ -27,9 +37,11 @@ class _Block:
 
 
 class _Usage:
-    def __init__(self, i, o):
+    def __init__(self, i, o, *, cache_creation=0, cache_read=0):
         self.input_tokens = i
         self.output_tokens = o
+        self.cache_creation_input_tokens = cache_creation
+        self.cache_read_input_tokens = cache_read
 
 
 class _Resp:
@@ -119,12 +131,74 @@ def test_anthropic_joins_text_blocks_and_reads_usage(fake_anthropic):
     assert fake_anthropic["model"] == "claude-haiku-4-5"
 
 
+def test_anthropic_emits_canonical_pii_free_telemetry(fake_anthropic, caplog):
+    with caplog.at_level(logging.INFO, logger="fare_assistant"):
+        models.AnthropicModel("claude-haiku-4-5").complete(
+            system="sensitive system", user="sensitive rider question", max_tokens=64, temperature=0
+        )
+    event = json.loads(caplog.records[-1].message)
+    assert event[GEN_AI_SYSTEM] == "anthropic"
+    assert event[GEN_AI_REQUEST_MODEL] == "claude-haiku-4-5"
+    assert event[GEN_AI_USAGE_INPUT_TOKENS] == 42
+    assert event[METRIC_OPERATION_DURATION] >= 0
+    assert "sensitive" not in caplog.text
+
+
 def test_bedrock_uses_region_and_reads_usage(fake_anthropic, monkeypatch):
     monkeypatch.setenv("AWS_REGION", "us-east-1")
     model = models.BedrockModel("us.anthropic.claude-haiku-4-5")
     out = model.complete(system="s", user="u", max_tokens=64, temperature=0.0)
     assert out.text == "Senior fare is $1.00 [doc:mst-fares]."
     assert out.input_tokens == 42 and out.output_tokens == 13
+
+
+@pytest.mark.parametrize(
+    ("model_class", "model_id", "expected_cost"),
+    [
+        (models.AnthropicModel, "claude-haiku-4-5", 0.78),
+        (
+            models.BedrockModel,
+            "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            0.858,
+        ),
+    ],
+)
+def test_hosted_cache_usage_is_normalized_and_priced_once(
+    fake_anthropic, caplog, model_class, model_id, expected_cost
+):
+    response = _Resp(
+        [_Block("text", "Senior fare is $1.00 [doc:mst-fares].")],
+        _Usage(500_000, 0, cache_creation=200_000, cache_read=300_000),
+    )
+    model = model_class(model_id)
+    model._client = _FakeClient(response, {})
+    with caplog.at_level(logging.INFO, logger="fare_assistant"):
+        completion = model.complete("system", "question", 64, 0.0)
+    event = json.loads(caplog.records[-1].message)
+    assert completion.input_tokens == 1_000_000
+    assert completion.cache_creation_input_tokens == 200_000
+    assert completion.cache_read_input_tokens == 300_000
+    assert event[GEN_AI_USAGE_INPUT_TOKENS] == 1_000_000
+    assert event[GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS] == 200_000
+    assert event[GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS] == 300_000
+    assert event[PORTFOLIO_COST_USD] == pytest.approx(expected_cost)
+
+
+@pytest.mark.parametrize(
+    "usage",
+    [
+        _Usage(True, 1),
+        _Usage(-1, 1),
+        _Usage(1, "1"),
+        _Usage(1, 1, cache_creation=-1),
+        _Usage(1, 1, cache_read="1"),
+    ],
+)
+def test_hosted_usage_rejects_malformed_counts(fake_anthropic, usage):
+    model = models.AnthropicModel("claude-haiku-4-5")
+    model._client = _FakeClient(_Resp([_Block("text", "answer")], usage), {})
+    with pytest.raises(ValueError, match="provider usage"):
+        model.complete("system", "question", 64, 0.0)
 
 
 # ── local (Ollama) backend, faked transport ──────────────────────────────────

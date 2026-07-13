@@ -89,6 +89,13 @@ class TestAuth:
 
         assert check_html(console.CONSOLE_HTML) == []
 
+    def test_console_treats_pass_rate_as_zero_to_one_hundred_percentage(self):
+        # Eval reports already store pass_rate on a 0–100 scale. The browser must
+        # format that value directly rather than turn 95.2 into 9520%.
+        assert "Number(s.pass_rate).toFixed(1)" in console.CONSOLE_HTML
+        assert "s.pass_rate * 100" not in console.CONSOLE_HTML
+        assert "s.pass_rate*100" not in console.CONSOLE_HTML
+
     def test_unknown_route_404(self):
         resp = console.console_handler(_event(path="/console/api/nope"))
         assert resp["statusCode"] == 404

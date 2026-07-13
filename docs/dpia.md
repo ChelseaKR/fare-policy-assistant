@@ -25,7 +25,8 @@ criteria and routes the decision to the agency.
 
 **Retention.** Rider questions are answered and discarded. Nothing a user types
 is logged or stored. Request logs carry only response kind, language, question
-length, and timing — never question or answer text (ADR 0004). The answer cache
+length, and timing; model-call logs add provider/model, fresh/cache token counts,
+and estimated cost — never question or answer text (ADR 0004). The answer cache
 is in memory and dies with the serverless container. CloudWatch log retention is
 14 days. There are no accounts and no user profiles.
 

@@ -43,6 +43,8 @@ generic:
   - src/assistant/retrieve.py
   - src/assistant/answer.py
   - src/assistant/models.py
+  - src/assistant/telemetry.py
+  - src/assistant/_vendor/
   - src/assistant/i18n.py
   - src/assistant/corpus.py
   - src/assistant/ingest.py

@@ -55,6 +55,8 @@ class AnswerResult:
     # these into a per-run cost estimate.
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
     # When the output guard replaces an answer, the original model text is
     # kept here so eval traces show what was actually blocked. Never shown
     # to riders.
@@ -204,6 +206,8 @@ def answer_question(
             as_of_date=as_of,
             input_tokens=completion.input_tokens,
             output_tokens=completion.output_tokens,
+            cache_creation_input_tokens=completion.cache_creation_input_tokens,
+            cache_read_input_tokens=completion.cache_read_input_tokens,
             raw_model_answer=completion.text,
             retrieval_score=top_score,
             confidence=band,
@@ -233,6 +237,8 @@ def answer_question(
         as_of_date=as_of,
         input_tokens=completion.input_tokens,
         output_tokens=completion.output_tokens,
+        cache_creation_input_tokens=completion.cache_creation_input_tokens,
+        cache_read_input_tokens=completion.cache_read_input_tokens,
         raw_model_answer=completion.text if guard_flags else "",
         retrieval_score=top_score,
         confidence=band,

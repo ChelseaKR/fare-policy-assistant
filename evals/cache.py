@@ -173,7 +173,10 @@ class CachingModel:
         )
         hit = get(key)
         if hit is not None:
-            return Completion(**hit)
+            cached = Completion(**hit)
+            # The original usage is useful cache provenance, but a cache hit
+            # makes no provider call and therefore spends zero tokens this run.
+            return Completion(text=cached.text, model=cached.model)
         completion = self._inner.complete(system, user, max_tokens, temperature)
         put(
             key,
@@ -182,6 +185,8 @@ class CachingModel:
                 "model": completion.model,
                 "input_tokens": completion.input_tokens,
                 "output_tokens": completion.output_tokens,
+                "cache_creation_input_tokens": completion.cache_creation_input_tokens,
+                "cache_read_input_tokens": completion.cache_read_input_tokens,
             },
         )
         return completion
