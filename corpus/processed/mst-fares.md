@@ -1,5 +1,5 @@
 # Fares — MST
-Source: https://mst.org/fares/ (fetched 2026-06-12)
+Source: https://mst.org/fares/ (fetched 2026-07-13)
 
 ## Fares Overview
 

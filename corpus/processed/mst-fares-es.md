@@ -1,5 +1,5 @@
 # Tarifas (Spanish fares page) — MST
-Source: https://mst.org/es/fares/ (fetched 2026-06-12)
+Source: https://mst.org/es/fares/ (fetched 2026-07-13)
 
 ## Tarifas Descripción general
 

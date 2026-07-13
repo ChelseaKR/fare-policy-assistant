@@ -1,7 +1,8 @@
 doc_id: yolobus-fares
 url: https://yolobus.com/fares/
 final_url: https://yolobus.com/fares/
-fetch_date: '2026-06-12'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: af66a88a0c070ee652e3d5568ae5ae0dfd6662fc87cdf0b7a6b064d0dcb3398c
-bytes: 84761
+format: html
+sha256: f2b93b9d270b98c000ce61c23ba3b572d7c797566553bdc52a3b580c90526583
+bytes: 85801

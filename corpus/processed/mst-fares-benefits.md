@@ -1,5 +1,5 @@
 # Benefits (Cal-ITP reduced fares) — MST
-Source: https://mst.org/fares/benefits/ (fetched 2026-06-12)
+Source: https://mst.org/fares/benefits/ (fetched 2026-07-13)
 
 ## Get Your Discount when You Pay Your Fare with a Contactless Card
 

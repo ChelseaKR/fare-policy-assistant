@@ -1,11 +1,9 @@
 # Fares — SacRT
-Source: https://www.sacrt.com/fares/ (fetched 2026-06-12)
+Source: https://www.sacrt.com/fares/ (fetched 2026-07-13)
 
 ## Fares
 
 SacRT offers a variety of fare options to meet your travel needs.
-Important Notice for ZipPass Users
-Last day to use passes/tickets: April 30, 2026
 
 ## Single, Daily and Monthly Passes
 
@@ -85,13 +83,6 @@ Ride buses and light rail trains for 90 minutes using a valid single ride ticket
 State of the art security to protect personal information
 Purchase single ride tickets, daily or monthly passes
 Learn more at sacrt.com/TransitConnect .
-
-## ZipPass App
-
-Our mobile fare app ZipPass allows you to pre-purchase, store and activate SacRT tickets and passes instantly on your smartphone for both bus or light rail. Simply download the app from either the App Store or Google Play to get started.
-Ride buses and light rail trains for 90 minutes using a valid single ride ticket
-State of the art security to protect personal information
-Purchase single ride tickets, daily or monthly passes
 Need a ticket for your next SacRT Light Rail trip?
 Our fare vending machines located at all SacRT light rail stations are simple to use!
 1. Choose your ticket or pass

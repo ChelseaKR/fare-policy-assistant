@@ -1,5 +1,5 @@
 # Reduced Fare ID — Yolobus
-Source: https://yolobus.com/reducedfareid/ (fetched 2026-06-12)
+Source: https://yolobus.com/reducedfareid/ (fetched 2026-07-13)
 
 ## (page top)
 

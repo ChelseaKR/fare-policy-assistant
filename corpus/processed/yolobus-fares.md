@@ -1,5 +1,5 @@
 # Fares — Yolobus
-Source: https://yolobus.com/fares/ (fetched 2026-06-12)
+Source: https://yolobus.com/fares/ (fetched 2026-07-13)
 
 ## Yolobus Fixed Route Bus Fares
 

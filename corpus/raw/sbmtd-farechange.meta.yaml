@@ -1,7 +1,8 @@
 doc_id: sbmtd-farechange
 url: https://sbmtd.gov/farechange/
 final_url: https://sbmtd.gov/farechange/
-fetch_date: '2026-06-12'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: 681b314d1e576d4bea5ace1b90b5c3d389be76d092d6a1e1ec70e3a38c2bf5a4
-bytes: 180496
+format: html
+sha256: f7539ba79710a6b6a4fd4f004e130e133cb3f935c15d1233e1c6fd7ca431bf19
+bytes: 180700

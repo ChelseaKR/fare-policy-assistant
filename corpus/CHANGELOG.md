@@ -13,6 +13,21 @@ entries: on a re-fetch that changes any document, it can call
 `assistant.corpus.diff_corpus` against the prior snapshot and append the added,
 removed, and changed documents below.
 
+## 9bf8636254bf (2026-07-13)
+
+Changed:
+- hta-fares
+- mst-fares
+- mst-fares-benefits
+- mst-fares-es
+- mst-veterans-resource
+- sacrt-fares
+- sbmtd-farechange
+- sbmtd-fares-passes
+- yolobus-fares
+- yolobus-purchasing
+- yolobus-reduced-fare-id
+
 ## 0938fff0539a (2026-06-17)
 
 Initial recorded version. Five agencies, 11 documents, 90 chunks: Monterey-Salinas

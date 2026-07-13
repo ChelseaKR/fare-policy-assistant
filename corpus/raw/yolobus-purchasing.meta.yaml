@@ -1,7 +1,8 @@
 doc_id: yolobus-purchasing
 url: https://yolobus.com/purchasing-a-ticket-or-pass/
 final_url: https://yolobus.com/purchasing-a-ticket-or-pass/
-fetch_date: '2026-06-12'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: c09c127a1d4579b7ebca8f4a769354717e0f268669f566526e9799dc5cdd7e74
-bytes: 74417
+format: html
+sha256: 7aa12b6f3c7f2bdfee50de44f3e4c59d3da230e16aa00ccbd73e9b1f1672679f
+bytes: 74033

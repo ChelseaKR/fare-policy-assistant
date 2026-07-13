@@ -1,5 +1,5 @@
 # Purchasing a Ticket or Pass — Yolobus
-Source: https://yolobus.com/purchasing-a-ticket-or-pass/ (fetched 2026-06-12)
+Source: https://yolobus.com/purchasing-a-ticket-or-pass/ (fetched 2026-07-13)
 
 ## How to Pay
 

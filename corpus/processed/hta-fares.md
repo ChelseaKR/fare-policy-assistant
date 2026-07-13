@@ -1,5 +1,5 @@
 # Fares — HTA
-Source: https://humboldttransit.org/fares/ (fetched 2026-06-17)
+Source: https://humboldttransit.org/fares/ (fetched 2026-07-13)
 
 ## Cash, Passes and Tap to Pay
 

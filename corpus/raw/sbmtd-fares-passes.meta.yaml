@@ -1,7 +1,8 @@
 doc_id: sbmtd-fares-passes
 url: https://sbmtd.gov/fares-passes/
 final_url: https://sbmtd.gov/fares-passes/
-fetch_date: '2026-06-12'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: 741a774a781292930ee1ac0f69f945813088a3f86f6f2a49d439c73655f9c5b4
-bytes: 123067
+format: html
+sha256: 665262b8a070679490c64e0def7037f09b3e77ffdb36d133b582b7f7f3e94506
+bytes: 122943

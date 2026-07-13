@@ -1,7 +1,8 @@
 doc_id: mst-fares-es
 url: https://mst.org/es/fares/
 final_url: https://mst.org/es/fares/
-fetch_date: '2026-06-12'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: 2ceba6538e54ea8f0b90dc1334edc698298f9c2c760456512f86b89b0a18345e
-bytes: 139298
+format: html
+sha256: 0567bf9b9e8bda848f4b011961e974af5d2511097bd9c313b03415d70074dc02
+bytes: 145600

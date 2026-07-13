@@ -1,10 +1,8 @@
 # Fares & Passes — SBMTD
-Source: https://sbmtd.gov/fares-passes/ (fetched 2026-06-12)
+Source: https://sbmtd.gov/fares-passes/ (fetched 2026-07-13)
 
-## (page top)
+## UCSB CAMPUS STORE
 
-New fares are now effective as of August 18, 2025. For more information click here .
-UCSB CAMPUS STORE
 1 UCEN Road Santa Barbara, CA 93106 805.893.3819
 EASTSIDE LIBRARY
 1102 East Montecito Street Santa Barbara, CA 93103 Vending Machine
@@ -61,17 +59,17 @@ UCSB & SBCC students may use their valid student ID as a bus pass by tapping it 
 ## Valid Dates
 
 UCSB – First day of the quarter until 2 weeks into the next quarter. SBCC – 7 calendar days before the first day of classes until the last day of final exams, except Fall semester stickers are valid until 7 calendar days before Spring classes begin.
-UCSB & SBCC cards are not valid on the Downtown-Waterfront Shuttle.
-2025-2026 Valid Dates for Student Registration Stickers as Prepaid Bus Fare
+UCSB & SBCC cards are not valid on the Downtown-Waterfront Shuttle or The Wave microtransit.
+2026-2027 Valid Dates for Student Registration Stickers as Prepaid Bus Fare
 SBCC
-Fall | Aug 18 – Jan 19
-Spring | Jan 19 – May 23
-Summer | May 25 – Aug 8
+Fall | Aug 17 – Jan 18
+Spring | Jan 18 – May 22
+Summer | May 25 – Aug 7
 UCSB
-Fall | Sep 21 – Jan 15
-Winter | Jan 5 – Apr 10
-Spring | Mar 30 – July 3
-Summer | Jun 22 – Oct 2
+Fall | Sep 20 – Jan 15
+Winter | Jan 4 – Apr 9
+Spring | Mar 29 – July 2
+Summer | Jun 21 – Oct 1
 
 ## TRANSFERS
 

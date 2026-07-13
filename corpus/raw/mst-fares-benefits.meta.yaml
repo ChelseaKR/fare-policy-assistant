@@ -1,7 +1,8 @@
 doc_id: mst-fares-benefits
 url: https://mst.org/fares/benefits/
 final_url: https://mst.org/fares/benefits/
-fetch_date: '2026-06-12'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: 6cc02fd72046ae314dfb5f19d96bc518758aee9b1cef3c48d3f0e26da0ee7e80
-bytes: 110406
+format: html
+sha256: 104e76173a2a3c3328730c96a2eb1b9a35df0f16a8be7c397dbd432c6661493d
+bytes: 116708

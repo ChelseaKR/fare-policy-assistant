@@ -1,5 +1,5 @@
 # Fare Change — SBMTD
-Source: https://sbmtd.gov/farechange/ (fetched 2026-06-12)
+Source: https://sbmtd.gov/farechange/ (fetched 2026-07-13)
 
 ## MTD Fare Change Is Now in Effect As Of August 18, 2025
 

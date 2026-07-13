@@ -1,7 +1,8 @@
 doc_id: hta-fares
 url: https://humboldttransit.org/fares/
 final_url: https://humboldttransit.org/fares/
-fetch_date: '2026-06-17'
+fetch_date: '2026-07-13'
 http_status: 200
-sha256: aeb16e82af0615a167401c1855595990132b385a5020eb9eb43360ae20de3836
-bytes: 45164
+format: html
+sha256: c741d86e025bb452c1cb9fec18f729bf18e85bfebf8c74122e208f41ee8bee76
+bytes: 48273
