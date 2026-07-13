@@ -11,7 +11,7 @@ The hard limits in [`CLAUDE.md`](../CLAUDE.md) still bind every item below: no
 eligibility determinations, no PII collection or query persistence in the
 deployed demo, every answer cited, corpus dated. Nothing here relaxes those.
 
-## Current state (2026-06-16)
+## Current state (2026-07-12)
 
 Done: 4-agency dated corpus with transposed-table normalization (ADR 0005);
 BM25 retrieval with EN/ES query expansion and agency filter; guarded answer
@@ -21,9 +21,10 @@ an independent GovChat-Eval audit; an accessible single-page demo on Lambda +
 HTTP API with layered cost guards; CI (lint, types, tests, smoke evals);
 model card and five ADRs.
 
-Known-incomplete, addressed below: a model card that overstates what the
-harness records; six documented eval failures; manual corpus snapshots; thin
-observability; single-shot Q&A only.
+The original June gaps below now carry inline completion/deferment evidence.
+Remaining operator-owned work is explicit (for example, subscribing a human
+SNS endpoint and conducting the manual assistive-technology walkthrough); it
+is not represented as unfinished code in this repository.
 
 ## P0 — Integrity and correctness
 
@@ -131,25 +132,24 @@ What a real operator needs before trusting the thing unattended.
    eval gate). The staleness budget (`FPA_STALENESS_BUDGET_DAYS`, default 90) is
    surfaced on `/version` and the UI. A corpus change becomes a reviewable PR
    with eval deltas, no human polling.
-2. **Answer caching in the deployed path.** Every question re-pays Bedrock. Add
-   a content-keyed cache (normalized question + corpus hash → answer) in front
-   of the model call in `answer.py`, backed by an in-memory LRU per container
-   and optionally a short-TTL store. Done = repeated questions skip the model
-   call; cost-per-demo-session drops measurably.
-3. **Observability and cost backstop.** The handler logs counts and timings but
-   nothing watches them. Add CloudWatch metric filters and alarms (error rate,
-   p99 latency, Bedrock throttles), and an AWS Budget alarm as a hard backstop
-   beneath the app-level guards. Done = a spend or error spike pages someone;
-   the demo's per-day cost is visible on a dashboard.
-4. **A true rate limit.** The current 8/min budget is per-container and resets
-   on cold starts, so it is a soft guard, not a real limit. Add gateway-level
-   throttling tuned with load, or a token-bucket keyed on a coarse, non-PII
-   signal. Done = a documented, tested request ceiling that holds across
-   containers without persisting anything identifying.
-5. **CI live-evals on protected branches.** `ci.yml` already reads
-   `AWS_OIDC_ROLE_ARN`; set the repo variable and an IAM role so the nightly
-   full suite and smoke judges run for real, and add the CI badge to the
-   README. Done = the badge is green from a live nightly run.
+2. **Answer caching in the deployed path.** ✅ **Done.** A bounded in-memory
+   content cache fronts the model call; repeated questions skip generation and
+   bypass the per-container call budget. The eval answer/judge cache also emits
+   explicit hit rates, preserves original cache-token provenance, and counts a
+   served hit as zero provider tokens for the current run.
+3. **Observability and cost backstop.** ✅ **Done in code and infrastructure.**
+   PII-free canonical GenAI measurements include provider/model, duration,
+   fresh/cache token buckets, and estimated cost. `infra/deploy.sh` provisions
+   CloudWatch metric filters, alarms, and a dashboard plus the documented
+   $20/month AWS Budget. Supplying the SNS subscriber is intentionally an
+   operator deployment step, not repository work.
+4. **A true rate limit.** ✅ **Done.** The API Gateway stage throttle is the
+   cross-container ceiling and is derived from Lambda reserved concurrency;
+   the in-memory 8/min budget remains a tested defense-in-depth backstop. ADR
+   0004 records the decision and `tests/test_deploy_rate_limit.py` guards it.
+5. **CI live-evals on protected branches.** ✅ **Done.** OIDC-backed live
+   evaluation jobs and the README badge are wired. Forks or deployments still
+   need to supply their own `AWS_OIDC_ROLE_ARN` and IAM trust relationship.
 
 ## P2 — Feature completeness
 

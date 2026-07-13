@@ -115,12 +115,31 @@ def _cost_line(summary: dict) -> str:
     cost = summary.get("cost")
     if not cost:
         return "- Cost: not recorded for this run"
+    total = cost.get("total_est_usd")
+    answer = cost.get("answer_model", {}).get("est_usd")
+    judge = cost.get("judge_model", {}).get("est_usd")
+    cache_create = sum(
+        cost.get(kind, {}).get("cache_creation_input_tokens", 0)
+        for kind in ("answer_model", "judge_model")
+    )
+    cache_read = sum(
+        cost.get(kind, {}).get("cache_read_input_tokens", 0)
+        for kind in ("answer_model", "judge_model")
+    )
+    cache_note = f"; cache write/read {cache_create:,}/{cache_read:,}"
+    if total is None or answer is None or judge is None:
+        unpriced = ", ".join(cost.get("unpriced_models", [])) or "unspecified model"
+        return (
+            f"- Cost (estimated): unavailable for {cost['total_tokens']:,} tokens — "
+            f"unpriced: {unpriced} (exact tokens{cache_note}; "
+            "unpriced usage is never assigned a zero-dollar estimate)"
+        )
     return (
-        f"- Cost (estimated): ${cost['total_est_usd']:.4f} for "
+        f"- Cost (estimated): ${total:.4f} for "
         f"{cost['total_tokens']:,} tokens — "
-        f"answer ${cost['answer_model']['est_usd']:.4f}, "
-        f"judge ${cost['judge_model']['est_usd']:.4f} "
-        "(exact tokens, list-price estimate)"
+        f"answer ${answer:.4f}, "
+        f"judge ${judge:.4f} "
+        f"(exact tokens{cache_note}, list-price estimate)"
     )
 
 

@@ -81,7 +81,8 @@ multi-turn conversation, cross-agency, counterfactual sensitivity, and
 stretch-language (Tagalog) suites; method and
 current scores in [EVALS.md](../EVALS.md). Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
-also records its exact token usage and an estimated cost, and checks the LLM
+also records its exact fresh/cache token usage and an estimated cost (cache
+writes and reads use their distinct rates), and checks the LLM
 judge against a hand-labeled sample (`evals/calibration/judge_labels.jsonl`):
 the report prints judge-vs-human agreement and Cohen's κ over that sample
 (harness in `evals/calibration.py`). An independent black-box audit by the

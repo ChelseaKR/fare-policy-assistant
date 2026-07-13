@@ -23,13 +23,47 @@ from typing import Protocol
 # nothing and lets tests monkeypatch `models.httpx.Client`.
 import httpx
 
+from assistant import config
+from assistant.telemetry import genai_call
+
 
 @dataclass
 class Completion:
     text: str
     model: str
+    # Canonical input total: fresh + cache creation + cache read.
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+
+
+def _usage_count(usage: object, name: str, *, default: int | None = None) -> int:
+    """Read one SDK usage field without coercing malformed provider data."""
+    try:
+        value = getattr(usage, name)
+    except AttributeError:
+        if default is not None:
+            return default
+        raise ValueError(f"provider usage missing {name}") from None
+    if type(value) is not int or value < 0:
+        raise ValueError(f"provider usage {name} must be a non-negative integer")
+    return value
+
+
+def _completion_usage(usage: object) -> tuple[int, int, int, int]:
+    """Normalize Anthropic's disjoint fresh/cache buckets to OTel totals."""
+    fresh = _usage_count(usage, "input_tokens")
+    output = _usage_count(usage, "output_tokens")
+    cache_creation = _usage_count(usage, "cache_creation_input_tokens", default=0)
+    cache_read = _usage_count(usage, "cache_read_input_tokens", default=0)
+    return fresh + cache_creation + cache_read, output, cache_creation, cache_read
+
+
+def _response_model(response: object, requested_model: str) -> str:
+    """Use the SDK's served model identity, falling back only when absent."""
+    value = getattr(response, "model", None)
+    return value if isinstance(value, str) and value else requested_model
 
 
 class Model(Protocol):
@@ -46,20 +80,39 @@ class AnthropicModel:
         self._client = anthropic.Anthropic()
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
-        resp = self._client.messages.create(
-            model=self.model,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        text = "".join(block.text for block in resp.content if block.type == "text")
-        return Completion(
-            text=text,
-            model=self.model,
-            input_tokens=resp.usage.input_tokens,
-            output_tokens=resp.usage.output_tokens,
-        )
+        with genai_call("anthropic", self.model) as call:
+            resp = self._client.messages.create(
+                model=self.model,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            input_tokens, output_tokens, cache_creation, cache_read = _completion_usage(resp.usage)
+            completion = Completion(
+                text="".join(block.text for block in resp.content if block.type == "text"),
+                model=_response_model(resp, self.model),
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cache_creation_input_tokens=cache_creation,
+                cache_read_input_tokens=cache_read,
+            )
+            call.record_completion(
+                model=completion.model,
+                input_tokens=completion.input_tokens,
+                output_tokens=completion.output_tokens,
+                cost_usd=config.estimate_cost_usd(
+                    self.model,
+                    completion.input_tokens,
+                    completion.output_tokens,
+                    provider="anthropic",
+                    cache_creation_input_tokens=completion.cache_creation_input_tokens,
+                    cache_read_input_tokens=completion.cache_read_input_tokens,
+                ),
+                cache_creation_input_tokens=completion.cache_creation_input_tokens,
+                cache_read_input_tokens=completion.cache_read_input_tokens,
+            )
+            return completion
 
 
 class BedrockModel:
@@ -84,20 +137,39 @@ class BedrockModel:
         )
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
-        resp = self._client.messages.create(
-            model=self.model,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        text = "".join(block.text for block in resp.content if block.type == "text")
-        return Completion(
-            text=text,
-            model=self.model,
-            input_tokens=resp.usage.input_tokens,
-            output_tokens=resp.usage.output_tokens,
-        )
+        with genai_call("aws.bedrock", self.model) as call:
+            resp = self._client.messages.create(
+                model=self.model,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            input_tokens, output_tokens, cache_creation, cache_read = _completion_usage(resp.usage)
+            completion = Completion(
+                text="".join(block.text for block in resp.content if block.type == "text"),
+                model=_response_model(resp, self.model),
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cache_creation_input_tokens=cache_creation,
+                cache_read_input_tokens=cache_read,
+            )
+            call.record_completion(
+                model=completion.model,
+                input_tokens=completion.input_tokens,
+                output_tokens=completion.output_tokens,
+                cost_usd=config.estimate_cost_usd(
+                    self.model,
+                    completion.input_tokens,
+                    completion.output_tokens,
+                    provider="bedrock",
+                    cache_creation_input_tokens=completion.cache_creation_input_tokens,
+                    cache_read_input_tokens=completion.cache_read_input_tokens,
+                ),
+                cache_creation_input_tokens=completion.cache_creation_input_tokens,
+                cache_read_input_tokens=completion.cache_read_input_tokens,
+            )
+            return completion
 
 
 class LocalModel:
@@ -129,29 +201,37 @@ class LocalModel:
         self._client = httpx.Client(base_url=host, timeout=120.0)
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
-        resp = self._client.post(
-            "/api/chat",
-            json={
-                "model": self.model,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                "stream": False,
-                "options": {"temperature": temperature, "num_predict": max_tokens},
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return Completion(
-            text=data["message"]["content"],
-            model=self.model,
-            # Ollama's own token counts for the served request, not a
-            # cross-provider-comparable tokenizer — good enough for the
-            # cost/usage bookkeeping the eval harness does per backend.
-            input_tokens=data.get("prompt_eval_count", 0),
-            output_tokens=data.get("eval_count", 0),
-        )
+        with genai_call("ollama", self.model) as call:
+            resp = self._client.post(
+                "/api/chat",
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "stream": False,
+                    "options": {"temperature": temperature, "num_predict": max_tokens},
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            completion = Completion(
+                text=data["message"]["content"],
+                model=self.model,
+                # Ollama's own token counts for the served request, not a
+                # cross-provider-comparable tokenizer — good enough for the
+                # usage bookkeeping the eval harness does per backend.
+                input_tokens=data.get("prompt_eval_count", 0),
+                output_tokens=data.get("eval_count", 0),
+            )
+            call.record_completion(
+                model=completion.model,
+                input_tokens=completion.input_tokens,
+                output_tokens=completion.output_tokens,
+                cost_usd=0.0,
+            )
+            return completion
 
 
 class MockModel:
@@ -168,18 +248,26 @@ class MockModel:
         # The answer prompt includes passages in [doc:<id>] blocks; cite the first.
         import re
 
-        doc_ids = re.findall(r"\[doc:([a-z0-9-]+)\]", user)
-        if doc_ids:
-            text = (
-                "Based on the published policy, see the cited document for the "
-                f"specific criteria. [doc:{doc_ids[0]}]"
+        with genai_call("mock", self.model) as call:
+            doc_ids = re.findall(r"\[doc:([a-z0-9-]+)\]", user)
+            if doc_ids:
+                text = (
+                    "Based on the published policy, see the cited document for the "
+                    f"specific criteria. [doc:{doc_ids[0]}]"
+                )
+            else:
+                text = (
+                    "I don't have a published policy document that answers this. "
+                    "Please contact the transit agency directly."
+                )
+            completion = Completion(text=text, model=self.model)
+            call.record_completion(
+                model=completion.model,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd=0.0,
             )
-        else:
-            text = (
-                "I don't have a published policy document that answers this. "
-                "Please contact the transit agency directly."
-            )
-        return Completion(text=text, model=self.model)
+            return completion
 
 
 def get_model(provider: str, model: str) -> Model:

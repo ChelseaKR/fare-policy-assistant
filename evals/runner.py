@@ -208,15 +208,52 @@ def _have_credentials(provider: str) -> bool:
 
 def _cost_block(cfg: config.Config, usage: dict[str, list[int]]) -> dict:
     """Exact token totals per model plus an estimated USD cost at list rates."""
-    a_in, a_out = usage["answer"]
-    j_in, j_out = usage["judge"]
-    a_usd = config.estimate_cost_usd(cfg.models.answer_model, a_in, a_out)
-    j_usd = config.estimate_cost_usd(cfg.models.judge_model, j_in, j_out)
+    a_in, a_out, a_create, a_read = usage["answer"]
+    j_in, j_out, j_create, j_read = usage["judge"]
+    a_usd = config.estimate_cost_usd(
+        cfg.models.answer_model,
+        a_in,
+        a_out,
+        provider=cfg.models.provider,
+        cache_creation_input_tokens=a_create,
+        cache_read_input_tokens=a_read,
+    )
+    j_usd = config.estimate_cost_usd(
+        cfg.models.judge_model,
+        j_in,
+        j_out,
+        provider=cfg.models.provider,
+        cache_creation_input_tokens=j_create,
+        cache_read_input_tokens=j_read,
+    )
+    unpriced = [
+        model
+        for model, value in (
+            (cfg.models.answer_model, a_usd),
+            (cfg.models.judge_model, j_usd),
+        )
+        if value is None
+    ]
     return {
-        "answer_model": {"input_tokens": a_in, "output_tokens": a_out, "est_usd": round(a_usd, 4)},
-        "judge_model": {"input_tokens": j_in, "output_tokens": j_out, "est_usd": round(j_usd, 4)},
+        "answer_model": {
+            "input_tokens": a_in,
+            "output_tokens": a_out,
+            "cache_creation_input_tokens": a_create,
+            "cache_read_input_tokens": a_read,
+            "est_usd": round(a_usd, 4) if a_usd is not None else None,
+        },
+        "judge_model": {
+            "input_tokens": j_in,
+            "output_tokens": j_out,
+            "cache_creation_input_tokens": j_create,
+            "cache_read_input_tokens": j_read,
+            "est_usd": round(j_usd, 4) if j_usd is not None else None,
+        },
         "total_tokens": a_in + a_out + j_in + j_out,
-        "total_est_usd": round(a_usd + j_usd, 4),
+        "total_est_usd": (
+            round(a_usd + j_usd, 4) if a_usd is not None and j_usd is not None else None
+        ),
+        "unpriced_models": unpriced,
     }
 
 
@@ -257,7 +294,7 @@ def _run_case(
     """Execute one case (including its multi-turn history replay, sequentially
     within this call so turns are never interleaved with another case's) and
     return its trace record plus the token usage it spent."""
-    usage = {"answer": [0, 0], "judge": [0, 0]}
+    usage = {"answer": [0, 0, 0, 0], "judge": [0, 0, 0, 0]}
     judge_history: list[tuple[str, str]] | None = None
     if case.get("turns"):
         # Multi-turn: replay earlier turns to build history, then the final
@@ -269,6 +306,8 @@ def _run_case(
             )
             usage["answer"][0] += prior.input_tokens
             usage["answer"][1] += prior.output_tokens
+            usage["answer"][2] += prior.cache_creation_input_tokens
+            usage["answer"][3] += prior.cache_read_input_tokens
             history.append((q, prior.answer))
         question = case["turns"][-1]
         result: AnswerResult = answer_question(
@@ -305,9 +344,13 @@ def _run_case(
     passed = all(c.passed for c in checks) and all(v.passed for v in verdicts)
     usage["answer"][0] += result.input_tokens
     usage["answer"][1] += result.output_tokens
+    usage["answer"][2] += result.cache_creation_input_tokens
+    usage["answer"][3] += result.cache_read_input_tokens
     for v in verdicts:
         usage["judge"][0] += v.input_tokens
         usage["judge"][1] += v.output_tokens
+        usage["judge"][2] += v.cache_creation_input_tokens
+        usage["judge"][3] += v.cache_read_input_tokens
     record = {
         "case_id": case["id"],
         "suite": case["suite"],
@@ -324,6 +367,8 @@ def _run_case(
         "guard_flags": result.guard_flags,
         "input_tokens": result.input_tokens,
         "output_tokens": result.output_tokens,
+        "cache_creation_input_tokens": result.cache_creation_input_tokens,
+        "cache_read_input_tokens": result.cache_read_input_tokens,
         "raw_model_answer": result.raw_model_answer,
         "citations": [asdict(c) for c in result.citations],
         "passages": [
@@ -481,7 +526,8 @@ def run(
     # Exact token usage, split by model (answer vs judge) since they price
     # differently. Aggregated into an estimated per-run cost in the summary.
     # Reused (--since) cases spent no tokens this run, so they contribute 0.
-    usage = {"answer": [0, 0], "judge": [0, 0]}  # [input_tokens, output_tokens]
+    # [canonical input total, output, cache creation input, cache read input]
+    usage = {"answer": [0, 0, 0, 0], "judge": [0, 0, 0, 0]}
     started = time.monotonic()
 
     def _execute(case: dict) -> tuple[dict, dict[str, list[int]], int]:
@@ -490,7 +536,10 @@ def run(
         (record, usage, passes). The first pass supplies the full trace; passes
         across replicates form the case's pass fraction. At N=1 this is exactly
         one `_run_case` call."""
-        agg: dict[str, list[int]] = {"answer": [0, 0], "judge": [0, 0]}
+        agg: dict[str, list[int]] = {
+            "answer": [0, 0, 0, 0],
+            "judge": [0, 0, 0, 0],
+        }
         record: dict | None = None
         passes = 0
         for _rep in range(replicates):
@@ -505,8 +554,8 @@ def run(
                 run_judges=run_judges,
             )
             for kind in ("answer", "judge"):
-                agg[kind][0] += case_usage[kind][0]
-                agg[kind][1] += case_usage[kind][1]
+                for index in range(4):
+                    agg[kind][index] += case_usage[kind][index]
             passes += int(rep_record["passed"])
             if record is None:
                 record = rep_record
@@ -539,8 +588,12 @@ def run(
             record, case_usage, passes = fresh_by_id[case["id"]]
             usage["answer"][0] += case_usage["answer"][0]
             usage["answer"][1] += case_usage["answer"][1]
+            usage["answer"][2] += case_usage["answer"][2]
+            usage["answer"][3] += case_usage["answer"][3]
             usage["judge"][0] += case_usage["judge"][0]
             usage["judge"][1] += case_usage["judge"][1]
+            usage["judge"][2] += case_usage["judge"][2]
+            usage["judge"][3] += case_usage["judge"][3]
             status = "PASS" if record["passed"] else "FAIL"
         else:
             record = reused_by_id[case["id"]]

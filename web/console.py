@@ -538,8 +538,10 @@ CONSOLE_HTML = """<!doctype html>
       var d = r.data;
       var rows = Object.keys(d.suites || {}).map(function (name) {
         var s = d.suites[name];
+        // summary.json's pass_rate is already a 0-100 percentage
+        // (evals/runner.py rounds 100 * passed / total to one decimal).
         return "<tr><td>" + esc(name) + "</td><td>" + s.passed + "/" + s.total +
-          "</td><td>" + (s.pass_rate * 100).toFixed(0) + "%</td></tr>";
+          "</td><td>" + Number(s.pass_rate).toFixed(1) + "%</td></tr>";
       }).join("");
       document.getElementById("eval-body").innerHTML =
         "<p>Run at " + esc(d.run_at) + " (" + esc(d.mode) + ", " +

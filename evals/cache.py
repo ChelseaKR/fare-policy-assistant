@@ -32,11 +32,11 @@ from assistant.models import Completion, Model
 
 
 def _digest(parts: list[str]) -> str:
-    h = hashlib.sha256()
-    for p in parts:
-        h.update(p.encode("utf-8"))
-        h.update(b"\x00")
-    return h.hexdigest()
+    # Canonical JSON array framing is injective for arbitrary Unicode strings,
+    # including U+0000. Separator bytes alone let adjacent fields collide when
+    # a prompt itself contains that separator.
+    framed = json.dumps(parts, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(framed.encode("utf-8")).hexdigest()
 
 
 def completion_key(
@@ -173,7 +173,10 @@ class CachingModel:
         )
         hit = get(key)
         if hit is not None:
-            return Completion(**hit)
+            cached = Completion(**hit)
+            # The original usage is useful cache provenance, but a cache hit
+            # makes no provider call and therefore spends zero tokens this run.
+            return Completion(text=cached.text, model=cached.model)
         completion = self._inner.complete(system, user, max_tokens, temperature)
         put(
             key,
@@ -182,6 +185,8 @@ class CachingModel:
                 "model": completion.model,
                 "input_tokens": completion.input_tokens,
                 "output_tokens": completion.output_tokens,
+                "cache_creation_input_tokens": completion.cache_creation_input_tokens,
+                "cache_read_input_tokens": completion.cache_read_input_tokens,
             },
         )
         return completion

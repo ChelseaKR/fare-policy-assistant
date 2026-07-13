@@ -408,6 +408,17 @@ class TestMultiTurn:
         # Same question, different history → two distinct cache entries.
         assert len(web_handler._ANSWER_CACHE) == 2
 
+    def test_delimiter_characters_cannot_collide_in_cache_key(self):
+        question = "What is the fare?"
+        web_handler.handler(
+            _event(body={"question": question, "history": [{"q": "a>b", "a": "c"}]})
+        )
+        web_handler.handler(
+            _event(body={"question": question, "history": [{"q": "a", "a": "b>c"}]})
+        )
+        # The old ``q>a`` / ``|`` join serialized both histories identically.
+        assert len(web_handler._ANSWER_CACHE) == 2
+
 
 class TestHistoryHmac:
     """Optional forged-history hardening (FPA_HISTORY_HMAC_KEY). Off by default;

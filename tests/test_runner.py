@@ -126,13 +126,69 @@ def test_cost_block_aggregates_tokens_and_estimates_usd():
             provider="anthropic", answer_model="claude-haiku-4-5", judge_model="claude-sonnet-4-6"
         )
     )
-    usage = {"answer": [1_000_000, 1_000_000], "judge": [1_000_000, 1_000_000]}
+    usage = {
+        "answer": [1_000_000, 1_000_000, 0, 0],
+        "judge": [1_000_000, 1_000_000, 0, 0],
+    }
     block = runner._cost_block(cfg, usage)
     # haiku $1/$5 per 1M, sonnet $3/$15 per 1M.
     assert block["answer_model"]["est_usd"] == pytest.approx(6.0)
     assert block["judge_model"]["est_usd"] == pytest.approx(18.0)
     assert block["total_tokens"] == 4_000_000
     assert block["total_est_usd"] == pytest.approx(24.0)
+    assert block["unpriced_models"] == []
+
+
+def test_cost_block_surfaces_unknown_model_instead_of_silent_zero():
+    cfg = config.Config(
+        models=config.ModelConfig(
+            provider="anthropic", answer_model="future-model", judge_model="claude-sonnet-4-6"
+        )
+    )
+    block = runner._cost_block(cfg, {"answer": [100, 10, 0, 0], "judge": [100, 10, 0, 0]})
+    assert block["answer_model"]["est_usd"] is None
+    assert block["total_est_usd"] is None
+    assert block["unpriced_models"] == ["future-model"]
+
+
+def test_cost_block_applies_bedrock_multi_region_premium():
+    cfg = config.Config(
+        models=config.ModelConfig(
+            provider="bedrock",
+            answer_model="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            judge_model="us.anthropic.claude-sonnet-4-6",
+        )
+    )
+    block = runner._cost_block(
+        cfg,
+        {
+            "answer": [1_000_000, 1_000_000, 0, 0],
+            "judge": [1_000_000, 1_000_000, 0, 0],
+        },
+    )
+    assert block["answer_model"]["est_usd"] == pytest.approx(6.6)
+    assert block["judge_model"]["est_usd"] == pytest.approx(19.8)
+    assert block["total_est_usd"] == pytest.approx(26.4)
+
+
+def test_cost_block_prices_cache_buckets_without_double_charging():
+    cfg = config.Config(
+        models=config.ModelConfig(
+            provider="anthropic",
+            answer_model="claude-haiku-4-5",
+            judge_model="claude-sonnet-4-6",
+        )
+    )
+    block = runner._cost_block(
+        cfg,
+        {
+            "answer": [1_000_000, 0, 200_000, 300_000],
+            "judge": [0, 0, 0, 0],
+        },
+    )
+    assert block["answer_model"]["cache_creation_input_tokens"] == 200_000
+    assert block["answer_model"]["cache_read_input_tokens"] == 300_000
+    assert block["answer_model"]["est_usd"] == pytest.approx(0.78)
 
 
 # ── full offline run end to end ──────────────────────────────────────────────

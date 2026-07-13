@@ -40,6 +40,20 @@ def test_completion_key_is_stable_and_content_sensitive():
     assert completion_key(**{**base, "model": "other"}) != completion_key(**base)
 
 
+def test_completion_key_cannot_collide_across_nul_containing_prompt_boundaries():
+    base = dict(
+        kind="answer",
+        provider="mock",
+        model="m",
+        system="alpha\0beta",
+        user="gamma",
+        max_tokens=10,
+        temperature=0.0,
+    )
+    shifted_boundary = {**base, "system": "alpha", "user": "beta\0gamma"}
+    assert completion_key(**base) != completion_key(**shifted_boundary)
+
+
 def test_case_content_key_changes_when_any_input_changes():
     base = dict(
         case_id="c1",
@@ -126,7 +140,38 @@ def test_caching_model_serves_second_call_from_cache(tmp_path):
 
     assert inner.calls == 1  # the real model ran exactly once
     assert first.text == second.text == "reply to question one"
+    assert first.input_tokens == 10
+    assert second.input_tokens == second.output_tokens == 0
     assert cache.stats()["answer_hits"] == 1
+
+
+def test_cache_round_trips_cache_bucket_provenance_but_hits_spend_zero(tmp_path):
+    class CachedUsageModel(_FakeModel):
+        def complete(self, system, user, max_tokens, temperature):
+            self.calls += 1
+            return Completion(
+                text="answer",
+                model=self.model,
+                input_tokens=100,
+                output_tokens=5,
+                cache_creation_input_tokens=20,
+                cache_read_input_tokens=30,
+            )
+
+    cache = EvalCache(tmp_path)
+    wrapped = CachingModel(CachedUsageModel(), cache, provider="anthropic", kind="answer")
+    first = wrapped.complete("sys", "question", 100, 0.0)
+    second = wrapped.complete("sys", "question", 100, 0.0)
+    assert (first.cache_creation_input_tokens, first.cache_read_input_tokens) == (20, 30)
+    assert (
+        second.input_tokens,
+        second.cache_creation_input_tokens,
+        second.cache_read_input_tokens,
+    ) == (
+        0,
+        0,
+        0,
+    )
 
 
 def test_caching_model_misses_on_any_content_change(tmp_path):
