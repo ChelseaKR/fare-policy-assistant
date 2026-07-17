@@ -52,6 +52,12 @@ rather than tied to a published tag.
   something this pass fabricates.
 
 ### Added
+- NIST AI RMF crosswalk in `docs/procurement-brief.md` (roadmap F-12 /
+  research item RR10, 2026-07-17): maps the existing artifacts (guards, eval
+  suites, calibration, audits, model card, risk register, freshness loop)
+  onto Govern/Map/Measure/Manage with file pointers. Explicitly a
+  self-assessment, not a certification; the pending manual accessibility
+  walkthrough stays flagged as not covered.
 - Tag-triggered release workflow (`.github/workflows/release.yml`, STANDARDS
   conformance REL-14): on a `v*` tag it checks the tag matches
   `pyproject.toml`'s version, re-runs `make verify` at the tagged commit,
