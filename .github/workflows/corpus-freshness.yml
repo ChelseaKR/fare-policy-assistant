@@ -16,6 +16,13 @@ on:
 permissions:
   contents: read
 
+# This workflow writes (pushes the corpus-refresh branch, opens a PR): never
+# cancel a run mid-write, and never let a manual dispatch race the Monday
+# schedule onto the same branch (CI-CD-STANDARD §8b).
+concurrency:
+  group: corpus-freshness
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
