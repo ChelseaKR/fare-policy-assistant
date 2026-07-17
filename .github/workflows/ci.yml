@@ -66,6 +66,8 @@ jobs:
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       # msgfmt (the G7 PO-compilation gate) is a system gettext binary, not a
       # uv/pip dependency — installed here like any non-uv tool. babel/pybabel
       # come from the dev dependency group, resolved by `uv run` inside the make
