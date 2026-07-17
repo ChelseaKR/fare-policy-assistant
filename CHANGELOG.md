@@ -8,6 +8,23 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Added
+- Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
+  I18N-22). A live run now fails when the Spanish-vs-mirrored-English pass
+  delta exceeds 5 points on 2 or more cases (`evals/runner.py::check_parity`),
+  and `evals/check_report_regression.py` re-applies the same gate to the
+  committed `EVALS.md` on every PR, reading the machine-readable `parity`
+  payload or, for reports generated before this change, the rendered Spanish
+  parity table. The general per-suite form (no gated suite more than 5 points
+  below the macro pass rate) gates alongside it, with one loud escape hatch:
+  `evals/expected_below_macro.json`, a committed suite-to-rationale map whose
+  annotations render in the report (the `conversation` suite carries the first
+  entry, citing its two documented forged-history failures). Stretch-language
+  suites stay outside the gate per the existing P3-3 promise. `EVALS.md` will
+  render the parity delta line from the next live run onward; the committed
+  report is unchanged here because reports are only ever regenerated from real
+  runs.
+
 ### Changed
 - Hosted completions now expose the SDK's actual served model while retaining
   the requested model for pricing, and eval cache keys use collision-proof
