@@ -9,6 +9,19 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Changed
+- Hash-pinned rider deploy bundle (roadmap M-7 / audit P1-6, 2026-07-17):
+  `infra/deploy.sh` now installs only from `infra/requirements-deploy.txt`
+  (a `uv export` of the locked runtime set) with `--require-hashes`, so the
+  deployed artifact carries exactly the dependency versions the test suite
+  ran against. The loose ranges it used before really did drift: the locked
+  numpy publishes no manylinux2014 wheels, so the old install silently
+  deployed an older numpy; the bundle now targets `aarch64-manylinux_2_28`,
+  which the python3.12 Lambda runtime (Amazon Linux 2023, glibc 2.34)
+  supports. Regenerate with `make deploy-reqs`;
+  `tests/test_deploy_requirements.py` holds the pin file, the script, and
+  `uv.lock` in lockstep. The operator console bundle
+  (`infra/deploy-console.sh`) is not covered and still installs from loose
+  ranges.
 - Hosted completions now expose the SDK's actual served model while retaining
   the requested model for pricing, and eval cache keys use collision-proof
   canonical JSON framing even when prompts contain U+0000.
