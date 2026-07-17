@@ -35,8 +35,8 @@ ocr = [
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
-    "ruff>=0.6",
-    "mypy>=1.11",
+    "ruff>=0.15",
+    "mypy>=1.18",
     "types-pyyaml",
     "pypdf>=4.0",
     "babel>=2.16",
@@ -118,6 +118,10 @@ source = ["assistant", "web", "evals"]
 omit = ["*/_vendor/*"]
 
 [tool.coverage.report]
+# Same floor the Makefile/CI gate enforces via --cov-fail-under=$(COV_MIN).
+# Measured 91.60% branch coverage on 2026-07-16; honest achieved is ~92-95%,
+# the gate sits a few points below to absorb environment drift.
+fail_under = 90
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
