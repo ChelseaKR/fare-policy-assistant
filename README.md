@@ -190,7 +190,7 @@ how to report a vulnerability, and a deployment hardening checklist are in
 
 ## Live demo
 
-Try it at <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>. The page
+Try it at <https://evals.chelseakr.com/>. The page
 states what the assistant will not do, answers in English, Spanish, or Tagalog, and
 cites the policy snapshot behind every answer. Questions are answered and
 discarded; nothing you type is stored. The serving path is one Lambda behind

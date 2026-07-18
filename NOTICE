@@ -9,3 +9,8 @@ employer or client of the author. It contains no employer- or client-proprietary
 or confidential code, data, methods, or documentation.
 
 Licensed under the MIT License. See the LICENSE file for the full terms.
+
+Files under `corpus/raw/` are reproducibility snapshots of publicly published
+transit-agency fare information. Their source URLs and fetch dates are recorded
+in `corpus/manifest.yaml`; those source materials remain the work of their
+respective agencies and are not covered by the project's MIT License.
