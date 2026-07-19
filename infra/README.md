@@ -70,14 +70,15 @@ above; its role holds only `lambda:GetFunctionConfiguration` /
 
 ```sh
 FPA_RIDER_FUNCTION_NAME=fare-policy-assistant-demo \
-FPA_CONSOLE_TOKEN=$(openssl rand -hex 32) \
+FPA_CONSOLE_TOKEN_PARAMETER_NAME=/fare-policy-assistant/demo-console-token \
 AWS_REGION=us-west-2 ./infra/deploy-console.sh
 ```
 
 **Authentication is the operator's job to finish, not this script's.** Out of
 the box the console is gated by a shared bearer token
-(`FPA_CONSOLE_TOKEN`) — the handler (`web/console.py`) fails closed if that
-variable is unset, but a shared token is not identity. Before handing the
+stored as an encrypted SSM parameter — the handler (`web/console.py`) fails
+closed if it cannot resolve that parameter, but a shared token is not identity.
+Before handing the
 console URL to a non-technical agency operator, put a real authorizer (JWT or
 IAM, backed by the agency's own SSO/IdP) in front of the console's API Gateway
 route; the exact `aws apigatewayv2 create-authorizer` invocation depends on

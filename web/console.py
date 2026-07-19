@@ -18,8 +18,10 @@ question or answer text ever reaches this module); the actions are config
 reads/writes only.
 
 Authentication fails closed on every data and action API: requests must carry
-`Authorization: Bearer <token>` matching `FPA_CONSOLE_TOKEN`, and if that
-variable is unset the APIs refuse every request rather than defaulting open.
+`Authorization: Bearer <token>` matching the encrypted SSM parameter named by
+`FPA_CONSOLE_TOKEN_PARAMETER_NAME`. If neither that parameter nor the local-dev
+`FPA_CONSOLE_TOKEN` fallback resolves, the APIs refuse every request rather
+than defaulting open.
 The static `/console` HTML shell is public so an ordinary browser can render
 the token-entry form; it contains no corpus data or configuration, and cannot
 read or change anything until the operator supplies the token. A shared bearer
@@ -74,6 +76,9 @@ _SECURITY_HEADERS = {
 # (an object with get_function_configuration / update_function_configuration
 # methods) so pin/embed-config actions are testable without AWS credentials.
 _client_factory = None
+_ssm_client_factory = None
+_resolved_console_token: str | None = None
+_console_token_resolved = False
 
 
 def _response(status: int, body: str, content_type: str = "application/json") -> dict:
@@ -91,8 +96,48 @@ def _json(status: int, payload: dict) -> dict:
 # ── auth ─────────────────────────────────────────────────────────────────────
 
 
-def _authorized(event: dict) -> bool:
+def _console_token() -> str | None:
+    """Resolve the operator token once per warm container.
+
+    Production uses an encrypted SSM parameter; the literal environment value
+    remains only as a local/test fallback. A lookup error fails closed but is
+    not cached, so a transient SSM outage can recover on the next request.
+    """
+    global _console_token_resolved, _resolved_console_token
+    if _console_token_resolved:
+        return _resolved_console_token
+
+    parameter_name = os.environ.get("FPA_CONSOLE_TOKEN_PARAMETER_NAME")
+    if parameter_name:
+        try:
+            if _ssm_client_factory is not None:
+                client = _ssm_client_factory()
+            else:
+                import boto3
+
+                client = boto3.client("ssm", region_name=os.environ.get("AWS_REGION", "us-west-2"))
+            value = client.get_parameter(Name=parameter_name, WithDecryption=True)
+            token = value.get("Parameter", {}).get("Value", "").strip()
+            _resolved_console_token = token or None
+            _console_token_resolved = True
+            return _resolved_console_token
+        except Exception:  # noqa: BLE001 - authentication must fail closed on any AWS error
+            return None
+
     token = os.environ.get("FPA_CONSOLE_TOKEN")
+    _resolved_console_token = token or None
+    _console_token_resolved = True
+    return _resolved_console_token
+
+
+def _reset_console_token_for_tests() -> None:
+    global _console_token_resolved, _resolved_console_token
+    _resolved_console_token = None
+    _console_token_resolved = False
+
+
+def _authorized(event: dict) -> bool:
+    token = _console_token()
     if not token:
         return False  # unset means misconfigured: refuse everything, never default open
     headers = {str(k).lower(): v for k, v in (event.get("headers") or {}).items()}
