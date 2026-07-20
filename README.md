@@ -20,6 +20,20 @@ tracked in the [Standards conformance](#standards-conformance) table below.
 This is, and is meant to be read as, a reference implementation — see the
 closing note.
 
+## Quick start
+
+Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are
+committed, so the offline path works with no API key and no network:
+
+```sh
+make test                                  # unit tests
+uv run python -m evals.runner --offline    # full eval, deterministic checks only
+uv run python -m assistant.cli --offline "What proof do I need for the veteran fare on MST?"
+```
+
+Live model runs and the other backends are covered in
+[Live runs and backends](#live-runs-and-backends).
+
 ## Standards conformance
 
 Assessed against [`ChelseaKR/portfolio-standards`](https://github.com/ChelseaKR/portfolio-standards)
@@ -232,17 +246,9 @@ DENY`. By default the widget is frameable only same-origin (`frame-ancestors
 'self'`); set `FPA_EMBED_ANCESTORS` to a space-separated origin allowlist (the
 agency's own domains) to let those sites embed it.
 
-## Quick start
+## Live runs and backends
 
-Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are
-committed, so the offline path works with no API key and no network:
-
-```sh
-make test                                  # unit tests
-uv run python -m evals.runner --offline    # full eval, deterministic checks only
-uv run python -m assistant.cli --offline "What proof do I need for the veteran fare on MST?"
-```
-
+The offline path above needs no credentials.
 Live runs use Claude on Amazon Bedrock by default, authenticated through the
 standard AWS credential chain. The recommended local setup is IAM Identity
 Center (SSO) — no long-lived keys on disk:
