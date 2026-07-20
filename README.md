@@ -332,5 +332,5 @@ Reference implementation. No accounts, no persistence of user queries.
 Fare information shown is based on policies published as of the dates in
 `corpus/manifest.yaml`; confirm anything time-sensitive with the agency.
 
-MIT licensed (see LICENSE). Corpus snapshots remain the work of their
+Apache-2.0 licensed (see LICENSE and NOTICE). Corpus snapshots remain the work of their
 respective transit agencies.
