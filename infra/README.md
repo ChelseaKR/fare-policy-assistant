@@ -12,6 +12,15 @@ script, so they cannot drift independently); `tests/test_deploy_rate_limit.py`
 guards that. See the 2026-07-08 amendment in ADR 0004 for why it, not a
 per-caller store, is the answer to roadmap P1 item 4.
 
+The rider bundle's dependencies are hash-pinned (roadmap M-7 / audit P1-6):
+`deploy.sh` installs only from `infra/requirements-deploy.txt` with
+`--require-hashes`, and that file is a `uv export` of the locked runtime set,
+so the deployed artifact carries exactly the versions the test suite ran
+against. Regenerate it with `make deploy-reqs` after any dependency change;
+`tests/test_deploy_requirements.py` fails if it drifts from `uv.lock`. The
+operator console bundle (`deploy-console.sh`) still installs from loose
+ranges and is not covered by this pin file.
+
 ## Observability
 
 The deploy also creates CloudWatch alarms (handler errors, Lambda errors and

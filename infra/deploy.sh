@@ -43,10 +43,18 @@ mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs" "$BUNDLE/web"
 
 # Cross-platform install: the Lambda runs linux/arm64, not the build machine's
 # platform, so force manylinux wheels (numpy's C extension breaks otherwise).
+# The python3.12 Lambda runtime is Amazon Linux 2023 (glibc 2.34), so
+# manylinux_2_28 wheels are safe; the locked numpy publishes no manylinux2014
+# wheels, which is why the older 2014 tag is not used here.
+#
+# Hash-pinned (roadmap M-7 / audit P1-6): the bundle installs exactly the
+# versions uv.lock tested, verified by hash, so the deployed artifact cannot
+# drift from the tested tree. Regenerate infra/requirements-deploy.txt with
+# `make deploy-reqs` after any dependency change;
+# tests/test_deploy_requirements.py keeps it in lockstep with uv.lock.
 uv pip install --quiet --target "$BUNDLE" \
-  --python-platform aarch64-manylinux2014 --python-version 3.12 --only-binary :all: \
-  "anthropic[bedrock]>=0.100" "rank-bm25>=0.2.2" "pyyaml>=6.0" \
-  "httpx>=0.27" "beautifulsoup4>=4.12" "jsonschema>=4.20"
+  --python-platform aarch64-manylinux_2_28 --python-version 3.12 --only-binary :all: \
+  --require-hashes -r "$ROOT/infra/requirements-deploy.txt"
 
 cp -R "$ROOT/src/assistant" "$BUNDLE/src/assistant"
 cp -R "$ROOT/prompts" "$BUNDLE/prompts"

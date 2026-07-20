@@ -84,8 +84,10 @@ class TestBundleRuntimeDependencies:
     """
 
     def test_rider_bundle_includes_structured_contract_runtime(self):
+        # jsonschema arrives via the hash-pinned requirement set (M-7/P1-6);
+        # tests/test_deploy_requirements.py holds that file against uv.lock.
         text = _script_text()
-        assert '"jsonschema>=4.20"' in text
+        assert '-r "$ROOT/infra/requirements-deploy.txt"' in text
         assert 'mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs"' in text
         assert 'cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"' in text
 
