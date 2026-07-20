@@ -5,7 +5,7 @@
 # rationale and web/console.py for the handler and its routes.
 #
 #   FPA_RIDER_FUNCTION_NAME=fare-policy-assistant-demo \
-#   FPA_CONSOLE_TOKEN=$(openssl rand -hex 32) \
+#   FPA_CONSOLE_TOKEN_PARAMETER_NAME=/fare-policy-assistant/demo-console-token \
 #   ./infra/deploy-console.sh
 #
 # Requires the AWS CLI with credentials that may manage IAM, Lambda, API
@@ -14,7 +14,7 @@
 # any change to web/console.py or the corpus.
 #
 # ── SECURITY: read this before handing the URL to an agency operator ────────
-# The bearer-token check in web/console.py (FPA_CONSOLE_TOKEN) is adequate for
+# The bearer-token check in web/console.py is adequate for
 # a single-operator pilot but is not identity: anyone holding the token has
 # full console access (pin any known corpus version, rewrite the embed
 # allowlist). Before treating a deployment as production for a non-technical
@@ -34,13 +34,13 @@
 # one-time manual step tied to credentials this script has no business
 # holding, exactly like the AWS Budget setup in infra/README.md; it is
 # intentionally left out of this script rather than faked. Until it is done,
-# treat FPA_CONSOLE_TOKEN as the only gate and rotate it like any other secret.
+# treat the SSM-backed token as the only gate and rotate it like any other secret.
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-west-2}"
 RIDER_FN="${FPA_RIDER_FUNCTION_NAME:?set FPA_RIDER_FUNCTION_NAME to the rider Lambda this console manages}"
 CONSOLE_FN="${FPA_CONSOLE_FUNCTION_NAME:-$RIDER_FN-console}"
-CONSOLE_TOKEN="${FPA_CONSOLE_TOKEN:?set FPA_CONSOLE_TOKEN, e.g. \$(openssl rand -hex 32), before deploying}"
+CONSOLE_TOKEN_PARAMETER="${FPA_CONSOLE_TOKEN_PARAMETER_NAME:-/fare-policy-assistant/demo-console-token}"
 ROLE_NAME="$CONSOLE_FN-role"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/infra/build-console"
@@ -96,6 +96,11 @@ POLICY=$(cat <<EOF
       "Effect": "Allow",
       "Action": ["lambda:GetFunctionConfiguration", "lambda:UpdateFunctionConfiguration"],
       "Resource": "arn:aws:lambda:$REGION:$ACCOUNT:function:$RIDER_FN"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameter"],
+      "Resource": "arn:aws:ssm:$REGION:$ACCOUNT:parameter$CONSOLE_TOKEN_PARAMETER"
     }
   ]
 }
@@ -113,7 +118,7 @@ aws iam put-role-policy --role-name "$ROLE_NAME" \
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 
 # ── Lambda ───────────────────────────────────────────────────────────────────
-ENV_VARS="Variables={FPA_CONSOLE_TOKEN=$CONSOLE_TOKEN,FPA_RIDER_FUNCTION_NAME=$RIDER_FN}"
+ENV_VARS="Variables={FPA_CONSOLE_TOKEN_PARAMETER_NAME=$CONSOLE_TOKEN_PARAMETER,FPA_RIDER_FUNCTION_NAME=$RIDER_FN}"
 if aws lambda get-function --function-name "$CONSOLE_FN" --region "$REGION" >/dev/null 2>&1; then
   aws lambda update-function-code --function-name "$CONSOLE_FN" --region "$REGION" \
     --architectures arm64 --zip-file "fileb://$BUILD/bundle.zip" >/dev/null

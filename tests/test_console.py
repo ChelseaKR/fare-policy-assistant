@@ -21,6 +21,11 @@ AUTH = {"authorization": "Bearer test-token"}
 @pytest.fixture(autouse=True)
 def token(monkeypatch):
     monkeypatch.setenv("FPA_CONSOLE_TOKEN", "test-token")
+    monkeypatch.delenv("FPA_CONSOLE_TOKEN_PARAMETER_NAME", raising=False)
+    console._reset_console_token_for_tests()
+    yield
+    console._reset_console_token_for_tests()
+    monkeypatch.setattr(console, "_ssm_client_factory", None)
 
 
 def _event(method="GET", path="/console/api/status", headers=None, body=None, qs=None):
@@ -59,8 +64,33 @@ def fake_client(monkeypatch):
 class TestAuth:
     def test_missing_token_env_fails_closed(self, monkeypatch):
         monkeypatch.delenv("FPA_CONSOLE_TOKEN", raising=False)
+        console._reset_console_token_for_tests()
         resp = console.console_handler(_event())
         assert resp["statusCode"] == 401
+
+    def test_ssm_parameter_token_is_accepted(self, monkeypatch):
+        class FakeSSM:
+            def get_parameter(self, **kwargs):
+                assert kwargs == {"Name": "/fare-policy-assistant/token", "WithDecryption": True}
+                return {"Parameter": {"Value": "parameter-token"}}
+
+        monkeypatch.delenv("FPA_CONSOLE_TOKEN", raising=False)
+        monkeypatch.setenv("FPA_CONSOLE_TOKEN_PARAMETER_NAME", "/fare-policy-assistant/token")
+        monkeypatch.setattr(console, "_ssm_client_factory", FakeSSM)
+        console._reset_console_token_for_tests()
+        event = _event(headers={"authorization": "Bearer parameter-token"})
+        assert console.console_handler(event)["statusCode"] == 200
+
+    def test_ssm_failure_fails_closed(self, monkeypatch):
+        class BrokenSSM:
+            def get_parameter(self, **kwargs):
+                raise RuntimeError("unavailable")
+
+        monkeypatch.delenv("FPA_CONSOLE_TOKEN", raising=False)
+        monkeypatch.setenv("FPA_CONSOLE_TOKEN_PARAMETER_NAME", "/fare-policy-assistant/token")
+        monkeypatch.setattr(console, "_ssm_client_factory", BrokenSSM)
+        console._reset_console_token_for_tests()
+        assert console.console_handler(_event())["statusCode"] == 401
 
     def test_missing_header_rejected(self):
         resp = console.console_handler(_event(headers={}))
