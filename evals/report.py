@@ -14,6 +14,14 @@ from pathlib import Path
 
 from assistant import config, corpus
 from evals import provenance
+from evals.runner import (
+    MACRO_THRESHOLD_PP,
+    PARITY_CASE_FLOOR,
+    PARITY_THRESHOLD_PP,
+    expected_below_macro,
+    parity_delta,
+    suites_below_macro,
+)
 
 FAILURES_PER_SUITE = 3
 
@@ -225,9 +233,39 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
             "(a pair passes only if every variant passes across the boundary).",
         ]
 
+    # Per-suite macro floor (M-1, general form): a gated suite sitting more
+    # than 5 points below the macro pass rate is named here — with its written
+    # annotation if one is committed, or flagged as the gate failure it is.
+    offenders = suites_below_macro(summary["suites"])
+    if offenders:
+        notes = expected_below_macro()
+        lines.append("")
+        for name, o in sorted(offenders.items()):
+            note = notes.get(name)
+            tag = (
+                f"annotated expected-below-macro: {note}"
+                if note
+                else "UNANNOTATED — the parity gate fails this run"
+            )
+            lines.append(
+                f"**Below-macro suite:** {name} at {o['pass_rate']}% vs macro {o['macro']}% "
+                f"(floor {o['floor']}%) — {tag}"
+            )
+
     parity = _spanish_parity(records)
     if parity:
         lines += ["", "## Spanish parity", "", parity]
+        delta = parity_delta(records)
+        if delta:
+            lines += [
+                "",
+                f"Parity delta: Spanish {delta['passed']}/{delta['pairs']} vs mirrored "
+                f"English {delta['mirror_passed']}/{delta['pairs']} → "
+                f"{delta['delta_pp']} pp. Gate (M-1): fails when the gap exceeds "
+                f"{PARITY_THRESHOLD_PP:g} points and {PARITY_CASE_FLOOR} or more "
+                f"mirrored cases diverge; each gated suite must also stay within "
+                f"{MACRO_THRESHOLD_PP:g} points of the macro pass rate.",
+            ]
 
     stretch_parity = _stretch_language_parity(records)
     if stretch_parity:
@@ -319,6 +357,9 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 "corpus_version": _corpus_version(summary),
                 "prompt_versions": summary["prompt_versions"],
                 "suites": summary["suites"],
+                # None when the run had no complete mirror pairs; the
+                # committed-report parity check treats that as skip-with-note.
+                "parity": parity_delta(records),
             }
         ),
         "",
