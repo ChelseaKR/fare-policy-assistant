@@ -75,9 +75,7 @@ class TestAuth:
                 return {"Parameter": {"Value": "parameter-token"}}
 
         monkeypatch.delenv("FPA_CONSOLE_TOKEN", raising=False)
-        monkeypatch.setenv(
-            "FPA_CONSOLE_TOKEN_PARAMETER_NAME", "/fare-policy-assistant/token"
-        )
+        monkeypatch.setenv("FPA_CONSOLE_TOKEN_PARAMETER_NAME", "/fare-policy-assistant/token")
         monkeypatch.setattr(console, "_ssm_client_factory", FakeSSM)
         console._reset_console_token_for_tests()
         event = _event(headers={"authorization": "Bearer parameter-token"})
@@ -89,9 +87,7 @@ class TestAuth:
                 raise RuntimeError("unavailable")
 
         monkeypatch.delenv("FPA_CONSOLE_TOKEN", raising=False)
-        monkeypatch.setenv(
-            "FPA_CONSOLE_TOKEN_PARAMETER_NAME", "/fare-policy-assistant/token"
-        )
+        monkeypatch.setenv("FPA_CONSOLE_TOKEN_PARAMETER_NAME", "/fare-policy-assistant/token")
         monkeypatch.setattr(console, "_ssm_client_factory", BrokenSSM)
         console._reset_console_token_for_tests()
         assert console.console_handler(_event())["statusCode"] == 401
