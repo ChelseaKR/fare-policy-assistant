@@ -8,6 +8,10 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Security
+- Update the locked Pillow dependency from 12.2.0 to 12.3.0, clearing the
+  image-decoder advisory cluster reported against PDF/OCR support.
+
 ### Added
 - Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
   I18N-22). A live run now fails when the Spanish-vs-mirrored-English pass
