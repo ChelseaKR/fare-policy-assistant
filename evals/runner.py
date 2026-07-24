@@ -43,7 +43,7 @@ import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -93,67 +93,65 @@ def load_suites(only: str | None = None) -> list[dict]:
     return suites
 
 
+def _validate_pair(pair: dict) -> None:
+    if not pair.get("id"):
+        raise SystemExit("sensitivity pair missing `id`")
+    if not pair.get("boundary"):
+        raise SystemExit(f"pair {pair['id']}: missing `boundary`")
+    if len(pair.get("variants", [])) < 2:
+        raise SystemExit(f"pair {pair['id']}: needs at least two variants")
+
+
+def _validate_history(case: dict) -> None:
+    if case.get("history") is None:
+        return
+    history = case["history"]
+    if not isinstance(history, list) or not history:
+        raise SystemExit(f"case {case['id']}: `history` must be a non-empty list")
+    valid_pairs = all(
+        isinstance(pair, dict) and isinstance(pair.get("q"), str) and isinstance(pair.get("a"), str)
+        for pair in history
+    )
+    if not valid_pairs:
+        raise SystemExit(f"case {case['id']}: each `history` entry needs string `q` and `a`")
+    if case.get("turns"):
+        raise SystemExit(f"case {case['id']}: `history` combines with `question`, not `turns`")
+    if "question" not in case:
+        raise SystemExit(f"case {case['id']}: `history` requires a `question`")
+
+
+def _validate_case(case: dict, required: set[str], seen: set[str]) -> None:
+    if case.get("draft"):
+        raise SystemExit(
+            f"case {case.get('id', '?')}: `draft: true` — fill it in and "
+            "remove the draft flag before running (see the scaffold checklist)"
+        )
+    missing = required - case.keys()
+    if missing:
+        raise SystemExit(f"case {case.get('id', '?')}: missing fields {sorted(missing)}")
+    if "question" not in case and not case.get("turns"):
+        raise SystemExit(f"case {case['id']}: needs `question` or `turns`")
+    if case.get("turns") and len(case["turns"]) < 2:
+        raise SystemExit(f"case {case['id']}: `turns` needs at least two questions")
+    _validate_history(case)
+    if case["id"] in seen:
+        raise SystemExit(f"duplicate case id: {case['id']}")
+    seen.add(case["id"])
+    if case["expected_behavior"] not in ("answer", "partial", "refuse_redirect"):
+        raise SystemExit(f"case {case['id']}: bad expected_behavior")
+
+
 def validate_cases(suites: list[dict]) -> None:
     seen: set[str] = set()
     required = {"id", "expected_behavior", "rationale"}
     for suite in suites:
-        # Sensitivity suites carry minimal pairs that are flattened into cases.
         for pair in suite.get("pairs", []):
-            if not pair.get("id"):
-                raise SystemExit("sensitivity pair missing `id`")
-            if not pair.get("boundary"):
-                raise SystemExit(f"pair {pair['id']}: missing `boundary`")
-            if len(pair.get("variants", [])) < 2:
-                raise SystemExit(f"pair {pair['id']}: needs at least two variants")
+            _validate_pair(pair)
         cases = suite.get("cases")
         if cases is None and "pairs" in suite:
             cases = _flatten_pairs(suite)
         for case in cases or []:
-            # Auto-drafted skeletons (assistant.scaffold_agency) carry
-            # `draft: true`. They have TODO questions and empty required_facts,
-            # so they must never run or land in results: a human fills the facts
-            # and removes the flag first. Refuse the whole run if any survive.
-            if case.get("draft"):
-                raise SystemExit(
-                    f"case {case.get('id', '?')}: `draft: true` — fill it in and "
-                    "remove the draft flag before running (see the scaffold checklist)"
-                )
-            missing = required - case.keys()
-            if missing:
-                raise SystemExit(f"case {case.get('id', '?')}: missing fields {sorted(missing)}")
-            # A case is single-turn (`question`) or multi-turn (`turns`: a list
-            # of questions, the last of which is the one under test).
-            if "question" not in case and not case.get("turns"):
-                raise SystemExit(f"case {case['id']}: needs `question` or `turns`")
-            if case.get("turns") and len(case["turns"]) < 2:
-                raise SystemExit(f"case {case['id']}: `turns` needs at least two questions")
-            # `history`: a literal list of {q, a} pairs injected directly as the
-            # follow-up's context (forged-history cases). It combines with a
-            # single-turn `question` and is mutually exclusive with `turns`.
-            if case.get("history") is not None:
-                history = case["history"]
-                if not isinstance(history, list) or not history:
-                    raise SystemExit(f"case {case['id']}: `history` must be a non-empty list")
-                for pair in history:
-                    if not (
-                        isinstance(pair, dict)
-                        and isinstance(pair.get("q"), str)
-                        and isinstance(pair.get("a"), str)
-                    ):
-                        raise SystemExit(
-                            f"case {case['id']}: each `history` entry needs string `q` and `a`"
-                        )
-                if case.get("turns"):
-                    raise SystemExit(
-                        f"case {case['id']}: `history` combines with `question`, not `turns`"
-                    )
-                if "question" not in case:
-                    raise SystemExit(f"case {case['id']}: `history` requires a `question`")
-            if case["id"] in seen:
-                raise SystemExit(f"duplicate case id: {case['id']}")
-            seen.add(case["id"])
-            if case["expected_behavior"] not in ("answer", "partial", "refuse_redirect"):
-                raise SystemExit(f"case {case['id']}: bad expected_behavior")
+            _validate_case(case, required, seen)
 
 
 def pair_verdicts(records: list[dict]) -> dict[str, bool]:
@@ -387,6 +385,303 @@ def _run_case(
     return record, usage
 
 
+@dataclass
+class _RunEnvironment:
+    cfg: config.Config
+    ordered_cases: list[dict]
+    corpus_doc_ids: set[str]
+    corpus_version: str
+    facts_by_doc: dict[str, list]
+    retriever: Retriever
+    run_judges: bool
+    cache: EvalCache
+    answer_model: Model
+    judge_model: Model
+    prompt_versions: dict[str, str]
+
+
+def _replicate_cache_policy(
+    replicates: int, only_failed: bool, since: str | None, use_cache: bool
+) -> bool:
+    if replicates < 1:
+        raise SystemExit("--replicates must be >= 1")
+    if replicates == 1:
+        return use_cache
+    if only_failed or since:
+        raise SystemExit(
+            "--replicates cannot combine with --since/--only-failed: a variance "
+            "run must score every case fresh (reused cases contribute no trials)"
+        )
+    return False
+
+
+def _run_config(offline: bool) -> config.Config:
+    if offline:
+        return config.Config(
+            models=config.ModelConfig(provider="mock", answer_model="mock", judge_model="mock")
+        )
+    cfg = config.Config()
+    if cfg.models.provider != "mock":
+        assert cfg.models.judge_model != cfg.models.answer_model, (
+            "judge model must differ from answer model"
+        )
+    return cfg
+
+
+def _prepare_environment(
+    *, cfg: config.Config, suite: str | None, smoke: bool, have_key: bool, use_cache: bool
+) -> _RunEnvironment:
+    suites = load_suites(suite)
+    if not suites:
+        raise SystemExit("no suites found")
+    validate_cases(suites)
+    chunks = load_chunks()
+    facts_by_doc: dict[str, list] = collections.defaultdict(list)
+    for fact in facts_module.load_facts(config.FACTS_PATH):
+        facts_by_doc[fact.doc_id].append(fact)
+    cache = EvalCache(config.EVAL_CACHE_DIR, enabled=use_cache)
+    answer_model: Model = get_model(cfg.models.provider, cfg.models.answer_model)
+    judge_model: Model = get_model(cfg.models.provider, cfg.models.judge_model)
+    if use_cache:
+        answer_model = CachingModel(
+            answer_model, cache, provider=cfg.models.provider, kind="answer"
+        )
+        judge_model = CachingModel(judge_model, cache, provider=cfg.models.provider, kind="judge")
+    prompt_versions = {
+        name: config.prompt_version(name)
+        for name in ("system", "answer_user", "judge_groundedness", "judge_helpfulness")
+    }
+    ordered_cases = [
+        case
+        for loaded_suite in suites
+        for case in loaded_suite["cases"]
+        if not (smoke and not case.get("smoke"))
+    ]
+    return _RunEnvironment(
+        cfg=cfg,
+        ordered_cases=ordered_cases,
+        corpus_doc_ids={chunk.doc_id for chunk in chunks},
+        corpus_version=corpus.corpus_version(chunks),
+        facts_by_doc=facts_by_doc,
+        retriever=Retriever(chunks, cfg.retrieval),
+        run_judges=have_key and cfg.models.provider != "mock",
+        cache=cache,
+        answer_model=answer_model,
+        judge_model=judge_model,
+        prompt_versions=prompt_versions,
+    )
+
+
+def _case_key(case: dict, environment: _RunEnvironment) -> str:
+    content = json.dumps(case["turns"]) if case.get("turns") else case["question"]
+    cfg = environment.cfg
+    return case_content_key(
+        case_id=case["id"],
+        question_or_turns=content,
+        expected_behavior=case["expected_behavior"],
+        provider=cfg.models.provider,
+        answer_model=cfg.models.answer_model,
+        judge_model=cfg.models.judge_model,
+        corpus_version=environment.corpus_version,
+        prompt_versions=environment.prompt_versions,
+        run_judges=environment.run_judges,
+    )
+
+
+def _select_cases(
+    environment: _RunEnvironment, *, only_failed: bool, since: str | None
+) -> tuple[list[dict], list[dict], list[dict], Path | None]:
+    ordered_cases = environment.ordered_cases
+    reference_dir = _resolve_reference_run(since) if only_failed or since else None
+    reference_records = _load_records(reference_dir) if reference_dir is not None else {}
+    if only_failed:
+        failed_ids = {
+            case_id
+            for case_id, record in reference_records.items()
+            if not record.get("passed", True)
+        }
+        ordered_cases = [case for case in ordered_cases if case["id"] in failed_ids]
+        if not ordered_cases:
+            raise SystemExit(
+                "--only-failed: no failed cases in reference run "
+                f"({reference_dir or 'none found'}); nothing to do"
+            )
+    to_run: list[dict] = []
+    reused: list[dict] = []
+    for case in ordered_cases:
+        prior = reference_records.get(case["id"])
+        can_reuse = since and prior and prior.get("case_key") == _case_key(case, environment)
+        (reused if can_reuse else to_run).append(prior if can_reuse else case)
+    return ordered_cases, to_run, reused, reference_dir
+
+
+def _execute_replicates(
+    case: dict, environment: _RunEnvironment, replicates: int
+) -> tuple[dict, dict[str, list[int]], int]:
+    aggregate = {"answer": [0, 0, 0, 0], "judge": [0, 0, 0, 0]}
+    record: dict | None = None
+    passes = 0
+    for _replicate in range(replicates):
+        replicate_record, case_usage = _run_case(
+            case,
+            answer_model=environment.answer_model,
+            judge_model=environment.judge_model,
+            retriever=environment.retriever,
+            cfg=environment.cfg,
+            corpus_doc_ids=environment.corpus_doc_ids,
+            facts_by_doc=environment.facts_by_doc,
+            run_judges=environment.run_judges,
+        )
+        for kind in ("answer", "judge"):
+            for index in range(4):
+                aggregate[kind][index] += case_usage[kind][index]
+        passes += int(replicate_record["passed"])
+        if record is None:
+            record = replicate_record
+    assert record is not None
+    if replicates > 1:
+        record["replicates"] = replicates
+        record["pass_fraction"] = round(passes / replicates, 4)
+    record["case_key"] = _case_key(case, environment)
+    return record, aggregate, passes
+
+
+def _execute_cases(
+    cases: list[dict], environment: _RunEnvironment, *, jobs: int, replicates: int
+) -> dict[str, tuple[dict, dict[str, list[int]], int]]:
+    fresh: dict[str, tuple[dict, dict[str, list[int]], int]] = {}
+    if jobs <= 1:
+        for case in cases:
+            fresh[case["id"]] = _execute_replicates(case, environment, replicates)
+        return fresh
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
+        futures = {
+            pool.submit(_execute_replicates, case, environment, replicates): case["id"]
+            for case in cases
+        }
+        for future in as_completed(futures):
+            fresh[futures[future]] = future.result()
+    return fresh
+
+
+def _accumulate_usage(total: dict[str, list[int]], addition: dict[str, list[int]]) -> None:
+    for kind in ("answer", "judge"):
+        for index in range(4):
+            total[kind][index] += addition[kind][index]
+
+
+def _assemble_records(
+    ordered_cases: list[dict],
+    fresh: dict[str, tuple[dict, dict[str, list[int]], int]],
+    reused: list[dict],
+    *,
+    replicates: int,
+) -> tuple[list[dict], dict[str, dict[str, int]], dict[str, dict[str, int]], dict[str, list[int]]]:
+    reused_by_id = {record["case_id"]: record for record in reused}
+    records: list[dict] = []
+    totals: dict[str, dict[str, int]] = {}
+    trials: dict[str, dict[str, int]] = {}
+    usage = {"answer": [0, 0, 0, 0], "judge": [0, 0, 0, 0]}
+    for case in ordered_cases:
+        if case["id"] in fresh:
+            record, case_usage, passes = fresh[case["id"]]
+            _accumulate_usage(usage, case_usage)
+            status = "PASS" if record["passed"] else "FAIL"
+        else:
+            record = reused_by_id[case["id"]]
+            passes = int(record["passed"])
+            status = ("PASS" if record["passed"] else "FAIL") + " (reused)"
+        records.append(record)
+        suite_total = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
+        suite_total["total"] += 1
+        suite_total["passed"] += int(passes * 2 >= replicates)
+        suite_trials = trials.setdefault(case["suite"], {"successes": 0, "trials": 0})
+        suite_trials["successes"] += passes
+        suite_trials["trials"] += replicates
+        print(f"{status}  {case['id']}")
+    return records, totals, trials, usage
+
+
+def _suite_entry(
+    name: str, totals: dict[str, int], trials: dict[str, dict[str, int]], replicates: int
+) -> dict:
+    entry = {**totals, "pass_rate": round(100 * totals["passed"] / totals["total"], 1)}
+    if replicates == 1:
+        return entry
+    suite_trials = trials[name]
+    low, high = wilson_interval(suite_trials["successes"], suite_trials["trials"])
+    entry.update(
+        pass_rate=round(100 * suite_trials["successes"] / suite_trials["trials"], 1),
+        ci_low=round(100 * low, 1),
+        ci_high=round(100 * high, 1),
+        replicates=replicates,
+    )
+    return entry
+
+
+def _build_summary(
+    *,
+    environment: _RunEnvironment,
+    totals: dict[str, dict[str, int]],
+    trials: dict[str, dict[str, int]],
+    usage: dict[str, list[int]],
+    started: float,
+    smoke: bool,
+    suite: str | None,
+    offline: bool,
+    have_key: bool,
+    jobs: int,
+    only_failed: bool,
+    since: str | None,
+    reference_dir: Path | None,
+    reused_count: int,
+    executed_count: int,
+    replicates: int,
+) -> dict:
+    cfg = environment.cfg
+    summary = {
+        "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "mode": "smoke" if smoke else ("suite:" + suite if suite else "full"),
+        "offline": offline or not have_key,
+        "judges_ran": environment.run_judges,
+        "answer_model": cfg.models.answer_model,
+        "judge_model": cfg.models.judge_model,
+        "prompt_versions": environment.prompt_versions,
+        "corpus_version": environment.corpus_version,
+        "duration_seconds": round(time.monotonic() - started, 1),
+        "cost": _cost_block(cfg, usage),
+        "execution": {
+            "jobs": jobs,
+            "cache": environment.cache.stats(),
+            "only_failed": only_failed,
+            "since": since or (reference_dir.name if only_failed and reference_dir else None),
+            "reused_cases": reused_count,
+            "executed_cases": executed_count,
+        },
+        "suites": {
+            name: _suite_entry(name, total, trials, replicates)
+            for name, total in sorted(totals.items())
+        },
+        "total": {
+            "passed": sum(total["passed"] for total in totals.values()),
+            "total": sum(total["total"] for total in totals.values()),
+        },
+    }
+    if replicates > 1:
+        summary["replicates"] = replicates
+    return summary
+
+
+def _add_summary_evidence(summary: dict, records: list[dict]) -> None:
+    verdicts = pair_verdicts(records)
+    if verdicts and "sensitivity" in summary["suites"]:
+        summary["suites"]["sensitivity"]["pairs_passed"] = sum(verdicts.values())
+        summary["suites"]["sensitivity"]["pairs_total"] = len(verdicts)
+    parity = parity_delta(records)
+    if parity:
+        summary["parity"] = parity
+
+
 def run(
     *,
     smoke: bool = False,
@@ -398,28 +693,8 @@ def run(
     since: str | None = None,
     replicates: int = 1,
 ) -> Path:
-    if replicates < 1:
-        raise SystemExit("--replicates must be >= 1")
-    if replicates > 1:
-        if only_failed or since:
-            raise SystemExit(
-                "--replicates cannot combine with --since/--only-failed: a variance "
-                "run must score every case fresh (reused cases contribute no trials)"
-            )
-        # A cache-served replicate returns byte-identical answers and verdicts
-        # and would measure zero variance, so replicate runs always bypass the
-        # answer/judge cache (equivalent to --no-cache).
-        use_cache = False
-    cfg = config.Config()
-    if offline:
-        cfg = config.Config(
-            models=config.ModelConfig(provider="mock", answer_model="mock", judge_model="mock")
-        )
-    if cfg.models.provider != "mock":
-        assert cfg.models.judge_model != cfg.models.answer_model, (
-            "judge model must differ from answer model"
-        )
-
+    use_cache = _replicate_cache_policy(replicates, only_failed, since, use_cache)
+    cfg = _run_config(offline)
     have_key = not offline and _have_credentials(cfg.models.provider)
     if not offline and not have_key:
         print(
@@ -437,242 +712,44 @@ def run(
             since=since,
             replicates=replicates,
         )
-
-    suites = load_suites(suite)
-    if not suites:
-        raise SystemExit("no suites found")
-    validate_cases(suites)
-
-    chunks = load_chunks()
-    corpus_doc_ids = {c.doc_id for c in chunks}
-    corpus_version = corpus.corpus_version(chunks)
-    facts_by_doc: dict[str, list] = collections.defaultdict(list)
-    for fact in facts_module.load_facts(config.FACTS_PATH):
-        facts_by_doc[fact.doc_id].append(fact)
-    retriever = Retriever(chunks, cfg.retrieval)
-    run_judges = have_key and cfg.models.provider != "mock"
-
-    cache = EvalCache(config.EVAL_CACHE_DIR, enabled=use_cache)
-    answer_model: Model = get_model(cfg.models.provider, cfg.models.answer_model)
-    judge_model: Model = get_model(cfg.models.provider, cfg.models.judge_model)
-    if use_cache:
-        answer_model = CachingModel(
-            answer_model, cache, provider=cfg.models.provider, kind="answer"
-        )
-        judge_model = CachingModel(judge_model, cache, provider=cfg.models.provider, kind="judge")
-
-    prompt_versions = {
-        name: config.prompt_version(name)
-        for name in ("system", "answer_user", "judge_groundedness", "judge_helpfulness")
-    }
-
-    # Flatten to an ordered case list (respecting --smoke) once, so
-    # --only-failed / --since filtering and the concurrent executor both work
-    # off the same sequence.
-    ordered_cases = [
-        case for s in suites for case in s["cases"] if not (smoke and not case.get("smoke"))
-    ]
-
-    reference_dir = None
-    reference_records: dict[str, dict] = {}
-    if only_failed or since:
-        reference_dir = _resolve_reference_run(since)
-        if reference_dir is not None:
-            reference_records = _load_records(reference_dir)
-
-    if only_failed:
-        failed_ids = {cid for cid, r in reference_records.items() if not r.get("passed", True)}
-        ordered_cases = [c for c in ordered_cases if c["id"] in failed_ids]
-        if not ordered_cases:
-            raise SystemExit(
-                "--only-failed: no failed cases in reference run "
-                f"({reference_dir or 'none found'}); nothing to do"
-            )
-
-    def _case_key(case: dict) -> str:
-        content = json.dumps(case["turns"]) if case.get("turns") else case["question"]
-        return case_content_key(
-            case_id=case["id"],
-            question_or_turns=content,
-            expected_behavior=case["expected_behavior"],
-            provider=cfg.models.provider,
-            answer_model=cfg.models.answer_model,
-            judge_model=cfg.models.judge_model,
-            corpus_version=corpus_version,
-            prompt_versions=prompt_versions,
-            run_judges=run_judges,
-        )
-
-    to_run: list[dict] = []
-    reused: list[dict] = []
-    if since and reference_dir is not None:
-        for case in ordered_cases:
-            prior = reference_records.get(case["id"])
-            if prior and prior.get("case_key") == _case_key(case):
-                reused.append(prior)
-            else:
-                to_run.append(case)
-    else:
-        to_run = ordered_cases
-
+    environment = _prepare_environment(
+        cfg=cfg, suite=suite, smoke=smoke, have_key=have_key, use_cache=use_cache
+    )
+    ordered_cases, to_run, reused, reference_dir = _select_cases(
+        environment, only_failed=only_failed, since=since
+    )
     run_dir = config.EVAL_RUNS_DIR / datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True, exist_ok=True)
     results_path = run_dir / "results.jsonl"
-
-    totals: dict[str, dict[str, int]] = {}
-    # Per-suite (successes, trials) across all replicate passes, used only when
-    # replicates > 1 to derive a mean pass rate and a Wilson interval.
-    trials: dict[str, dict[str, int]] = {}
-    # Exact token usage, split by model (answer vs judge) since they price
-    # differently. Aggregated into an estimated per-run cost in the summary.
-    # Reused (--since) cases spent no tokens this run, so they contribute 0.
-    # [canonical input total, output, cache creation input, cache read input]
-    usage = {"answer": [0, 0, 0, 0], "judge": [0, 0, 0, 0]}
     started = time.monotonic()
-
-    def _execute(case: dict) -> tuple[dict, dict[str, list[int]], int]:
-        """Run one case's replicate passes (sequentially, within this worker —
-        so a multi-turn replay is never interleaved) and return
-        (record, usage, passes). The first pass supplies the full trace; passes
-        across replicates form the case's pass fraction. At N=1 this is exactly
-        one `_run_case` call."""
-        agg: dict[str, list[int]] = {
-            "answer": [0, 0, 0, 0],
-            "judge": [0, 0, 0, 0],
-        }
-        record: dict | None = None
-        passes = 0
-        for _rep in range(replicates):
-            rep_record, case_usage = _run_case(
-                case,
-                answer_model=answer_model,
-                judge_model=judge_model,
-                retriever=retriever,
-                cfg=cfg,
-                corpus_doc_ids=corpus_doc_ids,
-                facts_by_doc=facts_by_doc,
-                run_judges=run_judges,
-            )
-            for kind in ("answer", "judge"):
-                for index in range(4):
-                    agg[kind][index] += case_usage[kind][index]
-            passes += int(rep_record["passed"])
-            if record is None:
-                record = rep_record
-        assert record is not None
-        if replicates > 1:
-            # A case's "passed" stays the first pass's verdict (its trace);
-            # pass_fraction carries the measured across-replicate rate for the
-            # interval and for compare.py. Suite totals count majority votes.
-            record["replicates"] = replicates
-            record["pass_fraction"] = round(passes / replicates, 4)
-        record["case_key"] = _case_key(case)
-        return record, agg, passes
-
-    fresh_by_id: dict[str, tuple[dict, dict[str, list[int]], int]] = {}
-    if jobs <= 1:
-        for case in to_run:
-            fresh_by_id[case["id"]] = _execute(case)
-    else:
-        with ThreadPoolExecutor(max_workers=jobs) as pool:
-            futures = {pool.submit(_execute, case): case["id"] for case in to_run}
-            for fut in as_completed(futures):
-                fresh_by_id[futures[fut]] = fut.result()
-
-    # Reassemble in the original suite order regardless of execution/reuse
-    # path, so results.jsonl is stable run to run for the same case set.
-    reused_by_id = {r["case_id"]: r for r in reused}
-    records = []
-    for case in ordered_cases:
-        if case["id"] in fresh_by_id:
-            record, case_usage, passes = fresh_by_id[case["id"]]
-            usage["answer"][0] += case_usage["answer"][0]
-            usage["answer"][1] += case_usage["answer"][1]
-            usage["answer"][2] += case_usage["answer"][2]
-            usage["answer"][3] += case_usage["answer"][3]
-            usage["judge"][0] += case_usage["judge"][0]
-            usage["judge"][1] += case_usage["judge"][1]
-            usage["judge"][2] += case_usage["judge"][2]
-            usage["judge"][3] += case_usage["judge"][3]
-            status = "PASS" if record["passed"] else "FAIL"
-        else:
-            record = reused_by_id[case["id"]]
-            passes = int(record["passed"])  # reuse path implies replicates == 1
-            status = ("PASS" if record["passed"] else "FAIL") + " (reused)"
-        records.append(record)
-        t = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
-        t["total"] += 1
-        # Count a case as passed by majority vote across replicates (== the
-        # single pass at N=1), so passed/total stays interpretable.
-        t["passed"] += 1 if passes * 2 >= replicates else 0
-        tr = trials.setdefault(case["suite"], {"successes": 0, "trials": 0})
-        tr["successes"] += passes
-        tr["trials"] += replicates
-        print(f"{status}  {case['id']}")
+    fresh = _execute_cases(to_run, environment, jobs=jobs, replicates=replicates)
+    records, totals, trials, usage = _assemble_records(
+        ordered_cases, fresh, reused, replicates=replicates
+    )
 
     with results_path.open("w", encoding="utf-8") as f:
-        for r in records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-
-    cache.save()
-
-    def _suite_entry(name: str, t: dict[str, int]) -> dict:
-        entry = {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
-        if replicates > 1:
-            # Report the mean pass rate over all replicate trials and its Wilson
-            # 95% interval, so the headline is a measured band, not a point.
-            tr = trials[name]
-            low, high = wilson_interval(tr["successes"], tr["trials"])
-            entry["pass_rate"] = round(100 * tr["successes"] / tr["trials"], 1)
-            entry["ci_low"] = round(100 * low, 1)
-            entry["ci_high"] = round(100 * high, 1)
-            entry["replicates"] = replicates
-        return entry
-
-    summary = {
-        "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        "mode": "smoke" if smoke else ("suite:" + suite if suite else "full"),
-        "offline": offline or not have_key,
-        "judges_ran": run_judges,
-        "answer_model": cfg.models.answer_model,
-        "judge_model": cfg.models.judge_model,
-        "prompt_versions": prompt_versions,
-        # Pinned so the provenance gate (evals/provenance.py) can prove EVALS.md,
-        # the baseline, and the audit dataset describe the same corpus HEAD ships.
-        "corpus_version": corpus_version,
-        "duration_seconds": round(time.monotonic() - started, 1),
-        "cost": _cost_block(cfg, usage),
-        "execution": {
-            "jobs": jobs,
-            "cache": cache.stats(),
-            "only_failed": only_failed,
-            "since": since or (reference_dir.name if only_failed and reference_dir else None),
-            "reused_cases": len(reused),
-            "executed_cases": len(to_run),
-        },
-        "suites": {name: _suite_entry(name, t) for name, t in sorted(totals.items())},
-        "total": {
-            "passed": sum(t["passed"] for t in totals.values()),
-            "total": sum(t["total"] for t in totals.values()),
-        },
-    }
-    if replicates > 1:
-        summary["replicates"] = replicates
-
-    # Counterfactual sensitivity: fold the pair-level verdict into the
-    # sensitivity suite's summary. A pair is distinguished only if every one of
-    # its variants passed (see `pair_verdicts`).
-    verdicts = pair_verdicts(records)
-    if verdicts and "sensitivity" in summary["suites"]:
-        summary["suites"]["sensitivity"]["pairs_passed"] = sum(verdicts.values())
-        summary["suites"]["sensitivity"]["pairs_total"] = len(verdicts)
-
-    # Bilingual parity (M-1): record the ES-vs-mirrored-EN delta alongside the
-    # scoreboard so downstream tools (report, history) read one number instead
-    # of re-deriving it from records.
-    parity = parity_delta(records)
-    if parity:
-        summary["parity"] = parity
+        for record in records:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    environment.cache.save()
+    summary = _build_summary(
+        environment=environment,
+        totals=totals,
+        trials=trials,
+        usage=usage,
+        started=started,
+        smoke=smoke,
+        suite=suite,
+        offline=offline,
+        have_key=have_key,
+        jobs=jobs,
+        only_failed=only_failed,
+        since=since,
+        reference_dir=reference_dir,
+        reused_count=len(reused),
+        executed_count=len(to_run),
+        replicates=replicates,
+    )
+    _add_summary_evidence(summary, records)
 
     (run_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"

@@ -188,7 +188,7 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
     return "\n".join(lines)
 
 
-def generate_markdown(summary: dict, records: list[dict]) -> str:
+def _report_intro(summary: dict) -> list[str]:
     total = summary["total"]
     lines = [
         "# Evaluation Report",
@@ -216,6 +216,11 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         lines.append(f"| {name} | {s['passed']} | {s['total']} | {_rate_cell(s)} |")
     pct = round(100 * total["passed"] / total["total"], 1) if total["total"] else 0
     lines.append(f"| **all** | **{total['passed']}** | **{total['total']}** | **{pct}%** |")
+    return lines
+
+
+def _scoreboard_notes(summary: dict) -> list[str]:
+    lines: list[str] = []
     if summary.get("replicates", 1) > 1:
         lines += [
             "",
@@ -251,7 +256,11 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 f"**Below-macro suite:** {name} at {o['pass_rate']}% vs macro {o['macro']}% "
                 f"(floor {o['floor']}%) — {tag}"
             )
+    return lines
 
+
+def _language_and_calibration_sections(summary: dict, records: list[dict]) -> list[str]:
+    lines: list[str] = []
     parity = _spanish_parity(records)
     if parity:
         lines += ["", "## Spanish parity", "", parity]
@@ -287,8 +296,43 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         lines += ["", "## Judge calibration", "", cal]
 
     lines += ["", "## Measuring variance", "", _variance_section()]
+    return lines
 
+
+def _failure_record_lines(record: dict, suite: str) -> list[str]:
+    lines = [f"### {record['case_id']} ({suite})", ""]
+    if record.get("turns"):
+        lines += ["**Conversation:**", ""]
+        lines += [f"{index}. {turn}" for index, turn in enumerate(record["turns"], 1)]
+        lines.append("")
+    else:
+        lines += [f"**Question:** {record['question']}", ""]
     lines += [
+        f"**Why this case exists:** {record['rationale']}",
+        "",
+        "**Retrieved passages:**",
+        "",
+    ]
+    lines += [
+        f"- `{passage['chunk_id']}` ({passage['section']}, score {passage['score']}): "
+        f"{passage['text'][:200]}…"
+        for passage in record["passages"][:3]
+    ]
+    lines += ["", f"**Answer ({record['kind']}):** {record['answer']}", ""]
+    if record.get("raw_model_answer"):
+        lines += [
+            "**Model text the guard blocked (never shown to riders):** "
+            + record["raw_model_answer"][:500],
+            "",
+        ]
+    lines += ["**Failed checks:**", ""]
+    lines += [f"- {failed}" for failed in _failed_checks(record)] or ["- (judge only)"]
+    lines.append("")
+    return lines
+
+
+def _representative_failures(summary: dict, records: list[dict]) -> list[str]:
+    lines = [
         "",
         "## Representative failures",
         "",
@@ -297,49 +341,19 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
     ]
     any_failures = False
     for suite in summary["suites"]:
-        failures = [r for r in records if r["suite"] == suite and not r["passed"]]
-        for r in failures[:FAILURES_PER_SUITE]:
+        failures = [
+            record for record in records if record["suite"] == suite and not record["passed"]
+        ]
+        for record in failures[:FAILURES_PER_SUITE]:
             any_failures = True
-            lines += [f"### {r['case_id']} ({suite})", ""]
-            if r.get("turns"):
-                lines.append("**Conversation:**")
-                lines.append("")
-                for i, turn in enumerate(r["turns"], 1):
-                    lines.append(f"{i}. {turn}")
-                lines.append("")
-            else:
-                lines += [f"**Question:** {r['question']}", ""]
-            lines += [
-                f"**Why this case exists:** {r['rationale']}",
-                "",
-                "**Retrieved passages:**",
-                "",
-            ]
-            for p in r["passages"][:3]:
-                lines.append(
-                    f"- `{p['chunk_id']}` ({p['section']}, score {p['score']}): {p['text'][:200]}…"
-                )
-            lines += [
-                "",
-                f"**Answer ({r['kind']}):** {r['answer']}",
-                "",
-            ]
-            if r.get("raw_model_answer"):
-                lines += [
-                    "**Model text the guard blocked (never shown to riders):** "
-                    + r["raw_model_answer"][:500],
-                    "",
-                ]
-            lines += [
-                "**Failed checks:**",
-                "",
-            ]
-            lines += [f"- {fc}" for fc in _failed_checks(r)] or ["- (judge only)"]
-            lines.append("")
+            lines += _failure_record_lines(record, suite)
     if not any_failures:
         lines.append("No failures in this run.")
+    return lines
 
-    lines += [
+
+def _report_footer(summary: dict, records: list[dict]) -> list[str]:
+    return [
         "",
         "---",
         "Regenerate with `make eval` (full) or `python -m evals.report` (report only).",
@@ -357,13 +371,19 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 "corpus_version": _corpus_version(summary),
                 "prompt_versions": summary["prompt_versions"],
                 "suites": summary["suites"],
-                # None when the run had no complete mirror pairs; the
-                # committed-report parity check treats that as skip-with-note.
                 "parity": parity_delta(records),
             }
         ),
         "",
     ]
+
+
+def generate_markdown(summary: dict, records: list[dict]) -> str:
+    lines = _report_intro(summary)
+    lines += _scoreboard_notes(summary)
+    lines += _language_and_calibration_sections(summary, records)
+    lines += _representative_failures(summary, records)
+    lines += _report_footer(summary, records)
     return "\n".join(lines)
 
 

@@ -26,6 +26,12 @@ rather than tied to a published tag.
   runs.
 
 ### Changed
+- Ruff now enforces a cyclomatic-complexity budget of 10 (`C90`) across
+  first-party Python in the normal lint and merge gates. Seven existing
+  hotspots in evaluation checks, run orchestration, report/history rendering,
+  language negotiation, and structural accessibility checking were split into
+  focused helpers so the new gate lands without suppressions or a weaker
+  threshold.
 - Hash-pinned rider deploy bundle (roadmap M-7 / audit P1-6, 2026-07-17):
   `infra/deploy.sh` now installs only from `infra/requirements-deploy.txt`
   (a `uv export` of the locked runtime set) with `--require-hashes`, so the

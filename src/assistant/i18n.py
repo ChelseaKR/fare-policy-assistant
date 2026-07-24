@@ -46,6 +46,33 @@ SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "es", "tl")
 DEFAULT_LANGUAGE = "en"
 
 
+def _parse_language_range(part: str, index: int) -> tuple[float, int, str] | None:
+    token = part.strip()
+    if not token:
+        return None
+    tag_part, _sep, params = token.partition(";")
+    tag = tag_part.strip().lower()
+    if not tag:
+        return None
+    weight = 1.0
+    params = params.strip()
+    if params.startswith("q="):
+        try:
+            weight = float(params[2:])
+        except ValueError:
+            weight = 0.0
+    return weight, -index, tag
+
+
+def _supported_language(tag: str) -> str | None:
+    if tag == "*":
+        return DEFAULT_LANGUAGE
+    if tag in SUPPORTED_LANGUAGES:
+        return tag
+    primary = tag.split("-", 1)[0]
+    return primary if primary in SUPPORTED_LANGUAGES else None
+
+
 def get_translation(lang: str) -> gettext.NullTranslations:
     """Return the gettext catalog for ``lang``, falling back to English text.
 
@@ -71,32 +98,17 @@ def negotiate_lang(accept_language: str | None) -> str:
     """
     if not accept_language:
         return DEFAULT_LANGUAGE
-    ranked: list[tuple[float, int, str]] = []
-    for index, part in enumerate(accept_language.split(",")):
-        token = part.strip()
-        if not token:
-            continue
-        tag_part, _sep, params = token.partition(";")
-        tag = tag_part.strip().lower()
-        if not tag:
-            continue
-        weight = 1.0
-        params = params.strip()
-        if params.startswith("q="):
-            try:
-                weight = float(params[2:])
-            except ValueError:
-                weight = 0.0
-        # index breaks q ties in source order (earlier = higher priority).
-        ranked.append((weight, -index, tag))
+    ranked = [
+        parsed
+        for index, part in enumerate(accept_language.split(","))
+        if (parsed := _parse_language_range(part, index)) is not None
+    ]
     for weight, _neg_index, tag in sorted(ranked, reverse=True):
         if weight <= 0.0:
             continue
-        if tag == "*" or tag in SUPPORTED_LANGUAGES:
-            return DEFAULT_LANGUAGE if tag == "*" else tag
-        primary = tag.split("-", 1)[0]
-        if primary in SUPPORTED_LANGUAGES:
-            return primary
+        matched = _supported_language(tag)
+        if matched is not None:
+            return matched
     return DEFAULT_LANGUAGE
 
 

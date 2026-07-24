@@ -209,32 +209,18 @@ def generate_markdown(runs: list[dict], svg_name: str = "eval-history.svg") -> s
     return "\n".join(lines)
 
 
-def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, int]:
-    """One instrument panel (axes + a polyline per suite and for overall),
-    returning the SVG fragment, the y-offset for the next panel, and the panel
-    width."""
-    pad_l, pad_r, pad_t, pad_b = 48, 170, 40, 44
-    plot_w, plot_h = 560, 200
-    width = pad_l + plot_w + pad_r
-    panel_h = pad_t + plot_h + pad_b
-    # Local (panel) coordinates: the whole panel is wrapped in a
-    # translate(0, top) group, so nothing here may add `top` again.
-    x0, y0 = pad_l, pad_t
+def _plot_x(index: int, count: int, x0: int, plot_w: int) -> float:
+    if count <= 1:
+        return x0 + plot_w / 2
+    return x0 + plot_w * index / (count - 1)
 
-    def px(i: int, n: int) -> float:
-        if n <= 1:
-            return x0 + plot_w / 2
-        return x0 + plot_w * i / (n - 1)
 
-    def py(v: float) -> float:
-        return y0 + plot_h * (1 - max(0.0, min(100.0, v)) / 100)
+def _plot_y(value: float, y0: int, plot_h: int) -> float:
+    return y0 + plot_h * (1 - max(0.0, min(100.0, value)) / 100)
 
-    parts: list[str] = [f'<g transform="translate(0,{top})">']
-    parts.append(
-        f'<text x="{x0}" y="24" font-size="15" font-weight="700" '
-        f'fill="#111827">{_esc(instrument)} — {len(group)} run(s)</text>'
-    )
-    # y gridlines + labels at 0/25/50/75/100.
+
+def _panel_axes(group: list[dict], x0: int, pad_t: int, plot_w: int, plot_h: int) -> list[str]:
+    parts: list[str] = []
     for val in (0, 25, 50, 75, 100):
         gy = pad_t + plot_h * (1 - val / 100)
         parts.append(
@@ -245,44 +231,65 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
             f'<text x="{x0 - 8}" y="{gy + 4}" font-size="11" '
             f'text-anchor="end" fill="#6b7280">{val}</text>'
         )
-    # x axis baseline + first/last run labels.
     parts.append(
         f'<line x1="{x0}" y1="{pad_t + plot_h}" x2="{x0 + plot_w}" '
         f'y2="{pad_t + plot_h}" stroke="#9ca3af" stroke-width="1"/>'
     )
-    n = len(group)
     first_lbl = group[0]["run_at"][:10]
     last_lbl = group[-1]["run_at"][:10]
     ylab = pad_t + plot_h + 18
     parts.append(
         f'<text x="{x0}" y="{ylab}" font-size="10" fill="#6b7280">{_esc(first_lbl)}</text>'
     )
-    if n > 1:
+    if len(group) > 1:
         parts.append(
             f'<text x="{x0 + plot_w}" y="{ylab}" font-size="10" '
             f'text-anchor="end" fill="#6b7280">{_esc(last_lbl)}</text>'
         )
+    return parts
 
-    # One series per suite, then overall on top. Missing suites break the line.
+
+def _panel_series(group: list[dict]) -> list[tuple[str, str, list[tuple[int, float]]]]:
     series: list[tuple[str, str, list[tuple[int, float]]]] = []
     for idx, name in enumerate(_suite_names(group)):
         color = _SERIES_COLORS[idx % len(_SERIES_COLORS)]
         pts = [(i, r["suites"][name]) for i, r in enumerate(group) if name in r["suites"]]
         series.append((name, color, pts))
     series.append(("overall", _OVERALL_COLOR, [(i, r["overall"]) for i, r in enumerate(group)]))
+    return series
 
+
+def _render_series(
+    series: list[tuple[str, str, list[tuple[int, float]]]],
+    count: int,
+    x0: int,
+    y0: int,
+    plot_w: int,
+    plot_h: int,
+) -> list[str]:
+    parts: list[str] = []
     for name, color, pts in series:
         width_stroke = "3" if name == "overall" else "1.5"
         if len(pts) >= 2:
-            coords = " ".join(f"{px(i, n):.1f},{py(v):.1f}" for i, v in pts)
+            coords = " ".join(
+                f"{_plot_x(i, count, x0, plot_w):.1f},{_plot_y(v, y0, plot_h):.1f}" for i, v in pts
+            )
             parts.append(
                 f'<polyline fill="none" stroke="{color}" '
                 f'stroke-width="{width_stroke}" points="{coords}"/>'
             )
         for i, v in pts:
-            parts.append(f'<circle cx="{px(i, n):.1f}" cy="{py(v):.1f}" r="2.5" fill="{color}"/>')
+            parts.append(
+                f'<circle cx="{_plot_x(i, count, x0, plot_w):.1f}" '
+                f'cy="{_plot_y(v, y0, plot_h):.1f}" r="2.5" fill="{color}"/>'
+            )
+    return parts
 
-    # Legend down the right margin.
+
+def _panel_legend(
+    series: list[tuple[str, str, list[tuple[int, float]]]], x0: int, pad_t: int, plot_w: int
+) -> list[str]:
+    parts: list[str] = []
     lx = x0 + plot_w + 16
     ly = pad_t + 6
     for name, color, _pts in series:
@@ -294,6 +301,25 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
             f'<text x="{lx + 26}" y="{ly}" font-size="11" fill="#374151">{_esc(name)}</text>'
         )
         ly += 18
+    return parts
+
+
+def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, int]:
+    """Render one instrument panel and return it with the next y offset and width."""
+    pad_l, pad_r, pad_t, pad_b = 48, 170, 40, 44
+    plot_w, plot_h = 560, 200
+    width = pad_l + plot_w + pad_r
+    panel_h = pad_t + plot_h + pad_b
+    x0, y0 = pad_l, pad_t
+    parts: list[str] = [
+        f'<g transform="translate(0,{top})">',
+        f'<text x="{x0}" y="24" font-size="15" font-weight="700" '
+        f'fill="#111827">{_esc(instrument)} — {len(group)} run(s)</text>',
+    ]
+    parts += _panel_axes(group, x0, pad_t, plot_w, plot_h)
+    series = _panel_series(group)
+    parts += _render_series(series, len(group), x0, y0, plot_w, plot_h)
+    parts += _panel_legend(series, x0, pad_t, plot_w)
 
     parts.append("</g>")
     return "\n".join(parts), top + panel_h, width

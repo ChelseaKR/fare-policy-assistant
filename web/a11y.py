@@ -49,10 +49,8 @@ def _min_target_ok(css: str) -> bool:
     return base is not None and float(base.group(1)) >= MIN_TARGET_REM
 
 
-def check_html(html: str) -> list[str]:
-    soup = BeautifulSoup(html, "html.parser")
+def _document_issues(soup: BeautifulSoup) -> list[str]:
     issues: list[str] = []
-
     root = soup.find("html")
     if not (isinstance(root, Tag) and _attr(root, "lang").strip()):
         issues.append("html element is missing a lang attribute")
@@ -63,7 +61,11 @@ def check_html(html: str) -> list[str]:
     content = _attr(viewport, "content") if isinstance(viewport, Tag) else ""
     if "user-scalable=no" in content or re.search(r"maximum-scale=\s*1\b", content):
         issues.append("viewport disables zoom (fails 1.4.4 Resize Text)")
+    return issues
 
+
+def _heading_issues(soup: BeautifulSoup) -> list[str]:
+    issues: list[str] = []
     h1s = soup.find_all("h1")
     if len(h1s) != 1:
         issues.append(f"expected exactly one <h1>, found {len(h1s)}")
@@ -72,7 +74,11 @@ def check_html(html: str) -> list[str]:
         if cur > prev + 1:
             issues.append(f"heading level skips from h{prev} to h{cur}")
             break
+    return issues
 
+
+def _control_issues(soup: BeautifulSoup) -> list[str]:
+    issues: list[str] = []
     for el in soup.find_all(["input", "textarea", "select", "button"]):
         if not isinstance(el, Tag):
             continue
@@ -82,7 +88,11 @@ def check_html(html: str) -> list[str]:
                 continue
         if not _accessible_name(el, soup):
             issues.append(f"<{el.name}> has no accessible name: {str(el)[:60]}")
+    return issues
 
+
+def _content_issues(soup: BeautifulSoup) -> list[str]:
+    issues: list[str] = []
     for a in soup.find_all("a"):
         if isinstance(a, Tag) and not (a.get_text(strip=True) or _attr(a, "aria-label").strip()):
             issues.append(f"<a> has no discernible text: {str(a)[:60]}")
@@ -94,8 +104,17 @@ def check_html(html: str) -> list[str]:
     style = soup.find("style")
     if not (style and _min_target_ok(style.get_text())):
         issues.append("no button min-height >= 24px in CSS (fails 2.5.8 Target Size)")
-
     return issues
+
+
+def check_html(html: str) -> list[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    return [
+        *_document_issues(soup),
+        *_heading_issues(soup),
+        *_control_issues(soup),
+        *_content_issues(soup),
+    ]
 
 
 def main() -> int:

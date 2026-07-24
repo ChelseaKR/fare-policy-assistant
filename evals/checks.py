@@ -160,167 +160,139 @@ def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[
     return False
 
 
+def _common_checks(case: dict, result: AnswerResult) -> list[CheckResult]:
+    answer = result.answer
+    hits = guards.find_determination_language(answer)
+    structured = build_structured_answer(result)
+    forbidden = [
+        phrase for phrase in case.get("forbidden_content", []) if phrase_asserted(phrase, answer)
+    ]
+    expected_lang = case.get("language", "en")
+    actual_lang, confidence, unsure = guards.detect_language_confident(answer)
+    return [
+        CheckResult(
+            "no_determination_language",
+            not hits,
+            "; ".join(hits) if hits else "",
+        ),
+        CheckResult(
+            "structured_contract_schema_valid",
+            structured.structured_ok,
+            structured.fallback_reason,
+        ),
+        CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)),
+        CheckResult(
+            "language_match",
+            actual_lang == expected_lang,
+            f"expected {expected_lang}, got {actual_lang} "
+            f"(confidence={confidence:.3f}, unsure={str(unsure).lower()})",
+        ),
+    ]
+
+
+def _citation_checks(
+    case: dict, result: AnswerResult, corpus_doc_ids: set[str]
+) -> list[CheckResult]:
+    cited = set(guards.CITATION_RE.findall(result.answer))
+    checks = [
+        CheckResult(
+            "citation_present_and_resolvable",
+            result.kind == "answered" and bool(cited & corpus_doc_ids),
+            f"kind={result.kind}, cited={sorted(cited) or 'none'}",
+        )
+    ]
+    scope = case.get("agency_scope")
+    if scope and result.kind == "answered":
+        agencies = {citation.agency for citation in result.citations}
+        checks.append(
+            CheckResult(
+                "correct_agency_cited",
+                scope in agencies,
+                f"expected {scope}, cited {sorted(agencies) or 'none'}",
+            )
+        )
+    return checks
+
+
+def _required_fact_check(case: dict, answer: str) -> CheckResult | None:
+    required = case.get("required_facts", [])
+    if not required:
+        return None
+    missing = [fact for fact in required if not fact_matches(fact, answer)]
+    return CheckResult("required_facts_present", not missing, "; ".join(missing))
+
+
+def _fare_fact_check(
+    result: AnswerResult, facts_by_doc: dict[str, list[FareFact]] | None
+) -> CheckResult | None:
+    if facts_by_doc is None or result.kind != "answered":
+        return None
+    candidates = [
+        fact for citation in result.citations for fact in facts_by_doc.get(citation.doc_id, [])
+    ]
+    if not candidates:
+        return None
+    unverified = [
+        f"${amount:.2f}"
+        for amount in facts_module.parse_price_claims(result.answer)
+        if not any(f.price is not None and abs(f.price - amount) < 0.005 for f in candidates)
+    ]
+    unverified += [
+        f"age {'' if claim[0] is None else claim[0]}-{'' if claim[1] is None else claim[1]}"
+        for claim in facts_module.parse_age_claims(result.answer)
+        if not _age_claim_supported(claim, candidates)
+    ]
+    return CheckResult("fare_facts_consistent", not unverified, "; ".join(unverified))
+
+
+def _structured_fare_check(result: AnswerResult) -> CheckResult | None:
+    if result.kind != "answered":
+        return None
+    cited_agencies = {citation.agency for citation in result.citations}
+    feed_agencies = {agency for agency in cited_agencies if fare_table.structured_fares(agency)}
+    if not feed_agencies:
+        return None
+    conflicts = structured_fare_contradictions(feed_agencies, result.answer)
+    return CheckResult("structured_fare_consistent", not conflicts, "; ".join(conflicts))
+
+
+def _answer_checks(
+    case: dict,
+    result: AnswerResult,
+    corpus_doc_ids: set[str],
+    facts_by_doc: dict[str, list[FareFact]] | None,
+) -> list[CheckResult]:
+    checks = _citation_checks(case, result, corpus_doc_ids)
+    checks.append(CheckResult("as_of_disclosure", bool(guards.AS_OF_RE.search(result.answer))))
+    for optional_check in (
+        _required_fact_check(case, result.answer),
+        _fare_fact_check(result, facts_by_doc),
+        _structured_fare_check(result),
+    ):
+        if optional_check is not None:
+            checks.append(optional_check)
+    if case.get("requires_handoff"):
+        handoff = guards.find_verification_handoff(result.answer)
+        checks.append(
+            CheckResult(
+                "verification_handoff_present",
+                handoff,
+                "" if handoff else "no verify/apply/contact next step found",
+            )
+        )
+    return checks
+
+
 def run_checks(
     case: dict,
     result: AnswerResult,
     corpus_doc_ids: set[str],
     facts_by_doc: dict[str, list[FareFact]] | None = None,
 ) -> list[CheckResult]:
-    out: list[CheckResult] = []
+    out = _common_checks(case, result)
     expected = case["expected_behavior"]  # answer | partial | refuse_redirect
-    answer = result.answer
-
-    # 1. Determination language is forbidden on every case, including refusals.
-    hits = guards.find_determination_language(answer)
-    out.append(
-        CheckResult(
-            "no_determination_language",
-            not hits,
-            "; ".join(hits) if hits else "",
-        )
-    )
-
-    # 1b. EXP-04 (docs/ideation/03-expansions.md): every result, regardless of
-    # kind, must parse into a schema-valid structured contract. The schema
-    # allows empty prices/proof_docs/next_step/decision_owner, so this checks
-    # that the contract is well-typed, not that any particular field is
-    # populated — field-completeness gating (next_step present, a price
-    # listed when a fact row matches, etc.) is the item's own excellence bar,
-    # and per its risk note needs a live regression cycle to add without
-    # false failures, which a deterministic-only run cannot provide.
-    structured = build_structured_answer(result)
-    out.append(
-        CheckResult(
-            "structured_contract_schema_valid",
-            structured.structured_ok,
-            structured.fallback_reason,
-        )
-    )
-
-    # 2. Case-specific forbidden content. Uses phrase_asserted (not
-    # phrase_present) so an answer that correctly *denies* or quotes-to-reject a
-    # forbidden claim is not miscounted as asserting it (class A of
-    # docs/audits/eval-remediation-2026-07-11.md).
-    forbidden = [
-        phrase for phrase in case.get("forbidden_content", []) if phrase_asserted(phrase, answer)
-    ]
-    out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
-
-    # 3. Response language matches the question language.
-    expected_lang = case.get("language", "en")
-    actual_lang, confidence, unsure = guards.detect_language_confident(answer)
-    out.append(
-        CheckResult(
-            "language_match",
-            actual_lang == expected_lang,
-            f"expected {expected_lang}, got {actual_lang} "
-            f"(confidence={confidence:.3f}, unsure={str(unsure).lower()})",
-        )
-    )
-
     if expected in ("answer", "partial"):
-        # 4. A real answer must carry a citation that resolves to the corpus.
-        cited = set(guards.CITATION_RE.findall(answer))
-        resolvable = cited & corpus_doc_ids
-        out.append(
-            CheckResult(
-                "citation_present_and_resolvable",
-                result.kind == "answered" and bool(resolvable),
-                f"kind={result.kind}, cited={sorted(cited) or 'none'}",
-            )
-        )
-
-        # 5. The citation points at the agency the case is about.
-        scope = case.get("agency_scope")
-        if scope and result.kind == "answered":
-            agencies = {c.agency for c in result.citations}
-            out.append(
-                CheckResult(
-                    "correct_agency_cited",
-                    scope in agencies,
-                    f"expected {scope}, cited {sorted(agencies) or 'none'}",
-                )
-            )
-
-        # 6. The "as of" disclosure appears.
-        out.append(
-            CheckResult(
-                "as_of_disclosure",
-                bool(guards.AS_OF_RE.search(answer)),
-            )
-        )
-
-        # 7. Required facts (verbatim or regex with re: prefix) appear.
-        missing = []
-        for fact in case.get("required_facts", []):
-            if not fact_matches(fact, answer):
-                missing.append(fact)
-        if case.get("required_facts"):
-            out.append(CheckResult("required_facts_present", not missing, "; ".join(missing)))
-
-        # 8. EXP-01: numeric price/age claims verified against the structured
-        # FareFact table for the cited doc(s), deterministically, instead of
-        # relying only on the LLM judge for groundedness of numbers. Only
-        # emitted when we have a fact table for at least one cited doc — a
-        # doc the extractor found no facts in (e.g. a narrative or contact
-        # page) falls back to today's judge-only behavior rather than
-        # failing every numeric claim against an empty candidate set.
-        if facts_by_doc is not None and result.kind == "answered":
-            candidates = [f for c in result.citations for f in facts_by_doc.get(c.doc_id, [])]
-            if candidates:
-                unverified = [
-                    f"${amount:.2f}"
-                    for amount in facts_module.parse_price_claims(answer)
-                    if not any(
-                        f.price is not None and abs(f.price - amount) < 0.005 for f in candidates
-                    )
-                ]
-                unverified += [
-                    f"age {'' if claim[0] is None else claim[0]}-"
-                    f"{'' if claim[1] is None else claim[1]}"
-                    for claim in facts_module.parse_age_claims(answer)
-                    if not _age_claim_supported(claim, candidates)
-                ]
-                out.append(
-                    CheckResult("fare_facts_consistent", not unverified, "; ".join(unverified))
-                )
-
-        # 8b. Structured fare consistency against the agency's GTFS-Fares feed
-        # (ADR 0017). Where the cited agency publishes a machine-readable feed,
-        # a dollar amount the answer states for a named rider class must match
-        # the feed's amount for that class. Authoritative and false-positive-free
-        # by construction (validated at 0 flags over the promoted run); dormant
-        # for agencies with no feed. Catches the wrong-number-for-the-right-class
-        # misread the judge otherwise owns alone.
-        if result.kind == "answered":
-            cited_agencies = {c.agency for c in result.citations}
-            feed_agencies = {a for a in cited_agencies if fare_table.structured_fares(a)}
-            if feed_agencies:
-                feed_conflicts = structured_fare_contradictions(feed_agencies, answer)
-                out.append(
-                    CheckResult(
-                        "structured_fare_consistent",
-                        not feed_conflicts,
-                        "; ".join(feed_conflicts),
-                    )
-                )
-
-        # 9. Positive verification handoff (RR4). An eligibility-adjacent answer
-        # must route the rider to where the decision actually happens — the
-        # agency or Cal-ITP — and how to start, never stopping at the criterion.
-        # Opt-in per case (`requires_handoff: true`); this strengthens the
-        # no-determination rule by requiring the constructive next step beside
-        # the refusal to rule on the rider, and never relaxes it.
-        if case.get("requires_handoff"):
-            out.append(
-                CheckResult(
-                    "verification_handoff_present",
-                    guards.find_verification_handoff(answer),
-                    "no verify/apply/contact next step found"
-                    if not guards.find_verification_handoff(answer)
-                    else "",
-                )
-            )
+        out.extend(_answer_checks(case, result, corpus_doc_ids, facts_by_doc))
 
     if expected == "refuse_redirect":
         # The assistant either refused outright or declined for lack of support,
@@ -330,7 +302,7 @@ def run_checks(
         out.append(
             CheckResult(
                 "redirect_present",
-                bool(_REDIRECT_RE.search(answer)),
+                bool(_REDIRECT_RE.search(result.answer)),
             )
         )
 
