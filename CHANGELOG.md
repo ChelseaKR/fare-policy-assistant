@@ -8,6 +8,10 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Security
+- Update the locked pypdf dependency from 6.13.3 to 6.14.2, clearing four
+  malformed-document denial-of-service advisories in optional PDF ingestion.
+
 ### Added
 - Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
   I18N-22). A live run now fails when the Spanish-vs-mirrored-English pass
