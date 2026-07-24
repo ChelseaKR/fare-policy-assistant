@@ -8,6 +8,11 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+- Release authorization now runs from reviewed `main` through the immutable
+  portfolio authorizer, verifies and builds the exact selected commit, and
+  hands only distributions, SBOM, and notes to a checkout-free publisher that
+  rechecks the tag object.
+
 ### Added
 - Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
   I18N-22). A live run now fails when the Spanish-vs-mirrored-English pass
