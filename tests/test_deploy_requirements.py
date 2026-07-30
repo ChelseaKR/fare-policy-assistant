@@ -206,8 +206,28 @@ class TestDeployScriptUsesThePinFile:
             "update-function-code"
         )
 
-    def test_bedrock_metric_counts_guarded_model_calls_not_just_cache_misses(self):
+    def test_model_metrics_count_completed_calls_and_estimated_cost(self):
         text = DEPLOY_SH.read_text(encoding="utf-8")
 
-        assert "--filter-pattern '{ $.model_called IS TRUE }'" in text
+        # Keep the legacy proxy for one rollback-compatible release while the
+        # structured metrics become the primary cost and completion signals.
+        assert "_metric_filter bedrock-calls '{ $.model_called IS TRUE }'" in text
+        assert 'GENAI_CALL_FILTER=\'{ $.event = "genai_call"' in text
+        assert "completion_recorded IS TRUE" in text
+        assert 'MODEL_COST_FILTER=\'{ $.event = "genai_call"' in text
+        assert "cost_estimate_available IS TRUE" in text
+        assert "metricName=EstimatedModelCostUsd" in text
+        assert r"metricValue=\$.estimated_cost_usd" in text
+        model_duration = next(
+            line for line in text.splitlines() if "metricName=ModelDurationMs" in line
+        )
+        answer_duration = next(
+            line for line in text.splitlines() if "metricName=AnswerDurationMs" in line
+        )
+        assert r"metricValue=\$.model_duration_ms" in model_duration
+        assert r"metricValue=\$.duration_ms" in answer_duration
+        assert "defaultValue" not in model_duration
+        assert "defaultValue" not in answer_duration
+        assert 'FEEDBACK_DOWN_V2_FILTER=\'{ $.event = "feedback"' in text
+        assert '.verdict = "down"' in text
         assert "--filter-pattern '{ $.cache = \"miss\" }'" not in text

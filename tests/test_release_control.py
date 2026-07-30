@@ -8,6 +8,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import pytest
+
 from assistant import config
 
 DEPLOY = config.REPO_ROOT / "infra" / "deploy.sh"
@@ -21,6 +23,7 @@ def _install_fake_aws(tmp_path: Path) -> Path:
     fake_aws = bin_dir / "aws"
     fake_aws.write_text(
         """#!/usr/bin/env python3
+import base64
 import json
 import os
 import pathlib
@@ -51,6 +54,8 @@ if args[:2] == ["lambda", "invoke"]:
     state.setdefault("invocations", []).append({
         "path": path,
         "question": body.get("question", ""),
+        "health_marker": event.get("fare_assistant_health"),
+        "log_tail": value("--log-type") == "Tail" if "--log-type" in args else False,
     })
     save()
     headers = {
@@ -110,7 +115,73 @@ if args[:2] == ["lambda", "invoke"]:
         "body": result_body,
     }))
     executed = os.environ.get("FAKE_EXECUTED_VERSION", qualifier)
-    print(json.dumps({"StatusCode": 200, "ExecutedVersion": executed}))
+    metadata = {"StatusCode": 200, "ExecutedVersion": executed}
+    if "--log-type" in args and value("--log-type") == "Tail":
+        request_id = f"fake-request-{qualifier}"
+        genai_event = {
+            "timestamp": "2026-07-29T00:00:00.000Z",
+            "level": "INFO",
+            "message": "genai_call",
+            "logger": "fare_assistant",
+            "requestId": request_id,
+            "event": "genai_call",
+            "aws_request_id": request_id,
+            "function_version": qualifier,
+            "gen_ai.system": "anthropic",
+            "gen_ai.operation.name": "chat",
+            "gen_ai.request.model": "claude-haiku-4-5",
+            "gen_ai.response.model": "claude-haiku-4-5",
+            "gen_ai.usage.input_tokens": 48,
+            "gen_ai.usage.output_tokens": 12,
+            "gen_ai.client.operation.duration": 0.125,
+            "portfolio.gen_ai.cost.usd": 0.000123,
+            "input_tokens": 48,
+            "output_tokens": 12,
+            "model_duration_ms": 125,
+            "estimated_cost_usd": 0.000123,
+            "cost_estimate_available": True,
+            "completion_recorded": True,
+            "error_type": None,
+        }
+        answer_event = {
+            "timestamp": "2026-07-29T00:00:00.126Z",
+            "level": "INFO",
+            "message": "answer_request",
+            "logger": "fare_assistant",
+            "requestId": request_id,
+            "event": "answer_request",
+            "aws_request_id": request_id,
+            "function_version": qualifier,
+            "kind": "answered",
+            "language": "en",
+            "question_chars": 49,
+            "turns": 0,
+            "duration_ms": 126,
+            "request_duration_ms": 126,
+            "cache": "bypass",
+            "model_called": True,
+            "structured_ok": True,
+            "status_code": 200,
+            "direct_health": True,
+            "input_tokens": 48,
+            "output_tokens": 12,
+            "completion_recorded": True,
+        }
+        mode = os.environ.get("FAKE_STRUCTURED_LOG_MODE", "valid")
+        if mode == "missing-answer":
+            log_events = [genai_event]
+        elif mode == "mismatched-request":
+            answer_event["requestId"] = "different-request"
+            answer_event["aws_request_id"] = "different-request"
+            log_events = [genai_event, answer_event]
+        elif mode == "content-leak":
+            genai_event["question"] = body.get("question", "")
+            log_events = [genai_event, answer_event]
+        else:
+            log_events = [genai_event, answer_event]
+        log_text = "\\n".join(json.dumps(item, separators=(",", ":")) for item in log_events)
+        metadata["LogResult"] = base64.b64encode((log_text + "\\n").encode()).decode()
+    print(json.dumps(metadata))
 elif args[:2] == ["lambda", "get-alias"]:
     alias = value("--name")
     response = state["aliases"][alias]
@@ -370,6 +441,109 @@ def test_direct_version_health_checks_exact_numeric_candidate(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.rstrip().endswith("version health: PASS: fare-policy-assistant-demo:6")
+
+
+def test_direct_version_health_requires_safe_structured_log_tail(tmp_path):
+    fake_bin = _install_fake_aws(tmp_path)
+    state_path = _state(tmp_path)
+    telemetry_path = tmp_path / "candidate-telemetry.json"
+    result = subprocess.run(
+        [
+            str(VERSION_HEALTH),
+            "--function-name",
+            "fare-policy-assistant-demo",
+            "--qualifier",
+            "6",
+            "--expected-corpus",
+            "0938fff0539a",
+            "--expected-disabled-docs",
+            "yolobus-fares",
+            "--require-structured-telemetry",
+            "--telemetry-output",
+            str(telemetry_path),
+        ],
+        cwd=config.REPO_ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_AWS_STATE": str(state_path),
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    state = json.loads(state_path.read_text())
+    tailed = [invocation for invocation in state["invocations"] if invocation["log_tail"]]
+    assert tailed == [
+        {
+            "path": "/api/ask",
+            "question": "What proof do I need for the veteran fare on MST?",
+            "health_marker": "release-v1",
+            "log_tail": True,
+        }
+    ]
+    assert telemetry_path.is_file()
+    telemetry = json.loads(telemetry_path.read_text())
+    serialized = json.dumps(telemetry, sort_keys=True)
+    assert "genai_call" in serialized
+    assert "answer_request" in serialized
+    assert "What proof" not in serialized
+
+
+@pytest.mark.parametrize("log_mode", ["missing-answer", "mismatched-request"])
+def test_direct_version_health_rejects_incomplete_structured_log_tail(tmp_path, log_mode):
+    fake_bin = _install_fake_aws(tmp_path)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [
+            str(VERSION_HEALTH),
+            "--qualifier",
+            "6",
+            "--require-structured-telemetry",
+        ],
+        cwd=config.REPO_ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_AWS_STATE": str(state_path),
+            "FAKE_STRUCTURED_LOG_MODE": log_mode,
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+
+
+def test_direct_version_health_rejects_content_in_structured_log_tail(tmp_path):
+    fake_bin = _install_fake_aws(tmp_path)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [
+            str(VERSION_HEALTH),
+            "--qualifier",
+            "6",
+            "--require-structured-telemetry",
+        ],
+        cwd=config.REPO_ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_AWS_STATE": str(state_path),
+            "FAKE_STRUCTURED_LOG_MODE": "content-leak",
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
 
 
 def test_direct_version_health_rejects_wrong_executed_version(tmp_path):
@@ -716,9 +890,13 @@ class TestDeployReleaseControlStructure:
             "FileSystemConfigs",
             "EphemeralStorage",
             "SnapStart",
-            "LoggingConfig",
         ):
             assert field in text
+        unmanaged_snapshot = text.split("unmanaged_config_snapshot() {", 1)[1].split(
+            "normalized_release_config() {", 1
+        )[0]
+        assert '"LoggingConfig",' in unmanaged_snapshot
+        assert 'snapshot["LoggingConfig"]' not in unmanaged_snapshot
         early_check = text.index('"$LIVE_REVIEWED_CONFIG" "$LATEST_REVIEW_CONFIG"')
         bundle = text.index("# ── bundle")
         prestage_check = text.index('"$LIVE_REVIEWED_CONFIG" "$PRESTAGE_LATEST_CONFIG"')
@@ -726,6 +904,22 @@ class TestDeployReleaseControlStructure:
         candidate_check = text.index('"$LIVE_REVIEWED_CONFIG" "$CANDIDATE_CONFIG"', update)
         publish = text.index("aws lambda publish-version", candidate_check)
         assert early_check < bundle < prestage_check < update < candidate_check < publish
+
+    def test_advanced_logging_is_exact_managed_release_state(self):
+        text = DEPLOY.read_text(encoding="utf-8")
+        assert (
+            'LOGGING_CONFIG="LogFormat=JSON,ApplicationLogLevel=INFO,'
+            'SystemLogLevel=WARN,LogGroup=$LOG_GROUP"'
+        ) in text
+        managed_assertion = text.split("assert_managed_release_config() {", 1)[1].split(
+            "exact_published_version() {", 1
+        )[0]
+        assert '"LogFormat": "JSON"' in managed_assertion
+        assert '"ApplicationLogLevel": "INFO"' in managed_assertion
+        assert '"SystemLogLevel": "WARN"' in managed_assertion
+        assert '"LogGroup": $log_group' in managed_assertion
+        release = text.split("# ── Lambda", 1)[1]
+        assert release.count('--logging-config "$LOGGING_CONFIG"') >= 2
 
     def test_interrupted_bootstrap_repairs_only_a_missing_rollback_alias(self):
         text = DEPLOY.read_text(encoding="utf-8")

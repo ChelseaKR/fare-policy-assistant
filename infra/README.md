@@ -6,7 +6,9 @@ role scoped to the pinned answer model. It publishes an immutable numbered
 version, verifies that version directly, and only then moves the stable `live`
 alias. Architecture and cost guards are in ADR 0004. Release control and
 rollback are in ADR 0018
-(`docs/decisions/0018-immutable-lambda-release-control.md`).
+(`docs/decisions/0018-immutable-lambda-release-control.md`); the structured
+logging and promotion gate are in ADR 0019
+(`docs/decisions/0019-privacy-safe-runtime-observability.md`).
 
 The API Gateway stage throttle is the true cross-container rate limit (its
 rate and burst are derived from `RESERVED_CONCURRENCY` at the top of the
@@ -54,17 +56,21 @@ A routine release:
    intended managed configuration, then publishes or reuses an exact numbered
    snapshot;
 4. freezes its runtime patch mode at `FunctionUpdate`;
-5. runs `infra/check-lambda-version.sh` against that number;
+5. runs `infra/check-lambda-version.sh` against that number, including one
+   paid cache-bypassing answer whose actual JSON log tail must satisfy the
+   privacy, correlation, token, cost, and duration contract;
 6. retains the old target under `rollback`;
 7. moves `live` with a revision guard; and
 8. restores the old target and prior rollback pointer automatically if the
    public assistant smoke fails or the process receives `EXIT`, `INT`, or
    `TERM` before verification completes.
 
-Layers, VPC/DLQ/tracing/KMS/EFS settings, ephemeral storage, SnapStart, logging,
-and unknown future Lambda configuration fields are release-reviewed state.
+Layers, VPC/DLQ/tracing/KMS/EFS settings, ephemeral storage, SnapStart, and
+unknown future Lambda configuration fields are release-reviewed state.
 `deploy.sh` does not inherit changes to them from `$LATEST`; drift blocks the
-release until it is reconciled with the immutable `live` version.
+release until it is reconciled with the immutable `live` version. Logging is
+also release-reviewed, but is intentionally managed to exact JSON/INFO/WARN
+settings under ADR 0019 rather than inherited.
 The initial `live` alias revision is also held as a release-wide baseline, so
 a concurrent promotion aborts this deployment instead of mixing settings from
 two releases.
@@ -118,21 +124,35 @@ publishes a relevant Python runtime update.
 
 ## Observability
 
-The deploy also creates CloudWatch alarms (handler errors, Lambda errors and
-throttles, p99 latency, and a Bedrock-call surge as a spend proxy) wired to an
-SNS topic `fare-policy-assistant-demo-alerts`. Two metric filters derive the
-custom metrics from the handler's structured logs (counts only, never rider
-content). To actually be paged, subscribe an endpoint once:
+The Lambda uses advanced JSON logging with application `INFO`, system `WARN`,
+and 14-day retention. Fixed-schema records expose anonymous invocation
+correlation, answer/model duration, canonical provider/model/token fields, and
+token-derived estimated cost. They never contain questions, answers, prompts,
+history, citations, request headers, IPs, user agents, exception messages, or
+stacks.
+
+The deploy creates CloudWatch alarms for handler errors, Lambda errors and
+throttles, p99 Lambda latency, unpriced model completions, and a call surge. It
+wires them to `fare-policy-assistant-demo-alerts`. Ten filters cover the
+structured metrics plus one-release legacy rollback compatibility. Deployment
+re-reads every filter contract, then tests the relevant patterns against the
+numeric candidate's actual captured model/answer events before promotion.
+
+To actually be paged, subscribe an endpoint once:
 
 ```sh
 aws sns subscribe --topic-arn <printed by deploy.sh> \
   --protocol email --notification-endpoint you@example.com
 ```
 
-The deploy also creates (or overwrites) a CloudWatch dashboard named
-`fare-policy-assistant-demo` — same name as the function — carrying the per-day
-Bedrock-call cost proxy, a 5-minute traffic panel, p99 duration, and an
-alarm-status panel. `deploy.sh` prints its console URL at the end.
+Deployment warns if the topic has no confirmed subscriber. It also creates (or
+overwrites) the `fare-policy-assistant-demo` dashboard with application-
+estimated model cost and call counts, 5-minute traffic, request/model/Lambda
+duration, and alarm status. `deploy.sh` prints its console URL at the end.
+
+`EstimatedModelCostUsd` comes from observed tokens and the pinned application
+price table. It is not an AWS bill. Unknown prices produce
+`UnpricedModelCalls`, never a misleading zero-cost sample.
 
 The spend backstop beneath the alarms is an account-level AWS Budget. It needs
 billing permissions the deploy role may lack, so it is a one-time manual step.

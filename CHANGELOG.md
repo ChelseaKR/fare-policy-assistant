@@ -33,6 +33,12 @@ rather than tied to a published tag.
   paid-path dated/cited answer.
 - A phased improvement and expansion plan, including a fail-soft advisory
   integration contract for independently verified GTFS Scorecard artifacts.
+- Privacy-safe production observability with Lambda-owned request correlation,
+  canonical GenAI model/token/duration fields, token-derived estimated cost,
+  explicit unpriced-call alarms, real request/model latency metrics, and an
+  updated CloudWatch dashboard. A paid cache-bypassing check now captures the
+  numbered candidate's actual JSON log tail, rejects content/request metadata,
+  and proves the installed metric-filter grammar before `live` can move.
 - Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
   I18N-22). A live run now fails when the Spanish-vs-mirrored-English pass
   delta exceeds 5 points on 2 or more cases (`evals/runner.py::check_parity`),

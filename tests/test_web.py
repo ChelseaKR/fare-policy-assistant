@@ -7,6 +7,9 @@ model (FPA_PROVIDER=mock), so they exercise the full pipeline offline.
 from __future__ import annotations
 
 import json
+import logging
+import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,6 +34,10 @@ def _event(method: str = "POST", path: str = "/api/ask", body: dict | None = Non
 
 def _post(question: str) -> dict:
     return web_handler.handler(_event(body={"question": question}))
+
+
+def _log_records(caplog, event: str) -> list[logging.LogRecord]:
+    return [record for record in caplog.records if getattr(record, "event", None) == event]
 
 
 class TestRouting:
@@ -177,11 +184,14 @@ class TestVersion:
         assert data["pinned"] == actual
         assert data["matches_pin"] is True
 
-    def test_version_flags_pin_mismatch(self, monkeypatch, capsys):
+    def test_version_flags_pin_mismatch(self, monkeypatch, caplog):
         monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", "deadbeefcafe")
-        data = json.loads(self._version()["body"])
+        with caplog.at_level(logging.WARNING, logger="fare_assistant"):
+            data = json.loads(self._version()["body"])
         assert data["matches_pin"] is False
-        assert "corpus_version_mismatch" in capsys.readouterr().out
+        record = _log_records(caplog, "corpus_version_mismatch")[-1]
+        assert record.serving_corpus_version == data["corpus_version"]
+        assert record.pinned_corpus_version == "deadbeefcafe"
 
     def test_version_lists_known_retained_versions(self):
         # EXP-05: the currently served corpus_version is itself a retained
@@ -386,6 +396,136 @@ class TestBudget:
         assert _post("Do youth ride free on Yolobus?")["statusCode"] == 200
 
 
+class TestStructuredObservability:
+    def test_model_and_answer_events_share_runtime_owned_correlation(self, monkeypatch, caplog):
+        monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "23")
+        event = _event(body={"question": "What is the MST senior fare?"})
+        event["requestContext"]["requestId"] = "UNTRUSTED-EVENT-ID"
+        event["requestContext"]["http"]["sourceIp"] = "192.0.2.44"
+        event["headers"] = {
+            "user-agent": "SECRET-USER-AGENT",
+            "x-request-id": "UNTRUSTED-HEADER-ID",
+        }
+        context = SimpleNamespace(aws_request_id="AWS-RUNTIME-REQUEST-ID")
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = web_handler.handler(event, context)
+
+        assert response["statusCode"] == 200
+        records = _log_records(caplog, "genai_call") + _log_records(caplog, "answer_request")
+        assert {record.aws_request_id for record in records} == {"AWS-RUNTIME-REQUEST-ID"}
+        assert {record.function_version for record in records} == {"23"}
+        serialized = repr([vars(record) for record in records])
+        for forbidden in (
+            "What is the MST senior fare?",
+            "UNTRUSTED-EVENT-ID",
+            "192.0.2.44",
+            "SECRET-USER-AGENT",
+            "UNTRUSTED-HEADER-ID",
+        ):
+            assert forbidden not in serialized
+
+    def test_cache_hit_has_terminal_duration(self, caplog):
+        question = "Do youth ride free on Yolobus?"
+        _post(question)
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = _post(question)
+
+        assert response["statusCode"] == 200
+        record = _log_records(caplog, "answer_request")[-1]
+        assert record.levelno == logging.INFO
+        assert record.cache == "hit"
+        assert record.model_called is False
+        assert record.completion_recorded is False
+        assert record.request_duration_ms >= 0
+        assert record.duration_ms == record.request_duration_ms
+
+    def test_rate_limit_has_terminal_observation(self, caplog):
+        now = time.monotonic()
+        web_handler._RECENT.extend([now] * web_handler.REQUESTS_PER_MINUTE)
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = _post("A distinct request that should be rate limited?")
+
+        assert response["statusCode"] == 429
+        record = _log_records(caplog, "answer_request")[-1]
+        assert record.levelno == logging.INFO
+        assert record.kind == "rate_limited"
+        assert record.status_code == 429
+        assert record.cache == "miss"
+        assert record.model_called is False
+        assert record.completion_recorded is False
+        assert record.request_duration_ms >= 0
+        assert record.duration_ms == record.request_duration_ms
+
+    def test_direct_health_marker_forces_paid_path_but_body_and_header_do_not(self, caplog):
+        question = "What is the MST senior fare?"
+        first = _post(question)
+        assert first["statusCode"] == 200
+        assert len(web_handler._ANSWER_CACHE) == 1
+
+        disguised = _event(
+            body={
+                "question": question,
+                web_handler._DIRECT_HEALTH_FIELD: web_handler._DIRECT_HEALTH_VALUE,
+            }
+        )
+        disguised["headers"] = {web_handler._DIRECT_HEALTH_FIELD: web_handler._DIRECT_HEALTH_VALUE}
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            disguised_response = web_handler.handler(disguised)
+        assert disguised_response["statusCode"] == 200
+        assert not _log_records(caplog, "genai_call")
+        disguised_record = _log_records(caplog, "answer_request")[-1]
+        assert disguised_record.cache == "hit"
+        assert disguised_record.direct_health is False
+
+        caplog.clear()
+        now = time.monotonic()
+        web_handler._RECENT.extend([now] * web_handler.REQUESTS_PER_MINUTE)
+        direct = _event(body={"question": question})
+        direct[web_handler._DIRECT_HEALTH_FIELD] = web_handler._DIRECT_HEALTH_VALUE
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            direct_response = web_handler.handler(
+                direct,
+                SimpleNamespace(aws_request_id="DIRECT-HEALTH-REQUEST-ID"),
+            )
+
+        assert direct_response["statusCode"] == 200
+        assert _log_records(caplog, "genai_call")
+        direct_record = _log_records(caplog, "answer_request")[-1]
+        assert direct_record.cache == "bypass"
+        assert direct_record.direct_health is True
+        assert direct_record.model_called is True
+        model_record = _log_records(caplog, "genai_call")[-1]
+        assert direct_record.aws_request_id == model_record.aws_request_id
+        assert direct_record.aws_request_id == "DIRECT-HEALTH-REQUEST-ID"
+        assert len(web_handler._ANSWER_CACHE) == 1
+
+    def test_handler_error_is_class_only_without_exception_or_request_content(
+        self, monkeypatch, caplog
+    ):
+        def fail(_event):
+            raise RuntimeError("SECRET-EXCEPTION-MESSAGE")
+
+        monkeypatch.setattr(web_handler, "_ask", fail)
+        event = _event(body={"question": "SECRET-QUESTION"})
+        context = SimpleNamespace(aws_request_id="AWS-RUNTIME-ERROR-ID")
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = web_handler.handler(event, context)
+
+        assert response["statusCode"] == 500
+        record = _log_records(caplog, "handler_error")[-1]
+        assert record.levelno == logging.ERROR
+        assert record.error_type == "RuntimeError"
+        assert record.route == "api_ask"
+        assert record.aws_request_id == "AWS-RUNTIME-ERROR-ID"
+        assert record.exc_info is None
+        serialized = repr(vars(record))
+        assert "SECRET-EXCEPTION-MESSAGE" not in serialized
+        assert "SECRET-QUESTION" not in serialized
+
+
 class TestCache:
     def test_repeated_question_is_cached_and_bypasses_budget(self):
         first = _post("Do youth ride free on Yolobus?")
@@ -483,7 +623,7 @@ class TestCache:
         assert not web_handler._ANSWER_CACHE
 
     @pytest.mark.parametrize("kind", ["refused_no_support", "answered_guarded"])
-    def test_refused_or_guarded_results_are_not_cached(self, monkeypatch, capsys, kind):
+    def test_refused_or_guarded_results_are_not_cached(self, monkeypatch, caplog, kind):
         calls = 0
 
         def guarded_answer(question, **kwargs):
@@ -497,14 +637,17 @@ class TestCache:
             )
 
         monkeypatch.setattr(web_handler, "answer_question", guarded_answer)
-        _post("A safe but unsupported fare-policy question?")
-        _post("A safe but unsupported fare-policy question?")
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            _post("A safe but unsupported fare-policy question?")
+            _post("A safe but unsupported fare-policy question?")
 
         assert calls == 2
         assert not web_handler._ANSWER_CACHE
-        log = capsys.readouterr().out
-        expected = "true" if kind == "answered_guarded" else "false"
-        assert f'"model_called": {expected}' in log
+        records = _log_records(caplog, "answer_request")
+        assert [record.model_called for record in records[-2:]] == [
+            kind == "answered_guarded",
+            kind == "answered_guarded",
+        ]
 
     def test_cache_evicts_past_bound(self, monkeypatch):
         monkeypatch.setattr(web_handler, "ANSWER_CACHE_SIZE", 3)
@@ -672,20 +815,39 @@ class TestFeedback:
         assert self._fb({"verdict": "maybe"})["statusCode"] == 400
         assert self._fb({})["statusCode"] == 400
 
-    def test_feedback_logs_no_content(self, capsys):
+    def test_feedback_logs_no_content(self, caplog):
         # Even if a client sends question/answer text, the handler must not log it.
-        self._fb(
-            {
-                "verdict": "down",
-                "kind": "answered",
-                "language": "es",
-                "question": "SECRET-Q",
-                "answer": "SECRET-A",
-            }
-        )
-        out = capsys.readouterr().out
-        assert "SECRET-Q" not in out and "SECRET-A" not in out
-        assert '"feedback": "down"' in out
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            self._fb(
+                {
+                    "verdict": "down",
+                    "kind": "answered",
+                    "language": "es",
+                    "question": "SECRET-Q",
+                    "answer": "SECRET-A",
+                }
+            )
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.verdict == "down"
+        assert record.kind == "answered"
+        assert record.language == "es"
+        assert "SECRET-Q" not in repr(vars(record))
+        assert "SECRET-A" not in repr(vars(record))
+
+    def test_feedback_does_not_log_free_form_classification_fields(self, caplog):
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = self._fb(
+                {
+                    "verdict": "up",
+                    "kind": {"question": "SECRET-KIND"},
+                    "language": ["SECRET-LANGUAGE"],
+                }
+            )
+        assert response["statusCode"] == 200
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.kind is None
+        assert record.language is None
+        assert "SECRET" not in repr(vars(record))
 
     def test_feedback_get_405(self):
         resp = web_handler.handler(

@@ -1,6 +1,6 @@
 # 0018 — Immutable Lambda release control
 
-Date: 2026-07-30. Status: accepted.
+Date: 2026-07-30. Status: accepted; logging gate amended by ADR 0019.
 
 ## Context
 
@@ -38,7 +38,9 @@ Each release follows this sequence:
 5. Directly invoke the numeric version with API Gateway payload-v2 fixtures.
    The checks cover the root page, corpus pin and disabled-document state, PII
    refusal, one paid cited MST answer, and Yolobus containment when
-   `yolobus-fares` is among the required disabled documents.
+   `yolobus-fares` is among the required disabled documents. ADR 0019 adds a
+   fail-closed check of the paid answer's actual privacy-safe JSON model/answer
+   records and the installed metric-filter grammar.
 6. Point the `rollback` alias at the current `live` version.
 7. Move `live` to the candidate with the alias revision identifier.
 8. Run the public assistant smoke. If it fails, move `live` back immediately
@@ -52,7 +54,8 @@ candidate into rider traffic.
 
 The immutable `live` version is also the reviewed baseline for versioned
 configuration the script does not own, including layers, VPC attachment, DLQ,
-tracing, KMS, EFS, ephemeral storage, SnapStart, and logging. Before staging,
+tracing, KMS, EFS, ephemeral storage, and SnapStart. Logging is intentionally
+managed to the exact ADR 0019 JSON/INFO/WARN contract. Before staging,
 the script compares mutable `$LATEST` with that baseline and refuses any
 unmanaged drift. It repeats the comparison using the same full configuration
 response whose revision identifier guards the update, and verifies the staged
