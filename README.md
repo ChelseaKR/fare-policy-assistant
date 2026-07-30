@@ -317,13 +317,16 @@ Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`).
 
-The corpus has a stable version id, a deterministic hash of its chunk content
-and fetch dates (`uv run python -m assistant.corpus`). The `/version` endpoint
-reports it, and a deployment can approve a version in `corpus/CHANGELOG.md` and
-pin to it with `FPA_PINNED_CORPUS_VERSION`; `/version` then reports whether the
-running deploy matches. PDF policies are supported too (text-first, with an OCR
-fallback for scans; ADR 0008), so a fare program published as PDF is citable
-like an HTML page.
+The corpus keeps its stable legacy version ID for deployed pins and existing
+clients, and now also reports a full `content_version` over every
+behavior-relevant chunk field. Source-complete schema-2 archives add a separate
+`snapshot_version` over content plus the verified fetch URL, date, status,
+format, raw digest, and byte count; they are staged, revalidated, and atomically
+published with the exact source bytes (`docs/decisions/0020`). The `/version`
+endpoint still compares `FPA_PINNED_CORPUS_VERSION` against the compatibility
+ID during the additive rollout. PDF policies are supported too (text-first,
+with an OCR fallback for scans; ADR 0008), so a fare program published as PDF
+is citable like an HTML page.
 
 A second, structured evidence source checks the prose corpus against reality:
 `make gtfs-fetch` / `make gtfs-check` cross-validate agency fares against

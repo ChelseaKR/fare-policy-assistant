@@ -192,6 +192,15 @@ These are release blockers, not ordinary backlog items.
 
 ### P0-08 — Make corpus identity cover every behavior-changing field
 
+> **Implementation status (2026-07-30):** the additive evidence-plane slice is
+> implemented in ADR 0020. Full `content_version` and `snapshot_version`
+> identities, strict raw-receipt validation, self-contained schema-2 archives,
+> and archive-before-live atomic publication are in place. The existing
+> 12-character `corpus_version` remains the compatibility pin. Binding
+> configuration, eval, runtime, console, and deployment state into
+> `release_version` is the next rollout slice; this item is not marked fully
+> complete until the numeric candidate gate verifies those identities.
+
 **Evidence:** The current corpus hash covers chunk ID, fetch date, and text. Agency, title, URL, language, and section are omitted even though they affect retrieval, prompting, and citations. Behavior can therefore change without the public corpus identity changing.
 
 **Risk:** Evaluation and deployment provenance can report the same corpus version for materially different system behavior.

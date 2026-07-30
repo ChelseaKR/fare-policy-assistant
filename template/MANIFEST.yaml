@@ -65,6 +65,17 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: src/assistant/identity.py
+    marker: "fare-assistant.content.v1"
+    note: >
+      The layered identity mechanism is generic. Choose stable, project-specific
+      schema namespaces for CONTENT_SCHEMA and SNAPSHOT_SCHEMA before publishing
+      identities in a new domain.
+  - path: src/assistant/snapshots.py
+    marker: "fare-assistant.source-evidence.v1"
+    note: >
+      Source-complete, atomic archives are generic. Replace EVIDENCE_SCHEMA with
+      a stable namespace owned by the new project before creating archives.
   - path: evals/coverage.py
     marker: "youth/student"
     note: >
