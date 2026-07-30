@@ -199,7 +199,9 @@ class TestDeployScriptUsesThePinFile:
         assert "fare-assistant-rollback.XXXXXX" in lambda_block
         assert 'configuration.json"' in lambda_block
         assert 'function.zip"' in lambda_block
-        assert "Lambda environment verification failed" in lambda_block
+        assert (
+            'assert_managed_release_config "$PUBLISHED_CONFIG" "published version"' in lambda_block
+        )
         assert lambda_block.index("update-function-configuration") < lambda_block.index(
             "update-function-code"
         )
