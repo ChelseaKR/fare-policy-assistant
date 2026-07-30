@@ -11,6 +11,8 @@ rather than tied to a published tag.
 ### Security
 - Update the locked Pillow dependency from 12.2.0 to 12.3.0, clearing the
   image-decoder advisory cluster reported against PDF/OCR support.
+- Update the locked pypdf dependency from 6.13.3 to 6.14.2, clearing four
+  malformed-document denial-of-service advisories in optional PDF ingestion.
 
 ### Added
 - Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
