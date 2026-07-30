@@ -43,8 +43,10 @@ EMBED_HTML = """<!doctype html>
   label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
   textarea { width: 100%; min-height: 3rem; font: inherit; padding: 0.5rem;
     border: 1px solid #d6d3cb; border-radius: 6px; background: #fff; color: #1a1f24; }
-  textarea:focus-visible, button:focus-visible, a:focus-visible {
-    outline: 3px solid #1d4ed8; outline-offset: 2px; }
+  textarea:focus-visible, button:focus-visible, a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 4px solid #1d4ed8; outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff; }
   button { font: inherit; border: 1px solid #14532d; background: #14532d;
     color: #fff; border-radius: 6px; padding: 0.5rem 1.1rem;
     /* WCAG 2.2 AA 2.5.8 Target Size (Minimum): at least 24px. */
@@ -58,6 +60,7 @@ EMBED_HTML = """<!doctype html>
     font-size: 0.85rem; }
   .sources a { color: #1d4ed8; }
   .asof { color: #4d5860; font-size: 0.8rem; margin-top: 0.4rem; }
+  .privacy { color: #4d5860; font-size: 0.8rem; margin: 0.45rem 0; }
   .ref { color: #4d5860; font-size: 0.78rem; margin-top: 0.8rem;
     border-top: 1px solid #d6d3cb; padding-top: 0.5rem; }
   .ref a { color: #1d4ed8; }
@@ -69,23 +72,30 @@ EMBED_HTML = """<!doctype html>
   <p class="note">Explains published fare and reduced-fare policy in English or
     Spanish. It does not decide your eligibility and does not collect personal
     information.</p>
-  <p class="frame">
-    <strong>Confirm before you rely on this.</strong> Answers explain published
-    policy from dated snapshots and can be out of date. The agency makes the
-    final eligibility decision; confirm anything time-sensitive with it.
+  <p class="frame" id="snapshot-note">
+    <strong>Snapshot-backed, not live.</strong> Answers use dated copies of
+    published policy pages, not the agency's live website, and can be out of date.
+    The agency makes the final eligibility decision; confirm current fares and
+    deadlines with it.
     <span class="es" lang="es"><strong>Confirme antes de usar esta
-    información.</strong> Las respuestas explican la política publicada a partir
-    de instantáneas con fecha y pueden estar desactualizadas. La agencia toma la
-    decisión final de elegibilidad; confirme cualquier detalle con ella.</span>
+    información.</strong> Las respuestas usan copias con fecha, no el sitio web
+    actualizado de la agencia, y pueden estar desactualizadas. La agencia toma
+    la decisión final de elegibilidad; confirme tarifas y fechas límite con
+    ella.</span>
   </p>
   <form id="form">
     <label for="q">Your question</label>
     <textarea id="q" name="question" maxlength="500" required
+      aria-describedby="snapshot-note"
       placeholder="Example: Senior discount on SBMTD?"></textarea>
     <button type="submit" class="primary" id="submit">Ask</button>
   </form>
-  <p id="status" role="status" aria-live="polite"></p>
-  <div id="answer"></div>
+  <p class="privacy">Questions are processed transiently. Their raw text is not
+    logged or used as a cache key; refused or personal-information-like inputs
+    are not cached.</p>
+  <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
+  <div id="answer" role="region" aria-label="Assistant answer" aria-live="polite"
+    aria-relevant="additions text" aria-busy="false"></div>
   <p class="ref">Reference implementation, not an official agency service. Confirm
     important details with the agency.
     <a href="/" target="_blank" rel="noopener">Open the full assistant</a>.</p>
@@ -103,9 +113,12 @@ EMBED_HTML = """<!doctype html>
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  // Answers are plain text with [doc:id] markers, **bold**, and "- " bullets.
+  // Answers are plain text with single or combined [doc:id] markers, **bold**,
+  // and "- " bullets.
   function render(text) {
-    var cleaned = text.replace(/\\s*\\[doc:[a-z0-9-]+\\]/g, "");
+    var cleaned = text.replace(
+      /\\s*\\[doc:[a-z0-9-]+(?:,\\s*doc:[a-z0-9-]+)*\\]/g, ""
+    );
     var lines = cleaned.split(/\\n/);
     var html = "";
     var inList = false;
@@ -150,9 +163,13 @@ EMBED_HTML = """<!doctype html>
     ev.preventDefault();
     var question = input.value.trim();
     if (!question) { return; }
+    // Clear the editable DOM immediately. The local variable exists only for
+    // this transient request; a refused PII-like input is not left in the page.
+    input.value = "";
     submit.disabled = true;
     status.className = "";
     status.textContent = "Looking through the published policies\\u2026";
+    answer.setAttribute("aria-busy", "true");
     answer.innerHTML = "";
 
     fetch("/api/ask", {
@@ -164,11 +181,13 @@ EMBED_HTML = """<!doctype html>
     }).then(function (r) {
       submit.disabled = false;
       if (!r.ok) {
+        answer.setAttribute("aria-busy", "false");
         status.className = "error";
         status.textContent = r.data.error || "Something went wrong. Please try again.";
         return;
       }
       status.textContent = "";
+      answer.setAttribute("aria-busy", "false");
       var data = r.data;
       var ans = document.createElement("div");
       ans.innerHTML = render(data.answer);
@@ -183,6 +202,7 @@ EMBED_HTML = """<!doctype html>
       answer.appendChild(ans);
     }).catch(function () {
       submit.disabled = false;
+      answer.setAttribute("aria-busy", "false");
       status.className = "error";
       status.textContent = "Could not reach the service. Please try again.";
     });
