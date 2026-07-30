@@ -18,6 +18,13 @@ ASSISTANT_BASE_URL="${FPA_SMOKE_ASSISTANT_BASE_URL:-$DEFAULT_ASSISTANT_BASE_URL}
 EVIDENCE_BASE_URL="${FPA_SMOKE_EVIDENCE_BASE_URL:-$DEFAULT_EVIDENCE_BASE_URL}"
 CONNECT_TIMEOUT="${FPA_SMOKE_CONNECT_TIMEOUT:-10}"
 MAX_TIME="${FPA_SMOKE_MAX_TIME:-45}"
+if [[ ${FPA_SMOKE_EXPECTED_DISABLED_DOC_IDS+x} ]]; then
+  EXPECTED_DISABLED_DOC_IDS="$FPA_SMOKE_EXPECTED_DISABLED_DOC_IDS"
+else
+  EXPECTED_DISABLED_DOC_IDS="yolobus-fares"
+fi
+DEADLINE_EPOCH=""
+CHECK_EVIDENCE=true
 
 usage() {
   cat <<'EOF'
@@ -28,6 +35,11 @@ Options:
   --evidence-base-url URL   Public evidence/report origin
   --connect-timeout SEC     Per-request connection timeout (default: 10)
   --max-time SEC            Per-request total timeout (default: 45)
+  --expected-disabled-docs IDS
+                            Required comma-separated disabled document ids
+                            (default: yolobus-fares; "" means none)
+  --deadline-epoch EPOCH    Stop network checks by this Unix timestamp
+  --assistant-only          Skip the independent static evidence origin
   -h, --help                Show this help
 
 Environment equivalents:
@@ -35,6 +47,7 @@ Environment equivalents:
   FPA_SMOKE_EVIDENCE_BASE_URL
   FPA_SMOKE_CONNECT_TIMEOUT
   FPA_SMOKE_MAX_TIME
+  FPA_SMOKE_EXPECTED_DISABLED_DOC_IDS
 EOF
 }
 
@@ -65,6 +78,20 @@ while (($#)); do
       MAX_TIME="$2"
       shift 2
       ;;
+    --expected-disabled-docs)
+      (($# >= 2)) || fail "--expected-disabled-docs requires a value"
+      EXPECTED_DISABLED_DOC_IDS="$2"
+      shift 2
+      ;;
+    --deadline-epoch)
+      (($# >= 2)) || fail "--deadline-epoch requires a value"
+      DEADLINE_EPOCH="$2"
+      shift 2
+      ;;
+    --assistant-only)
+      CHECK_EVIDENCE=false
+      shift
+      ;;
     -h | --help)
       usage
       exit 0
@@ -80,71 +107,149 @@ command -v jq >/dev/null 2>&1 || fail "jq is required"
 
 [[ "$ASSISTANT_BASE_URL" =~ ^https?://[^[:space:]]+$ ]] \
   || fail "assistant base URL must be an absolute http(s) URL"
-[[ "$EVIDENCE_BASE_URL" =~ ^https?://[^[:space:]]+$ ]] \
-  || fail "evidence base URL must be an absolute http(s) URL"
+if [[ "$CHECK_EVIDENCE" == "true" ]]; then
+  [[ "$EVIDENCE_BASE_URL" =~ ^https?://[^[:space:]]+$ ]] \
+    || fail "evidence base URL must be an absolute http(s) URL"
+fi
 [[ "$CONNECT_TIMEOUT" =~ ^[1-9][0-9]*$ ]] \
   || fail "connect timeout must be a positive integer"
 [[ "$MAX_TIME" =~ ^[1-9][0-9]*$ ]] \
   || fail "max time must be a positive integer"
+if [[ -n "$EXPECTED_DISABLED_DOC_IDS" \
+  && ! "$EXPECTED_DISABLED_DOC_IDS" =~ ^[a-z0-9-]+(,[a-z0-9-]+)*$ ]]; then
+  fail "expected disabled documents must be comma-separated document ids"
+fi
+if [[ -n "$DEADLINE_EPOCH" && ! "$DEADLINE_EPOCH" =~ ^[1-9][0-9]*$ ]]; then
+  fail "deadline epoch must be a positive Unix timestamp"
+fi
 
 ASSISTANT_BASE_URL="${ASSISTANT_BASE_URL%/}"
-EVIDENCE_BASE_URL="${EVIDENCE_BASE_URL%/}"
+if [[ "$CHECK_EVIDENCE" == "true" ]]; then
+  EVIDENCE_BASE_URL="${EVIDENCE_BASE_URL%/}"
+fi
 
 SMOKE_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/fare-assistant-smoke.XXXXXX")"
 trap 'rm -rf "$SMOKE_TMPDIR"' EXIT
-
-CURL_OPTIONS=(
-  --silent
-  --show-error
-  --location
-  --connect-timeout "$CONNECT_TIMEOUT"
-  --max-time "$MAX_TIME"
-  --retry 2
-  --retry-delay 1
-  --retry-all-errors
-  --user-agent "fare-policy-assistant-production-smoke/1"
-)
 
 LAST_STATUS=""
 LAST_HEADERS=""
 LAST_BODY=""
 REQUEST_NUMBER=0
 
+run_before_deadline() {
+  local remaining
+  local marker
+  local command_pid
+  local timer_pid
+  local status
+
+  if [[ -z "$DEADLINE_EPOCH" ]]; then
+    "$@"
+    return
+  fi
+
+  remaining=$((DEADLINE_EPOCH - $(date +%s)))
+  ((remaining > 0)) || return 124
+  marker="$(mktemp "$SMOKE_TMPDIR/deadline.XXXXXX")"
+
+  "$@" &
+  command_pid=$!
+  (
+    timer_sleep_pid=""
+    trap '
+      if [[ -n "$timer_sleep_pid" ]]; then
+        kill "$timer_sleep_pid" 2>/dev/null || true
+      fi
+      exit 0
+    ' TERM INT
+    sleep "$remaining" &
+    timer_sleep_pid=$!
+    wait "$timer_sleep_pid" || exit 0
+    if kill -0 "$command_pid" 2>/dev/null; then
+      echo "expired" >"$marker"
+      kill -TERM "$command_pid" 2>/dev/null || true
+      kill -KILL "$command_pid" 2>/dev/null || true
+    fi
+  ) &
+  timer_pid=$!
+
+  if wait "$command_pid"; then
+    status=0
+  else
+    status=$?
+  fi
+  kill "$timer_pid" 2>/dev/null || true
+  wait "$timer_pid" 2>/dev/null || true
+  if [[ "$(<"$marker")" == "expired" ]] || (( $(date +%s) >= DEADLINE_EPOCH )); then
+    return 124
+  fi
+  return "$status"
+}
+
+requires_disabled_document() {
+  local document_id="$1"
+  [[ ",$EXPECTED_DISABLED_DOC_IDS," == *",$document_id,"* ]]
+}
+
 request() {
   local method="$1"
   local url="$2"
   local payload="${3:-}"
   local curl_status
+  local status_path
+  local request_max_time="$MAX_TIME"
+  local request_connect_timeout="$CONNECT_TIMEOUT"
+  local remaining
+  local -a curl_options
 
   REQUEST_NUMBER=$((REQUEST_NUMBER + 1))
   LAST_HEADERS="$SMOKE_TMPDIR/headers-$REQUEST_NUMBER"
   LAST_BODY="$SMOKE_TMPDIR/body-$REQUEST_NUMBER"
+  status_path="$SMOKE_TMPDIR/status-$REQUEST_NUMBER"
+
+  if [[ -n "$DEADLINE_EPOCH" ]]; then
+    remaining=$((DEADLINE_EPOCH - $(date +%s)))
+    ((remaining > 0)) || fail "$method $url exceeded the operation deadline"
+    ((request_max_time > remaining)) && request_max_time="$remaining"
+    ((request_connect_timeout > remaining)) && request_connect_timeout="$remaining"
+  fi
+  curl_options=(
+    --silent
+    --show-error
+    --location
+    --connect-timeout "$request_connect_timeout"
+    --max-time "$request_max_time"
+    --retry 2
+    --retry-delay 1
+    --retry-max-time "$request_max_time"
+    --retry-all-errors
+    --user-agent "fare-policy-assistant-production-smoke/1"
+  )
 
   if [[ "$method" == "POST" ]]; then
-    if ! curl_status="$(
-      curl "${CURL_OPTIONS[@]}" \
+    if ! run_before_deadline \
+      curl "${curl_options[@]}" \
         --request POST \
         --header "content-type: application/json" \
         --data "$payload" \
         --dump-header "$LAST_HEADERS" \
         --output "$LAST_BODY" \
         --write-out "%{http_code}" \
-        "$url"
-    )"; then
-      fail "$method $url could not be reached"
+        "$url" >"$status_path"; then
+      fail "$method $url could not be reached before the operation deadline"
     fi
   else
-    if ! curl_status="$(
-      curl "${CURL_OPTIONS[@]}" \
+    if ! run_before_deadline \
+      curl "${curl_options[@]}" \
         --request GET \
         --dump-header "$LAST_HEADERS" \
         --output "$LAST_BODY" \
         --write-out "%{http_code}" \
-        "$url"
-    )"; then
-      fail "$method $url could not be reached"
+        "$url" >"$status_path"; then
+      fail "$method $url could not be reached before the operation deadline"
     fi
   fi
+  curl_status="$(tr -d '\r\n' <"$status_path")"
   LAST_STATUS="$curl_status"
 }
 
@@ -226,32 +331,38 @@ check_assistant_html() {
   echo "smoke: ok: $label"
 }
 
-echo "smoke: evidence=$EVIDENCE_BASE_URL"
+if [[ "$CHECK_EVIDENCE" == "true" ]]; then
+  echo "smoke: evidence=$EVIDENCE_BASE_URL"
+fi
 echo "smoke: assistant=$ASSISTANT_BASE_URL"
 
 # Static evidence entrypoints: these prove the report origin is healthy without
 # treating it as the rider assistant.
-request GET "$EVIDENCE_BASE_URL/"
-expect_status_200 "evidence /"
-expect_header_contains "evidence /" "content-type" "text/html"
-grep -Fqi "evaluation" "$LAST_BODY" || fail "evidence / is missing its evaluation marker"
-echo "smoke: ok: evidence /"
+if [[ "$CHECK_EVIDENCE" == "true" ]]; then
+  request GET "$EVIDENCE_BASE_URL/"
+  expect_status_200 "evidence /"
+  expect_header_contains "evidence /" "content-type" "text/html"
+  grep -Fqi "evaluation" "$LAST_BODY" || fail "evidence / is missing its evaluation marker"
+  echo "smoke: ok: evidence /"
 
-request GET "$EVIDENCE_BASE_URL/report.html"
-expect_status_200 "evidence /report.html"
-expect_header_contains "evidence /report.html" "content-type" "text/html"
-grep -Fqi "evaluation" "$LAST_BODY" \
-  || fail "evidence /report.html is missing its evaluation marker"
-echo "smoke: ok: evidence /report.html"
+  request GET "$EVIDENCE_BASE_URL/report.html"
+  expect_status_200 "evidence /report.html"
+  expect_header_contains "evidence /report.html" "content-type" "text/html"
+  grep -Fqi "evaluation" "$LAST_BODY" \
+    || fail "evidence /report.html is missing its evaluation marker"
+  echo "smoke: ok: evidence /report.html"
+fi
 
 # Every public, read-only rider entrypoint.
 check_assistant_html "/" "Transit Fare Policy Assistant"
 check_assistant_html "/offline" "Offline fare reference"
-if grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
+if requires_disabled_document "yolobus-fares" \
+  && grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
   fail "assistant /offline exposes the contained Yolobus fare period"
 fi
 check_assistant_html "/guide" "Which fare applies to me?"
-if grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
+if requires_disabled_document "yolobus-fares" \
+  && grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
   fail "assistant /guide exposes the contained Yolobus fare period"
 fi
 check_assistant_html "/embed" "Transit fare policy assistant" true
@@ -260,12 +371,17 @@ request GET "$ASSISTANT_BASE_URL/version"
 expect_status_200 "assistant /version"
 expect_header_contains "assistant /version" "content-type" "application/json"
 check_no_store_security_headers "assistant /version"
-jq -e '
-  (.corpus_version | type == "string" and length > 0)
-  and (.as_of | type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
-  and (.agencies | type == "array" and length > 0)
-  and (.matches_pin == true)
-  and (.disabled_documents | type == "array" and index("yolobus-fares") != null)
+jq -e --arg disabled "$EXPECTED_DISABLED_DOC_IDS" '
+  . as $body
+  | ($body.corpus_version | type == "string" and length > 0)
+  and ($body.as_of | type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
+  and ($body.agencies | type == "array" and length > 0)
+  and ($body.matches_pin == true)
+  and ($body.disabled_documents | type == "array")
+  and all(
+    ($disabled | split(",") | map(select(length > 0)))[];
+    . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
+  )
 ' "$LAST_BODY" >/dev/null || fail "assistant /version returned an invalid corpus payload"
 echo "smoke: ok: assistant /version"
 
@@ -293,20 +409,22 @@ echo "smoke: ok: assistant PII refusal"
 
 # The expired Yolobus source is an operational kill switch, not a decorative
 # /version flag. Prove the rider path fails closed while that source is disabled.
-YOLOBUS_PAYLOAD="$(
-  jq -nc --arg question "How much is the local fare on Yolobus?" \
-    '{question: $question}'
-)"
-request POST "$ASSISTANT_BASE_URL/api/ask" "$YOLOBUS_PAYLOAD"
-expect_status_200 "assistant Yolobus containment"
-expect_header_contains "assistant Yolobus containment" "content-type" "application/json"
-check_no_store_security_headers "assistant Yolobus containment"
-jq -e '
-  .kind == "refused_no_support"
-  and (.answer | type == "string" and length > 0)
-  and (.citations | type == "array" and length == 0)
-' "$LAST_BODY" >/dev/null || fail "disabled Yolobus source did not fail closed"
-echo "smoke: ok: assistant Yolobus containment"
+if requires_disabled_document "yolobus-fares"; then
+  YOLOBUS_PAYLOAD="$(
+    jq -nc --arg question "How much is the local fare on Yolobus?" \
+      '{question: $question}'
+  )"
+  request POST "$ASSISTANT_BASE_URL/api/ask" "$YOLOBUS_PAYLOAD"
+  expect_status_200 "assistant Yolobus containment"
+  expect_header_contains "assistant Yolobus containment" "content-type" "application/json"
+  check_no_store_security_headers "assistant Yolobus containment"
+  jq -e '
+    .kind == "refused_no_support"
+    and (.answer | type == "string" and length > 0)
+    and (.citations | type == "array" and length == 0)
+  ' "$LAST_BODY" >/dev/null || fail "disabled Yolobus source did not fail closed"
+  echo "smoke: ok: assistant Yolobus containment"
+fi
 
 # One rehearsed, known-good answer proves the paid serving path and citations.
 SAFE_PAYLOAD="$(
