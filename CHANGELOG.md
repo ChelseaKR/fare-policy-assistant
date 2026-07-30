@@ -104,6 +104,12 @@ rather than tied to a published tag.
   in `docs/decisions/0004-demo-deploy.md`.
 
 ### Fixed
+- Make the rider Lambda ZIP byte-reproducible across rebuilds by sorting archive
+  paths and normalizing timestamps, file modes, and ZIP metadata. An unchanged
+  reviewed revision now reuses its exact numbered Lambda version instead of
+  publishing a duplicate because dependency-install mtimes changed. Unused
+  dependency console entry points are omitted because their generated shebangs
+  embed the builder's absolute virtual-environment path.
 - Hosted-model usage and eval cost accounting now follow the reviewed
   portfolio GenAI telemetry contract. Anthropic and Bedrock cache-write/read
   buckets are normalized into canonical input totals once, priced at their

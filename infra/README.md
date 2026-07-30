@@ -25,6 +25,15 @@ against. Regenerate it with `make deploy-reqs` after any dependency change;
 operator console bundle (`deploy-console.sh`) still installs from loose
 ranges and is not covered by this pin file.
 
+`scripts/build_lambda_zip.py` writes the rider ZIP with sorted paths and fixed
+timestamps, modes, and ZIP metadata. Rebuilding unchanged inputs therefore
+reuses the same Lambda `CodeSha256` instead of consuming another numbered
+version because of installation-time mtimes. The builder rejects symlinks and
+special filesystem entries and preserves the existing `__pycache__` and wheel
+`RECORD` exclusions. It also omits unused dependency console scripts under
+top-level `bin/`, whose generated shebangs otherwise expose the builder's
+checkout-specific virtual-environment path and change the artifact digest.
+
 ## Immutable release and rollback
 
 Run the full verification gate, merge the reviewed release, switch to a clean

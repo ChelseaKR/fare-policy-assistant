@@ -23,6 +23,7 @@ from typing import Any
 from assistant import config
 
 DEPLOY_SH = config.REPO_ROOT / "infra" / "deploy.sh"
+ZIP_BUILDER = config.REPO_ROOT / "scripts" / "build_lambda_zip.py"
 REQUIREMENTS = config.REPO_ROOT / "infra" / "requirements-deploy.txt"
 UV_LOCK = config.REPO_ROOT / "uv.lock"
 
@@ -161,6 +162,13 @@ class TestDeployScriptUsesThePinFile:
             "deploy.sh must not install from inline version ranges; "
             "pin in infra/requirements-deploy.txt instead (M-7/P1-6)"
         )
+
+    def test_uses_the_reproducible_zip_builder(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert ZIP_BUILDER.is_file()
+        assert "uv run python scripts/build_lambda_zip.py" in text
+        assert "zip -q" not in text
 
     def test_deployment_pins_corpus_and_contains_expired_yolobus_source(self):
         text = DEPLOY_SH.read_text(encoding="utf-8")
