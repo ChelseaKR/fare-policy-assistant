@@ -13,6 +13,7 @@ REGION="${AWS_REGION:-us-west-2}"
 FN="${FPA_FUNCTION_NAME:-fare-policy-assistant-demo}"
 LIVE_ALIAS="${FPA_LIVE_ALIAS:-live}"
 ROLLBACK_ALIAS="${FPA_ROLLBACK_ALIAS:-rollback}"
+LEGACY_IDENTITY_ROLLBACK_VERSION="${FPA_LEGACY_IDENTITY_ROLLBACK_VERSION:-}"
 LOG_GROUP="/aws/lambda/$FN"
 LOGGING_CONFIG="LogFormat=JSON,ApplicationLogLevel=INFO,SystemLogLevel=WARN,LogGroup=$LOG_GROUP"
 ROLE_NAME="$FN-role"
@@ -21,10 +22,13 @@ BUILD="$ROOT/infra/build"
 BUNDLE="$BUILD/bundle"
 API_ID="${FPA_API_ID:-}"
 SOURCE_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
-if [[ "${FPA_ALLOW_DIRTY_DEPLOY:-}" != "1" \
-  && -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]]; then
-  echo "working tree is dirty; refusing an untraceable production deploy" >&2
-  echo "commit the release or set FPA_ALLOW_DIRTY_DEPLOY=1 for an explicit emergency" >&2
+[[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
+  echo "source revision is not a full lowercase Git object id" >&2
+  exit 2
+}
+if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]]; then
+  echo "working tree is dirty; refusing a false source/release identity" >&2
+  echo "commit the complete release before deploying" >&2
   exit 2
 fi
 
@@ -34,6 +38,11 @@ for required_command in aws curl jq openssl uv; do
     exit 2
   }
 done
+if [[ -n "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
+  && ! "$LEGACY_IDENTITY_ROLLBACK_VERSION" =~ ^[1-9][0-9]*$ ]]; then
+  echo "FPA_LEGACY_IDENTITY_ROLLBACK_VERSION must be a numeric published version" >&2
+  exit 2
+fi
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 
 # Hard ceiling on parallel Bedrock spend: at most this many containers run at
@@ -104,11 +113,13 @@ PROMOTION_GUARD_EXPECTED_VERSION=""
 PROMOTION_GUARD_EXPECTED_REVISION=""
 PROMOTION_GUARD_EXPECTED_DESCRIPTION=""
 PROMOTION_GUARD_RESTORE_VERSION=""
+PROMOTION_GUARD_RESTORE_DESCRIPTION=""
 ROLLBACK_POINTER_GUARD_ACTIVE=false
 ROLLBACK_POINTER_GUARD_EXPECTED_VERSION=""
 ROLLBACK_POINTER_GUARD_EXPECTED_REVISION=""
 ROLLBACK_POINTER_GUARD_EXPECTED_DESCRIPTION=""
 ROLLBACK_POINTER_GUARD_RESTORE_VERSION=""
+ROLLBACK_POINTER_GUARD_RESTORE_DESCRIPTION=""
 
 # Once live has moved, every abnormal exit must attempt a compare-and-swap
 # restore until the public route has passed smoke. The version and RevisionId
@@ -132,7 +143,8 @@ restore_unverified_live() {
   current_version="$(jq -r '.FunctionVersion // ""' <<<"$current_alias")"
   current_revision="$(jq -r '.RevisionId // ""' <<<"$current_alias")"
   current_description="$(jq -r '.Description // ""' <<<"$current_alias")"
-  if [[ "$current_version" == "$PROMOTION_GUARD_RESTORE_VERSION" ]]; then
+  if [[ "$current_version" == "$PROMOTION_GUARD_RESTORE_VERSION" \
+    && "$current_description" == "$PROMOTION_GUARD_RESTORE_DESCRIPTION" ]]; then
     if ! jq -e '((.RoutingConfig.AdditionalVersionWeights // {}) | length) == 0' \
       <<<"$current_alias" >/dev/null; then
       echo "CRITICAL: live returned to the prior primary version but still has weighted routing" >&2
@@ -154,7 +166,7 @@ restore_unverified_live() {
       --function-version "$PROMOTION_GUARD_RESTORE_VERSION" \
       --revision-id "$current_revision" \
       --routing-config "$EMPTY_ALIAS_ROUTING" \
-      --description "automatic restore of unverified $current_version" \
+      --description "$PROMOTION_GUARD_RESTORE_DESCRIPTION" \
       --region "$REGION" \
       --output json
   )"; then
@@ -162,8 +174,10 @@ restore_unverified_live() {
     return 1
   fi
   if ! jq -e \
-    --arg version "$PROMOTION_GUARD_RESTORE_VERSION" '
+    --arg version "$PROMOTION_GUARD_RESTORE_VERSION" \
+    --arg description "$PROMOTION_GUARD_RESTORE_DESCRIPTION" '
       .FunctionVersion == $version
+      and (.Description // "") == $description
       and ((.RoutingConfig.AdditionalVersionWeights // {}) | length) == 0
     ' <<<"$restored_alias" >/dev/null; then
     echo "CRITICAL: restored live alias failed target/routing verification" >&2
@@ -192,7 +206,8 @@ restore_previous_rollback_pointer() {
   current_version="$(jq -r '.FunctionVersion // ""' <<<"$current_alias")"
   current_revision="$(jq -r '.RevisionId // ""' <<<"$current_alias")"
   current_description="$(jq -r '.Description // ""' <<<"$current_alias")"
-  if [[ "$current_version" == "$ROLLBACK_POINTER_GUARD_RESTORE_VERSION" ]]; then
+  if [[ "$current_version" == "$ROLLBACK_POINTER_GUARD_RESTORE_VERSION" \
+    && "$current_description" == "$ROLLBACK_POINTER_GUARD_RESTORE_DESCRIPTION" ]]; then
     if ! jq -e '((.RoutingConfig.AdditionalVersionWeights // {}) | length) == 0' \
       <<<"$current_alias" >/dev/null; then
       echo "WARNING: rollback pointer returned to its prior target but still has weighted routing" >&2
@@ -214,7 +229,7 @@ restore_previous_rollback_pointer() {
       --function-version "$ROLLBACK_POINTER_GUARD_RESTORE_VERSION" \
       --revision-id "$current_revision" \
       --routing-config "$EMPTY_ALIAS_ROUTING" \
-      --description "promotion aborted; prior pointer restored" \
+      --description "$ROLLBACK_POINTER_GUARD_RESTORE_DESCRIPTION" \
       --region "$REGION" \
       --output json
   )"; then
@@ -222,8 +237,10 @@ restore_previous_rollback_pointer() {
     return 1
   fi
   if ! jq -e \
-    --arg version "$ROLLBACK_POINTER_GUARD_RESTORE_VERSION" '
+    --arg version "$ROLLBACK_POINTER_GUARD_RESTORE_VERSION" \
+    --arg description "$ROLLBACK_POINTER_GUARD_RESTORE_DESCRIPTION" '
       .FunctionVersion == $version
+      and (.Description // "") == $description
       and ((.RoutingConfig.AdditionalVersionWeights // {}) | length) == 0
     ' <<<"$restored_alias" >/dev/null; then
     echo "WARNING: restored rollback pointer failed target/routing verification" >&2
@@ -257,6 +274,7 @@ HAS_LIVE_ALIAS=false
 LIVE_ALIAS_JSON=""
 BASELINE_LIVE_VERSION=""
 BASELINE_LIVE_REVISION=""
+BASELINE_LIVE_DESCRIPTION=""
 if [[ "$FUNCTION_EXISTS" == "true" ]]; then
   if LIVE_ALIAS_JSON="$(
     aws lambda get-alias \
@@ -276,6 +294,7 @@ if [[ "$FUNCTION_EXISTS" == "true" ]]; then
     }
     BASELINE_LIVE_VERSION="$LIVE_VERSION"
     BASELINE_LIVE_REVISION="$LIVE_REVISION"
+    BASELINE_LIVE_DESCRIPTION="$(jq -r '.Description // ""' <<<"$LIVE_ALIAS_JSON")"
     EXISTING_LAMBDA_ENV="$(
       aws lambda get-function-configuration \
         --function-name "$FN" --qualifier "$LIVE_VERSION" --region "$REGION" \
@@ -361,16 +380,31 @@ LAMBDA_ENV="$(
     FPA_DEPLOY_DISABLED_DOC_IDS="$DISABLED_DOC_IDS" \
     FPA_DEPLOY_HISTORY_HMAC_KEY="$HISTORY_HMAC_KEY" \
     uv run python -c '
+import hashlib
 import json
 import os
 
 raw = json.loads(os.environ["FPA_DEPLOY_EXISTING_LAMBDA_ENV"] or "{}")
 values = raw if isinstance(raw, dict) else {}
+history_key = os.environ["FPA_DEPLOY_HISTORY_HMAC_KEY"]
+history_key_id = hashlib.sha256(
+    b"fare-assistant.history-key-id.v1\0" + history_key.encode("ascii")
+).hexdigest()
+for derived_key in (
+    "FPA_ARTIFACT_CODE_SHA256",
+    "FPA_CONFIG_VERSION",
+    "FPA_PINNED_CONTENT_VERSION",
+    "FPA_PINNED_SNAPSHOT_VERSION",
+    "FPA_RELEASE_VERSION",
+    "FPA_SOURCE_REVISION",
+):
+    values.pop(derived_key, None)
 values.update(
     {
         "FPA_PINNED_CORPUS_VERSION": os.environ["FPA_DEPLOY_PINNED_CORPUS_VERSION"],
         "FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"],
-        "FPA_HISTORY_HMAC_KEY": os.environ["FPA_DEPLOY_HISTORY_HMAC_KEY"],
+        "FPA_HISTORY_HMAC_KEY": history_key,
+        "FPA_HISTORY_HMAC_KEY_ID": history_key_id,
     }
 )
 print(json.dumps({"Variables": values}, separators=(",", ":")))
@@ -957,12 +991,169 @@ ensure_rollback_alias_exists() {
   assert_unweighted_alias "$rollback_json" "$ROLLBACK_ALIAS"
 }
 
+qualified_release_health() {
+  local version="$1"
+  local expected_corpus="$2"
+  local expected_disabled_docs="$3"
+  local release_config
+  local source
+  local config_version
+  local content
+  local snapshot
+  local release
+  local artifact
+  local value
+  local present=0
+
+  [[ "$version" =~ ^[1-9][0-9]*$ ]] || {
+    echo "qualified release health requires a numeric version" >&2
+    return 1
+  }
+  release_config="$(
+    aws lambda get-function-configuration \
+      --function-name "$FN" --qualifier "$version" \
+      --region "$REGION" --output json
+  )"
+  source="$(jq -r '.Environment.Variables.FPA_SOURCE_REVISION // ""' <<<"$release_config")"
+  config_version="$(
+    jq -r '.Environment.Variables.FPA_CONFIG_VERSION // ""' <<<"$release_config"
+  )"
+  content="$(
+    jq -r '.Environment.Variables.FPA_PINNED_CONTENT_VERSION // ""' <<<"$release_config"
+  )"
+  snapshot="$(
+    jq -r '.Environment.Variables.FPA_PINNED_SNAPSHOT_VERSION // ""' <<<"$release_config"
+  )"
+  release="$(jq -r '.Environment.Variables.FPA_RELEASE_VERSION // ""' <<<"$release_config")"
+  artifact="$(
+    jq -r '.Environment.Variables.FPA_ARTIFACT_CODE_SHA256 // ""' <<<"$release_config"
+  )"
+  for value in "$source" "$config_version" "$content" "$snapshot" "$release" "$artifact"; do
+    [[ -n "$value" ]] && present=$((present + 1))
+  done
+
+  if [[ "$present" == "6" ]]; then
+    jq -e --arg version "$version" --arg artifact "$artifact" '
+      .Version == $version and .CodeSha256 == $artifact
+    ' <<<"$release_config" >/dev/null || {
+      echo "qualified release $version and identity artifact disagree" >&2
+      return 1
+    }
+    "$ROOT/infra/check-lambda-version.sh" \
+      --function-name "$FN" \
+      --qualifier "$version" \
+      --expected-corpus "$expected_corpus" \
+      --expected-disabled-docs "$expected_disabled_docs" \
+      --require-release-identity \
+      --expected-source "$source" \
+      --expected-config "$config_version" \
+      --expected-content "$content" \
+      --expected-snapshot "$snapshot" \
+      --expected-release "$release" \
+      --expected-artifact "$artifact" \
+      --region "$REGION"
+    return
+  fi
+  if [[ "$present" != "0" ]]; then
+    echo "qualified release $version has a partial identity tuple; refusing direct health" >&2
+    return 1
+  fi
+  if [[ -z "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
+    || "$version" != "$LEGACY_IDENTITY_ROLLBACK_VERSION" ]]; then
+    echo "legacy identity is not allowlisted for qualified release $version" >&2
+    return 1
+  fi
+  "$ROOT/infra/check-lambda-version.sh" \
+    --function-name "$FN" \
+    --qualifier "$version" \
+    --expected-corpus "$expected_corpus" \
+    --expected-disabled-docs "$expected_disabled_docs" \
+    --allow-legacy-release-identity \
+    --region "$REGION"
+}
+
 public_assistant_smoke() {
   local expected_disabled_docs="$1"
+  local live_alias_json
+  local version
+  local release_config
+  local source
+  local config_version
+  local content
+  local snapshot
+  local release
+  local artifact
+  local present=0
+
+  live_alias_json="$(
+    aws lambda get-alias \
+      --function-name "$FN" --name "$LIVE_ALIAS" \
+      --region "$REGION" --output json
+  )"
+  assert_unweighted_alias "$live_alias_json" "$LIVE_ALIAS"
+  version="$(jq -r '.FunctionVersion // ""' <<<"$live_alias_json")"
+  [[ "$version" =~ ^[1-9][0-9]*$ ]] || {
+    echo "live alias does not target a numeric version for public smoke" >&2
+    return 1
+  }
+  release_config="$(
+    aws lambda get-function-configuration \
+      --function-name "$FN" --qualifier "$version" \
+      --region "$REGION" --output json
+  )"
+  source="$(jq -r '.Environment.Variables.FPA_SOURCE_REVISION // ""' <<<"$release_config")"
+  config_version="$(
+    jq -r '.Environment.Variables.FPA_CONFIG_VERSION // ""' <<<"$release_config"
+  )"
+  content="$(
+    jq -r '.Environment.Variables.FPA_PINNED_CONTENT_VERSION // ""' <<<"$release_config"
+  )"
+  snapshot="$(
+    jq -r '.Environment.Variables.FPA_PINNED_SNAPSHOT_VERSION // ""' <<<"$release_config"
+  )"
+  release="$(jq -r '.Environment.Variables.FPA_RELEASE_VERSION // ""' <<<"$release_config")"
+  artifact="$(
+    jq -r '.Environment.Variables.FPA_ARTIFACT_CODE_SHA256 // ""' <<<"$release_config"
+  )"
+  for value in "$source" "$config_version" "$content" "$snapshot" "$release" "$artifact"; do
+    [[ -n "$value" ]] && present=$((present + 1))
+  done
+
+  if [[ "$present" == "6" ]]; then
+    jq -e --arg version "$version" --arg artifact "$artifact" '
+      .Version == $version and .CodeSha256 == $artifact
+    ' <<<"$release_config" >/dev/null || {
+      echo "live configuration and identity artifact disagree before public smoke" >&2
+      return 1
+    }
+    "$ROOT/scripts/smoke-production.sh" \
+      --assistant-only \
+      --assistant-base-url "https://$API_ID.execute-api.$REGION.amazonaws.com" \
+      --expected-disabled-docs "$expected_disabled_docs" \
+      --require-release-identity \
+      --expected-source "$source" \
+      --expected-config "$config_version" \
+      --expected-content "$content" \
+      --expected-snapshot "$snapshot" \
+      --expected-release "$release" \
+      --expected-artifact "$artifact" \
+      --expected-function-version "$version"
+    return
+  fi
+  if [[ "$present" != "0" ]]; then
+    echo "live release has a partial identity tuple; refusing public smoke" >&2
+    return 1
+  fi
+  if [[ -z "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
+    || "$version" != "$LEGACY_IDENTITY_ROLLBACK_VERSION" ]]; then
+    echo "legacy identity is not allowlisted for live version $version" >&2
+    return 1
+  fi
   "$ROOT/scripts/smoke-production.sh" \
     --assistant-only \
     --assistant-base-url "https://$API_ID.execute-api.$REGION.amazonaws.com" \
-    --expected-disabled-docs "$expected_disabled_docs"
+    --expected-disabled-docs "$expected_disabled_docs" \
+    --allow-legacy-release-identity
 }
 
 ensure_api_targets_live() {
@@ -1056,12 +1247,7 @@ ensure_api_targets_live() {
     exit 1
   fi
   expected_source_revision="$source_before_revision"
-  "$ROOT/infra/check-lambda-version.sh" \
-    --function-name "$FN" \
-    --qualifier "$LIVE_VERSION" \
-    --expected-corpus "$live_corpus" \
-    --expected-disabled-docs "$live_disabled" \
-    --region "$REGION"
+  qualified_release_health "$LIVE_VERSION" "$live_corpus" "$live_disabled"
 
   source_pre_cutover_config="$(
     aws lambda get-function-configuration \
@@ -1199,12 +1385,8 @@ if [[ "$FUNCTION_EXISTS" == "true" && "$HAS_LIVE_ALIAS" != "true" ]]; then
     echo "bootstrap version runtime mode was not frozen at FunctionUpdate" >&2
     exit 1
   }
-  "$ROOT/infra/check-lambda-version.sh" \
-    --function-name "$FN" \
-    --qualifier "$BOOTSTRAP_VERSION" \
-    --expected-corpus "$BOOTSTRAP_CORPUS" \
-    --expected-disabled-docs "$BOOTSTRAP_DISABLED" \
-    --region "$REGION"
+  qualified_release_health \
+    "$BOOTSTRAP_VERSION" "$BOOTSTRAP_CORPUS" "$BOOTSTRAP_DISABLED"
   LIVE_ALIAS_JSON="$(
     aws lambda create-alias \
       --function-name "$FN" \
@@ -1222,6 +1404,7 @@ if [[ "$FUNCTION_EXISTS" == "true" && "$HAS_LIVE_ALIAS" != "true" ]]; then
   LIVE_VERSION="$BOOTSTRAP_VERSION"
   BASELINE_LIVE_VERSION="$BOOTSTRAP_VERSION"
   BASELINE_LIVE_REVISION="$(jq -r '.RevisionId // ""' <<<"$LIVE_ALIAS_JSON")"
+  BASELINE_LIVE_DESCRIPTION="$(jq -r '.Description // ""' <<<"$LIVE_ALIAS_JSON")"
   [[ -n "$BASELINE_LIVE_REVISION" ]] || {
     echo "$LIVE_ALIAS bootstrap response had no revision id" >&2
     exit 1
@@ -1258,7 +1441,12 @@ fi
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
 rm -rf "$BUNDLE" "$BUILD/bundle.zip"
-mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs" "$BUNDLE/web"
+mkdir -p \
+  "$BUNDLE/src" \
+  "$BUNDLE/corpus/processed" \
+  "$BUNDLE/docs" \
+  "$BUNDLE/release" \
+  "$BUNDLE/web"
 
 # Cross-platform install: the Lambda runs linux/arm64, not the build machine's
 # platform, so force manylinux wheels (numpy's C extension breaks otherwise).
@@ -1275,13 +1463,80 @@ uv pip install --quiet --target "$BUNDLE" \
   --python-platform aarch64-manylinux_2_28 --python-version 3.12 --only-binary :all: \
   --require-hashes -r "$ROOT/infra/requirements-deploy.txt"
 
-cp -R "$ROOT/src/assistant" "$BUNDLE/src/assistant"
-cp -R "$ROOT/prompts" "$BUNDLE/prompts"
-cp "$ROOT/corpus/processed/chunks.jsonl" "$BUNDLE/corpus/processed/"
-cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"
-cp "$ROOT/web/__init__.py" "$ROOT/web/handler.py" "$ROOT/web/index.html" \
-   "$ROOT/web/offline.py" "$ROOT/web/guide.py" "$ROOT/web/embed.py" \
-   "$ROOT/web/csp.py" "$BUNDLE/web/"
+# Only reviewed Git index entries may cross the first-party bundle boundary.
+# Recursive shell copies would also package ignored checkout debris such as
+# bytecode, editor state, or a locally dropped credential.  Exact file scopes
+# keep the intentionally small corpus/docs/web runtime surface explicit.
+(
+  cd "$ROOT"
+  uv run python scripts/copy_tracked_bundle.py \
+    --repo-root "$ROOT" \
+    --destination "$BUNDLE" \
+    --tree src/assistant \
+    --tree prompts \
+    --file corpus/processed/chunks.jsonl \
+    --file docs/answer-contract.schema.json \
+    --file web/__init__.py \
+    --file web/handler.py \
+    --file web/index.html \
+    --file web/offline.py \
+    --file web/guide.py \
+    --file web/embed.py \
+    --file web/csp.py
+)
+
+DESCRIPTOR_BUILD_ARGS=(
+  --output "$BUNDLE/release/release.json"
+  --source-revision "$SOURCE_REVISION"
+)
+RELEASE_DESCRIPTOR_SUMMARY="$(
+  cd "$ROOT"
+  FPA_RELEASE_EFFECTIVE_ENVIRONMENT_JSON="$LAMBDA_ENV" \
+    uv run python scripts/build_release_descriptor.py \
+      "${DESCRIPTOR_BUILD_ARGS[@]}"
+)"
+if ! jq -e \
+  --arg source "$SOURCE_REVISION" \
+  --arg corpus "$PINNED_CORPUS_VERSION" '
+    .FPA_SOURCE_REVISION == $source
+    and .FPA_PINNED_CORPUS_VERSION == $corpus
+    and (.FPA_CONFIG_VERSION | test("^[0-9a-f]{64}$"))
+    and (.FPA_PINNED_CONTENT_VERSION | test("^[0-9a-f]{64}$"))
+    and (.FPA_PINNED_SNAPSHOT_VERSION | test("^[0-9a-f]{64}$"))
+    and (.FPA_RELEASE_VERSION | test("^[0-9a-f]{64}$"))
+    and (.FPA_HISTORY_HMAC_KEY_ID | test("^[0-9a-f]{64}$"))
+  ' <<<"$RELEASE_DESCRIPTOR_SUMMARY" >/dev/null; then
+  echo "release descriptor summary did not match the reviewed source/corpus" >&2
+  exit 1
+fi
+CONFIG_VERSION="$(jq -r '.FPA_CONFIG_VERSION' <<<"$RELEASE_DESCRIPTOR_SUMMARY")"
+CONTENT_VERSION="$(jq -r '.FPA_PINNED_CONTENT_VERSION' <<<"$RELEASE_DESCRIPTOR_SUMMARY")"
+SNAPSHOT_VERSION="$(jq -r '.FPA_PINNED_SNAPSHOT_VERSION' <<<"$RELEASE_DESCRIPTOR_SUMMARY")"
+RELEASE_VERSION="$(jq -r '.FPA_RELEASE_VERSION' <<<"$RELEASE_DESCRIPTOR_SUMMARY")"
+DESCRIPTOR_HISTORY_KEY_ID="$(
+  jq -r '.FPA_HISTORY_HMAC_KEY_ID' <<<"$RELEASE_DESCRIPTOR_SUMMARY"
+)"
+LAMBDA_HISTORY_KEY_ID="$(
+  jq -r '.Variables.FPA_HISTORY_HMAC_KEY_ID // ""' <<<"$LAMBDA_ENV"
+)"
+[[ "$DESCRIPTOR_HISTORY_KEY_ID" == "$LAMBDA_HISTORY_KEY_ID" ]] || {
+  echo "release descriptor history-key identity disagrees with Lambda configuration" >&2
+  exit 1
+}
+LAMBDA_ENV="$(
+  jq -c \
+    --arg source "$SOURCE_REVISION" \
+    --arg config "$CONFIG_VERSION" \
+    --arg content "$CONTENT_VERSION" \
+    --arg snapshot "$SNAPSHOT_VERSION" \
+    --arg release "$RELEASE_VERSION" '
+      .Variables.FPA_SOURCE_REVISION = $source
+      | .Variables.FPA_CONFIG_VERSION = $config
+      | .Variables.FPA_PINNED_CONTENT_VERSION = $content
+      | .Variables.FPA_PINNED_SNAPSHOT_VERSION = $snapshot
+      | .Variables.FPA_RELEASE_VERSION = $release
+    ' <<<"$LAMBDA_ENV"
+)"
 
 (
   cd "$ROOT"
@@ -1295,6 +1550,10 @@ LOCAL_CODE_SHA="$(
   echo "could not compute the AWS-style SHA-256 for the local deployment bundle" >&2
   exit 1
 }
+LAMBDA_ENV="$(
+  jq -c --arg artifact "$LOCAL_CODE_SHA" \
+    '.Variables.FPA_ARTIFACT_CODE_SHA256 = $artifact' <<<"$LAMBDA_ENV"
+)"
 
 # ── IAM role: logs plus InvokeModel on the pinned answer model only ──────────
 TRUST='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
@@ -1621,7 +1880,11 @@ EXPECTED_CANDIDATE_REVISION="$CANDIDATE_REVISION"
 }
 assert_managed_release_config \
   "$CANDIDATE_CONFIG" "staged candidate" "$EXPECTED_CANDIDATE_REVISION"
-RELEASE_DESCRIPTION="git=${SOURCE_REVISION:0:12} corpus=$PINNED_CORPUS_VERSION utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+RELEASE_DESCRIPTION="release=$RELEASE_VERSION source=${SOURCE_REVISION:0:12} config=${CONFIG_VERSION:0:12} content=${CONTENT_VERSION:0:12} snapshot=${SNAPSHOT_VERSION:0:12}"
+(( ${#RELEASE_DESCRIPTION} <= 256 )) || {
+  echo "release identity description exceeds the Lambda 256-character limit" >&2
+  exit 1
+}
 PUBLISHED_VERSIONS="$(
   aws lambda list-versions-by-function \
     --function-name "$FN" --region "$REGION" --output json
@@ -1671,6 +1934,10 @@ PUBLISHED_CODE_SHA="$(jq -r '.CodeSha256' <<<"$PUBLISHED_CONFIG")"
   echo "published version code hash does not match the staged artifact" >&2
   exit 1
 }
+[[ "$(jq -r '.Description // ""' <<<"$PUBLISHED_CONFIG")" == "$RELEASE_DESCRIPTION" ]] || {
+  echo "published version description does not match the release identity" >&2
+  exit 1
+}
 assert_managed_release_config "$PUBLISHED_CONFIG" "published version"
 CANDIDATE_TELEMETRY="$BUILD/candidate-telemetry.json"
 "$ROOT/infra/check-lambda-version.sh" \
@@ -1678,6 +1945,13 @@ CANDIDATE_TELEMETRY="$BUILD/candidate-telemetry.json"
   --qualifier "$NEW_VERSION" \
   --expected-corpus "$PINNED_CORPUS_VERSION" \
   --expected-disabled-docs "$DISABLED_DOC_IDS" \
+  --require-release-identity \
+  --expected-source "$SOURCE_REVISION" \
+  --expected-config "$CONFIG_VERSION" \
+  --expected-content "$CONTENT_VERSION" \
+  --expected-snapshot "$SNAPSHOT_VERSION" \
+  --expected-release "$RELEASE_VERSION" \
+  --expected-artifact "$CANDIDATE_CODE_SHA" \
   --require-structured-telemetry \
   --telemetry-output "$CANDIDATE_TELEMETRY" \
   --region "$REGION"
@@ -1738,6 +2012,15 @@ elif [[ "$HAS_LIVE_ALIAS" != "true" ]]; then
       --output json
   )"
   assert_unweighted_alias "$LIVE_ALIAS_JSON" "$LIVE_ALIAS"
+  jq -e \
+    --arg version "$NEW_VERSION" \
+    --arg description "$RELEASE_DESCRIPTION" '
+      .FunctionVersion == $version
+      and (.Description // "") == $description
+    ' <<<"$LIVE_ALIAS_JSON" >/dev/null || {
+    echo "$LIVE_ALIAS did not retain the candidate release identity description" >&2
+    exit 1
+  }
   ensure_initial_rollback_alias \
     "$NEW_VERSION" "no prior release retained yet"
   HAS_LIVE_ALIAS=true
@@ -1767,12 +2050,17 @@ else
     assert_unweighted_alias "$PREVIOUS_ROLLBACK_JSON" "$ROLLBACK_ALIAS"
     PREVIOUS_ROLLBACK_VERSION="$(jq -r '.FunctionVersion' <<<"$PREVIOUS_ROLLBACK_JSON")"
     PREVIOUS_ROLLBACK_REVISION="$(jq -r '.RevisionId' <<<"$PREVIOUS_ROLLBACK_JSON")"
-    ROLLBACK_POINTER_DESCRIPTION="prior live before $NEW_VERSION"
-    if [[ "$PREVIOUS_ROLLBACK_VERSION" != "$OLD_VERSION" ]]; then
+    PREVIOUS_ROLLBACK_DESCRIPTION="$(
+      jq -r '.Description // ""' <<<"$PREVIOUS_ROLLBACK_JSON"
+    )"
+    ROLLBACK_POINTER_DESCRIPTION="$BASELINE_LIVE_DESCRIPTION"
+    if [[ "$PREVIOUS_ROLLBACK_VERSION" != "$OLD_VERSION" \
+      || "$PREVIOUS_ROLLBACK_DESCRIPTION" != "$ROLLBACK_POINTER_DESCRIPTION" ]]; then
       ROLLBACK_POINTER_GUARD_EXPECTED_VERSION="$OLD_VERSION"
       ROLLBACK_POINTER_GUARD_EXPECTED_REVISION=""
       ROLLBACK_POINTER_GUARD_EXPECTED_DESCRIPTION="$ROLLBACK_POINTER_DESCRIPTION"
       ROLLBACK_POINTER_GUARD_RESTORE_VERSION="$PREVIOUS_ROLLBACK_VERSION"
+      ROLLBACK_POINTER_GUARD_RESTORE_DESCRIPTION="$PREVIOUS_ROLLBACK_DESCRIPTION"
       ROLLBACK_POINTER_GUARD_ACTIVE=true
     fi
     UPDATED_ROLLBACK_JSON="$(
@@ -1794,7 +2082,7 @@ else
         --name "$ROLLBACK_ALIAS" \
         --function-version "$OLD_VERSION" \
         --routing-config "$EMPTY_ALIAS_ROUTING" \
-        --description "prior live before $NEW_VERSION" \
+        --description "$BASELINE_LIVE_DESCRIPTION" \
         --region "$REGION" \
         --output json
     )"
@@ -1804,20 +2092,30 @@ else
     exit 1
   fi
   assert_unweighted_alias "$UPDATED_ROLLBACK_JSON" "$ROLLBACK_ALIAS"
-  [[ "$(jq -r '.FunctionVersion // ""' <<<"$UPDATED_ROLLBACK_JSON")" == "$OLD_VERSION" ]] || {
+  if ! jq -e \
+    --arg version "$OLD_VERSION" \
+    --arg description "$BASELINE_LIVE_DESCRIPTION" '
+      .FunctionVersion == $version
+      and (.Description // "") == $description
+    ' <<<"$UPDATED_ROLLBACK_JSON" >/dev/null; then
     echo "$ROLLBACK_ALIAS did not settle on prior live version $OLD_VERSION" >&2
     exit 1
-  }
+  fi
   UPDATED_ROLLBACK_REVISION="$(jq -r '.RevisionId' <<<"$UPDATED_ROLLBACK_JSON")"
   if [[ "$ROLLBACK_POINTER_GUARD_ACTIVE" == "true" ]]; then
     ROLLBACK_POINTER_GUARD_EXPECTED_REVISION="$UPDATED_ROLLBACK_REVISION"
   fi
 
   PROMOTION_DESCRIPTION="$RELEASE_DESCRIPTION previous=$OLD_VERSION"
+  (( ${#PROMOTION_DESCRIPTION} <= 256 )) || {
+    echo "promotion alias description exceeds the Lambda 256-character limit" >&2
+    exit 1
+  }
   PROMOTION_GUARD_EXPECTED_VERSION="$NEW_VERSION"
   PROMOTION_GUARD_EXPECTED_REVISION=""
   PROMOTION_GUARD_EXPECTED_DESCRIPTION="$PROMOTION_DESCRIPTION"
   PROMOTION_GUARD_RESTORE_VERSION="$OLD_VERSION"
+  PROMOTION_GUARD_RESTORE_DESCRIPTION="$BASELINE_LIVE_DESCRIPTION"
   PROMOTION_GUARD_ACTIVE=true
   if ! PROMOTED_LIVE_JSON="$(
     aws lambda update-alias \
@@ -1838,6 +2136,15 @@ else
   PROMOTED_LIVE_REVISION="$(jq -r '.RevisionId' <<<"$PROMOTED_LIVE_JSON")"
   PROMOTION_GUARD_EXPECTED_REVISION="$PROMOTED_LIVE_REVISION"
   assert_unweighted_alias "$PROMOTED_LIVE_JSON" "$LIVE_ALIAS"
+  jq -e \
+    --arg version "$NEW_VERSION" \
+    --arg description "$PROMOTION_DESCRIPTION" '
+      .FunctionVersion == $version
+      and (.Description // "") == $description
+    ' <<<"$PROMOTED_LIVE_JSON" >/dev/null || {
+    echo "promoted alias did not retain the candidate release identity description" >&2
+    exit 1
+  }
 
   if ! public_assistant_smoke "$DISABLED_DOC_IDS"; then
     echo "candidate $NEW_VERSION failed public smoke; rolling live back to $OLD_VERSION" >&2
@@ -1848,11 +2155,17 @@ else
       --function-name "$FN" --name "$LIVE_ALIAS" --region "$REGION" --output json
   )"
   assert_unweighted_alias "$VERIFIED_LIVE_JSON" "$LIVE_ALIAS"
-  [[ "$(jq -r '.FunctionVersion // ""' <<<"$VERIFIED_LIVE_JSON")" == "$NEW_VERSION" \
-    && "$(jq -r '.RevisionId // ""' <<<"$VERIFIED_LIVE_JSON")" == "$PROMOTED_LIVE_REVISION" ]] || {
+  if ! jq -e \
+    --arg version "$NEW_VERSION" \
+    --arg revision "$PROMOTED_LIVE_REVISION" \
+    --arg description "$PROMOTION_DESCRIPTION" '
+      .FunctionVersion == $version
+      and (.RevisionId // "") == $revision
+      and (.Description // "") == $description
+    ' <<<"$VERIFIED_LIVE_JSON" >/dev/null; then
     echo "live alias changed before promotion verification completed" >&2
     exit 1
-  }
+  fi
   refresh_integration
   integration_targets_live_alias || {
     echo "HTTP API $API_ID stopped targeting the qualified live alias during promotion" >&2
@@ -2007,6 +2320,10 @@ echo "retained rollback version: $FINAL_ROLLBACK_VERSION"
 echo "source revision: $SOURCE_REVISION"
 echo "artifact code sha256 (base64): $CANDIDATE_CODE_SHA"
 echo "corpus pin: $PINNED_CORPUS_VERSION"
+echo "content version: $CONTENT_VERSION"
+echo "snapshot version: $SNAPSHOT_VERSION"
+echo "config version: $CONFIG_VERSION"
+echo "release version: $RELEASE_VERSION"
 echo "disabled documents pending review: $DISABLED_DOC_IDS"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
 echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

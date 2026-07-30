@@ -141,6 +141,7 @@ def test_smoke_script_covers_both_public_surfaces_without_network(tmp_path):
             "2",
             "--max-time",
             "5",
+            "--allow-legacy-release-identity",
         ],
         cwd=config.REPO_ROOT,
         env={**os.environ, "LC_ALL": "C", "PATH": f"{fake_bin}:{os.environ['PATH']}"},
@@ -179,6 +180,7 @@ def test_assistant_only_ignores_an_irrelevant_invalid_evidence_url(tmp_path):
             "--assistant-only",
             "--assistant-base-url",
             "http://assistant.test",
+            "--allow-legacy-release-identity",
         ],
         cwd=config.REPO_ROOT,
         env={
@@ -208,6 +210,7 @@ def test_explicit_empty_disabled_documents_skips_yolobus_containment(tmp_path):
             "http://assistant.test",
             "--expected-disabled-docs",
             "",
+            "--allow-legacy-release-identity",
         ],
         cwd=config.REPO_ROOT,
         env={
@@ -235,6 +238,7 @@ def test_default_disabled_document_requirement_detects_missing_containment(tmp_p
             "--assistant-only",
             "--assistant-base-url",
             "http://assistant.test",
+            "--allow-legacy-release-identity",
         ],
         cwd=config.REPO_ROOT,
         env={
@@ -250,7 +254,7 @@ def test_default_disabled_document_requirement_detects_missing_containment(tmp_p
     )
 
     assert result.returncode != 0
-    assert "invalid corpus payload" in result.stderr
+    assert "invalid explicit legacy release identity" in result.stderr
 
 
 def test_deadline_terminates_a_slow_public_request(tmp_path):
@@ -265,6 +269,7 @@ def test_deadline_terminates_a_slow_public_request(tmp_path):
             "http://assistant.test",
             "--deadline-epoch",
             str(deadline),
+            "--allow-legacy-release-identity",
         ],
         cwd=config.REPO_ROOT,
         env={

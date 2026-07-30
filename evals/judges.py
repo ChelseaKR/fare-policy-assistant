@@ -73,8 +73,8 @@ def judge_groundedness(
     completion = model.complete(
         system=config.load_prompt("judge_groundedness"),
         user=user,
-        max_tokens=512,
-        temperature=0.0,
+        max_tokens=config.JUDGE_MAX_TOKENS,
+        temperature=config.JUDGE_TEMPERATURE,
     )
     tok = {
         "input_tokens": completion.input_tokens,
@@ -112,8 +112,8 @@ def judge_helpfulness(
     completion = model.complete(
         system=config.load_prompt("judge_helpfulness"),
         user=user,
-        max_tokens=512,
-        temperature=0.0,
+        max_tokens=config.JUDGE_MAX_TOKENS,
+        temperature=config.JUDGE_TEMPERATURE,
     )
     tok = {
         "input_tokens": completion.input_tokens,

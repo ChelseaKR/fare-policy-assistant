@@ -10,6 +10,7 @@ REGION="${AWS_REGION:-us-west-2}"
 FN="${FPA_FUNCTION_NAME:-fare-policy-assistant-demo}"
 LIVE_ALIAS="${FPA_LIVE_ALIAS:-live}"
 ROLLBACK_ALIAS="${FPA_ROLLBACK_ALIAS:-rollback}"
+LEGACY_IDENTITY_ROLLBACK_VERSION="${FPA_LEGACY_IDENTITY_ROLLBACK_VERSION:-}"
 API_ID="${FPA_API_ID:-}"
 ASSISTANT_BASE_URL="${FPA_ASSISTANT_BASE_URL:-}"
 if [[ ${FPA_REQUIRED_DISABLED_DOC_IDS+x} ]]; then
@@ -29,6 +30,7 @@ RESTORE_GUARD_EXPECTED_VERSION=""
 RESTORE_GUARD_EXPECTED_REVISION=""
 RESTORE_GUARD_EXPECTED_DESCRIPTION=""
 RESTORE_GUARD_DISPLACED_VERSION=""
+RESTORE_GUARD_DISPLACED_DESCRIPTION=""
 
 fail() {
   echo "rollback: FAIL: $*" >&2
@@ -125,7 +127,8 @@ restore_displaced_live() {
   current_version="$(jq -r '.FunctionVersion // ""' <<<"$current_alias")"
   current_revision="$(jq -r '.RevisionId // ""' <<<"$current_alias")"
   current_description="$(jq -r '.Description // ""' <<<"$current_alias")"
-  if [[ "$current_version" == "$RESTORE_GUARD_DISPLACED_VERSION" ]]; then
+  if [[ "$current_version" == "$RESTORE_GUARD_DISPLACED_VERSION" \
+    && "$current_description" == "$RESTORE_GUARD_DISPLACED_DESCRIPTION" ]]; then
     if ! jq -e '((.RoutingConfig.AdditionalVersionWeights // {}) | length) == 0' \
       <<<"$current_alias" >/dev/null; then
       echo "rollback: CRITICAL: displaced primary version was restored but weighted routing remains" >&2
@@ -148,7 +151,7 @@ restore_displaced_live() {
       --function-version "$RESTORE_GUARD_DISPLACED_VERSION" \
       --revision-id "$current_revision" \
       --routing-config "$EMPTY_ALIAS_ROUTING" \
-      --description "rollback target unverified; displaced live restored" \
+      --description "$RESTORE_GUARD_DISPLACED_DESCRIPTION" \
       --region "$REGION" \
       --output json
   )"; then
@@ -156,8 +159,10 @@ restore_displaced_live() {
     return 1
   fi
   if ! jq -e \
-    --arg version "$RESTORE_GUARD_DISPLACED_VERSION" '
+    --arg version "$RESTORE_GUARD_DISPLACED_VERSION" \
+    --arg description "$RESTORE_GUARD_DISPLACED_DESCRIPTION" '
       .FunctionVersion == $version
+      and (.Description // "") == $description
       and ((.RoutingConfig.AdditionalVersionWeights // {}) | length) == 0
     ' <<<"$restored_alias" >/dev/null; then
     echo "rollback: CRITICAL: restored live failed target/routing verification" >&2
@@ -189,6 +194,10 @@ trap 'exit 143' TERM
 command -v aws >/dev/null 2>&1 || fail "aws is required"
 command -v jq >/dev/null 2>&1 || fail "jq is required"
 [[ "$MAX_SECONDS" =~ ^[1-9][0-9]*$ ]] || fail "FPA_ROLLBACK_MAX_SECONDS must be positive"
+if [[ -n "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
+  && ! "$LEGACY_IDENTITY_ROLLBACK_VERSION" =~ ^[1-9][0-9]*$ ]]; then
+  fail "FPA_LEGACY_IDENTITY_ROLLBACK_VERSION must be a numeric published version"
+fi
 OPERATION_DEADLINE_EPOCH=$((START_SECONDS + MAX_SECONDS))
 RESTORE_RESERVE_SECONDS=$((MAX_SECONDS / 3))
 ((RESTORE_RESERVE_SECONDS < 1)) && RESTORE_RESERVE_SECONDS=1
@@ -209,6 +218,7 @@ assert_unweighted_alias "$LIVE_JSON" "$LIVE_ALIAS"
 assert_unweighted_alias "$ROLLBACK_JSON" "$ROLLBACK_ALIAS"
 CURRENT_VERSION="$(jq -r '.FunctionVersion' <<<"$LIVE_JSON")"
 LIVE_REVISION="$(jq -r '.RevisionId' <<<"$LIVE_JSON")"
+CURRENT_DESCRIPTION="$(jq -r '.Description // ""' <<<"$LIVE_JSON")"
 TARGET_VERSION="$(jq -r '.FunctionVersion' <<<"$ROLLBACK_JSON")"
 ALIAS_ARN="$(jq -r '.AliasArn // ""' <<<"$LIVE_JSON")"
 [[ -n "$ALIAS_ARN" ]] || fail "$LIVE_ALIAS has no qualified alias ARN"
@@ -230,6 +240,20 @@ TARGET_CORPUS="$(jq -r '.Environment.Variables.FPA_PINNED_CORPUS_VERSION // ""' 
   <<<"$TARGET_CONFIG")"
 TARGET_DISABLED="$(jq -r '.Environment.Variables.FPA_DISABLED_DOC_IDS // ""' \
   <<<"$TARGET_CONFIG")"
+TARGET_SOURCE="$(jq -r '.Environment.Variables.FPA_SOURCE_REVISION // ""' <<<"$TARGET_CONFIG")"
+TARGET_CONFIG_VERSION="$(
+  jq -r '.Environment.Variables.FPA_CONFIG_VERSION // ""' <<<"$TARGET_CONFIG"
+)"
+TARGET_CONTENT="$(
+  jq -r '.Environment.Variables.FPA_PINNED_CONTENT_VERSION // ""' <<<"$TARGET_CONFIG"
+)"
+TARGET_SNAPSHOT="$(
+  jq -r '.Environment.Variables.FPA_PINNED_SNAPSHOT_VERSION // ""' <<<"$TARGET_CONFIG"
+)"
+TARGET_RELEASE="$(jq -r '.Environment.Variables.FPA_RELEASE_VERSION // ""' <<<"$TARGET_CONFIG")"
+TARGET_ARTIFACT="$(
+  jq -r '.Environment.Variables.FPA_ARTIFACT_CODE_SHA256 // ""' <<<"$TARGET_CONFIG"
+)"
 [[ "$TARGET_CORPUS" =~ ^[0-9a-f]{12}$ ]] \
   || fail "retained version has no valid corpus pin"
 TARGET_RUNTIME_MODE="$(
@@ -246,13 +270,55 @@ for document_id in "${REQUIRED_DISABLED[@]}"; do
     || fail "retained version does not contain required disabled document $document_id"
 done
 
-"$ROOT/infra/check-lambda-version.sh" \
-  --function-name "$FN" \
-  --qualifier "$TARGET_VERSION" \
-  --expected-corpus "$TARGET_CORPUS" \
-  --expected-disabled-docs "$TARGET_DISABLED" \
-  --deadline-epoch "$OPERATION_DEADLINE_EPOCH" \
-  --region "$REGION"
+TARGET_IDENTITY_FIELDS=(
+  "$TARGET_SOURCE"
+  "$TARGET_CONFIG_VERSION"
+  "$TARGET_CONTENT"
+  "$TARGET_SNAPSHOT"
+  "$TARGET_RELEASE"
+  "$TARGET_ARTIFACT"
+)
+TARGET_IDENTITY_PRESENT=0
+for value in "${TARGET_IDENTITY_FIELDS[@]}"; do
+  [[ -n "$value" ]] && TARGET_IDENTITY_PRESENT=$((TARGET_IDENTITY_PRESENT + 1))
+done
+TARGET_IDENTITY_MODE=""
+if [[ "$TARGET_IDENTITY_PRESENT" == "6" ]]; then
+  jq -e --arg version "$TARGET_VERSION" --arg artifact "$TARGET_ARTIFACT" '
+    .Version == $version and .CodeSha256 == $artifact
+  ' <<<"$TARGET_CONFIG" >/dev/null \
+    || fail "retained version artifact identity does not match its qualified code"
+  TARGET_IDENTITY_MODE="strict"
+  "$ROOT/infra/check-lambda-version.sh" \
+    --function-name "$FN" \
+    --qualifier "$TARGET_VERSION" \
+    --expected-corpus "$TARGET_CORPUS" \
+    --expected-disabled-docs "$TARGET_DISABLED" \
+    --require-release-identity \
+    --expected-source "$TARGET_SOURCE" \
+    --expected-config "$TARGET_CONFIG_VERSION" \
+    --expected-content "$TARGET_CONTENT" \
+    --expected-snapshot "$TARGET_SNAPSHOT" \
+    --expected-release "$TARGET_RELEASE" \
+    --expected-artifact "$TARGET_ARTIFACT" \
+    --deadline-epoch "$OPERATION_DEADLINE_EPOCH" \
+    --region "$REGION"
+elif [[ "$TARGET_IDENTITY_PRESENT" != "0" ]]; then
+  fail "retained version contains a partial release identity"
+else
+  [[ -n "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
+    && "$TARGET_VERSION" == "$LEGACY_IDENTITY_ROLLBACK_VERSION" ]] \
+    || fail "retained legacy version is not the explicitly allowlisted baseline"
+  TARGET_IDENTITY_MODE="legacy"
+  "$ROOT/infra/check-lambda-version.sh" \
+    --function-name "$FN" \
+    --qualifier "$TARGET_VERSION" \
+    --expected-corpus "$TARGET_CORPUS" \
+    --expected-disabled-docs "$TARGET_DISABLED" \
+    --allow-legacy-release-identity \
+    --deadline-epoch "$OPERATION_DEADLINE_EPOCH" \
+    --region "$REGION"
+fi
 
 if [[ -z "$API_ID" ]]; then
   API_IDS="$(
@@ -291,12 +357,21 @@ assert_single_live_integration
 (( $(date +%s) < VERIFICATION_DEADLINE_EPOCH )) \
   || fail "insufficient time remains to move and verify the rollback target safely"
 
-ROLLBACK_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-ROLLBACK_DESCRIPTION="rollback=$ROLLBACK_AT from=$CURRENT_VERSION"
+if [[ "$TARGET_IDENTITY_MODE" == "strict" ]]; then
+  TARGET_PUBLISHED_DESCRIPTION="$(jq -r '.Description // ""' <<<"$TARGET_CONFIG")"
+  [[ "$TARGET_PUBLISHED_DESCRIPTION" == release="$TARGET_RELEASE"* ]] \
+    || fail "retained identity release has an invalid published description"
+  ROLLBACK_DESCRIPTION="$TARGET_PUBLISHED_DESCRIPTION rollback-from=$CURRENT_VERSION"
+else
+  ROLLBACK_DESCRIPTION="legacy-release=$TARGET_VERSION rollback-from=$CURRENT_VERSION"
+fi
+(( ${#ROLLBACK_DESCRIPTION} <= 256 )) \
+  || fail "rollback alias description exceeds the Lambda 256-character limit"
 RESTORE_GUARD_EXPECTED_VERSION="$TARGET_VERSION"
 RESTORE_GUARD_EXPECTED_REVISION=""
 RESTORE_GUARD_EXPECTED_DESCRIPTION="$ROLLBACK_DESCRIPTION"
 RESTORE_GUARD_DISPLACED_VERSION="$CURRENT_VERSION"
+RESTORE_GUARD_DISPLACED_DESCRIPTION="$CURRENT_DESCRIPTION"
 RESTORE_GUARD_ACTIVE=true
 if ! UPDATED_ALIAS="$(
   aws_until "$VERIFICATION_DEADLINE_EPOCH" lambda update-alias \
@@ -319,12 +394,31 @@ assert_unweighted_alias "$UPDATED_ALIAS" "$LIVE_ALIAS"
   || fail "$LIVE_ALIAS did not settle on retained version $TARGET_VERSION"
 assert_single_live_integration "$VERIFICATION_DEADLINE_EPOCH"
 
-if ! "$ROOT/scripts/smoke-production.sh" \
-  --assistant-only \
-  --assistant-base-url "$ASSISTANT_BASE_URL" \
-  --expected-disabled-docs "$REQUIRED_DISABLED_DOC_IDS" \
-  --deadline-epoch "$VERIFICATION_DEADLINE_EPOCH"; then
-  fail "retained version failed the public assistant smoke"
+if [[ "$TARGET_IDENTITY_MODE" == "strict" ]]; then
+  if ! "$ROOT/scripts/smoke-production.sh" \
+    --assistant-only \
+    --assistant-base-url "$ASSISTANT_BASE_URL" \
+    --expected-disabled-docs "$REQUIRED_DISABLED_DOC_IDS" \
+    --require-release-identity \
+    --expected-source "$TARGET_SOURCE" \
+    --expected-config "$TARGET_CONFIG_VERSION" \
+    --expected-content "$TARGET_CONTENT" \
+    --expected-snapshot "$TARGET_SNAPSHOT" \
+    --expected-release "$TARGET_RELEASE" \
+    --expected-artifact "$TARGET_ARTIFACT" \
+    --expected-function-version "$TARGET_VERSION" \
+    --deadline-epoch "$VERIFICATION_DEADLINE_EPOCH"; then
+    fail "retained version failed the public assistant smoke"
+  fi
+else
+  if ! "$ROOT/scripts/smoke-production.sh" \
+    --assistant-only \
+    --assistant-base-url "$ASSISTANT_BASE_URL" \
+    --expected-disabled-docs "$REQUIRED_DISABLED_DOC_IDS" \
+    --allow-legacy-release-identity \
+    --deadline-epoch "$VERIFICATION_DEADLINE_EPOCH"; then
+    fail "retained legacy version failed the public assistant smoke"
+  fi
 fi
 assert_single_live_integration "$VERIFICATION_DEADLINE_EPOCH"
 VERIFIED_LIVE_JSON="$(
@@ -332,8 +426,14 @@ VERIFIED_LIVE_JSON="$(
     --function-name "$FN" --name "$LIVE_ALIAS" --region "$REGION" --output json
 )"
 assert_unweighted_alias "$VERIFIED_LIVE_JSON" "$LIVE_ALIAS"
-[[ "$(jq -r '.FunctionVersion // ""' <<<"$VERIFIED_LIVE_JSON")" == "$TARGET_VERSION" \
-  && "$(jq -r '.RevisionId // ""' <<<"$VERIFIED_LIVE_JSON")" == "$UPDATED_REVISION" ]] \
+jq -e \
+  --arg version "$TARGET_VERSION" \
+  --arg revision "$UPDATED_REVISION" \
+  --arg description "$ROLLBACK_DESCRIPTION" '
+    .FunctionVersion == $version
+    and (.RevisionId // "") == $revision
+    and (.Description // "") == $description
+  ' <<<"$VERIFIED_LIVE_JSON" >/dev/null \
   || fail "live alias changed before rollback verification completed"
 
 ELAPSED_SECONDS=$(( $(date +%s) - START_SECONDS ))

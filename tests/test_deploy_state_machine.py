@@ -18,8 +18,18 @@ FUNCTION = "fare-policy-assistant-demo"
 API_ID = "test-api"
 CORPUS_VERSION = "0938fff0539a"
 HISTORY_KEY = "0" * 64
+SOURCE_REVISION = "a" * 40
+IDENTITY_ARTIFACT = "A" * 43 + "="
 ALIAS_ARN = f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}:live"
 ALIAS_URI = f"arn:aws:apigateway:{REGION}:lambda:path/2015-03-31/functions/{ALIAS_ARN}/invocations"
+IDENTITY_ENV_KEYS = {
+    "FPA_SOURCE_REVISION",
+    "FPA_CONFIG_VERSION",
+    "FPA_PINNED_CONTENT_VERSION",
+    "FPA_PINNED_SNAPSHOT_VERSION",
+    "FPA_RELEASE_VERSION",
+    "FPA_ARTIFACT_CODE_SHA256",
+}
 
 
 FAKE_AWS = r"""
@@ -172,6 +182,33 @@ def role_policy():
     }
 
 
+def version_identity(qualifier):
+    function_config = state["configs"][qualifier]
+    environment = function_config["Environment"]["Variables"]
+    field_map = {
+        "source_revision": "FPA_SOURCE_REVISION",
+        "config_version": "FPA_CONFIG_VERSION",
+        "content_version": "FPA_PINNED_CONTENT_VERSION",
+        "snapshot_version": "FPA_PINNED_SNAPSHOT_VERSION",
+        "release_version": "FPA_RELEASE_VERSION",
+        "artifact_code_sha256": "FPA_ARTIFACT_CODE_SHA256",
+    }
+    present = {
+        response_key: environment[environment_key]
+        for response_key, environment_key in field_map.items()
+        if environment_key in environment
+    }
+    if not present:
+        return {}
+    if len(present) != len(field_map):
+        return {"identity_status": "invalid", **present}
+    return {
+        "identity_status": "verified",
+        "function_version": qualifier,
+        **present,
+    }
+
+
 def invoke_payload(event, qualifier):
     path = event["rawPath"]
     request_body = json.loads(event.get("body") or "{}")
@@ -191,11 +228,24 @@ def invoke_payload(event, qualifier):
         headers["content-type"] = "text/html"
         body = "<html><title>Transit Fare Policy Assistant</title></html>"
     elif path == "/version":
+        identity = version_identity(qualifier)
+        if (
+            state.get("candidate_version_identity_mismatch")
+            and identity.get("identity_status") == "verified"
+        ):
+            identity["release_version"] = "f" * 64
+        if (
+            state.get("candidate_version_partial_identity")
+            and identity.get("identity_status") == "verified"
+        ):
+            identity.pop("snapshot_version")
+            identity["identity_status"] = "invalid"
         body = json.dumps(
             {
                 "corpus_version": state["corpus_version"],
                 "matches_pin": True,
                 "disabled_documents": disabled_documents,
+                **identity,
             }
         )
     elif "Social Security" in request_body.get("question", ""):
@@ -486,14 +536,17 @@ if args[:2] == ["lambda", "invoke"]:
     event_path = pathlib.Path(value("--payload").removeprefix("fileb://"))
     event = json.loads(event_path.read_text(encoding="utf-8"))
     output_path = pathlib.Path(args[-1])
-    output_path.write_text(json.dumps(invoke_payload(event, qualifier)), encoding="utf-8")
+    response = invoke_payload(event, qualifier)
+    output_path.write_text(json.dumps(response), encoding="utf-8")
     log_tail = value("--log-type") == "Tail"
+    response_body = json.loads(response["body"]) if event["rawPath"] == "/version" else {}
     record(
         "lambda.invoke",
         qualifier=qualifier,
         path=event["rawPath"],
         health_marker=event.get("fare_assistant_health"),
         log_tail=log_tail,
+        identity_status=response_body.get("identity_status"),
     )
     metadata = {"StatusCode": 200, "ExecutedVersion": qualifier}
     if log_tail:
@@ -569,6 +622,7 @@ if args[:2] == ["lambda", "update-alias"]:
         to_version=alias["FunctionVersion"],
         revision=alias["RevisionId"],
         routing=routing,
+        description=alias["Description"],
     )
     finish(alias)
 
@@ -789,6 +843,33 @@ def save_state(state):
     os.replace(temporary, state_path)
 
 
+def version_identity(state, version):
+    function_config = state["configs"][version]
+    environment = function_config["Environment"]["Variables"]
+    field_map = {
+        "source_revision": "FPA_SOURCE_REVISION",
+        "config_version": "FPA_CONFIG_VERSION",
+        "content_version": "FPA_PINNED_CONTENT_VERSION",
+        "snapshot_version": "FPA_PINNED_SNAPSHOT_VERSION",
+        "release_version": "FPA_RELEASE_VERSION",
+        "artifact_code_sha256": "FPA_ARTIFACT_CODE_SHA256",
+    }
+    present = {
+        response_key: environment[environment_key]
+        for response_key, environment_key in field_map.items()
+        if environment_key in environment
+    }
+    if not present:
+        return {}
+    if len(present) != len(field_map):
+        return {"identity_status": "invalid", **present}
+    return {
+        "identity_status": "verified",
+        "function_version": version,
+        **present,
+    }
+
+
 if "--dump-header" not in args:
     output_path = pathlib.Path(value("--output"))
     output_path.write_bytes(b"synthetic encrypted-at-rest rollback artifact")
@@ -814,9 +895,12 @@ disabled_documents = [
     .split(",")
     if item
 ]
-state["events"].append(
-    {"op": "public.request", "live_version": live_version, "path": path}
-)
+public_event = {"op": "public.request", "live_version": live_version, "path": path}
+if path == "/version":
+    public_event["identity_status"] = version_identity(state, live_version).get(
+        "identity_status"
+    )
+state["events"].append(public_event)
 save_state(state)
 
 if live_version == os.environ.get("FAKE_PUBLIC_FAIL_VERSION"):
@@ -840,6 +924,12 @@ security_headers = [
 ]
 if path == "/version":
     content_type = "application/json"
+    identity = version_identity(state, live_version)
+    if (
+        state.get("public_version_identity_mismatch")
+        and identity.get("identity_status") == "verified"
+    ):
+        identity["release_version"] = "f" * 64
     body = json.dumps(
         {
             "corpus_version": state["corpus_version"],
@@ -847,6 +937,7 @@ if path == "/version":
             "agencies": ["MST"],
             "matches_pin": True,
             "disabled_documents": disabled_documents,
+            **identity,
         }
     )
     response_headers = [*security_headers, "x-frame-options: DENY"]
@@ -955,6 +1046,90 @@ raise SystemExit(2)
 """.lstrip()
 
 
+FAKE_GIT = r"""
+#!/usr/bin/env python3
+import hashlib
+import os
+import pathlib
+import stat
+import sys
+
+args = sys.argv[1:]
+repo_root = None
+if args[:1] == ["-C"] and len(args) >= 2:
+    repo_root = pathlib.Path(args[1]).resolve()
+    args = args[2:]
+
+if args == ["rev-parse", "HEAD"]:
+    print(os.environ["FAKE_GIT_SOURCE_REVISION"])
+    raise SystemExit(0)
+if args == ["rev-parse", "--show-toplevel"] and repo_root is not None:
+    print(repo_root)
+    raise SystemExit(0)
+if args in (
+    ["status", "--porcelain", "--untracked-files=normal"],
+    ["status", "--porcelain=v1", "--untracked-files=normal", "-z"],
+):
+    status = os.environ.get("FAKE_GIT_STATUS", "")
+    if status:
+        terminator = "\0" if "-z" in args else "\n"
+        sys.stdout.buffer.write(status.encode() + terminator.encode())
+    raise SystemExit(0)
+
+def fixture_entries():
+    if repo_root is None:
+        return []
+    selected = []
+    for tree in ("src/assistant", "prompts"):
+        for path in (repo_root / tree).rglob("*"):
+            relative = path.relative_to(repo_root)
+            if (
+                path.is_file()
+                and "__pycache__" not in relative.parts
+                and path.suffix != ".pyc"
+            ):
+                selected.append(relative)
+    for name in (
+        "corpus/processed/chunks.jsonl",
+        "docs/answer-contract.schema.json",
+        "web/__init__.py",
+        "web/handler.py",
+        "web/index.html",
+        "web/offline.py",
+        "web/guide.py",
+        "web/embed.py",
+        "web/csp.py",
+    ):
+        selected.append(pathlib.Path(name))
+
+    entries = []
+    for relative in sorted(set(selected), key=lambda path: path.as_posix()):
+        source = repo_root / relative
+        payload = source.read_bytes()
+        header = f"blob {len(payload)}\0".encode()
+        object_id = hashlib.sha1(header + payload).hexdigest()
+        mode = "100755" if source.stat().st_mode & stat.S_IXUSR else "100644"
+        entries.append((mode, object_id, relative.as_posix(), payload))
+    return entries
+
+if args == ["ls-files", "--stage", "-z"]:
+    for mode, object_id, path, _payload in fixture_entries():
+        sys.stdout.buffer.write(f"{mode} {object_id} 0\t{path}\0".encode())
+    raise SystemExit(0)
+if args[:2] == ["cat-file", "blob"] and len(args) == 3:
+    requested = args[2]
+    for _mode, object_id, _path, payload in fixture_entries():
+        if object_id == requested:
+            sys.stdout.buffer.write(payload)
+            raise SystemExit(0)
+    print(f"unknown fake blob: {requested}", file=sys.stderr)
+    raise SystemExit(1)
+
+print("unsupported fake git call: " + " ".join(args), file=sys.stderr)
+raise SystemExit(2)
+""".lstrip()
+
+
 def _lambda_config(version: str, code_sha: str, revision: str) -> dict[str, Any]:
     function_arn = f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}"
     if version != "$LATEST":
@@ -1017,6 +1192,11 @@ def _initial_state(
     config_revision_changes_on_wait: bool = False,
     transient_code_response: bool = False,
     partial_retry_unknown_drift: bool = False,
+    candidate_version_identity_mismatch: bool = False,
+    candidate_version_partial_identity: bool = False,
+    public_version_identity_mismatch: bool = False,
+    rollback_already_old_live: bool = False,
+    identity_route_repair: str = "",
 ) -> dict[str, Any]:
     version_five = _lambda_config("5", "old-five-sha", "version-5-r1")
     latest = _lambda_config("$LATEST", "old-five-sha", "latest-r1")
@@ -1039,6 +1219,9 @@ def _initial_state(
         "competing_live_on_read": competing_live_on_read,
         "config_revision_changes_on_wait": config_revision_changes_on_wait,
         "transient_code_response": transient_code_response,
+        "candidate_version_identity_mismatch": candidate_version_identity_mismatch,
+        "candidate_version_partial_identity": candidate_version_partial_identity,
+        "public_version_identity_mismatch": public_version_identity_mismatch,
         "role_arn": f"arn:aws:iam::{ACCOUNT}:role/{FUNCTION}-role",
         "alias_permission": True,
         "aliases": {
@@ -1083,6 +1266,30 @@ def _initial_state(
             f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}"
         )
         state["configs"]["$LATEST"]["FutureBehaviorConfig"] = {"Mode": "unreviewed-new-setting"}
+    if identity_route_repair:
+        if identity_route_repair not in {"verified", "partial", "mismatch"}:
+            raise ValueError(f"unsupported identity route fixture: {identity_route_repair}")
+        identity_variables = {
+            "FPA_SOURCE_REVISION": SOURCE_REVISION,
+            "FPA_CONFIG_VERSION": "1" * 64,
+            "FPA_PINNED_CONTENT_VERSION": "2" * 64,
+            "FPA_PINNED_SNAPSHOT_VERSION": "3" * 64,
+            "FPA_RELEASE_VERSION": "4" * 64,
+            "FPA_ARTIFACT_CODE_SHA256": IDENTITY_ARTIFACT,
+        }
+        if identity_route_repair == "partial":
+            identity_variables.pop("FPA_PINNED_SNAPSHOT_VERSION")
+        elif identity_route_repair == "mismatch":
+            identity_variables["FPA_ARTIFACT_CODE_SHA256"] = "B" * 43 + "="
+        for version in ("$LATEST", "5"):
+            state["configs"][version]["CodeSha256"] = IDENTITY_ARTIFACT
+            state["configs"][version]["Environment"]["Variables"].update(identity_variables)
+        state["integration"]["IntegrationUri"] = (
+            f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}"
+        )
+    if rollback_already_old_live:
+        state["aliases"]["rollback"]["FunctionVersion"] = "5"
+        state["aliases"]["rollback"]["Description"] = "operator-retained rollback marker"
     return state
 
 
@@ -1104,11 +1311,19 @@ def _run_deploy(
     config_revision_changes_on_wait: bool = False,
     transient_code_response: bool = False,
     partial_retry_unknown_drift: bool = False,
+    candidate_version_identity_mismatch: bool = False,
+    candidate_version_partial_identity: bool = False,
+    public_version_identity_mismatch: bool = False,
+    rollback_already_old_live: bool = False,
+    identity_route_repair: str = "",
+    deploy_runs: int = 1,
+    git_status: str = "",
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     _write_executable(bin_dir / "aws", FAKE_AWS)
     _write_executable(bin_dir / "curl", FAKE_CURL)
+    _write_executable(bin_dir / "git", FAKE_GIT)
     _write_executable(bin_dir / "uv", FAKE_UV)
     _write_executable(bin_dir / "sleep", "#!/bin/sh\nexit 0\n")
 
@@ -1124,6 +1339,11 @@ def _run_deploy(
                 config_revision_changes_on_wait=config_revision_changes_on_wait,
                 transient_code_response=transient_code_response,
                 partial_retry_unknown_drift=partial_retry_unknown_drift,
+                candidate_version_identity_mismatch=candidate_version_identity_mismatch,
+                candidate_version_partial_identity=candidate_version_partial_identity,
+                public_version_identity_mismatch=public_version_identity_mismatch,
+                rollback_already_old_live=rollback_already_old_live,
+                identity_route_repair=identity_route_repair,
             )
         ),
         encoding="utf-8",
@@ -1136,26 +1356,36 @@ def _run_deploy(
         "FAKE_AWS_STATE": str(state_path),
         "FAKE_PUBLIC_FAIL_VERSION": fail_public_version,
         "FAKE_REAL_PYTHON": sys.executable,
-        "FPA_ALLOW_DIRTY_DEPLOY": "1",
+        "FAKE_GIT_SOURCE_REVISION": SOURCE_REVISION,
+        "FAKE_GIT_STATUS": git_status,
         "FPA_API_ID": API_ID,
         "FPA_PINNED_CORPUS_VERSION": CORPUS_VERSION,
         "FPA_DISABLED_DOC_IDS": disabled_docs,
         "FPA_HISTORY_HMAC_KEY": HISTORY_KEY,
+        "FPA_LEGACY_IDENTITY_ROLLBACK_VERSION": "5",
         "FPA_SMOKE_CONNECT_TIMEOUT": "1",
         "FPA_SMOKE_MAX_TIME": "1",
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "TMPDIR": str(task_tmpdir),
         "UV_CACHE_DIR": str(tmp_path / "uv-cache"),
     }
-    result = subprocess.run(
-        [str(DEPLOY)],
-        cwd=config.REPO_ROOT,
-        env=environment,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=90,
-    )
+    result: subprocess.CompletedProcess[str] | None = None
+    for run_number in range(1, deploy_runs + 1):
+        current_state = json.loads(state_path.read_text(encoding="utf-8"))
+        current_state["events"].append({"op": "deploy.start", "run": run_number})
+        state_path.write_text(json.dumps(current_state), encoding="utf-8")
+        result = subprocess.run(
+            [str(DEPLOY)],
+            cwd=config.REPO_ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+        if result.returncode != 0:
+            break
+    assert result is not None
     return result, json.loads(state_path.read_text(encoding="utf-8"))
 
 
@@ -1172,6 +1402,32 @@ def _event_index(
     raise AssertionError(f"missing event {operation} with {details}: {events}")
 
 
+def _assert_verified_release_config(function_config: dict[str, Any]) -> None:
+    variables = function_config["Environment"]["Variables"]
+    assert IDENTITY_ENV_KEYS <= variables.keys()
+    assert variables["FPA_SOURCE_REVISION"] == SOURCE_REVISION
+    for name in (
+        "FPA_CONFIG_VERSION",
+        "FPA_PINNED_CONTENT_VERSION",
+        "FPA_PINNED_SNAPSHOT_VERSION",
+        "FPA_RELEASE_VERSION",
+    ):
+        assert len(variables[name]) == 64
+        assert set(variables[name]) <= set("0123456789abcdef")
+    assert variables["FPA_ARTIFACT_CODE_SHA256"] == function_config["CodeSha256"]
+    assert len(variables["FPA_ARTIFACT_CODE_SHA256"]) == 44
+
+
+def test_dirty_source_checkout_aborts_before_any_aws_operation(tmp_path: Path) -> None:
+    result, state = _run_deploy(tmp_path, git_status=" M reviewed-source.py")
+
+    assert result.returncode == 2
+    assert "working tree is dirty; refusing a false source/release identity" in result.stderr
+    assert state["events"] == [{"op": "deploy.start", "run": 1}]
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+
+
 def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prior_live(
     tmp_path: Path,
 ) -> None:
@@ -1184,6 +1440,8 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
     assert state["aliases"]["rollback"]["RoutingConfig"] == {"AdditionalVersionWeights": {}}
     assert state["integration"]["IntegrationUri"] == ALIAS_URI
     assert state["runtime_modes"]["6"] == "FunctionUpdate"
+    _assert_verified_release_config(state["configs"]["6"])
+    assert not (IDENTITY_ENV_KEYS & state["configs"]["5"]["Environment"]["Variables"].keys())
     assert state["configs"]["6"]["LoggingConfig"] == {
         "LogFormat": "JSON",
         "ApplicationLogLevel": "INFO",
@@ -1242,6 +1500,39 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
             "path": "/api/ask",
             "health_marker": "release-v1",
             "log_tail": True,
+            "identity_status": None,
+        }
+    ]
+    version_health = [
+        event
+        for event in events
+        if event.get("op") == "lambda.invoke"
+        and event.get("qualifier") == "6"
+        and event.get("path") == "/version"
+    ]
+    assert version_health == [
+        {
+            "op": "lambda.invoke",
+            "qualifier": "6",
+            "path": "/version",
+            "health_marker": None,
+            "log_tail": False,
+            "identity_status": "verified",
+        }
+    ]
+    public_version = [
+        event
+        for event in events
+        if event.get("op") == "public.request"
+        and event.get("live_version") == "6"
+        and event.get("path") == "/version"
+    ]
+    assert public_version == [
+        {
+            "op": "public.request",
+            "live_version": "6",
+            "path": "/version",
+            "identity_status": "verified",
         }
     ]
     assert structured_filter_checks
@@ -1305,7 +1596,119 @@ def test_first_bootstrap_accounts_for_alias_permission_revision_change(
         "lambda.publish-version",
         version="6",
     )
+    legacy_version_health = [
+        event
+        for event in state["events"]
+        if event.get("op") == "lambda.invoke"
+        and event.get("qualifier") == "5"
+        and event.get("path") == "/version"
+    ]
+    assert legacy_version_health
+    assert all(event["identity_status"] is None for event in legacy_version_health)
     assert permission < route_cutover < candidate_publish
+
+
+def test_identity_bearing_live_repairs_unqualified_route_with_strict_health(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, identity_route_repair="verified")
+
+    assert result.returncode == 0, result.stderr
+    assert state["integration"]["IntegrationUri"] == ALIAS_URI
+    assert state["aliases"]["live"]["FunctionVersion"] == "6"
+    strict_version_health = _event_index(
+        state["events"],
+        "lambda.invoke",
+        qualifier="5",
+        path="/version",
+    )
+    route_cutover = _event_index(
+        state["events"],
+        "apigatewayv2.update-integration",
+        to_uri=ALIAS_URI,
+    )
+    candidate_staging = _event_index(
+        state["events"],
+        "lambda.update-function-configuration",
+    )
+    assert state["events"][strict_version_health]["identity_status"] == "verified"
+    assert strict_version_health < route_cutover < candidate_staging
+    assert "version health: ok: qualified release identity" in result.stdout
+
+
+def test_identity_bearing_bootstrap_uses_strict_health_before_alias_route(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(
+        tmp_path,
+        bootstrap_mode=True,
+        identity_route_repair="verified",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert state["integration"]["IntegrationUri"] == ALIAS_URI
+    strict_version_health = [
+        event
+        for event in state["events"]
+        if event.get("op") == "lambda.invoke"
+        and event.get("qualifier") == "5"
+        and event.get("path") == "/version"
+    ]
+    assert strict_version_health
+    assert {event["identity_status"] for event in strict_version_health} == {"verified"}
+    assert "version health: ok: qualified release identity" in result.stdout
+    assert "version health: ok: explicit legacy release identity" not in result.stdout
+
+
+def test_partial_identity_route_repair_fails_before_integration_change(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, identity_route_repair="partial")
+
+    assert result.returncode != 0
+    assert (
+        "qualified release 5 has a partial identity tuple; refusing direct health" in result.stderr
+    )
+    assert state["integration"]["IntegrationUri"] == (
+        f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}"
+    )
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert not any(
+        event.get("op")
+        in {
+            "apigatewayv2.update-integration",
+            "lambda.update-function-configuration",
+            "lambda.update-function-code",
+            "lambda.publish-version",
+            "lambda.update-alias",
+        }
+        for event in state["events"]
+    )
+
+
+def test_artifact_mismatch_route_repair_fails_before_direct_health(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, identity_route_repair="mismatch")
+
+    assert result.returncode != 0
+    assert "qualified release 5 and identity artifact disagree" in result.stderr
+    assert state["integration"]["IntegrationUri"] == (
+        f"arn:aws:lambda:{REGION}:{ACCOUNT}:function:{FUNCTION}"
+    )
+    assert not any(
+        event.get("op")
+        in {
+            "lambda.invoke",
+            "apigatewayv2.update-integration",
+            "lambda.update-function-configuration",
+            "lambda.update-function-code",
+            "lambda.publish-version",
+            "lambda.update-alias",
+        }
+        for event in state["events"]
+    )
 
 
 def test_code_staging_uses_revision_observed_after_configuration_settles(
@@ -1329,7 +1732,16 @@ def test_code_staging_validates_settled_candidate_not_transient_response(
 
     assert result.returncode == 0, result.stderr
     assert state["aliases"]["live"]["FunctionVersion"] == "6"
-    assert state["configs"]["6"]["Environment"] == state["configs"]["5"]["Environment"]
+    _assert_verified_release_config(state["configs"]["6"])
+    for name in (
+        "FPA_PINNED_CORPUS_VERSION",
+        "FPA_DISABLED_DOC_IDS",
+        "FPA_HISTORY_HMAC_KEY",
+    ):
+        assert (
+            state["configs"]["6"]["Environment"]["Variables"][name]
+            == state["configs"]["5"]["Environment"]["Variables"][name]
+        )
     publish = _event_index(
         state["events"],
         "lambda.publish-version",
@@ -1408,6 +1820,31 @@ def test_public_smoke_failure_restores_live_and_previous_rollback_pointer(
         < restore_rollback
     )
     assert not any(event["op"] == "cloudwatch.put-dashboard" for event in events)
+
+
+def test_public_failure_restores_rollback_description_when_target_was_unchanged(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(
+        tmp_path,
+        fail_public_version="6",
+        rollback_already_old_live=True,
+    )
+
+    assert result.returncode != 0
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["live"]["Description"] == "reviewed live release 5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["Description"] == "operator-retained rollback marker"
+    rollback_updates = [
+        event
+        for event in state["events"]
+        if event.get("op") == "lambda.update-alias" and event.get("alias") == "rollback"
+    ]
+    assert [event["description"] for event in rollback_updates] == [
+        "reviewed live release 5",
+        "operator-retained rollback marker",
+    ]
 
 
 def test_unmanaged_latest_drift_aborts_before_lambda_staging_or_alias_moves(
@@ -1545,3 +1982,122 @@ def test_partial_bootstrap_retry_rejects_unknown_latest_configuration_drift(
         event.get("op") == "lambda.remove-permission" and event.get("statement_id") == "apigw"
         for event in state["events"]
     )
+
+
+def test_identical_retry_reuses_exact_numeric_release_without_alias_moves(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, deploy_runs=2)
+
+    assert result.returncode == 0, result.stderr
+    assert "reusing exact published candidate version 6" in result.stdout
+    assert "candidate is already the live immutable version 6" in result.stdout
+    assert state["aliases"]["live"]["FunctionVersion"] == "6"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "5"
+    _assert_verified_release_config(state["configs"]["6"])
+    assert [event for event in state["events"] if event.get("op") == "lambda.publish-version"] == [
+        {"op": "lambda.publish-version", "version": "6"}
+    ]
+
+    second_start = _event_index(state["events"], "deploy.start", run=2)
+    assert not any(
+        event.get("op") in {"lambda.update-alias", "lambda.create-alias"}
+        for event in state["events"][second_start + 1 :]
+    )
+    assert [
+        event.get("identity_status")
+        for event in state["events"][second_start + 1 :]
+        if event.get("op") == "lambda.invoke" and event.get("path") == "/version"
+    ] == ["verified"]
+    public_identity_statuses = [
+        event.get("identity_status")
+        for event in state["events"][second_start + 1 :]
+        if event.get("op") == "public.request" and event.get("path") == "/version"
+    ]
+    assert public_identity_statuses
+    assert set(public_identity_statuses) == {"verified"}
+
+
+def test_mismatched_candidate_identity_aborts_before_alias_moves(tmp_path: Path) -> None:
+    result, state = _run_deploy(
+        tmp_path,
+        candidate_version_identity_mismatch=True,
+    )
+
+    assert result.returncode != 0
+    assert "/version did not match the verified numeric release identity" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert any(
+        event.get("op") == "lambda.invoke"
+        and event.get("qualifier") == "6"
+        and event.get("path") == "/version"
+        and event.get("identity_status") == "verified"
+        for event in state["events"]
+    )
+    assert not any(
+        event.get("op") in {"lambda.update-alias", "lambda.create-alias"}
+        for event in state["events"]
+    )
+
+
+def test_partial_candidate_identity_aborts_before_alias_moves(tmp_path: Path) -> None:
+    result, state = _run_deploy(
+        tmp_path,
+        candidate_version_partial_identity=True,
+    )
+
+    assert result.returncode != 0
+    assert "/version did not match the verified numeric release identity" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert any(
+        event.get("op") == "lambda.invoke"
+        and event.get("qualifier") == "6"
+        and event.get("path") == "/version"
+        and event.get("identity_status") == "invalid"
+        for event in state["events"]
+    )
+    assert not any(
+        event.get("op") in {"lambda.update-alias", "lambda.create-alias"}
+        for event in state["events"]
+    )
+
+
+def test_public_identity_mismatch_restores_both_alias_pointers(tmp_path: Path) -> None:
+    result, state = _run_deploy(
+        tmp_path,
+        public_version_identity_mismatch=True,
+    )
+
+    assert result.returncode != 0
+    assert "assistant /version returned an invalid verified release identity" in result.stderr
+    assert "candidate 6 failed public smoke" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    events = state["events"]
+    promote_live = _event_index(
+        events,
+        "lambda.update-alias",
+        alias="live",
+        to_version="6",
+    )
+    public_version = _event_index(
+        events,
+        "public.request",
+        live_version="6",
+        path="/version",
+    )
+    restore_live = _event_index(
+        events,
+        "lambda.update-alias",
+        alias="live",
+        to_version="5",
+    )
+    restore_rollback = _event_index(
+        events,
+        "lambda.update-alias",
+        alias="rollback",
+        to_version="4",
+    )
+    assert promote_live < public_version < restore_live < restore_rollback

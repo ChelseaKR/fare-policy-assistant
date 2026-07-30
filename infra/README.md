@@ -34,6 +34,13 @@ special filesystem entries and preserves the existing `__pycache__` and wheel
 top-level `bin/`, whose generated shebangs otherwise expose the builder's
 checkout-specific virtual-environment path and change the artifact digest.
 
+`scripts/copy_tracked_bundle.py` admits only the explicitly selected regular
+files recorded in the Git index. It verifies a clean worktree, rejects
+symlinks/submodules and unsafe destinations, compares each worktree file with
+its reviewed Git blob, and writes the immutable blob bytes. Ignored bytecode,
+editor state, credentials, and other checkout debris therefore cannot enter
+the first-party portion of the ZIP.
+
 ## Immutable release and rollback
 
 Run the full verification gate, merge the reviewed release, switch to a clean
@@ -44,9 +51,23 @@ make verify
 AWS_REGION=us-west-2 ./infra/deploy.sh
 ```
 
-The script refuses a dirty worktree by default. An emergency operator may set
-`FPA_ALLOW_DIRTY_DEPLOY=1`, but that deliberately weakens the source-revision
-record and must be noted in the incident timeline.
+The script always refuses a dirty worktree. There is no emergency bypass:
+identity-bearing artifacts may name a source revision only when every tracked
+and untracked release input is clean. An emergency build must first be
+committed and reviewed so the deployed bytes remain attributable.
+
+The one-time transition from a pre-identity production version requires the
+operator to name that exact observed numeric baseline:
+
+```sh
+FPA_LEGACY_IDENTITY_ROLLBACK_VERSION=<observed-version> \
+  AWS_REGION=us-west-2 ./infra/deploy.sh
+```
+
+Keep the same variable on an emergency rollback only while `rollback` still
+targets that legacy version. After the next successful release advances
+`rollback` to an identity-bearing version, omit it; the legacy exception is not
+a standing compatibility mode.
 
 The first run against the historical deployment performs a safe bootstrap
 before touching `$LATEST`: it publishes the exact current production state,

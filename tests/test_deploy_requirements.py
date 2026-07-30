@@ -177,7 +177,9 @@ class TestDeployScriptUsesThePinFile:
         assert 'DISABLED_DOC_IDS="yolobus-fares"' in text
         assert '"FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"]' in text
         assert 'HISTORY_HMAC_KEY="$(openssl rand -hex 32)"' in text
-        assert '"FPA_HISTORY_HMAC_KEY": os.environ["FPA_DEPLOY_HISTORY_HMAC_KEY"]' in text
+        assert '"FPA_HISTORY_HMAC_KEY": history_key' in text
+        assert '"FPA_HISTORY_HMAC_KEY_ID": history_key_id' in text
+        assert '--output "$BUNDLE/release/release.json"' in text
 
     def test_deployment_preserves_existing_lambda_environment_and_history_key(self):
         text = DEPLOY_SH.read_text(encoding="utf-8")

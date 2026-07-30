@@ -65,6 +65,13 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: src/assistant/release_identity.py
+    marker: "fare-assistant.release.v1"
+    note: >
+      The release-identity mechanism is generic. Choose stable,
+      project-specific namespaces for configuration, release, descriptor,
+      domain-profile, and history-key schemas before publishing identities in
+      a new domain.
   - path: src/assistant/identity.py
     marker: "fare-assistant.content.v1"
     note: >
