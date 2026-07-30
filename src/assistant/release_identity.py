@@ -229,9 +229,7 @@ def _sha256(value: object, context: str) -> str:
 def _source_revision(value: object, context: str = "source_revision") -> str:
     revision = _string(value, context)
     if not _SOURCE_REVISION.fullmatch(revision):
-        raise ReleaseIdentityError(
-            f"{context} must be a full 40-character lowercase Git object ID"
-        )
+        raise ReleaseIdentityError(f"{context} must be a full 40-character lowercase Git object ID")
     return revision
 
 
@@ -348,6 +346,18 @@ def _embed_ancestors(environment: Mapping[str, str]) -> list[str]:
     return values
 
 
+def _validate_embed_ancestors(values: Sequence[str], context: str) -> None:
+    if "'none'" in values and len(values) != 1:
+        raise ReleaseIdentityError(f"{context} cannot combine 'none' with other sources")
+    for value in values:
+        if value in {"'self'", "'none'", "*", "http:", "https:"}:
+            continue
+        if not _CSP_ORIGIN.fullmatch(value):
+            raise ReleaseIdentityError(f"{context} contains an invalid CSP source")
+        if value.rsplit(":", 1)[-1].isdigit() and int(value.rsplit(":", 1)[-1]) > 65535:
+            raise ReleaseIdentityError(f"{context} contains an invalid port")
+
+
 def _domain_payload(environment: Mapping[str, str]) -> dict[str, object]:
     requested = environment.get("FPA_DOMAIN", "transit")
     if not isinstance(requested, str) or requested != requested.strip():
@@ -375,8 +385,23 @@ def _domain_payload(environment: Mapping[str, str]) -> dict[str, object]:
 
 def _prompt_payload(prompts_dir: Path) -> dict[str, object]:
     return {
-        name: _file_receipt(prompts_dir / f"{name}.txt", f"{name} prompt")
-        for name in PROMPT_NAMES
+        name: _file_receipt(prompts_dir / f"{name}.txt", f"{name} prompt") for name in PROMPT_NAMES
+    }
+
+
+def _provider_transport(provider: str, environment: Mapping[str, str]) -> dict[str, object]:
+    try:
+        resolved = config.resolve_provider_transport(provider, environment)
+    except (TypeError, ValueError) as exc:
+        raise ReleaseIdentityError(str(exc)) from exc
+    endpoint_sha256 = (
+        hashlib.sha256(resolved.base_url.encode("utf-8")).hexdigest()
+        if resolved.base_url is not None
+        else None
+    )
+    return {
+        "aws_region": resolved.aws_region,
+        "endpoint_sha256": endpoint_sha256,
     }
 
 
@@ -414,6 +439,7 @@ def _resolved_config_payload(
     return {
         "models": {
             "provider": models.provider,
+            "transport": _provider_transport(models.provider, environment),
             "answer": {
                 "model_id": models.answer_model,
                 "max_tokens": models.max_tokens,
@@ -460,10 +486,33 @@ def _validate_receipt(value: object, context: str) -> None:
 def _validate_config_payload(value: object) -> Mapping[str, object]:
     payload = _exact_fields(value, _CONFIG_FIELDS, "config")
 
-    models = _exact_fields(payload["models"], {"provider", "answer", "judge_model_id"}, "models")
+    models = _exact_fields(
+        payload["models"],
+        {"provider", "transport", "answer", "judge_model_id"},
+        "models",
+    )
     provider = _string(models["provider"], "models.provider")
     if provider not in config._DEFAULT_MODELS:
         raise ReleaseIdentityError(f"models.provider is unsupported: {provider!r}")
+    transport = _exact_fields(
+        models["transport"],
+        {"aws_region", "endpoint_sha256"},
+        "models.transport",
+    )
+    aws_region = _optional_string(transport["aws_region"], "models.transport.aws_region")
+    endpoint = transport["endpoint_sha256"]
+    if endpoint is not None:
+        _sha256(endpoint, "models.transport.endpoint_sha256")
+    if provider == "bedrock":
+        if not config.is_canonical_aws_region(aws_region) or endpoint is None:
+            raise ReleaseIdentityError(
+                "bedrock transport must contain a valid AWS region and endpoint digest"
+            )
+    elif provider in {"anthropic", "local"}:
+        if aws_region is not None or endpoint is None:
+            raise ReleaseIdentityError(f"{provider} transport must contain only an endpoint digest")
+    elif aws_region is not None or endpoint is not None:
+        raise ReleaseIdentityError(f"{provider} transport fields must be null")
     _string(models["judge_model_id"], "models.judge_model_id")
     answer = _exact_fields(
         models["answer"],
@@ -575,9 +624,7 @@ def _validate_config_payload(value: object) -> Mapping[str, object]:
         for index, item in enumerate(disabled)
     ]
     if normalized_disabled != sorted(set(normalized_disabled)):
-        raise ReleaseIdentityError(
-            "source_policy.disabled_document_ids must be sorted and unique"
-        )
+        raise ReleaseIdentityError("source_policy.disabled_document_ids must be sorted and unique")
 
     runtime = _exact_fields(
         payload["runtime"],
@@ -595,11 +642,11 @@ def _validate_config_payload(value: object) -> Mapping[str, object]:
     if not ancestors:
         raise ReleaseIdentityError("runtime.embed_ancestors must not be empty")
     ancestor_values = [
-        _string(item, f"runtime.embed_ancestors[{index}]")
-        for index, item in enumerate(ancestors)
+        _string(item, f"runtime.embed_ancestors[{index}]") for index, item in enumerate(ancestors)
     ]
     if ancestor_values != sorted(set(ancestor_values)):
         raise ReleaseIdentityError("runtime.embed_ancestors must be sorted and unique")
+    _validate_embed_ancestors(ancestor_values, "runtime.embed_ancestors")
     signing = _exact_fields(
         runtime["history_signing"],
         {"enabled", "key_id"},
@@ -703,8 +750,7 @@ def _release_payload(
         "source_revision": source_revision,
         "config_version": config_version,
         "evidence": [
-            item.to_json_dict()
-            for item in sorted(evidence, key=lambda candidate: candidate.scope)
+            item.to_json_dict() for item in sorted(evidence, key=lambda candidate: candidate.scope)
         ],
     }
 
@@ -1140,8 +1186,7 @@ def verify_release_descriptor(
         )
         if mismatched:
             raise ReleaseIdentityError(
-                "release identity environment does not match descriptor: "
-                + ", ".join(mismatched)
+                "release identity environment does not match descriptor: " + ", ".join(mismatched)
             )
     return descriptor
 

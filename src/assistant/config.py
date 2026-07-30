@@ -7,9 +7,11 @@ versioned file under prompts/ so that eval runs are reproducible.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from assistant import domain
 from assistant._vendor.genai_telemetry import Usage, cost_usd
@@ -84,8 +86,12 @@ _DEFAULT_MODELS = {
 
 DEFAULT_PROVIDER = "bedrock"
 DEFAULT_AWS_REGION = "us-west-2"
+DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
+DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_STALENESS_BUDGET_DAYS = 90
 DEFAULT_EMBED_ANCESTORS = "'self'"
+
+_AWS_REGION = re.compile(r"^[a-z]{2}(?:-gov)?-[a-z]+-[1-9][0-9]*$")
 
 # Rider-runtime limits currently enforced by ``web.handler``. They live here as
 # named release inputs so the handler and the release descriptor can share one
@@ -117,6 +123,131 @@ def _default_model(provider: str, index: int) -> str:
         return _DEFAULT_MODELS[provider][index]
     except KeyError as exc:
         raise ValueError(f"unsupported model provider: {provider!r}") from exc
+
+
+@dataclass(frozen=True)
+class ProviderTransport:
+    """One validated, explicit model-provider transport selection.
+
+    The endpoint itself is passed to the client but is represented only by an
+    opaque digest in the public release descriptor. Credentials remain outside
+    this value; direct-Anthropic custom headers fail closed because secret
+    header values cannot safely become public identity inputs.
+    """
+
+    provider: str
+    base_url: str | None
+    aws_region: str | None
+
+
+def _base_url(
+    value: object,
+    *,
+    environment_name: str,
+    origin_only: bool = False,
+    require_https: bool = False,
+) -> str:
+    expected_scheme = "HTTPS" if require_https else "HTTP(S)"
+    if not isinstance(value, str) or not value or value != value.strip():
+        raise ValueError(f"{environment_name} must be a trimmed absolute {expected_scheme} URL")
+    if any(character.isspace() for character in value):
+        raise ValueError(f"{environment_name} must not contain whitespace")
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError(f"{environment_name} must contain a valid host and port") from exc
+    if (
+        parsed.scheme not in {"http", "https"}
+        or (require_https and parsed.scheme != "https")
+        or not parsed.netloc
+        or parsed.hostname is None
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or "?" in value
+        or "#" in value
+        or (port is not None and not 1 <= port <= 65535)
+    ):
+        raise ValueError(
+            f"{environment_name} must be an absolute {expected_scheme} URL without "
+            "credentials, query parameters, or a fragment"
+        )
+    if origin_only and parsed.path not in {"", "/"}:
+        raise ValueError(f"{environment_name} must be an HTTP(S) origin without a path")
+
+    # All three clients treat one terminal slash as the same base endpoint.
+    # Remove that one redundant spelling before both use and hashing, while
+    # leaving repeated slashes untouched rather than guessing their semantics.
+    if value.endswith("/") and not value.endswith("//"):
+        return value[:-1]
+    return value
+
+
+def is_canonical_aws_region(value: object) -> bool:
+    """Return whether ``value`` is the canonical region spelling we accept."""
+    return (
+        isinstance(value, str)
+        and value == value.strip()
+        and _AWS_REGION.fullmatch(value) is not None
+    )
+
+
+def resolve_provider_transport(
+    provider: str,
+    environment: Mapping[str, str] | None = None,
+) -> ProviderTransport:
+    """Resolve provider region/endpoint once, without SDK profile fallbacks."""
+    if provider not in _DEFAULT_MODELS:
+        raise ValueError(f"unsupported model provider: {provider!r}")
+    values = _environment(environment)
+
+    if provider == "bedrock":
+        region = values.get("AWS_REGION", DEFAULT_AWS_REGION)
+        if not is_canonical_aws_region(region):
+            raise ValueError("AWS_REGION must be a canonical AWS region name")
+        assert isinstance(region, str)
+        default_url = f"https://bedrock-runtime.{region}.amazonaws.com"
+        return ProviderTransport(
+            provider=provider,
+            base_url=_base_url(
+                values.get("ANTHROPIC_BEDROCK_BASE_URL", default_url),
+                environment_name="ANTHROPIC_BEDROCK_BASE_URL",
+                require_https=True,
+            ),
+            aws_region=region,
+        )
+
+    if provider == "anthropic":
+        custom_headers = values.get("ANTHROPIC_CUSTOM_HEADERS")
+        if custom_headers is not None and custom_headers != "":
+            raise ValueError(
+                "ANTHROPIC_CUSTOM_HEADERS is unsupported because secret headers "
+                "cannot be included in release identity"
+            )
+        return ProviderTransport(
+            provider=provider,
+            base_url=_base_url(
+                values.get("ANTHROPIC_BASE_URL", DEFAULT_ANTHROPIC_BASE_URL),
+                environment_name="ANTHROPIC_BASE_URL",
+                require_https=True,
+            ),
+            aws_region=None,
+        )
+
+    if provider == "local":
+        return ProviderTransport(
+            provider=provider,
+            base_url=_base_url(
+                values.get("FPA_OLLAMA_HOST", DEFAULT_OLLAMA_BASE_URL),
+                environment_name="FPA_OLLAMA_HOST",
+                origin_only=True,
+            ),
+            aws_region=None,
+        )
+
+    return ProviderTransport(provider=provider, base_url=None, aws_region=None)
 
 
 @dataclass(frozen=True)

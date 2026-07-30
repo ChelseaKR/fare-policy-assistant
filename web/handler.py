@@ -24,10 +24,12 @@ pinned 1024-token answer ceiling in config.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
 import os
+import re
 import sys
 import time
 from collections import OrderedDict, deque
@@ -36,24 +38,24 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent  # bundle root mirrors the repo root
 sys.path.insert(0, str(_ROOT / "src"))
 
-from assistant import config, guards, telemetry  # noqa: E402
+from assistant import config, guards, release_identity, telemetry  # noqa: E402
 from assistant.answer import AnswerResult, answer_question  # noqa: E402
 from assistant.contract import build_structured_answer  # noqa: E402
 from assistant.models import get_model  # noqa: E402
 from assistant.retrieve import default_retriever  # noqa: E402
 from web.csp import html_csp  # noqa: E402
 
-MAX_QUESTION_CHARS = 500
+MAX_QUESTION_CHARS = config.MAX_QUESTION_CHARS
 # Reject oversized request bodies before json.loads parses them. A question (500
 # chars) plus three truncated history turns is a few KB; 16 KB is comfortable
 # headroom and well under the API Gateway 10 MB ceiling.
-MAX_BODY_BYTES = 16 * 1024
-REQUESTS_PER_MINUTE = 8  # per container, in-process backstop; the gateway
+MAX_BODY_BYTES = config.MAX_BODY_BYTES
+REQUESTS_PER_MINUTE = config.REQUESTS_PER_MINUTE  # per container, in-process backstop; the gateway
 # throttle (infra/deploy.sh) is the cross-container ceiling -- see module
 # docstring and ADR 0004 amendment "a true cross-container rate limit".
-ANSWER_CACHE_SIZE = 256  # per container; answers are deterministic (temperature 0)
-MAX_HISTORY_TURNS = 3  # prior turns the client may send for a follow-up
-MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
+ANSWER_CACHE_SIZE = config.ANSWER_CACHE_SIZE  # per container; temperature 0
+MAX_HISTORY_TURNS = config.MAX_HISTORY_TURNS
+MAX_HISTORY_ANSWER_CHARS = config.MAX_HISTORY_ANSWER_CHARS
 
 # Optional forged-history hardening. The client holds the conversation and sends
 # prior turns back with a follow-up; by default any well-formed turn is accepted
@@ -82,18 +84,14 @@ def _history_hmac_key() -> str:
 def _sign_turn(q: str, a: str) -> str:
     """HMAC-SHA256 over a server-issued turn and its evidence-policy state.
 
-    Binding the corpus version and disabled-source set means a turn signed
-    before a corpus rollout or containment change cannot be replayed as current
-    context afterward. JSON encoding keeps field boundaries unambiguous.
+    Binding the complete release means a turn signed before any source,
+    configuration, prompt, containment, or evidence change cannot be replayed
+    as current context afterward. JSON encoding keeps field boundaries
+    unambiguous.
     """
     key = _history_hmac_key()
     material = json.dumps(
-        [
-            q,
-            a,
-            _corpus_summary()["corpus_version"],
-            _disabled_document_ids(),
-        ],
+        [_behavior_version(), q, a],
         ensure_ascii=False,
         separators=(",", ":"),
     ).encode("utf-8")
@@ -200,7 +198,12 @@ def _version_payload() -> dict:
     if as_of:
         from datetime import UTC, date, datetime
 
-        budget = int(os.environ.get("FPA_STALENESS_BUDGET_DAYS", "90"))
+        budget = int(
+            os.environ.get(
+                "FPA_STALENESS_BUDGET_DAYS",
+                str(config.DEFAULT_STALENESS_BUDGET_DAYS),
+            )
+        )
         age = (datetime.now(UTC).date() - date.fromisoformat(as_of)).days
         summary["staleness_days"] = age
         summary["staleness_budget_days"] = budget
@@ -217,6 +220,24 @@ def _version_payload() -> dict:
                 serving=summary["corpus_version"],
                 pinned=pinned,
             )
+    try:
+        summary.update(_release_status())
+    except release_identity.ReleaseIdentityError:
+        # The candidate gate needs a safe diagnostic, never the validation
+        # exception or any environment material.
+        summary.update(
+            {
+                "identity_status": "invalid",
+                "source_revision": None,
+                "config_version": None,
+                "snapshot_version": None,
+                "release_version": None,
+                "artifact_code_sha256": None,
+                "function_version": (
+                    "local" if os.environ.get("AWS_LAMBDA_FUNCTION_VERSION", "") == "" else None
+                ),
+            }
+        )
     return summary
 
 
@@ -230,16 +251,121 @@ _RECENT: deque[float] = deque()
 # an offline dictionary. The bounded LRU and its key both die with the container.
 _ANSWER_CACHE: OrderedDict[str, dict] = OrderedDict()
 _ANSWER_CACHE_HMAC_KEY = os.urandom(32)
+_LOCAL_SNAPSHOT_VERSION: str | None = None
+
+_RELEASE_ENV_KEYS = (
+    "FPA_SOURCE_REVISION",
+    "FPA_CONFIG_VERSION",
+    "FPA_PINNED_CONTENT_VERSION",
+    "FPA_PINNED_SNAPSHOT_VERSION",
+    "FPA_RELEASE_VERSION",
+    "FPA_ARTIFACT_CODE_SHA256",
+)
+
+
+def _function_version() -> str:
+    value = os.environ.get("AWS_LAMBDA_FUNCTION_VERSION", "")
+    if value == "":
+        return "local"
+    if re.fullmatch(r"[1-9][0-9]*", value):
+        return value
+    raise release_identity.ReleaseIdentityError(
+        "AWS_LAMBDA_FUNCTION_VERSION must be an immutable numeric release"
+    )
+
+
+def _artifact_code_sha256(*, required: bool) -> str | None:
+    """Validate the AWS base64 SHA-256 without exposing any environment values."""
+    value = os.environ.get("FPA_ARTIFACT_CODE_SHA256", "")
+    if not value:
+        if required:
+            raise release_identity.ReleaseIdentityError(
+                "artifact code identity is required for a numeric Lambda release"
+            )
+        return None
+    try:
+        decoded = base64.b64decode(value, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise release_identity.ReleaseIdentityError(
+            "artifact code identity is not valid base64"
+        ) from exc
+    if len(decoded) != 32 or base64.b64encode(decoded).decode("ascii") != value:
+        raise release_identity.ReleaseIdentityError(
+            "artifact code identity is not an AWS-style SHA-256"
+        )
+    return value
+
+
+def _local_snapshot_version() -> str:
+    global _LOCAL_SNAPSHOT_VERSION
+    if _LOCAL_SNAPSHOT_VERSION is None:
+        _LOCAL_SNAPSHOT_VERSION = release_identity.resolve_current_snapshot().snapshot_version
+    return _LOCAL_SNAPSHOT_VERSION
+
+
+def _release_status() -> dict[str, object]:
+    """Return a verified production tuple or an explicit local-development state."""
+    numeric_lambda = _function_version() != "local"
+    descriptor_present = config.RELEASE_DESCRIPTOR_PATH.is_file()
+    identity_environment_present = any(os.environ.get(key) for key in _RELEASE_ENV_KEYS)
+
+    if descriptor_present:
+        descriptor = release_identity.load_release_descriptor()
+        descriptor = release_identity.verify_release_descriptor(
+            descriptor,
+            require_environment=numeric_lambda or identity_environment_present,
+        )
+        artifact = _artifact_code_sha256(required=numeric_lambda)
+        return {
+            "identity_status": "verified",
+            "source_revision": descriptor.source_revision,
+            "config_version": descriptor.config_version,
+            "content_version": descriptor.content_version,
+            "snapshot_version": descriptor.snapshot_version,
+            "release_version": descriptor.release_version,
+            "artifact_code_sha256": artifact,
+            "function_version": _function_version(),
+        }
+
+    if numeric_lambda or identity_environment_present:
+        raise release_identity.ReleaseIdentityError(
+            "an identity-bearing runtime is missing its bundled release descriptor"
+        )
+
+    local_config = release_identity.build_config_identity()
+    return {
+        "identity_status": "development",
+        "source_revision": None,
+        "config_version": local_config.config_version,
+        "content_version": _corpus_summary()["content_version"],
+        "snapshot_version": _local_snapshot_version(),
+        "release_version": None,
+        "artifact_code_sha256": None,
+        "function_version": "local",
+    }
+
+
+def _behavior_version() -> str:
+    """Identity boundary for cache entries and signed client-held history."""
+    status = _release_status()
+    release_version = status.get("release_version")
+    if isinstance(release_version, str):
+        return release_version
+    return (
+        "development:"
+        f"{status['config_version']}:{status['content_version']}:{status['snapshot_version']}"
+    )
 
 
 def _cache_key(question: str, history: list[tuple[str, str]]) -> str:
-    """Return an opaque digest for the question, context, and source policy.
-
-    Including the disabled-source set prevents a warm answer cached before an
-    operator containment change from surviving that change.
-    """
+    """Return an opaque digest bound to one complete application release."""
     material = json.dumps(
-        [question.casefold(), history, _disabled_document_ids()],
+        [
+            config.ANSWER_CACHE_KEY_SCHEMA,
+            _behavior_version(),
+            question.casefold(),
+            history,
+        ],
         ensure_ascii=False,
         separators=(",", ":"),
     ).encode("utf-8")
@@ -310,18 +436,13 @@ def _embed_response(body: str) -> dict:
     else in the security posture changes: no store, nosniff, no referrer, and the
     same default-src 'none' base with the widget's inline blocks hashed in.
     """
-    ancestors = os.environ.get("FPA_EMBED_ANCESTORS", "'self'")
+    ancestors = os.environ.get("FPA_EMBED_ANCESTORS", config.DEFAULT_EMBED_ANCESTORS)
     return _html_response(body, html_csp(body, frame_ancestors=ancestors), frameable=True)
 
 
 def _make_cfg() -> config.Config:
     """Read the provider at call time so tests can run the handler offline."""
-    provider = os.environ.get("FPA_PROVIDER", "bedrock")
-    if provider == "mock":
-        return config.Config(
-            models=config.ModelConfig(provider="mock", answer_model="mock", judge_model="mock")
-        )
-    return config.Config()
+    return config.Config.from_environment()
 
 
 def _response(status: int, body: str, content_type: str = "application/json") -> dict:
@@ -334,6 +455,18 @@ def _response(status: int, body: str, content_type: str = "application/json") ->
 
 def _json(status: int, payload: dict) -> dict:
     return _response(status, json.dumps(payload, ensure_ascii=False))
+
+
+_IDENTITY_UNAVAILABLE = "This release could not verify its runtime identity. Please try later."
+
+
+def _policy_identity_error() -> dict | None:
+    """Fail closed before serving rider-facing policy or interactive surfaces."""
+    try:
+        _release_status()
+    except release_identity.ReleaseIdentityError:
+        return _json(503, {"error": _IDENTITY_UNAVAILABLE})
+    return None
 
 
 def _over_budget(now: float) -> bool:
@@ -440,6 +573,10 @@ def _ask(event: dict) -> dict:
         return _json(
             400, {"error": f"Please keep questions under {MAX_QUESTION_CHARS} characters."}
         )
+    try:
+        release_status = _release_status()
+    except release_identity.ReleaseIdentityError:
+        return _json(503, {"error": _IDENTITY_UNAVAILABLE})
     started = time.monotonic()
     direct_health = _direct_health_bypass(event)
     raw_history = data.get("history")
@@ -536,6 +673,12 @@ def _ask(event: dict) -> dict:
         # The corpus snapshot this answer came from, so a client can tie an
         # answer to an approved corpus version (persona research R2-6).
         "corpus_version": _corpus_summary()["corpus_version"],
+        "content_version": release_status["content_version"],
+        "snapshot_version": release_status["snapshot_version"],
+        "config_version": release_status["config_version"],
+        "release_version": release_status["release_version"],
+        "source_revision": release_status["source_revision"],
+        "identity_status": release_status["identity_status"],
         "citations": [
             {"agency": c.agency, "title": c.title, "url": c.url, "fetch_date": c.fetch_date}
             for c in result.citations
@@ -603,12 +746,18 @@ def _handle_event(event: dict) -> dict:
     if path == "/" and method == "GET":
         return _html_response(_INDEX_HTML, _INDEX_CSP)
     if path == "/offline" and method == "GET":
+        if identity_error := _policy_identity_error():
+            return identity_error
         body = _offline_html()
         return _html_response(body, html_csp(body))
     if path == "/guide" and method == "GET":
+        if identity_error := _policy_identity_error():
+            return identity_error
         body = _guide_html()
         return _html_response(body, html_csp(body))
     if path == "/embed" and method == "GET":
+        if identity_error := _policy_identity_error():
+            return identity_error
         from web.embed import EMBED_HTML
 
         return _embed_response(EMBED_HTML)

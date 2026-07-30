@@ -173,9 +173,98 @@ class TestVersion:
         assert resp["statusCode"] == 200
         data = json.loads(resp["body"])
         assert len(data["corpus_version"]) == 12
+        assert len(data["content_version"]) == 64
+        assert len(data["snapshot_version"]) == 64
+        assert len(data["config_version"]) == 64
+        assert data["identity_status"] == "development"
+        assert data["source_revision"] is None
+        assert data["release_version"] is None
+        assert data["artifact_code_sha256"] is None
+        assert data["function_version"] == "local"
         assert data["as_of"]
         assert set(data["agencies"]) >= {"MST", "Yolobus", "HTA"}
         assert data["documents"] >= 5
+
+    def test_staleness_default_comes_from_shared_config(self, monkeypatch):
+        monkeypatch.delenv("FPA_STALENESS_BUDGET_DAYS", raising=False)
+        monkeypatch.setattr(web_handler.config, "DEFAULT_STALENESS_BUDGET_DAYS", 137)
+
+        data = json.loads(self._version()["body"])
+
+        assert data["staleness_budget_days"] == 137
+
+    def test_partial_release_environment_fails_closed(self, monkeypatch):
+        monkeypatch.setenv("FPA_SOURCE_REVISION", "a" * 40)
+
+        version = json.loads(self._version()["body"])
+        assert version["identity_status"] == "invalid"
+        assert version["source_revision"] is None
+
+        for path in ("/offline", "/guide", "/embed"):
+            policy = web_handler.handler(_event(method="GET", path=path))
+            assert policy["statusCode"] == 503
+            assert "runtime identity" in json.loads(policy["body"])["error"]
+
+        assert web_handler.handler(_event(method="GET", path="/"))["statusCode"] == 200
+        ask = _post("What is the MST senior fare?")
+        assert ask["statusCode"] == 503
+        assert "runtime identity" in json.loads(ask["body"])["error"]
+
+    def test_mutable_latest_runtime_never_masquerades_as_local(self, monkeypatch):
+        monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
+
+        version = json.loads(self._version()["body"])
+        assert version["identity_status"] == "invalid"
+        assert version["function_version"] is None
+
+        for path in ("/offline", "/guide", "/embed"):
+            assert web_handler.handler(_event(method="GET", path=path))["statusCode"] == 503
+        assert _post("What is the MST senior fare?")["statusCode"] == 503
+        assert web_handler.handler(_event(method="GET", path="/"))["statusCode"] == 200
+
+    def test_verified_descriptor_binds_version_and_answer(self, monkeypatch, tmp_path):
+        from assistant import config as assistant_config
+        from assistant import release_identity
+        from assistant.corpus import corpus_version
+        from assistant.ingest import load_chunks
+
+        chunks = load_chunks()
+        snapshot = release_identity.resolve_current_snapshot()
+        config_identity = release_identity.build_config_identity()
+        descriptor = release_identity.build_release_descriptor(
+            "a" * 40,
+            config_identity,
+            content_version=snapshot.content_version,
+            snapshot_version=snapshot.snapshot_version,
+            corpus_version=corpus_version(chunks),
+        )
+        descriptor_path = tmp_path / "release.json"
+        release_identity.write_release_descriptor(descriptor, descriptor_path)
+        monkeypatch.setattr(assistant_config, "RELEASE_DESCRIPTOR_PATH", descriptor_path)
+        monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "23")
+        monkeypatch.setenv("FPA_SOURCE_REVISION", descriptor.source_revision)
+        monkeypatch.setenv("FPA_CONFIG_VERSION", descriptor.config_version)
+        monkeypatch.setenv("FPA_PINNED_CONTENT_VERSION", descriptor.content_version)
+        monkeypatch.setenv("FPA_PINNED_SNAPSHOT_VERSION", descriptor.snapshot_version)
+        monkeypatch.setenv("FPA_RELEASE_VERSION", descriptor.release_version)
+        monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", descriptor.corpus_version)
+        monkeypatch.setenv("FPA_ARTIFACT_CODE_SHA256", "A" * 43 + "=")
+
+        version = json.loads(self._version()["body"])
+        assert version["identity_status"] == "verified"
+        assert version["release_version"] == descriptor.release_version
+        assert version["function_version"] == "23"
+
+        answer = json.loads(_post("What is the MST senior fare?")["body"])
+        for field in (
+            "source_revision",
+            "config_version",
+            "content_version",
+            "snapshot_version",
+            "release_version",
+        ):
+            assert answer[field] == version[field]
+        assert answer["identity_status"] == "verified"
 
     def test_version_reports_pin_match(self, monkeypatch):
         actual = json.loads(self._version()["body"])["corpus_version"]
@@ -263,6 +352,18 @@ class TestEmbedWidget:
         csp = self._embed()["headers"]["content-security-policy"]
         assert "frame-ancestors 'self'" in csp
 
+    def test_embed_default_comes_from_shared_config(self, monkeypatch):
+        monkeypatch.delenv("FPA_EMBED_ANCESTORS", raising=False)
+        monkeypatch.setattr(
+            web_handler.config,
+            "DEFAULT_EMBED_ANCESTORS",
+            "https://shared-default.example",
+        )
+
+        csp = self._embed()["headers"]["content-security-policy"]
+
+        assert "frame-ancestors https://shared-default.example" in csp
+
     def test_embed_ancestor_allowlist_is_configurable(self, monkeypatch):
         monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov https://mst.org")
         csp = self._embed()["headers"]["content-security-policy"]
@@ -321,6 +422,10 @@ class TestAnswers:
         assert data["confidence"] in {"medium", "high"}
         # The answer is tied to a corpus version (persona research R2-6).
         assert len(data["corpus_version"]) == 12
+        assert len(data["content_version"]) == 64
+        assert len(data["snapshot_version"]) == 64
+        assert len(data["config_version"]) == 64
+        assert data["identity_status"] == "development"
 
     def test_answered_response_carries_valid_structured_contract(self):
         # EXP-04: the typed payload rides alongside `answer`, validated
@@ -399,6 +504,20 @@ class TestBudget:
 class TestStructuredObservability:
     def test_model_and_answer_events_share_runtime_owned_correlation(self, monkeypatch, caplog):
         monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "23")
+        monkeypatch.setattr(
+            web_handler,
+            "_release_status",
+            lambda: {
+                "identity_status": "verified",
+                "source_revision": "a" * 40,
+                "config_version": "b" * 64,
+                "content_version": "c" * 64,
+                "snapshot_version": "d" * 64,
+                "release_version": "e" * 64,
+                "artifact_code_sha256": "A" * 43 + "=",
+                "function_version": "23",
+            },
+        )
         event = _event(body={"question": "What is the MST senior fare?"})
         event["requestContext"]["requestId"] = "UNTRUSTED-EVENT-ID"
         event["requestContext"]["http"]["sourceIp"] = "192.0.2.44"
@@ -721,7 +840,7 @@ class TestHistoryHmac:
         assert "sig" not in data
 
     def test_key_set_drops_unsigned_and_tampered_turns(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         good = web_handler._sign_turn("on MST?", "The fare is $2.")
         raw = [
             {"q": "on MST?", "a": "The fare is $2."},  # unsigned → dropped
@@ -732,7 +851,7 @@ class TestHistoryHmac:
         assert out == [("on MST?", "The fare is $2.")]
 
     def test_key_set_drops_turn_whose_answer_was_edited(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         sig = web_handler._sign_turn("on MST?", "The fare is $2.")
         # Same signature, but the client rewrote the answer → verification fails.
         out = web_handler._parse_history(
@@ -741,7 +860,7 @@ class TestHistoryHmac:
         assert out == []
 
     def test_key_set_response_includes_verifiable_sig(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         resp = _post("Do youth ride free on Yolobus?")
         data = json.loads(resp["body"])
         assert "sig" in data
@@ -758,11 +877,11 @@ class TestHistoryHmac:
     def test_sign_turn_has_unambiguous_field_boundaries(self, monkeypatch):
         # Structured signing material prevents delimiter ambiguity:
         # ("x|y","z") must not collide with ("x","y|z").
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         assert web_handler._sign_turn("x|y", "z") != web_handler._sign_turn("x", "y|z")
 
     def test_signed_turn_is_invalid_after_source_containment_change(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
         question = "How much is a local fare?"
         answer = "The local fare is $2.00."
@@ -774,7 +893,7 @@ class TestHistoryHmac:
         assert web_handler._parse_history([{"q": question, "a": answer, "sig": old_sig}]) == []
 
     def test_refusal_is_not_signed_for_follow_up_history(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
 
         data = json.loads(_post("How much is the local fare on Yolobus?")["body"])
@@ -782,18 +901,20 @@ class TestHistoryHmac:
         assert data["kind"] == "refused_no_support"
         assert "sig" not in data
 
-    def test_cache_hit_is_resigned_after_history_key_rotation(self, monkeypatch):
+    def test_history_key_rotation_crosses_cache_and_signature_boundary(self, monkeypatch):
         question = "Do youth ride free on Yolobus?"
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "old-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         first = json.loads(_post(question)["body"])
+        first_keys = set(web_handler._ANSWER_CACHE)
 
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "new-secret")
-        cached = json.loads(_post(question)["body"])
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "2" * 64)
+        after_rotation = json.loads(_post(question)["body"])
 
-        assert cached["answer"] == first["answer"]
-        assert cached["sig"] != first["sig"]
-        assert cached["sig"] == web_handler._sign_turn(question, cached["answer"])
-        assert web_handler._ANSWER_CACHE
+        assert after_rotation["answer"] == first["answer"]
+        assert after_rotation["sig"] != first["sig"]
+        assert after_rotation["sig"] == web_handler._sign_turn(question, after_rotation["answer"])
+        assert set(web_handler._ANSWER_CACHE) != first_keys
+        assert len(web_handler._ANSWER_CACHE) == 2
         assert all("sig" not in payload for payload in web_handler._ANSWER_CACHE.values())
 
 

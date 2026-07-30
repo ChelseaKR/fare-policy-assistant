@@ -16,6 +16,14 @@ DEPLOY = config.REPO_ROOT / "infra" / "deploy.sh"
 VERSION_HEALTH = config.REPO_ROOT / "infra" / "check-lambda-version.sh"
 ROLLBACK = config.REPO_ROOT / "infra" / "rollback.sh"
 
+STRICT_SOURCE = "1" * 40
+STRICT_CONFIG = "2" * 64
+STRICT_CONTENT = "3" * 64
+STRICT_SNAPSHOT = "4" * 64
+STRICT_RELEASE = "5" * 64
+STRICT_ARTIFACT = "A" * 43 + "="
+STRICT_PUBLISHED_DESCRIPTION = f"release={STRICT_RELEASE} source={STRICT_SOURCE[:12]}"
+
 
 def _install_fake_aws(tmp_path: Path) -> Path:
     bin_dir = tmp_path / "bin"
@@ -32,12 +40,39 @@ import sys
 args = sys.argv[1:]
 state_path = pathlib.Path(os.environ["FAKE_AWS_STATE"])
 state = json.loads(state_path.read_text())
+identity_mode = os.environ.get("FAKE_RELEASE_IDENTITY_MODE", "legacy")
+source_revision = os.environ.get("FAKE_SOURCE_REVISION", "1" * 40)
+config_version = os.environ.get("FAKE_CONFIG_VERSION", "2" * 64)
+content_version = os.environ.get("FAKE_CONTENT_VERSION", "3" * 64)
+snapshot_version = os.environ.get("FAKE_SNAPSHOT_VERSION", "4" * 64)
+release_version = os.environ.get("FAKE_RELEASE_VERSION", "5" * 64)
+artifact_sha256 = os.environ.get("FAKE_ARTIFACT_SHA256", "A" * 43 + "=")
+qualified_code_sha256 = os.environ.get("FAKE_QUALIFIED_CODE_SHA256", artifact_sha256)
+published_description = os.environ.get(
+    "FAKE_PUBLISHED_DESCRIPTION",
+    f"release={release_version} source={source_revision[:12]}",
+)
 
 def value(flag):
     return args[args.index(flag) + 1]
 
 def save():
     state_path.write_text(json.dumps(state))
+
+def identity_environment():
+    if identity_mode == "legacy":
+        return {}
+    identity = {
+        "FPA_SOURCE_REVISION": source_revision,
+        "FPA_CONFIG_VERSION": config_version,
+        "FPA_PINNED_CONTENT_VERSION": content_version,
+        "FPA_PINNED_SNAPSHOT_VERSION": snapshot_version,
+        "FPA_RELEASE_VERSION": release_version,
+        "FPA_ARTIFACT_CODE_SHA256": artifact_sha256,
+    }
+    if identity_mode == "partial":
+        return {"FPA_SOURCE_REVISION": source_revision}
+    return identity
 
 if args[:2] == ["lambda", "invoke"]:
     qualifier = value("--qualifier")
@@ -67,11 +102,23 @@ if args[:2] == ["lambda", "invoke"]:
         headers["content-type"] = "text/html"
         result_body = "<html><title>Transit Fare Policy Assistant</title></html>"
     elif path == "/version":
-        result_body = json.dumps({
+        version_body = {
             "corpus_version": "0938fff0539a",
             "matches_pin": True,
             "disabled_documents": disabled_documents,
-        })
+        }
+        if identity_mode != "legacy":
+            version_body.update({
+                "identity_status": "verified",
+                "function_version": qualifier,
+                "source_revision": source_revision,
+                "config_version": config_version,
+                "content_version": content_version,
+                "snapshot_version": snapshot_version,
+                "release_version": release_version,
+                "artifact_code_sha256": artifact_sha256,
+            })
+        result_body = json.dumps(version_body)
     elif "Social Security" in body.get("question", ""):
         result_body = json.dumps({
             "kind": "refused_input",
@@ -191,14 +238,18 @@ elif args[:2] == ["lambda", "get-alias"]:
         print(json.dumps(response))
 elif args[:2] == ["lambda", "get-function-configuration"]:
     disabled = os.environ.get("FAKE_DISABLED_DOC_IDS", "yolobus-fares")
+    environment = {
+        "FPA_PINNED_CORPUS_VERSION": "0938fff0539a",
+        "FPA_DISABLED_DOC_IDS": disabled,
+        "FPA_HISTORY_HMAC_KEY": "0" * 64,
+        **identity_environment(),
+    }
     print(json.dumps({
         "FunctionName": value("--function-name"),
         "Version": value("--qualifier") if "--qualifier" in args else "$LATEST",
-        "Environment": {"Variables": {
-            "FPA_PINNED_CORPUS_VERSION": "0938fff0539a",
-            "FPA_DISABLED_DOC_IDS": disabled,
-            "FPA_HISTORY_HMAC_KEY": "0" * 64,
-        }},
+        "CodeSha256": qualified_code_sha256,
+        "Description": published_description,
+        "Environment": {"Variables": environment},
     }))
 elif args[:2] == ["lambda", "get-runtime-management-config"]:
     if "--query" in args and value("--query") == "UpdateRuntimeOn":
@@ -261,6 +312,13 @@ payload = args[args.index("--data") + 1] if "--data" in args else ""
 state = json.loads(pathlib.Path(os.environ["FAKE_AWS_STATE"]).read_text())
 live = state["aliases"]["live"]["FunctionVersion"]
 fail_version = os.environ.get("FAKE_PUBLIC_FAIL_VERSION")
+identity_mode = os.environ.get("FAKE_RELEASE_IDENTITY_MODE", "legacy")
+source_revision = os.environ.get("FAKE_SOURCE_REVISION", "1" * 40)
+config_version = os.environ.get("FAKE_CONFIG_VERSION", "2" * 64)
+content_version = os.environ.get("FAKE_CONTENT_VERSION", "3" * 64)
+snapshot_version = os.environ.get("FAKE_SNAPSHOT_VERSION", "4" * 64)
+release_version = os.environ.get("FAKE_RELEASE_VERSION", "5" * 64)
+artifact_sha256 = os.environ.get("FAKE_ARTIFACT_SHA256", "A" * 43 + "=")
 disabled_documents = [
     item
     for item in os.environ.get("FAKE_DISABLED_DOC_IDS", "yolobus-fares").split(",")
@@ -301,13 +359,25 @@ security = [
 ]
 if url.endswith("/version"):
     content_type = "application/json"
-    body = json.dumps({
+    version_body = {
         "corpus_version": "0938fff0539a",
         "as_of": "2026-07-29",
         "agencies": ["MST"],
         "matches_pin": True,
         "disabled_documents": disabled_documents,
-    })
+    }
+    if identity_mode != "legacy":
+        version_body.update({
+            "identity_status": "verified",
+            "function_version": live,
+            "source_revision": source_revision,
+            "config_version": config_version,
+            "content_version": content_version,
+            "snapshot_version": snapshot_version,
+            "release_version": release_version,
+            "artifact_code_sha256": artifact_sha256,
+        })
+    body = json.dumps(version_body)
     response_headers = security + ["x-frame-options: DENY"]
 elif url.endswith("/api/ask"):
     content_type = "application/json"
@@ -412,6 +482,23 @@ def _state(tmp_path: Path) -> Path:
     return path
 
 
+def _rollback_env(
+    fake_bin: Path,
+    state_path: Path,
+    *,
+    identity_mode: str = "strict",
+    **overrides: str,
+) -> dict[str, str]:
+    return {
+        **os.environ,
+        "PATH": f"{fake_bin}:{os.environ['PATH']}",
+        "FAKE_AWS_STATE": str(state_path),
+        "FAKE_RELEASE_IDENTITY_MODE": identity_mode,
+        "FPA_API_ID": "test-api",
+        **overrides,
+    }
+
+
 def test_direct_version_health_checks_exact_numeric_candidate(tmp_path):
     fake_bin = _install_fake_aws(tmp_path)
     state_path = _state(tmp_path)
@@ -422,6 +509,7 @@ def test_direct_version_health_checks_exact_numeric_candidate(tmp_path):
             "fare-policy-assistant-demo",
             "--qualifier",
             "6",
+            "--allow-legacy-release-identity",
             "--expected-corpus",
             "0938fff0539a",
             "--expected-disabled-docs",
@@ -454,6 +542,7 @@ def test_direct_version_health_requires_safe_structured_log_tail(tmp_path):
             "fare-policy-assistant-demo",
             "--qualifier",
             "6",
+            "--allow-legacy-release-identity",
             "--expected-corpus",
             "0938fff0539a",
             "--expected-disabled-docs",
@@ -502,6 +591,7 @@ def test_direct_version_health_rejects_incomplete_structured_log_tail(tmp_path, 
             str(VERSION_HEALTH),
             "--qualifier",
             "6",
+            "--allow-legacy-release-identity",
             "--require-structured-telemetry",
         ],
         cwd=config.REPO_ROOT,
@@ -528,6 +618,7 @@ def test_direct_version_health_rejects_content_in_structured_log_tail(tmp_path):
             str(VERSION_HEALTH),
             "--qualifier",
             "6",
+            "--allow-legacy-release-identity",
             "--require-structured-telemetry",
         ],
         cwd=config.REPO_ROOT,
@@ -550,7 +641,12 @@ def test_direct_version_health_rejects_wrong_executed_version(tmp_path):
     fake_bin = _install_fake_aws(tmp_path)
     state_path = _state(tmp_path)
     result = subprocess.run(
-        [str(VERSION_HEALTH), "--qualifier", "6"],
+        [
+            str(VERSION_HEALTH),
+            "--qualifier",
+            "6",
+            "--allow-legacy-release-identity",
+        ],
         cwd=config.REPO_ROOT,
         env={
             **os.environ,
@@ -576,6 +672,7 @@ def test_direct_version_health_explicit_empty_skips_yolobus_containment(tmp_path
             str(VERSION_HEALTH),
             "--qualifier",
             "6",
+            "--allow-legacy-release-identity",
             "--expected-disabled-docs",
             "",
         ],
@@ -604,7 +701,12 @@ def test_direct_version_health_default_detects_missing_containment(tmp_path):
     fake_bin = _install_fake_aws(tmp_path)
     state_path = _state(tmp_path)
     result = subprocess.run(
-        [str(VERSION_HEALTH), "--qualifier", "6"],
+        [
+            str(VERSION_HEALTH),
+            "--qualifier",
+            "6",
+            "--allow-legacy-release-identity",
+        ],
         cwd=config.REPO_ROOT,
         env={
             **os.environ,
@@ -622,19 +724,14 @@ def test_direct_version_health_default_detects_missing_containment(tmp_path):
     assert "/version did not match" in result.stderr
 
 
-def test_rollback_moves_live_alias_to_retained_version_and_smokes(tmp_path):
+def test_rollback_moves_live_alias_to_strict_identity_target_and_smokes(tmp_path):
     fake_bin = _install_fake_aws(tmp_path)
     _install_fake_curl(fake_bin)
     state_path = _state(tmp_path)
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FPA_API_ID": "test-api",
-        },
+        env=_rollback_env(fake_bin, state_path),
         check=False,
         capture_output=True,
         text=True,
@@ -644,23 +741,22 @@ def test_rollback_moves_live_alias_to_retained_version_and_smokes(tmp_path):
     assert result.returncode == 0, result.stderr
     state = json.loads(state_path.read_text())
     assert state["aliases"]["live"]["FunctionVersion"] == "4"
+    assert state["aliases"]["live"]["Description"] == (
+        f"{STRICT_PUBLISHED_DESCRIPTION} rollback-from=5"
+    )
     assert "rollback: PASS: live moved 5 -> 4" in result.stdout
 
 
-def test_rollback_restores_displaced_live_version_when_public_smoke_fails(tmp_path):
+def test_rollback_restores_exact_displaced_live_description_when_public_smoke_fails(
+    tmp_path,
+):
     fake_bin = _install_fake_aws(tmp_path)
     _install_fake_curl(fake_bin)
     state_path = _state(tmp_path)
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FAKE_PUBLIC_FAIL_VERSION": "4",
-            "FPA_API_ID": "test-api",
-        },
+        env=_rollback_env(fake_bin, state_path, FAKE_PUBLIC_FAIL_VERSION="4"),
         check=False,
         capture_output=True,
         text=True,
@@ -670,7 +766,94 @@ def test_rollback_restores_displaced_live_version_when_public_smoke_fails(tmp_pa
     assert result.returncode != 0
     state = json.loads(state_path.read_text())
     assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["live"]["Description"] == "current live"
     assert "restoring displaced version 5" in result.stderr
+
+
+def test_rollback_allows_only_explicitly_allowlisted_legacy_target(tmp_path):
+    fake_bin = _install_fake_aws(tmp_path)
+    _install_fake_curl(fake_bin)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [str(ROLLBACK)],
+        cwd=config.REPO_ROOT,
+        env=_rollback_env(
+            fake_bin,
+            state_path,
+            identity_mode="legacy",
+            FPA_LEGACY_IDENTITY_ROLLBACK_VERSION="4",
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    state = json.loads(state_path.read_text())
+    assert state["aliases"]["live"]["FunctionVersion"] == "4"
+    assert state["aliases"]["live"]["Description"] == "legacy-release=4 rollback-from=5"
+
+
+def test_rollback_rejects_non_allowlisted_legacy_target_before_alias_move(tmp_path):
+    fake_bin = _install_fake_aws(tmp_path)
+    _install_fake_curl(fake_bin)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [str(ROLLBACK)],
+        cwd=config.REPO_ROOT,
+        env=_rollback_env(fake_bin, state_path, identity_mode="legacy"),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "not the explicitly allowlisted baseline" in result.stderr
+    assert json.loads(state_path.read_text())["aliases"]["live"]["FunctionVersion"] == "5"
+
+
+def test_rollback_rejects_partial_release_identity_before_alias_move(tmp_path):
+    fake_bin = _install_fake_aws(tmp_path)
+    _install_fake_curl(fake_bin)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [str(ROLLBACK)],
+        cwd=config.REPO_ROOT,
+        env=_rollback_env(fake_bin, state_path, identity_mode="partial"),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "contains a partial release identity" in result.stderr
+    assert json.loads(state_path.read_text())["aliases"]["live"]["FunctionVersion"] == "5"
+
+
+def test_rollback_rejects_identity_artifact_mismatch_before_alias_move(tmp_path):
+    fake_bin = _install_fake_aws(tmp_path)
+    _install_fake_curl(fake_bin)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [str(ROLLBACK)],
+        cwd=config.REPO_ROOT,
+        env=_rollback_env(
+            fake_bin,
+            state_path,
+            FAKE_QUALIFIED_CODE_SHA256="B" * 43 + "=",
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "artifact identity does not match its qualified code" in result.stderr
+    assert json.loads(state_path.read_text())["aliases"]["live"]["FunctionVersion"] == "5"
 
 
 def test_rollback_allows_explicitly_empty_required_disabled_documents(tmp_path):
@@ -680,14 +863,12 @@ def test_rollback_allows_explicitly_empty_required_disabled_documents(tmp_path):
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FAKE_DISABLED_DOC_IDS": "",
-            "FPA_REQUIRED_DISABLED_DOC_IDS": "",
-            "FPA_API_ID": "test-api",
-        },
+        env=_rollback_env(
+            fake_bin,
+            state_path,
+            FAKE_DISABLED_DOC_IDS="",
+            FPA_REQUIRED_DISABLED_DOC_IDS="",
+        ),
         check=False,
         capture_output=True,
         text=True,
@@ -715,12 +896,7 @@ def test_rollback_rejects_unqualified_api_integration_before_alias_move(tmp_path
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FPA_API_ID": "test-api",
-        },
+        env=_rollback_env(fake_bin, state_path),
         check=False,
         capture_output=True,
         text=True,
@@ -742,12 +918,7 @@ def test_rollback_rejects_weighted_alias_before_alias_move(tmp_path):
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FPA_API_ID": "test-api",
-        },
+        env=_rollback_env(fake_bin, state_path),
         check=False,
         capture_output=True,
         text=True,
@@ -766,14 +937,12 @@ def test_rollback_guard_does_not_overwrite_concurrent_live_change(tmp_path):
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FAKE_PUBLIC_FAIL_VERSION": "4",
-            "FAKE_CONCURRENT_LIVE_VERSION": "7",
-            "FPA_API_ID": "test-api",
-        },
+        env=_rollback_env(
+            fake_bin,
+            state_path,
+            FAKE_PUBLIC_FAIL_VERSION="4",
+            FAKE_CONCURRENT_LIVE_VERSION="7",
+        ),
         check=False,
         capture_output=True,
         text=True,
@@ -794,15 +963,13 @@ def test_rollback_deadline_bounds_public_smoke_and_restores_live(tmp_path):
     result = subprocess.run(
         [str(ROLLBACK)],
         cwd=config.REPO_ROOT,
-        env={
-            **os.environ,
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "FAKE_AWS_STATE": str(state_path),
-            "FAKE_PUBLIC_SLEEP_VERSION": "4",
-            "FAKE_PUBLIC_SLEEP_SECONDS": "30",
-            "FPA_API_ID": "test-api",
-            "FPA_ROLLBACK_MAX_SECONDS": "6",
-        },
+        env=_rollback_env(
+            fake_bin,
+            state_path,
+            FAKE_PUBLIC_SLEEP_VERSION="4",
+            FAKE_PUBLIC_SLEEP_SECONDS="30",
+            FPA_ROLLBACK_MAX_SECONDS="6",
+        ),
         check=False,
         capture_output=True,
         text=True,

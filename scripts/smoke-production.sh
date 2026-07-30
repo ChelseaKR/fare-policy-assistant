@@ -8,7 +8,14 @@
 # Defaults point at production. Override them explicitly for a staging deploy:
 #   ./scripts/smoke-production.sh \
 #     --assistant-base-url https://example.execute-api.us-west-2.amazonaws.com \
-#     --evidence-base-url https://staging-evals.example.org
+#     --evidence-base-url https://staging-evals.example.org \
+#     --require-release-identity \
+#     --expected-source ... --expected-config ... --expected-content ... \
+#     --expected-snapshot ... --expected-release ... --expected-artifact ... \
+#     --expected-function-version ...
+#
+# Every invocation must deliberately select strict identity verification or
+# the narrowly scoped legacy mode; there is no implicit production fallback.
 set -euo pipefail
 
 DEFAULT_ASSISTANT_BASE_URL="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com"
@@ -25,6 +32,15 @@ else
 fi
 DEADLINE_EPOCH=""
 CHECK_EVIDENCE=true
+REQUIRE_RELEASE_IDENTITY=false
+ALLOW_LEGACY_RELEASE_IDENTITY=false
+EXPECTED_SOURCE=""
+EXPECTED_CONFIG=""
+EXPECTED_CONTENT=""
+EXPECTED_SNAPSHOT=""
+EXPECTED_RELEASE=""
+EXPECTED_ARTIFACT=""
+EXPECTED_FUNCTION_VERSION=""
 
 usage() {
   cat <<'EOF'
@@ -38,6 +54,22 @@ Options:
   --expected-disabled-docs IDS
                             Required comma-separated disabled document ids
                             (default: yolobus-fares; "" means none)
+  --require-release-identity
+                            Require the complete identity-bearing release
+  --allow-legacy-release-identity
+                            Explicitly allow a pre-identity retained release
+  --expected-source VERSION Required 40-character source revision
+  --expected-config VERSION Required full-width configuration identity
+  --expected-content VERSION
+                            Required full-width content identity
+  --expected-snapshot VERSION
+                            Required full-width source-snapshot identity
+  --expected-release VERSION
+                            Required full-width release identity
+  --expected-artifact SHA256
+                            Required AWS-style base64 ZIP CodeSha256
+  --expected-function-version VERSION
+                            Required numeric Lambda function version
   --deadline-epoch EPOCH    Stop network checks by this Unix timestamp
   --assistant-only          Skip the independent static evidence origin
   -h, --help                Show this help
@@ -83,6 +115,49 @@ while (($#)); do
       EXPECTED_DISABLED_DOC_IDS="$2"
       shift 2
       ;;
+    --require-release-identity)
+      REQUIRE_RELEASE_IDENTITY=true
+      shift
+      ;;
+    --allow-legacy-release-identity)
+      ALLOW_LEGACY_RELEASE_IDENTITY=true
+      shift
+      ;;
+    --expected-source)
+      (($# >= 2)) || fail "--expected-source requires a value"
+      EXPECTED_SOURCE="$2"
+      shift 2
+      ;;
+    --expected-config)
+      (($# >= 2)) || fail "--expected-config requires a value"
+      EXPECTED_CONFIG="$2"
+      shift 2
+      ;;
+    --expected-content)
+      (($# >= 2)) || fail "--expected-content requires a value"
+      EXPECTED_CONTENT="$2"
+      shift 2
+      ;;
+    --expected-snapshot)
+      (($# >= 2)) || fail "--expected-snapshot requires a value"
+      EXPECTED_SNAPSHOT="$2"
+      shift 2
+      ;;
+    --expected-release)
+      (($# >= 2)) || fail "--expected-release requires a value"
+      EXPECTED_RELEASE="$2"
+      shift 2
+      ;;
+    --expected-artifact)
+      (($# >= 2)) || fail "--expected-artifact requires a value"
+      EXPECTED_ARTIFACT="$2"
+      shift 2
+      ;;
+    --expected-function-version)
+      (($# >= 2)) || fail "--expected-function-version requires a value"
+      EXPECTED_FUNCTION_VERSION="$2"
+      shift 2
+      ;;
     --deadline-epoch)
       (($# >= 2)) || fail "--deadline-epoch requires a value"
       DEADLINE_EPOCH="$2"
@@ -121,6 +196,41 @@ if [[ -n "$EXPECTED_DISABLED_DOC_IDS" \
 fi
 if [[ -n "$DEADLINE_EPOCH" && ! "$DEADLINE_EPOCH" =~ ^[1-9][0-9]*$ ]]; then
   fail "deadline epoch must be a positive Unix timestamp"
+fi
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "$ALLOW_LEGACY_RELEASE_IDENTITY" ]]; then
+  fail "choose exactly one of --require-release-identity or --allow-legacy-release-identity"
+fi
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "true" ]]; then
+  [[ -n "$EXPECTED_SOURCE" \
+    && -n "$EXPECTED_CONFIG" \
+    && -n "$EXPECTED_CONTENT" \
+    && -n "$EXPECTED_SNAPSHOT" \
+    && -n "$EXPECTED_RELEASE" \
+    && -n "$EXPECTED_ARTIFACT" \
+    && -n "$EXPECTED_FUNCTION_VERSION" ]] \
+    || fail "--require-release-identity requires every expected release identity argument"
+  [[ "$EXPECTED_SOURCE" =~ ^[0-9a-f]{40}$ ]] \
+    || fail "--expected-source must be a 40-character lowercase source revision"
+  for expected_identity in \
+    "$EXPECTED_CONFIG" \
+    "$EXPECTED_CONTENT" \
+    "$EXPECTED_SNAPSHOT" \
+    "$EXPECTED_RELEASE"; do
+    [[ "$expected_identity" =~ ^[0-9a-f]{64}$ ]] \
+      || fail "configuration, content, snapshot, and release identities must be 64-character lowercase SHA-256 values"
+  done
+  [[ "$EXPECTED_ARTIFACT" =~ ^[A-Za-z0-9+/]{43}=$ ]] \
+    || fail "--expected-artifact must be an AWS-style base64 SHA-256 digest"
+  [[ "$EXPECTED_FUNCTION_VERSION" =~ ^[1-9][0-9]*$ ]] \
+    || fail "--expected-function-version must be a numeric published version"
+elif [[ -n "$EXPECTED_SOURCE" \
+  || -n "$EXPECTED_CONFIG" \
+  || -n "$EXPECTED_CONTENT" \
+  || -n "$EXPECTED_SNAPSHOT" \
+  || -n "$EXPECTED_RELEASE" \
+  || -n "$EXPECTED_ARTIFACT" \
+  || -n "$EXPECTED_FUNCTION_VERSION" ]]; then
+  fail "--allow-legacy-release-identity does not accept expected release identity arguments"
 fi
 
 ASSISTANT_BASE_URL="${ASSISTANT_BASE_URL%/}"
@@ -371,18 +481,59 @@ request GET "$ASSISTANT_BASE_URL/version"
 expect_status_200 "assistant /version"
 expect_header_contains "assistant /version" "content-type" "application/json"
 check_no_store_security_headers "assistant /version"
-jq -e --arg disabled "$EXPECTED_DISABLED_DOC_IDS" '
-  . as $body
-  | ($body.corpus_version | type == "string" and length > 0)
-  and ($body.as_of | type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
-  and ($body.agencies | type == "array" and length > 0)
-  and ($body.matches_pin == true)
-  and ($body.disabled_documents | type == "array")
-  and all(
-    ($disabled | split(",") | map(select(length > 0)))[];
-    . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
-  )
-' "$LAST_BODY" >/dev/null || fail "assistant /version returned an invalid corpus payload"
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "true" ]]; then
+  jq -e \
+    --arg disabled "$EXPECTED_DISABLED_DOC_IDS" \
+    --arg source "$EXPECTED_SOURCE" \
+    --arg config "$EXPECTED_CONFIG" \
+    --arg content "$EXPECTED_CONTENT" \
+    --arg snapshot "$EXPECTED_SNAPSHOT" \
+    --arg release "$EXPECTED_RELEASE" \
+    --arg artifact "$EXPECTED_ARTIFACT" \
+    --arg function_version "$EXPECTED_FUNCTION_VERSION" '
+      . as $body
+      | ($body.corpus_version | type == "string" and length > 0)
+        and ($body.as_of | type == "string"
+          and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
+        and ($body.agencies | type == "array" and length > 0)
+        and ($body.matches_pin == true)
+        and ($body.disabled_documents | type == "array")
+        and all(
+          ($disabled | split(",") | map(select(length > 0)))[];
+          . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
+        )
+        and $body.identity_status == "verified"
+        and $body.source_revision == $source
+        and $body.config_version == $config
+        and $body.content_version == $content
+        and $body.snapshot_version == $snapshot
+        and $body.release_version == $release
+        and $body.artifact_code_sha256 == $artifact
+        and $body.function_version == $function_version
+    ' "$LAST_BODY" >/dev/null \
+    || fail "assistant /version returned an invalid verified release identity"
+else
+  jq -e --arg disabled "$EXPECTED_DISABLED_DOC_IDS" '
+    . as $body
+    | ($body.corpus_version | type == "string" and length > 0)
+      and ($body.as_of | type == "string"
+        and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
+      and ($body.agencies | type == "array" and length > 0)
+      and ($body.matches_pin == true)
+      and ($body.disabled_documents | type == "array")
+      and all(
+        ($disabled | split(",") | map(select(length > 0)))[];
+        . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
+      )
+      and ($body | has("source_revision") | not)
+      and ($body | has("config_version") | not)
+      and ($body | has("snapshot_version") | not)
+      and ($body | has("release_version") | not)
+      and ($body | has("artifact_code_sha256") | not)
+      and ($body.identity_status // "legacy") != "verified"
+  ' "$LAST_BODY" >/dev/null \
+    || fail "assistant /version returned an invalid explicit legacy release identity"
+fi
 echo "smoke: ok: assistant /version"
 
 # PII must be refused before any rider detail can enter retrieval/model context,

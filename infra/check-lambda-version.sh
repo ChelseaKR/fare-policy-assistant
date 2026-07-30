@@ -10,6 +10,14 @@ REGION="${AWS_REGION:-us-west-2}"
 FN="${FPA_FUNCTION_NAME:-fare-policy-assistant-demo}"
 QUALIFIER=""
 EXPECTED_CORPUS=""
+REQUIRE_RELEASE_IDENTITY=false
+ALLOW_LEGACY_RELEASE_IDENTITY=false
+EXPECTED_SOURCE=""
+EXPECTED_CONFIG=""
+EXPECTED_CONTENT=""
+EXPECTED_SNAPSHOT=""
+EXPECTED_RELEASE=""
+EXPECTED_ARTIFACT=""
 if [[ ${FPA_EXPECTED_DISABLED_DOC_IDS+x} ]]; then
   EXPECTED_DISABLED_DOC_IDS="$FPA_EXPECTED_DISABLED_DOC_IDS"
 else
@@ -29,6 +37,16 @@ Options:
   --expected-corpus VERSION     Required 12-character corpus identity
   --expected-disabled-docs IDS  Required comma-separated disabled document ids
                                 (default: yolobus-fares; "" means none)
+  --require-release-identity    Require the complete identity-bearing release
+                                contract (new numeric candidates)
+  --allow-legacy-release-identity
+                                Explicitly allow a pre-identity retained target
+  --expected-source VERSION     Required 40-character source revision
+  --expected-config VERSION     Required full-width configuration identity
+  --expected-content VERSION    Required full-width content identity
+  --expected-snapshot VERSION   Required full-width source-snapshot identity
+  --expected-release VERSION    Required full-width release identity
+  --expected-artifact SHA256    Required AWS-style base64 ZIP CodeSha256
   --deadline-epoch EPOCH        Stop network checks by this Unix timestamp
   --require-structured-telemetry
                                 Require privacy-safe correlated JSON events from
@@ -64,6 +82,44 @@ while (($#)); do
     --expected-disabled-docs)
       (($# >= 2)) || fail "--expected-disabled-docs requires a value"
       EXPECTED_DISABLED_DOC_IDS="$2"
+      shift 2
+      ;;
+    --require-release-identity)
+      REQUIRE_RELEASE_IDENTITY=true
+      shift
+      ;;
+    --allow-legacy-release-identity)
+      ALLOW_LEGACY_RELEASE_IDENTITY=true
+      shift
+      ;;
+    --expected-source)
+      (($# >= 2)) || fail "--expected-source requires a value"
+      EXPECTED_SOURCE="$2"
+      shift 2
+      ;;
+    --expected-config)
+      (($# >= 2)) || fail "--expected-config requires a value"
+      EXPECTED_CONFIG="$2"
+      shift 2
+      ;;
+    --expected-content)
+      (($# >= 2)) || fail "--expected-content requires a value"
+      EXPECTED_CONTENT="$2"
+      shift 2
+      ;;
+    --expected-snapshot)
+      (($# >= 2)) || fail "--expected-snapshot requires a value"
+      EXPECTED_SNAPSHOT="$2"
+      shift 2
+      ;;
+    --expected-release)
+      (($# >= 2)) || fail "--expected-release requires a value"
+      EXPECTED_RELEASE="$2"
+      shift 2
+      ;;
+    --expected-artifact)
+      (($# >= 2)) || fail "--expected-artifact requires a value"
+      EXPECTED_ARTIFACT="$2"
       shift 2
       ;;
     --deadline-epoch)
@@ -113,6 +169,37 @@ if [[ -n "$DEADLINE_EPOCH" && ! "$DEADLINE_EPOCH" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ -n "$TELEMETRY_OUTPUT" && "$REQUIRE_STRUCTURED_TELEMETRY" != "true" ]]; then
   fail "--telemetry-output requires --require-structured-telemetry"
+fi
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "$ALLOW_LEGACY_RELEASE_IDENTITY" ]]; then
+  fail "choose exactly one of --require-release-identity or --allow-legacy-release-identity"
+fi
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "true" ]]; then
+  [[ -n "$EXPECTED_SOURCE" \
+    && -n "$EXPECTED_CONFIG" \
+    && -n "$EXPECTED_CONTENT" \
+    && -n "$EXPECTED_SNAPSHOT" \
+    && -n "$EXPECTED_RELEASE" \
+    && -n "$EXPECTED_ARTIFACT" ]] \
+    || fail "--require-release-identity requires every --expected-* identity argument"
+  [[ "$EXPECTED_SOURCE" =~ ^[0-9a-f]{40}$ ]] \
+    || fail "--expected-source must be a 40-character lowercase source revision"
+  for expected_identity in \
+    "$EXPECTED_CONFIG" \
+    "$EXPECTED_CONTENT" \
+    "$EXPECTED_SNAPSHOT" \
+    "$EXPECTED_RELEASE"; do
+    [[ "$expected_identity" =~ ^[0-9a-f]{64}$ ]] \
+      || fail "configuration, content, snapshot, and release identities must be 64-character lowercase SHA-256 values"
+  done
+  [[ "$EXPECTED_ARTIFACT" =~ ^[A-Za-z0-9+/]{43}=$ ]] \
+    || fail "--expected-artifact must be an AWS-style base64 SHA-256 digest"
+elif [[ -n "$EXPECTED_SOURCE" \
+  || -n "$EXPECTED_CONFIG" \
+  || -n "$EXPECTED_CONTENT" \
+  || -n "$EXPECTED_SNAPSHOT" \
+  || -n "$EXPECTED_RELEASE" \
+  || -n "$EXPECTED_ARTIFACT" ]]; then
+  fail "--allow-legacy-release-identity does not accept --expected-* identity arguments"
 fi
 
 HEALTH_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/fare-assistant-version-health.XXXXXX")"
@@ -381,6 +468,52 @@ validate_structured_telemetry() {
   fi
 }
 
+if ! QUALIFIED_CONFIG="$(
+  run_before_deadline aws lambda get-function-configuration \
+    --function-name "$FN" \
+    --qualifier "$QUALIFIER" \
+    --region "$REGION" \
+    --output json
+)"; then
+  fail "could not read the exact qualified configuration for $FN:$QUALIFIER"
+fi
+
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "true" ]]; then
+  jq -e \
+    --arg version "$QUALIFIER" \
+    --arg source "$EXPECTED_SOURCE" \
+    --arg config "$EXPECTED_CONFIG" \
+    --arg content "$EXPECTED_CONTENT" \
+    --arg snapshot "$EXPECTED_SNAPSHOT" \
+    --arg release "$EXPECTED_RELEASE" \
+    --arg artifact "$EXPECTED_ARTIFACT" '
+      (.Environment.Variables // {}) as $env
+      | .Version == $version
+        and .CodeSha256 == $artifact
+        and $env.FPA_SOURCE_REVISION == $source
+        and $env.FPA_CONFIG_VERSION == $config
+        and $env.FPA_PINNED_CONTENT_VERSION == $content
+        and $env.FPA_PINNED_SNAPSHOT_VERSION == $snapshot
+        and $env.FPA_RELEASE_VERSION == $release
+        and $env.FPA_ARTIFACT_CODE_SHA256 == $artifact
+    ' <<<"$QUALIFIED_CONFIG" >/dev/null \
+    || fail "qualified Lambda configuration did not match the complete release identity"
+  echo "version health: ok: qualified release identity"
+else
+  jq -e \
+    --arg version "$QUALIFIER" '
+      (.Environment.Variables // {}) as $env
+      | .Version == $version
+        and ($env | has("FPA_SOURCE_REVISION") | not)
+        and ($env | has("FPA_CONFIG_VERSION") | not)
+        and ($env | has("FPA_PINNED_SNAPSHOT_VERSION") | not)
+        and ($env | has("FPA_RELEASE_VERSION") | not)
+        and ($env | has("FPA_ARTIFACT_CODE_SHA256") | not)
+    ' <<<"$QUALIFIED_CONFIG" >/dev/null \
+    || fail "legacy mode requires a qualified target with no identity-bearing release tuple"
+  echo "version health: ok: explicit legacy release identity"
+fi
+
 invoke_event GET / "" "root"
 jq -e '
   (.body | type == "string" and contains("Transit Fare Policy Assistant"))
@@ -389,20 +522,58 @@ jq -e '
 echo "version health: ok: root"
 
 invoke_event GET /version "" "version"
-jq -e \
-  --arg corpus "$EXPECTED_CORPUS" \
-  --arg disabled "$EXPECTED_DISABLED_DOC_IDS" '
-    (.body | fromjson) as $body
-    | ($body.matches_pin == true)
-      and ($body.corpus_version | type == "string" and length > 0)
-      and ($corpus == "" or $body.corpus_version == $corpus)
-      and ($body.disabled_documents | type == "array")
-      and all(
-        ($disabled | split(",") | map(select(length > 0)))[];
-        . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
-      )
-  ' "$LAST_PAYLOAD" >/dev/null \
-  || fail "/version did not match the approved corpus and containment state"
+if [[ "$REQUIRE_RELEASE_IDENTITY" == "true" ]]; then
+  jq -e \
+    --arg version "$QUALIFIER" \
+    --arg corpus "$EXPECTED_CORPUS" \
+    --arg disabled "$EXPECTED_DISABLED_DOC_IDS" \
+    --arg source "$EXPECTED_SOURCE" \
+    --arg config "$EXPECTED_CONFIG" \
+    --arg content "$EXPECTED_CONTENT" \
+    --arg snapshot "$EXPECTED_SNAPSHOT" \
+    --arg release "$EXPECTED_RELEASE" \
+    --arg artifact "$EXPECTED_ARTIFACT" '
+      (.body | fromjson) as $body
+      | ($body.matches_pin == true)
+        and ($body.corpus_version | type == "string" and length > 0)
+        and ($corpus == "" or $body.corpus_version == $corpus)
+        and ($body.disabled_documents | type == "array")
+        and all(
+          ($disabled | split(",") | map(select(length > 0)))[];
+          . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
+        )
+        and $body.identity_status == "verified"
+        and $body.function_version == $version
+        and $body.source_revision == $source
+        and $body.config_version == $config
+        and $body.content_version == $content
+        and $body.snapshot_version == $snapshot
+        and $body.release_version == $release
+        and $body.artifact_code_sha256 == $artifact
+    ' "$LAST_PAYLOAD" >/dev/null \
+    || fail "/version did not match the verified numeric release identity"
+else
+  jq -e \
+    --arg corpus "$EXPECTED_CORPUS" \
+    --arg disabled "$EXPECTED_DISABLED_DOC_IDS" '
+      (.body | fromjson) as $body
+      | ($body.matches_pin == true)
+        and ($body.corpus_version | type == "string" and length > 0)
+        and ($corpus == "" or $body.corpus_version == $corpus)
+        and ($body.disabled_documents | type == "array")
+        and all(
+          ($disabled | split(",") | map(select(length > 0)))[];
+          . as $doc_id | ($body.disabled_documents | index($doc_id)) != null
+        )
+        and ($body | has("source_revision") | not)
+        and ($body | has("config_version") | not)
+        and ($body | has("snapshot_version") | not)
+        and ($body | has("release_version") | not)
+        and ($body | has("artifact_code_sha256") | not)
+        and ($body.identity_status // "legacy") != "verified"
+    ' "$LAST_PAYLOAD" >/dev/null \
+    || fail "/version did not match the explicit legacy release identity"
+fi
 echo "version health: ok: version"
 
 PII_SENTINEL="987-65-4321"
