@@ -125,7 +125,7 @@ if args[:2] == ["lambda", "invoke"]:
             "logger": "fare_assistant",
             "requestId": request_id,
             "event": "genai_call",
-            "aws_request_id": request_id,
+            "runtime_request_id": request_id,
             "function_version": qualifier,
             "gen_ai.system": "anthropic",
             "gen_ai.operation.name": "chat",
@@ -150,7 +150,7 @@ if args[:2] == ["lambda", "invoke"]:
             "logger": "fare_assistant",
             "requestId": request_id,
             "event": "answer_request",
-            "aws_request_id": request_id,
+            "runtime_request_id": request_id,
             "function_version": qualifier,
             "kind": "answered",
             "language": "en",
@@ -172,7 +172,7 @@ if args[:2] == ["lambda", "invoke"]:
             log_events = [genai_event]
         elif mode == "mismatched-request":
             answer_event["requestId"] = "different-request"
-            answer_event["aws_request_id"] = "different-request"
+            answer_event["runtime_request_id"] = "different-request"
             log_events = [genai_event, answer_event]
         elif mode == "content-leak":
             genai_event["question"] = body.get("question", "")

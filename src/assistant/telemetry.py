@@ -59,7 +59,10 @@ def request_correlation(aws_request_id: str | None) -> Iterator[None]:
 def _common_fields(event: str) -> dict[str, object]:
     return {
         "event": event,
-        "aws_request_id": _aws_request_id.get(),
+        # Lambda's Python JSON formatter reserves/omits an ``aws_request_id``
+        # extra key. Use a distinct name, then require it to equal Lambda's
+        # built-in ``requestId`` during candidate verification.
+        "runtime_request_id": _aws_request_id.get(),
         "function_version": function_version(),
     }
 
