@@ -682,7 +682,46 @@ integration_targets_unqualified_function() {
 
 ensure_alias_permission() {
   local source_arn="arn:aws:execute-api:$REGION:$ACCOUNT:$API_ID/*"
+  local alias_before
+  local alias_after
+  local alias_before_snapshot
+  local alias_after_snapshot
+  local alias_before_version
+  local alias_before_revision
+  local permission_revision
   local policy_response
+
+  alias_before="$(
+    aws lambda get-alias \
+      --function-name "$FN" --name "$LIVE_ALIAS" --region "$REGION" --output json
+  )"
+  assert_unweighted_alias "$alias_before" "$LIVE_ALIAS"
+  alias_before_version="$(jq -r '.FunctionVersion // ""' <<<"$alias_before")"
+  alias_before_revision="$(jq -r '.RevisionId // ""' <<<"$alias_before")"
+  [[ "$alias_before_version" =~ ^[1-9][0-9]*$ && -n "$alias_before_revision" ]] || {
+    echo "$LIVE_ALIAS has no guarded numbered target for API permission setup" >&2
+    exit 1
+  }
+  if [[ -n "$BASELINE_LIVE_VERSION" \
+    && ( "$alias_before_version" != "$BASELINE_LIVE_VERSION" \
+      || "$alias_before_revision" != "$BASELINE_LIVE_REVISION" ) ]]; then
+    echo "live alias changed before API permission setup; refusing to mix release baselines" >&2
+    exit 1
+  fi
+  alias_before_snapshot="$(
+    jq -S -c '{
+      AliasArn,
+      Name,
+      FunctionVersion,
+      Description: (.Description // ""),
+      RoutingConfig: {
+        AdditionalVersionWeights:
+          (.RoutingConfig.AdditionalVersionWeights // {})
+      }
+    }' <<<"$alias_before"
+  )"
+  BASELINE_LIVE_VERSION="$alias_before_version"
+  BASELINE_LIVE_REVISION="$alias_before_revision"
 
   if policy_response="$(
     aws lambda get-policy \
@@ -719,6 +758,9 @@ ensure_alias_permission() {
     exit 1
   fi
 
+  # A qualified resource-policy mutation advances the same revision reported
+  # by GetAlias/GetPolicy. Guard the write with the pre-policy revision, then
+  # adopt only the new revision that both APIs report for unchanged routing.
   aws lambda add-permission \
     --function-name "$FN" \
     --qualifier "$LIVE_ALIAS" \
@@ -727,6 +769,7 @@ ensure_alias_permission() {
     --principal apigateway.amazonaws.com \
     --source-account "$ACCOUNT" \
     --source-arn "$source_arn" \
+    --revision-id "$alias_before_revision" \
     --region "$REGION" >/dev/null
   policy_response="$(
     aws lambda get-policy \
@@ -749,6 +792,37 @@ ensure_alias_permission() {
     echo "alias permission apigw-live was not installed with the reviewed scope" >&2
     exit 1
   }
+  permission_revision="$(jq -r '.RevisionId // ""' <<<"$policy_response")"
+  [[ -n "$permission_revision" ]] || {
+    echo "alias permission installation returned no revision id" >&2
+    exit 1
+  }
+  alias_after="$(
+    aws lambda get-alias \
+      --function-name "$FN" --name "$LIVE_ALIAS" --region "$REGION" --output json
+  )"
+  assert_unweighted_alias "$alias_after" "$LIVE_ALIAS"
+  alias_after_snapshot="$(
+    jq -S -c '{
+      AliasArn,
+      Name,
+      FunctionVersion,
+      Description: (.Description // ""),
+      RoutingConfig: {
+        AdditionalVersionWeights:
+          (.RoutingConfig.AdditionalVersionWeights // {})
+      }
+    }' <<<"$alias_after"
+  )"
+  if [[ "$alias_after_snapshot" != "$alias_before_snapshot" \
+    || "$(jq -r '.RevisionId // ""' <<<"$alias_after")" != "$permission_revision" ]]; then
+    echo "live alias changed outside the guarded API permission mutation" >&2
+    exit 1
+  fi
+  LIVE_VERSION="$alias_before_version"
+  LIVE_REVISION="$permission_revision"
+  BASELINE_LIVE_VERSION="$alias_before_version"
+  BASELINE_LIVE_REVISION="$permission_revision"
 }
 
 remove_unqualified_api_permission() {
@@ -1372,9 +1446,21 @@ if [[ "$FUNCTION_EXISTS" == "true" ]]; then
       --output json
   )"
   aws lambda wait function-updated --function-name "$FN" --region "$REGION"
-  LATEST_REVISION="$(jq -r '.RevisionId // ""' <<<"$STAGED_CONFIG_RESPONSE")"
+  # Lambda may advance RevisionId once more while the asynchronous
+  # configuration update settles. Re-read the completed snapshot and use that
+  # revision for the code CAS; the update response's revision can be stale.
+  SETTLED_CONFIG_RESPONSE="$(
+    aws lambda get-function-configuration \
+      --function-name "$FN" --region "$REGION" --output json
+  )"
+  if ! same_versioned_release_config \
+    "$STAGED_CONFIG_RESPONSE" "$SETTLED_CONFIG_RESPONSE"; then
+    echo "mutable \$LATEST changed while configuration staging settled" >&2
+    exit 1
+  fi
+  LATEST_REVISION="$(jq -r '.RevisionId // ""' <<<"$SETTLED_CONFIG_RESPONSE")"
   [[ -n "$LATEST_REVISION" ]] || {
-    echo "configuration staging returned no revision id" >&2
+    echo "settled configuration has no revision id" >&2
     exit 1
   }
   STAGED_CODE_RESPONSE="$(
