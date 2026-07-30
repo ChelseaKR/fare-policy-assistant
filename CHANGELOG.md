@@ -32,6 +32,10 @@ rather than tied to a published tag.
   runs.
 
 ### Changed
+- Release authorization now runs from reviewed `main` through the immutable
+  portfolio authorizer, verifies and builds the exact selected commit, and
+  hands only distributions, SBOM, and notes to a checkout-free publisher that
+  rechecks the tag object.
 - Hash-pinned rider deploy bundle (roadmap M-7 / audit P1-6, 2026-07-17):
   `infra/deploy.sh` now installs only from `infra/requirements-deploy.txt`
   (a `uv export` of the locked runtime set) with `--require-hashes`, so the

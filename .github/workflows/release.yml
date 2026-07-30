@@ -1,6 +1,6 @@
 name: release
 
-# Tag-driven release (RELEASE-AND-VERSIONING-STANDARD §4). Nothing here
+# Trusted-main release (RELEASE-AND-VERSIONING-STANDARD §4). Nothing here
 # publishes to a package index (fare-assistant is a deployed demo/reference
 # app, not a library on PyPI — see the README "Standards conformance"
 # table), so the pipeline's publish target is the GitHub Release itself:
@@ -12,8 +12,12 @@ name: release
 # Tag like `v0.1.0`; `git tag -s v0.1.0 -m v0.1.0 && git push origin v0.1.0`.
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing signed stable SemVer tag (vX.Y.Z)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,38 +25,28 @@ permissions:
 # A release publishes artifacts to the GitHub Release — never race two tags,
 # but never silently drop a re-run either.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
-  # The tag must match the package version (without the leading v) — the
-  # single source of version truth is pyproject.toml (RELEASE-STANDARD §2).
-  version-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-        with:
-          persist-credentials: false
-      - name: Tag matches pyproject.toml version
-        run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          pkg_version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
-          echo "tag=$tag_version pyproject=$pkg_version"
-          if [ "$tag_version" != "$pkg_version" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match pyproject version $pkg_version"
-            exit 1
-          fi
+  authorize:
+    uses: ChelseaKR/portfolio-standards/.github/workflows/release-authorize.yml@3692aa5270d673f91f8571b4fc0ce1c622bf67e5
+    permissions:
+      contents: read
+    with:
+      tag: ${{ inputs.tag }}
 
   # Never publish untested code: re-run the full offline merge-blocking gate
   # set (lint, format, typecheck, coverage-gated tests, a11y, i18n,
   # committed-report regression) at the tagged commit — the exact `make
   # verify` set CI runs on every push, not the PR's prior checkmark.
   release-tests:
-    needs: version-check
+    needs: authorize
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
+          ref: ${{ needs.authorize.outputs.release-commit }}
           persist-credentials: false
       # No cache here either: this job gates the artifact build below, so a
       # poisoned cache hit would taint the release path just as directly
@@ -68,7 +62,7 @@ jobs:
         run: make verify
 
   build:
-    needs: release-tests
+    needs: [authorize, release-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -77,6 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
+          ref: ${{ needs.authorize.outputs.release-commit }}
           persist-credentials: false
       # No cache in the build/publish path: a cache hit is an unverified
       # input into the artifact we're about to attest and ship
@@ -86,6 +81,20 @@ jobs:
           enable-cache: false
       - name: Build sdist + wheel
         run: uv build
+      - name: Require tag, package, and changelog versions to match
+        env:
+          TAG: ${{ needs.authorize.outputs.release-tag }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          PACKAGE_VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          test "${VERSION}" = "${PACKAGE_VERSION}"
+          awk -v ver="${VERSION}" '
+            index($0, "## [" ver "]") == 1 { found=1; print; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
       - name: Generate a runtime CycloneDX SBOM
         run: |
           uv sync --frozen --no-dev
@@ -104,18 +113,20 @@ jobs:
         with:
           name: sbom-cyclonedx
           path: sbom.cdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
 
   # Create the GitHub Release: attach the build + SBOM, and use the matching
   # CHANGELOG section as release notes (RELEASE-STANDARD §3.2, §6).
   github-release:
-    needs: build
+    needs: [authorize, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-        with:
-          persist-credentials: false
       - name: Download build artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
@@ -126,26 +137,17 @@ jobs:
         with:
           name: sbom-cyclonedx
           path: sbom/
-      - name: Extract CHANGELOG section for this version
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v ver="$version" '
-            index($0, "## [" ver "]") == 1 { flag = 1; next }
-            /^## \[/ { flag = 0 }
-            flag' CHANGELOG.md > /tmp/release-notes.md
-          if [ -s /tmp/release-notes.md ]; then
-            echo "notes extracted for $version:"; cat /tmp/release-notes.md
-          else
-            echo "::warning::no CHANGELOG section found for $version; falling back to autogenerated notes"
-          fi
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: release-notes
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.authorize.outputs.release-tag }}
+          TAG_OBJECT_SHA: ${{ needs.authorize.outputs.tag-object-sha }}
         run: |
-          if [ -s /tmp/release-notes.md ]; then
-            gh release create "$GITHUB_REF_NAME" dist/* sbom/sbom.cdx.json \
-              --title "$GITHUB_REF_NAME" --notes-file /tmp/release-notes.md --verify-tag
-          else
-            gh release create "$GITHUB_REF_NAME" dist/* sbom/sbom.cdx.json \
-              --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
-          fi
+          set -euo pipefail
+          LIVE_TAG_OBJECT="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha)"
+          test "${LIVE_TAG_OBJECT}" = "${TAG_OBJECT_SHA}"
+          gh release create "${TAG}" dist/* sbom/sbom.cdx.json \
+            --title "${TAG}" --notes-file release-notes.md --verify-tag
