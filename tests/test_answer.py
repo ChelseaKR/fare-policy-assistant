@@ -76,6 +76,24 @@ class TestAnswerPipeline:
         assert result.kind == "refused_input"
         assert not result.passages
 
+    def test_operator_disabled_source_fails_closed_before_model(self, retriever, monkeypatch):
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+
+        class ModelMustNotRun:
+            def complete(self, system, user, max_tokens, temperature):
+                raise AssertionError("disabled source must be contained before the model runs")
+
+        result = answer_question(
+            "How much is the local fare on Yolobus?",
+            model=ModelMustNotRun(),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "refused_no_support"
+        assert result.confidence == "low"
+        assert "source_disabled:yolobus-fares" in result.guard_flags
+        assert all(sc.chunk.doc_id != "yolobus-fares" for sc in result.passages)
+
     def test_offtopic_refused_with_redirect(self, retriever):
         result = answer_question(
             "weather forecast astronomy parliament",
@@ -131,6 +149,45 @@ class TestAnswerPipeline:
         )
         assert result.kind == "answered_guarded"
         assert "missing_citation" in result.guard_flags
+
+    def test_unknown_only_citation_fails_closed(self, retriever):
+        result = answer_question(
+            "How much is the Yolobus local fare discount?",
+            model=ScriptedModel(
+                "The senior fare is $1.00 [doc:not-in-the-corpus], as of 2026-06-12."
+            ),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "answered_guarded"
+        assert result.citations == []
+        assert "unretrieved_citation:not-in-the-corpus" in result.guard_flags
+        assert "not-in-the-corpus" not in result.answer
+
+    def test_mixed_valid_and_unknown_citations_fail_closed(self, retriever):
+        result = answer_question(
+            "How much is the Yolobus local fare discount?",
+            model=ScriptedModel(
+                "The senior fare is $1.00 [doc:yolobus-fares, doc:not-retrieved], as of 2026-06-12."
+            ),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "answered_guarded"
+        assert result.citations == []
+        assert "unretrieved_citation:not-retrieved" in result.guard_flags
+
+    def test_valid_but_nonretrieved_citation_fails_closed(self, retriever):
+        result = answer_question(
+            "How much is the Yolobus local fare discount?",
+            model=ScriptedModel("The fare is $2.00 [doc:mst-fares], as of 2026-06-12."),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        retrieved_ids = {sc.chunk.doc_id for sc in result.passages}
+        assert "mst-fares" not in retrieved_ids
+        assert result.kind == "answered_guarded"
+        assert "unretrieved_citation:mst-fares" in result.guard_flags
 
 
 class TestMultiTurn:

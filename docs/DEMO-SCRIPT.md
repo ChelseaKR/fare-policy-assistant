@@ -5,8 +5,10 @@ a government procurement contact, or a civic-tech audience. The thesis is not
 "look, a chatbot." It is "here is how you test one so it behaves." Lead with the
 evaluation, use the chatbot as the thing being evaluated.
 
-Keep the live demo (`https://evals.chelseakr.com/`)
-and `EVALS.md` open in two tabs before you start.
+Keep these distinct public entrypoints open in two tabs before you start:
+
+- evaluation evidence hub: <https://evals.chelseakr.com/>
+- live AWS assistant: <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>
 
 ## The 30-second hook
 
@@ -20,8 +22,11 @@ and `EVALS.md` open in two tabs before you start.
 ## The 3-minute walkthrough
 
 **1. Open on the evaluation, not the chat (~40s).**
-Show the "How this assistant is tested" panel on the live page, then click
-through to `EVALS.md`. Point at the scoreboard: 192/201 across nine suites.
+Start in the evaluation evidence hub, then open its full generated report.
+Point at the committed promoted baseline: 192/201 across nine suites. Then point
+to the status note: the latest observed run is 190/201 overall and 175/186 on
+the production core, with its cross-agency promotion gate red. It is visible,
+but it has not been promoted over the baseline.
 Say the line that most vendors can't:
 
 > "This number is reproducible. The answer model and the judge both run
@@ -31,8 +36,11 @@ Say the line that most vendors can't:
 > don't cherry-pick."
 
 **2. Show a grounded answer with a citation (~30s).**
-In the chat, click the example "Senior discount, SBMTD" (or type *"Am I eligible
-for a senior discount on SBMTD?"*). When it answers, point at two things:
+Switch to the separate live AWS assistant. Click the example "Senior discount,
+SBMTD" (or type *"Am I eligible for a senior discount on SBMTD?"*). When it
+answers, point at three things:
+
+- the prominent warning that answers use dated snapshots, not live agency pages,
 - the citation with the source document and fetch date, and
 - that it states the *published criterion* ("the criteria are 65 and older")
   and routes the decision to the agency.
@@ -52,7 +60,8 @@ Spanish with the same citations. Optionally ask an out-of-corpus question
 points elsewhere instead of guessing.
 
 **5. Close on the honest-failures move (~30s).**
-Back in `EVALS.md`, scroll to a representative failure with its full trace.
+Back in the evaluation evidence hub, open the full report and scroll to a
+representative failure with its full trace.
 
 > "This is the credibility move. A team that shows you its failures candidly is
 > a team you can trust with the ones that matter. The whole method here
@@ -84,8 +93,9 @@ failures the report already lists, which is the point.
   `evals/calibration/`. Be honest that the human-agreement number is not final
   yet.
 - **"Is this production?"** No, and deliberately. It is a reference
-  implementation with a visible "will not do" list, no user-data persistence,
-  and no eligibility determinations. The README says so on the first screen.
+  implementation with a visible "will not do" list, no raw-question or history
+  persistence, and no eligibility determinations. The README says so on the
+  first screen.
 - **"Could this run on our stack?"** Yes — it defaults to Claude on Amazon
   Bedrock (the common gov requirement) behind a thin provider adapter, with the
   direct Anthropic API behind a config switch.

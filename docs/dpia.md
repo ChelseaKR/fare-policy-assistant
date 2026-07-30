@@ -23,43 +23,50 @@ criteria and routes the decision to the agency.
 - *Output:* a fare-policy answer drawn only from the corpus.
 - *Corpus:* public agency documents, dated and versioned. No personal data.
 
-**Retention.** Rider questions are answered and discarded. Nothing a user types
-is logged or stored. Request logs carry only response kind, language, question
-length, and timing; model-call logs add provider/model, fresh/cache token counts,
-and estimated cost — never question or answer text (ADR 0004). The answer cache
-is in memory and dies with the serverless container. CloudWatch log retention is
-14 days. There are no accounts and no user profiles.
+**Retention and transient state.** Plaintext rider questions and conversation
+history are not written to application logs, databases, or the server answer
+cache. The browser keeps visible conversation turns in memory for the current
+tab and sends the last three successful turns with a follow-up. A successful
+question is processed in Lambda memory and sent to the configured model
+provider; the response payload may remain in a bounded in-memory cache keyed by
+a process-local HMAC digest of question/history until eviction or container
+termination. Guarded and refused inputs are not cached. Request logs carry only
+response kind, language, question length, timing, and operational flags;
+model-call logs add provider/model, token counts, and estimated cost — never
+question or answer text (ADR 0004). CloudWatch log retention is 14 days. There
+are no accounts or user profiles.
 
 ## 2. Necessity and proportionality
 
-The lawful, proportionate design is to process **no personal data at all**. The
-task (answering a fare-policy question) does not require identifying the rider,
-so the system does not. Special-category data (health/disability, and in some
-readings income or veteran status) is never collected: the PII input guard
-refuses identifiers, the assistant does not ask for them, and the eligibility
-decision is explicitly left to the agency, so there is no profiling of
-individuals and no automated decision with legal or similarly significant effect
-under Article 22.
+The proportionate design is to avoid identification and minimize rider text.
+Answering a fare-policy question does not require an identity, account,
+eligibility document, or persistent profile. A rider can still type personal or
+special-category information, so the system treats all free text as potentially
+personal data: it does not solicit those details, refuses recognized identifiers
+before retrieval/model use, keeps no content logs or rider database, and leaves
+eligibility decisions to the agency. A production operator must establish and
+document its own lawful basis, processor terms, and retention configuration.
 
 ## 3. Risks to data subjects, and mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| A rider volunteers PII in free text | Medium | Medium | Input guard refuses questions containing identifiers before retrieval; content is never logged or stored, so a volunteered identifier is not persisted (`src/assistant/guards.py`, ADR 0004). |
-| Sensitive attribute inferred/retained | Low | Medium | No persistence, no profiling; attributes are neither solicited nor stored. |
+| A rider volunteers PII in free text | Medium | Medium | Input guard refuses recognized identifiers before retrieval/model use; refused content is not cached or logged. An unmatched value may still be processed transiently, so the UI warns riders not to provide personal details (`src/assistant/guards.py`, ADR 0004). |
+| Sensitive attribute inferred/retained | Low | Medium | No account/profile database and no content logs; attributes are not solicited. Current-tab history and successful answer payloads are transient as described above. |
 | Automated eligibility decision affecting a person | Low | High | Out of scope by design: output guard blocks determination language; eval refusal suite tests it; the agency decides (model card, `evals/suites/refusal.yaml`). |
 | Re-identification from logs | Low | Low | Logs carry counts/timings only; 14-day retention. |
-| Third-party processor exposure (model provider) | Low | Medium | Only the question text (no identifiers) reaches the model; provider is Claude on Amazon Bedrock under the account's data terms; no training on inputs. |
+| Third-party processor exposure (model provider) | Low | Medium | Successful question text that passed the identifier guard reaches the configured model; recognized PII is refused first. Production adoption requires review of the operator's current provider terms and retention controls. |
 
 ## 4. Residual risk and conclusion
 
 Residual risk is **low**. The dominant control is architectural: the system does
-not need, request, or retain personal data, and does not make decisions about
-people. The main residual exposure is a rider typing an identifier the guard
-does not match; because nothing is stored, the exposure is transient. A
-production deployment should confirm the deployment-hardening checklist in
-`SECURITY.md`, set an appropriate log-retention and data-processing agreement
-with the model provider, and re-run this DPIA against its live configuration.
+not need or request an identity, creates no rider profile, keeps no content logs,
+and does not make decisions about people. The main residual exposure is a rider
+typing an identifier the guard does not match, or another person viewing
+current-tab history or transient cached output. A production deployment should
+confirm the deployment-hardening checklist in `SECURITY.md`, set appropriate
+log/provider retention and processor agreements, conduct legal review, and
+re-run this DPIA against its live configuration.
 
 See also: `docs/ai-risk-register.md` (model-specific risks) and
 `docs/eu-ai-act-classification.md` (regulatory classification).

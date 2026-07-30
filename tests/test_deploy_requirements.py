@@ -161,3 +161,51 @@ class TestDeployScriptUsesThePinFile:
             "deploy.sh must not install from inline version ranges; "
             "pin in infra/requirements-deploy.txt instead (M-7/P1-6)"
         )
+
+    def test_deployment_pins_corpus_and_contains_expired_yolobus_source(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+        assert "FPA_PINNED_CORPUS_VERSION" in text
+        assert "corpus_version; print(corpus_version())" in text
+        assert 'DISABLED_DOC_IDS="yolobus-fares"' in text
+        assert '"FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"]' in text
+        assert 'HISTORY_HMAC_KEY="$(openssl rand -hex 32)"' in text
+        assert '"FPA_HISTORY_HMAC_KEY": os.environ["FPA_DEPLOY_HISTORY_HMAC_KEY"]' in text
+
+    def test_deployment_preserves_existing_lambda_environment_and_history_key(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert "get-function-configuration" in text
+        assert "EXISTING_LAMBDA_ENV" in text
+        assert "ResourceNotFoundException" in text
+        assert "refusing to deploy" in text
+        assert "2>/dev/null || printf '{}'" not in text
+        assert "EXISTING_HISTORY_HMAC_KEY" in text
+        assert 'elif [[ -n "$EXISTING_HISTORY_HMAC_KEY" ]]' in text
+        assert "values.update(" in text
+
+    def test_disabled_document_list_can_be_explicitly_empty_and_ids_are_validated(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert "[[ ${FPA_DISABLED_DOC_IDS+x} ]]" in text
+        assert 'if [[ -n "$DISABLED_DOC_IDS"' in text
+        assert "unknown disabled document id(s)" in text
+
+    def test_existing_deploy_captures_rollback_and_applies_config_before_code(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+        lambda_block = text.split("# ── Lambda", 1)[1].split(
+            "# Hard ceiling on parallel Bedrock spend", 1
+        )[0]
+
+        assert "fare-assistant-rollback.XXXXXX" in lambda_block
+        assert 'configuration.json"' in lambda_block
+        assert 'function.zip"' in lambda_block
+        assert "Lambda environment verification failed" in lambda_block
+        assert lambda_block.index("update-function-configuration") < lambda_block.index(
+            "update-function-code"
+        )
+
+    def test_bedrock_metric_counts_guarded_model_calls_not_just_cache_misses(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert "--filter-pattern '{ $.model_called IS TRUE }'" in text
+        assert "--filter-pattern '{ $.cache = \"miss\" }'" not in text

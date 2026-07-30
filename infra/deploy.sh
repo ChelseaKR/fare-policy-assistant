@@ -35,6 +35,115 @@ RESERVED_CONCURRENCY=2
 THROTTLE_RATE_LIMIT="$RESERVED_CONCURRENCY"
 THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
 
+# Preserve operator-owned Lambda settings across iterative deploys. AWS replaces
+# the entire Variables map on update, so constructing it from only this script's
+# three controls would silently erase settings such as FPA_EMBED_ANCESTORS.
+FUNCTION_EXISTS=false
+if EXISTING_LAMBDA_ENV="$(
+  aws lambda get-function-configuration --function-name "$FN" --region "$REGION" \
+    --query 'Environment.Variables' --output json 2>&1
+)"; then
+  FUNCTION_EXISTS=true
+elif [[ "$EXISTING_LAMBDA_ENV" == *"ResourceNotFoundException"* ]]; then
+  # A confirmed missing function is the only safe case for starting with an
+  # empty environment. Authentication, authorization, and network failures
+  # must abort rather than masquerade as a first deploy.
+  EXISTING_LAMBDA_ENV='{}'
+else
+  echo "could not read existing Lambda environment; refusing to deploy:" >&2
+  echo "$EXISTING_LAMBDA_ENV" >&2
+  exit 1
+fi
+
+lambda_env_value() {
+  (
+    cd "$ROOT"
+    FPA_DEPLOY_EXISTING_LAMBDA_ENV="$EXISTING_LAMBDA_ENV" \
+      FPA_DEPLOY_ENV_KEY="$1" \
+      uv run python -c '
+import json
+import os
+
+raw = json.loads(os.environ["FPA_DEPLOY_EXISTING_LAMBDA_ENV"] or "{}")
+values = raw if isinstance(raw, dict) else {}
+print(values.get(os.environ["FPA_DEPLOY_ENV_KEY"], ""))
+'
+  )
+}
+
+EXISTING_DISABLED_DOC_IDS="$(lambda_env_value FPA_DISABLED_DOC_IDS)"
+EXISTING_HISTORY_HMAC_KEY="$(lambda_env_value FPA_HISTORY_HMAC_KEY)"
+
+# Production evidence controls. The currently reviewed bundle is pinned by its
+# deterministic corpus identity. ``yolobus-fares`` is contained by default
+# because the committed fare period ended 2026-06-30; remove it only after the
+# replacement source has been reviewed, ingested, evaluated, and approved.
+PINNED_CORPUS_VERSION="${FPA_PINNED_CORPUS_VERSION:-$(cd "$ROOT" && uv run python -c 'from assistant.corpus import corpus_version; print(corpus_version())')}"
+if [[ ${FPA_DISABLED_DOC_IDS+x} ]]; then
+  DISABLED_DOC_IDS="$FPA_DISABLED_DOC_IDS"
+elif [[ -n "$EXISTING_DISABLED_DOC_IDS" ]]; then
+  DISABLED_DOC_IDS="$EXISTING_DISABLED_DOC_IDS"
+else
+  DISABLED_DOC_IDS="yolobus-fares"
+fi
+if [[ ${FPA_HISTORY_HMAC_KEY+x} ]]; then
+  HISTORY_HMAC_KEY="$FPA_HISTORY_HMAC_KEY"
+elif [[ -n "$EXISTING_HISTORY_HMAC_KEY" ]]; then
+  HISTORY_HMAC_KEY="$EXISTING_HISTORY_HMAC_KEY"
+else
+  HISTORY_HMAC_KEY="$(openssl rand -hex 32)"
+fi
+if [[ ! "$PINNED_CORPUS_VERSION" =~ ^[0-9a-f]{12}$ ]]; then
+  echo "invalid corpus pin: expected a 12-character lowercase hex digest" >&2
+  exit 2
+fi
+if [[ -n "$DISABLED_DOC_IDS" && ! "$DISABLED_DOC_IDS" =~ ^[a-z0-9-]+(,[a-z0-9-]+)*$ ]]; then
+  echo "invalid disabled document list: expected comma-separated document ids" >&2
+  exit 2
+fi
+if [[ ! "$HISTORY_HMAC_KEY" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "invalid history signing key: expected a 64-character lowercase hex secret" >&2
+  exit 2
+fi
+if [[ -n "$DISABLED_DOC_IDS" ]]; then
+  (
+    cd "$ROOT"
+    FPA_DEPLOY_DISABLED_DOC_IDS="$DISABLED_DOC_IDS" uv run python -c '
+import os
+
+from assistant.ingest import load_chunks
+
+requested = set(os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"].split(","))
+known = {chunk.doc_id for chunk in load_chunks()}
+unknown = sorted(requested - known)
+if unknown:
+    raise SystemExit("unknown disabled document id(s): " + ", ".join(unknown))
+'
+  )
+fi
+LAMBDA_ENV="$(
+  cd "$ROOT"
+  FPA_DEPLOY_EXISTING_LAMBDA_ENV="$EXISTING_LAMBDA_ENV" \
+    FPA_DEPLOY_PINNED_CORPUS_VERSION="$PINNED_CORPUS_VERSION" \
+    FPA_DEPLOY_DISABLED_DOC_IDS="$DISABLED_DOC_IDS" \
+    FPA_DEPLOY_HISTORY_HMAC_KEY="$HISTORY_HMAC_KEY" \
+    uv run python -c '
+import json
+import os
+
+raw = json.loads(os.environ["FPA_DEPLOY_EXISTING_LAMBDA_ENV"] or "{}")
+values = raw if isinstance(raw, dict) else {}
+values.update(
+    {
+        "FPA_PINNED_CORPUS_VERSION": os.environ["FPA_DEPLOY_PINNED_CORPUS_VERSION"],
+        "FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"],
+        "FPA_HISTORY_HMAC_KEY": os.environ["FPA_DEPLOY_HISTORY_HMAC_KEY"],
+    }
+)
+print(json.dumps({"Variables": values}, separators=(",", ":")))
+'
+)"
+
 # ── bundle ───────────────────────────────────────────────────────────────────
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
@@ -101,17 +210,62 @@ aws iam put-role-policy --role-name "$ROLE_NAME" \
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 
 # ── Lambda ───────────────────────────────────────────────────────────────────
-if aws lambda get-function --function-name "$FN" --region "$REGION" >/dev/null 2>&1; then
-  aws lambda update-function-code --function-name "$FN" --region "$REGION" \
-    --architectures arm64 --zip-file "fileb://$BUILD/bundle.zip" >/dev/null
-  aws lambda wait function-updated --function-name "$FN" --region "$REGION"
+if [[ "$FUNCTION_EXISTS" == "true" ]]; then
+  # Capture the exact live code plus full configuration before mutation. The
+  # signed AWS download URL is consumed without printing it; the rollback
+  # directory is private because configuration may contain secrets.
+  ROLLBACK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/fare-assistant-rollback.XXXXXX")"
+  chmod 700 "$ROLLBACK_DIR"
+  aws lambda get-function-configuration --function-name "$FN" --region "$REGION" \
+    >"$ROLLBACK_DIR/configuration.json"
+  PREVIOUS_CODE_URL="$(
+    aws lambda get-function --function-name "$FN" --region "$REGION" \
+      --query Code.Location --output text
+  )"
+  curl --silent --show-error --fail --location "$PREVIOUS_CODE_URL" \
+    --output "$ROLLBACK_DIR/function.zip"
+  chmod 600 "$ROLLBACK_DIR/configuration.json" "$ROLLBACK_DIR/function.zip"
+  echo "saved pre-deploy rollback artifact: $ROLLBACK_DIR"
+
+  # Apply and verify required containment/configuration before new code can go
+  # live. If configuration fails, the old code remains in place.
   aws lambda update-function-configuration --function-name "$FN" --region "$REGION" \
     --runtime python3.12 --handler web.handler.handler \
-    --timeout 25 --memory-size 512 --role "$ROLE_ARN" >/dev/null
+    --timeout 25 --memory-size 512 --role "$ROLE_ARN" \
+    --environment "$LAMBDA_ENV" >/dev/null
+  aws lambda wait function-updated --function-name "$FN" --region "$REGION"
+  APPLIED_LAMBDA_ENV="$(
+    aws lambda get-function-configuration --function-name "$FN" --region "$REGION" \
+      --query 'Environment.Variables' --output json
+  )"
+  (
+    cd "$ROOT"
+    FPA_DEPLOY_APPLIED_LAMBDA_ENV="$APPLIED_LAMBDA_ENV" \
+      FPA_DEPLOY_PINNED_CORPUS_VERSION="$PINNED_CORPUS_VERSION" \
+      FPA_DEPLOY_DISABLED_DOC_IDS="$DISABLED_DOC_IDS" \
+      FPA_DEPLOY_HISTORY_HMAC_KEY="$HISTORY_HMAC_KEY" \
+      uv run python -c '
+import json
+import os
+
+actual = json.loads(os.environ["FPA_DEPLOY_APPLIED_LAMBDA_ENV"] or "{}")
+expected = {
+    "FPA_PINNED_CORPUS_VERSION": os.environ["FPA_DEPLOY_PINNED_CORPUS_VERSION"],
+    "FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"],
+    "FPA_HISTORY_HMAC_KEY": os.environ["FPA_DEPLOY_HISTORY_HMAC_KEY"],
+}
+wrong = sorted(key for key, value in expected.items() if actual.get(key) != value)
+if wrong:
+    raise SystemExit("Lambda environment verification failed for: " + ", ".join(wrong))
+'
+  )
+  aws lambda update-function-code --function-name "$FN" --region "$REGION" \
+    --architectures arm64 --zip-file "fileb://$BUILD/bundle.zip" >/dev/null
 else
   aws lambda create-function --function-name "$FN" --region "$REGION" \
     --runtime python3.12 --handler web.handler.handler --architectures arm64 \
     --timeout 25 --memory-size 512 --role "$ROLE_ARN" \
+    --environment "$LAMBDA_ENV" \
     --zip-file "fileb://$BUILD/bundle.zip" >/dev/null
 fi
 aws lambda wait function-updated --function-name "$FN" --region "$REGION"
@@ -175,11 +329,12 @@ aws logs put-metric-filter --region "$REGION" \
   --filter-pattern '{ $.error = * }' \
   --metric-transformations \
     "metricName=HandlerErrors,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
-# A second filter counts answer-model calls (cache misses) as a spend proxy.
+# A second filter counts answer-model calls as a spend proxy. This is separate
+# from cache status because a fail-closed output guard still consumed Bedrock.
 aws logs put-metric-filter --region "$REGION" \
   --log-group-name "/aws/lambda/$FN" \
   --filter-name "$FN-bedrock-calls" \
-  --filter-pattern '{ $.cache = "miss" }' \
+  --filter-pattern '{ $.model_called IS TRUE }' \
   --metric-transformations \
     "metricName=BedrockAnswerCalls,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
 # Thumbs-down feedback (verdict only, no content) as a quality signal.
@@ -275,5 +430,7 @@ aws cloudwatch put-dashboard --region "$REGION" --dashboard-name "$FN" \
 #   aws budgets create-budget --account-id <id> --budget '{...}'  (see infra/README.md)
 
 echo "deployed: https://$API_ID.execute-api.$REGION.amazonaws.com/"
+echo "corpus pin: $PINNED_CORPUS_VERSION"
+echo "disabled documents pending review: $DISABLED_DOC_IDS"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
 echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

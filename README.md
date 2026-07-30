@@ -8,11 +8,13 @@ public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
 
-**[Read the latest evaluation report → EVALS.md](EVALS.md)**
+**[Evaluation evidence hub](https://evals.chelseakr.com/)** ·
+**[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/)** ·
+[Evaluation report in the repository](EVALS.md)
 
 ## Status: Beta
 
-Deployed and evaluated (see the live demo and EVALS.md below), but not
+Deployed and evaluated (use the two public entrypoints above), but not
 production-grade: the manual accessibility walkthrough is still pending, the
 EN/ES answer-quality gap exceeds this project's own ≤5-point target, and the
 judge-calibration sample is smaller than the standard's floor. All three are
@@ -50,8 +52,8 @@ toward, not that they all pass yet — see the linked gap for current state.
 | Release & Versioning | Applies | Partial. `.github/workflows/release.yml` (added 2026-07-10) is tag-triggered on `v*`: checks the tag matches `pyproject.toml`'s version, re-runs `make verify` at the tagged commit, builds sdist+wheel, generates a CycloneDX 1.7 SBOM, attests SLSA build provenance, and creates a GitHub Release with the matching `CHANGELOG.md` section as notes. Nothing is published to a package index (no PyPI project registered, no other repo pins this one), so the GitHub Release is the publish target, not Trusted Publishing — the pipeline still exists so the deployed artifact is traceable to a signed, tested, tagged build. No tracking issue filed yet. |
 | Accessibility | Applies | Partial. Merge-blocking structural and browser pa11y/axe gates are green; the manual screen-reader walkthrough is still pending (`docs/audits/a11y-walkthrough.md`). |
 | Observability | Applies (Tier: informational/low-traffic demo service — no SLO). PII-free JSON logs include canonical provider/model/duration, fresh/cache token, and estimated-cost fields without prompts or responses; deployment provisions CloudWatch metric filters, alarms, a dashboard, and the deployed account has a $20/month `fare-demo` AWS Budget. An SNS email subscriber is still operator-supplied. | — |
-| Internationalization | Applies | Gettext catalogs for EN/ES/TL have 9 merge-blocking gates (`docs/I18N.md`). The current live white-box run passes multilingual 22/22 and Tagalog stretch 15/15, while the independent lexical multilingual proxy remains below threshold at 0.581; Tagalog still has no agency-authored source page. |
-| AI Evaluation | Applies | This is the project's thesis. 201-case harness, versioned prompts, a committed regression baseline, and an independent GovChat-Eval audit. The 2026-07-11 remediation (`docs/audits/eval-remediation-2026-07-11.md`) fixed a negation-blind forbidden-content check, three corpus-wording fact patterns, a decline threshold that had drifted from its own calibration harness, and a retrieval-recall gap. The resulting v10 live run passed the baseline gate at **192/201 (95.5%)**, up from 182/201, with no suite regression (multilingual 22/22; Tagalog stretch 15/15), and the committed baseline was advanced to it (all prior staleness waivers resolved). A direct probe confirmed both the answer and judge models are deterministic at temperature 0, so the harness is reproducible. Calibration still reports κ on only four still-current labels; the answer-bound labels need human relabeling (worksheet at `evals/calibration/judge_relabel_worksheet_2026-07-11.jsonl`) before κ is representative. |
+| Internationalization | Applies | English and Spanish are the supported answer languages. Gettext catalogs for EN/ES/TL have 9 merge-blocking gates (`docs/I18N.md`), but Tagalog remains experimental: its 15-case stretch suite uses cross-lingual retrieval over a corpus with no agency-authored Tagalog source page and is excluded from the production-core release denominator. The independent lexical multilingual proxy remains below threshold at 0.581. |
+| AI Evaluation | Applies | This is the project's thesis: 186 production-core English/Spanish cases, 15 separately reported experimental Tagalog cases, versioned prompts, a committed regression baseline, and an independent GovChat-Eval audit. The promoted baseline remains **192/201 (95.5%)** overall and **177/186 (95.2%)** production-core. The latest observed nightly is lower at **190/201 overall and 175/186 production-core**, with the cross-agency gate red, so it has not replaced the baseline. A direct probe confirmed both the answer and judge models are deterministic at temperature 0. Calibration still reports κ on only four still-current labels; the answer-bound labels need human relabeling (worksheet at `evals/calibration/judge_relabel_worksheet_2026-07-11.jsonl`) before κ is representative. |
 | Documentation | Applies | Partial. This table is new (2026-07-05); ADRs, model card, and CONTRIBUTING exist and are dated. `CHANGELOG.md` added 2026-07-05. No tracking issue filed yet. |
 | Responsible-Tech Framework | Applies (civic domain touching age/disability/income/veteran status). Misuse-resistance is code-enforced and tested (`src/assistant/guards.py`). The three governance artifacts now exist, synthesized from ADR 0004, `SECURITY.md`, and the model card: a DPIA (`docs/dpia.md`), an AI risk register (`docs/ai-risk-register.md`), and an EU-AI-Act classification (`docs/eu-ai-act-classification.md`) — the last of which shows the "never determine eligibility" invariant is what keeps the system below the Annex III high-risk line. | — |
 
@@ -85,18 +87,21 @@ by the evaluation suites (`evals/suites/`). The model card
 
 ## How it is evaluated
 
-201 cases across nine suites, each case written against a specific passage in
-the corpus and readable by a non-engineer. This includes 30 counterfactual
-sensitivity variants and 15 explicitly stretch-only Tagalog cases.
+186 production-core English/Spanish cases, plus 15 explicitly experimental
+Tagalog stretch cases, across nine suites. Each case is written against a
+specific passage in the corpus and readable by a non-engineer. The 201-case
+research total includes 30 counterfactual sensitivity variants; the Tagalog
+cases are reported separately and do not contribute to the production release
+denominator.
 
 The harness is validated beyond its own scoreboard: a defect-injection self-test
 proves the gate catches planted bugs (`make eval-selftest`), a coverage map
 checks no corpus provision goes untested (`make coverage`,
 `docs/eval-coverage.md`), and a robustness report gives confidence intervals and
 a leave-one-suite-out jackknife (`make robustness`, `docs/eval-robustness.md`).
-The rendered report and the improvement curve publish to GitHub Pages via the
-manual `Pages` workflow (enable Pages → Settings once), at
-<https://chelseakr.github.io/fare-policy-assistant/>.
+The rendered report and the improvement curve publish to the public
+[evaluation evidence hub](https://evals.chelseakr.com/) via the manual `Pages`
+workflow.
 
 The suites:
 
@@ -202,39 +207,53 @@ one page without reading the code, see
 how to report a vulnerability, and a deployment hardening checklist are in
 [`SECURITY.md`](SECURITY.md).
 
-## Live demo
+## Live demo and evidence
 
-Try it at <https://evals.chelseakr.com/>. The page
-states what the assistant will not do, answers in English, Spanish, or Tagalog, and
-cites the policy snapshot behind every answer. Questions are answered and
-discarded; nothing you type is stored. The serving path is one Lambda behind
-an HTTP API with layered cost guards (ADR 0004), deployed by
-`infra/deploy.sh`.
+These are two distinct public surfaces:
 
-The page opens with a "How this assistant is tested" panel that links straight
-to the evaluation report, so the point of the project is the first thing a
-reviewer sees rather than a footer link. If you are walking someone through the
+- **[Evaluation evidence hub](https://evals.chelseakr.com/):** generated
+  scoreboards, representative failures, trend history, and governance evidence.
+- **[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/):**
+  the rider-facing system those evaluations exercise.
+
+The live assistant states what it will not do, supports English and Spanish,
+and cites the dated policy snapshot behind every answer. Tagalog behavior is
+experimental, evaluated only as a 15-case stretch over a corpus with no
+agency-authored Tagalog source page; it is not a supported production language.
+The assistant does not read the agencies' live websites when a rider asks a
+question. Questions and conversation history are processed transiently; their
+raw text is not logged or used as a cache key. Successful answer payloads may
+remain in a bounded in-memory cache until the serverless container is recycled.
+Refused, guarded, or personal-information-like inputs are not cached.
+
+The assistant's "How this assistant is tested" panel links to the separate
+evidence hub, so a reviewer can move between the system and its evidence
+without confusing the two deployments. If you are walking someone through the
 project, `docs/DEMO-SCRIPT.md` is a three-minute script: the hook, a few
 rehearsed queries that show grounded citations and the refusal to determine
 eligibility, and the honest-failures move.
 
 For riders with no signal at the stop, `/offline` renders every agency's dated
 policy text on one printable page, built from the committed corpus with no model
-call (`make offline` writes it locally for inspection).
+call. The page displays the earliest and latest fetch dates represented so the
+snapshot window cannot be mistaken for live agency data (`make offline` writes
+it locally for inspection).
 
 For riders who would rather browse than type — low signal, low literacy, or a
 preference for forms over chat — `/guide` is a zero-model-call, statically
 pre-rendered "which fare applies to me" walkthrough: choose an agency, then a
 published fare category, to reach the criteria, price, proof, and next step.
 It has no input fields on purpose and never determines eligibility; it only
-shows the agency's own published text, verbatim, with a source link
+shows saved copies of the agency's published text, verbatim, with a source link
+and the page's earliest-to-latest snapshot window
 (`make guide` writes it locally for inspection).
 
 An agency can embed the assistant in its own fare page with one iframe pointing
 at `/embed`:
 
 ```html
-<iframe src="https://<demo-host>/embed" title="Transit fare policy assistant"
+<iframe src="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/embed"
+        title="Transit fare policy assistant"
         width="100%" height="520"
         style="border:1px solid #d6d3cb;border-radius:8px"></iframe>
 ```

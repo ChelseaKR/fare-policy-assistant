@@ -13,8 +13,26 @@ rather than tied to a published tag.
   image-decoder advisory cluster reported against PDF/OCR support.
 - Update the locked pypdf dependency from 6.13.3 to 6.14.2, clearing four
   malformed-document denial-of-service advisories in optional PDF ingestion.
+- Guard the current question and client-held prior questions before history
+  parsing or cache access; cache only successful answers under process-local
+  keyed digests, never plaintext rider text or refused/guarded payloads.
+- Recognize compact, spaced, and hyphenated SSN, phone, and Medicare identifier
+  formats before retrieval/model use. Only successful supported answers enter
+  browser follow-up history, and signed turns are bound to the corpus version
+  and disabled-source state so stale policy context cannot be replayed.
+- Fail closed when a citation tag is malformed or names a document outside the
+  exact retrieved evidence set; single and combined citation tags now share one
+  grammar through enforcement, structured extraction, and public rendering.
+  Production contains the expired `yolobus-fares` snapshot through an
+  operator-visible source kill switch.
 
 ### Added
+- Production smoke coverage for the separate evidence and assistant origins,
+  every public GET route, security headers, PII refusal, corpus pin/source
+  containment (including active Yolobus refusal and static-page removal), and a
+  paid-path dated/cited answer.
+- A phased improvement and expansion plan, including a fail-soft advisory
+  integration contract for independently verified GTFS Scorecard artifacts.
 - Bilingual parity gate (2026-07-17, roadmap M-1; audit P1-1; AIEV-10/11,
   I18N-22). A live run now fails when the Spanish-vs-mirrored-English pass
   delta exceeds 5 points on 2 or more cases (`evals/runner.py::check_parity`),
@@ -32,6 +50,17 @@ rather than tied to a published tag.
   runs.
 
 ### Changed
+- Public surfaces now distinguish the evaluation evidence hub from the AWS
+  assistant, describe dated snapshots and bounded transient processing
+  precisely, render prose rather than experimental structured cards, and give
+  programmatically focused answer regions a visible focus treatment.
+- Iterative deploys now fail closed when existing Lambda configuration cannot be
+  read, preserve unrelated operator variables and the history-signing key,
+  validate disabled source IDs, capture the current code/configuration as a
+  private rollback artifact, apply and verify containment before code, and count
+  guarded Bedrock calls in the spend alarm.
+- Nightly evaluation evidence uploads even when the evaluator fails, preserving
+  the partial report and traces needed to diagnose a red release gate.
 - Release authorization now runs from reviewed `main` through the immutable
   portfolio authorizer, verifies and builds the exact selected commit, and
   hands only distributions, SBOM, and notes to a checkout-free publisher that

@@ -2,8 +2,10 @@
 
 This is a reference implementation and portfolio project, not an official
 service of any transit agency. It is deployed as a public demo, so it is built to
-be safe to expose, but treat it accordingly: no accounts, no authentication, no
-storage of anything a user types.
+be safe to expose, but treat it accordingly: no accounts, no authentication, and
+no database or application-log retention of rider text. The browser holds visible
+conversation turns for the current tab, and successful response payloads can
+remain briefly in a bounded serverless-container memory cache.
 
 ## Reporting a vulnerability
 
@@ -17,11 +19,13 @@ is no bounty; this is a personal project, and fixes are best effort.
 The design treats a rider's question as untrusted input and the published corpus
 as the only source of truth.
 
-- **No personal data.** Input is checked for PII (ID numbers, contact details,
-  birth dates) and refused before retrieval. Nothing a user types is logged or
-  stored; request logs carry only the response kind, language, character count,
-  and timing (ADR 0004). The answer cache is in memory and dies with the
-  container.
+- **Data minimization.** Input is checked for PII (ID numbers, contact details,
+  birth dates) and refused before retrieval. Plaintext questions and history are
+  not written to application logs, databases, or the answer cache; request logs
+  carry only response kind, language, character count, timing, and operational
+  flags (ADR 0004). The browser retains current-tab conversation turns, and the
+  server cache retains successful answer payloads under process-local HMAC keys
+  until eviction or container termination.
 - **No eligibility decisions.** An output guard blocks and replaces any answer
   that decides a person's eligibility, and every answer must carry a citation
   that resolves to the corpus or it is not returned.
@@ -68,11 +72,12 @@ The demo defaults are safe, but a real deployment should confirm each of these.
   not a trust boundary — the output guard polices every new answer — but a
   tampered prior "answer" can still be fed back as a leading premise). To
   restrict history to turns this server actually issued, set
-  `FPA_HISTORY_HMAC_KEY`: `/api/ask` then returns an HMAC `sig` over each answer,
-  the client echoes it back with the turn, and the handler drops any turn whose
-  signature does not verify. Off by default for the demo; the `conversation`
-  eval suite's `conv-forged-*` cases assert the assistant re-grounds even when
-  history is fabricated.
+  `FPA_HISTORY_HMAC_KEY`: `/api/ask` then returns an HMAC `sig` over each
+  successful answer plus the corpus/containment state, the client echoes it back
+  with the turn, and the handler drops any turn whose signature does not verify.
+  The production deploy script enables this by default and preserves the key
+  across routine deploys; the `conversation` eval suite's `conv-forged-*` cases
+  assert the assistant re-grounds even when history is fabricated.
 
 ## Known accepted risks
 

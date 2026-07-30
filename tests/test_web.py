@@ -189,6 +189,35 @@ class TestVersion:
         data = json.loads(self._version()["body"])
         assert data["corpus_version"] in data["known_versions"]
 
+    def test_version_discloses_operator_disabled_documents(self, monkeypatch):
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares, sbmtd-farechange")
+        data = json.loads(self._version()["body"])
+        assert data["disabled_documents"] == [
+            "sbmtd-farechange",
+            "yolobus-fares",
+        ]
+
+    def test_disabled_documents_are_removed_from_offline_and_guide(self, monkeypatch):
+        marker = "All fares are effective July 1, 2025"
+        monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
+        web_handler._OFFLINE_HTML = None
+        web_handler._GUIDE_HTML = None
+        for path in ("/offline", "/guide"):
+            warm_body = web_handler.handler(_event(method="GET", path=path))["body"]
+            assert marker in warm_body
+
+        # Changing containment policy in a warm process must invalidate both
+        # rendered-page caches and remove the disabled material immediately.
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+        for path in ("/offline", "/guide"):
+            contained_body = web_handler.handler(_event(method="GET", path=path))["body"]
+            assert marker not in contained_body
+            assert (
+                f"Corpus version (full) {web_handler._corpus_summary()['corpus_version']}"
+                in contained_body
+            )
+            assert "active page-view version" in contained_body
+
 
 class TestEmbedWidget:
     def _embed(self):
@@ -377,6 +406,106 @@ class TestCache:
         assert a["body"] == b["body"]
         assert len(web_handler._ANSWER_CACHE) == 1
 
+    def test_source_containment_change_cannot_reuse_warm_cached_answer(self, monkeypatch):
+        question = "How much is the local fare on Yolobus?"
+        first = json.loads(_post(question)["body"])
+        assert first["kind"] == "answered"
+
+        key_before = web_handler._cache_key(question, [])
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+        key_after = web_handler._cache_key(question, [])
+        assert key_after != key_before
+
+        contained = json.loads(_post(question)["body"])
+        assert contained["kind"] == "refused_no_support"
+        assert contained != first
+
+    def test_cache_keys_are_process_local_hmac_digests_not_plaintext(self):
+        question = "How much is the unique-marker-7QX senior fare on SBMTD?"
+        _post(question)
+
+        assert len(web_handler._ANSWER_CACHE) == 1
+        key = next(iter(web_handler._ANSWER_CACHE))
+        assert len(key) == 64
+        assert set(key) <= set("0123456789abcdef")
+        assert question.casefold() not in key
+        assert "unique-marker-7qx" not in key
+        assert key == web_handler._cache_key(question, [])
+
+        history = [("prior-marker-8VZ?", "answer-marker-4RM")]
+        history_key = web_handler._cache_key(question, history)
+        assert history_key != key
+        assert all(marker not in history_key for marker in ("prior-marker", "answer-marker"))
+
+    def test_pii_refusal_precedes_history_parse_and_cache_access(self, monkeypatch):
+        def must_not_run(*args, **kwargs):
+            raise AssertionError("guarded input reached history, cache, or answer pipeline")
+
+        monkeypatch.setattr(web_handler, "_parse_history", must_not_run)
+        monkeypatch.setattr(web_handler, "_cache_get", must_not_run)
+        monkeypatch.setattr(web_handler, "answer_question", must_not_run)
+        response = web_handler.handler(
+            _event(
+                body={
+                    "question": "My SSN is 123-45-6789; what is the fare?",
+                    "history": [{"q": "prior question", "a": "prior answer"}],
+                }
+            )
+        )
+
+        assert response["statusCode"] == 200
+        assert json.loads(response["body"])["kind"] == "refused_input"
+        assert not web_handler._ANSWER_CACHE
+
+    def test_pii_in_history_is_refused_before_parse_cache_or_model(self, monkeypatch):
+        def must_not_run(*args, **kwargs):
+            raise AssertionError("guarded history reached parser, cache, or answer pipeline")
+
+        monkeypatch.setattr(web_handler, "_parse_history", must_not_run)
+        monkeypatch.setattr(web_handler, "_cache_get", must_not_run)
+        monkeypatch.setattr(web_handler, "answer_question", must_not_run)
+        response = web_handler.handler(
+            _event(
+                body={
+                    "question": "What is the MST fare?",
+                    "history": [
+                        {
+                            "q": "My email is rider-private@example.com",
+                            "a": "Please do not share personal information.",
+                        }
+                    ],
+                }
+            )
+        )
+
+        assert response["statusCode"] == 200
+        assert json.loads(response["body"])["kind"] == "refused_input"
+        assert not web_handler._ANSWER_CACHE
+
+    @pytest.mark.parametrize("kind", ["refused_no_support", "answered_guarded"])
+    def test_refused_or_guarded_results_are_not_cached(self, monkeypatch, capsys, kind):
+        calls = 0
+
+        def guarded_answer(question, **kwargs):
+            nonlocal calls
+            calls += 1
+            return AnswerResult(
+                question=question,
+                answer="Please contact the transit agency.",
+                kind=kind,
+                model="bedrock:test" if kind == "answered_guarded" else "",
+            )
+
+        monkeypatch.setattr(web_handler, "answer_question", guarded_answer)
+        _post("A safe but unsupported fare-policy question?")
+        _post("A safe but unsupported fare-policy question?")
+
+        assert calls == 2
+        assert not web_handler._ANSWER_CACHE
+        log = capsys.readouterr().out
+        expected = "true" if kind == "answered_guarded" else "false"
+        assert f'"model_called": {expected}' in log
+
     def test_cache_evicts_past_bound(self, monkeypatch):
         monkeypatch.setattr(web_handler, "ANSWER_CACHE_SIZE", 3)
         for i in range(5):
@@ -394,6 +523,18 @@ class TestMultiTurn:
     def test_history_ignores_malformed(self):
         assert web_handler._parse_history("nope") == []
         assert web_handler._parse_history([{"q": "only q"}, {"q": 1, "a": 2}]) == []
+
+    def test_history_guard_allows_public_agency_phone_in_prior_answer(self):
+        checked = web_handler._request_input_check(
+            "Where can I apply?",
+            [
+                {
+                    "q": "How do I contact HTA?",
+                    "a": "Call Humboldt Transit Authority at 707-443-0826.",
+                }
+            ],
+        )
+        assert checked.ok
 
     def test_history_distinguishes_cache_entries(self):
         web_handler.handler(_event(body={"question": "What is the fare?", "history": []}))
@@ -471,11 +612,46 @@ class TestHistoryHmac:
         )
         assert echoed and echoed[0][0] == "Do youth ride free on Yolobus?"
 
-    def test_sign_turn_is_length_prefixed(self, monkeypatch):
-        # The length prefix prevents delimiter ambiguity: ("x|y","z") must not
-        # collide with ("x","y|z").
+    def test_sign_turn_has_unambiguous_field_boundaries(self, monkeypatch):
+        # Structured signing material prevents delimiter ambiguity:
+        # ("x|y","z") must not collide with ("x","y|z").
         monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
         assert web_handler._sign_turn("x|y", "z") != web_handler._sign_turn("x", "y|z")
+
+    def test_signed_turn_is_invalid_after_source_containment_change(self, monkeypatch):
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
+        question = "How much is a local fare?"
+        answer = "The local fare is $2.00."
+        old_sig = web_handler._sign_turn(question, answer)
+
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+
+        assert old_sig != web_handler._sign_turn(question, answer)
+        assert web_handler._parse_history([{"q": question, "a": answer, "sig": old_sig}]) == []
+
+    def test_refusal_is_not_signed_for_follow_up_history(self, monkeypatch):
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+
+        data = json.loads(_post("How much is the local fare on Yolobus?")["body"])
+
+        assert data["kind"] == "refused_no_support"
+        assert "sig" not in data
+
+    def test_cache_hit_is_resigned_after_history_key_rotation(self, monkeypatch):
+        question = "Do youth ride free on Yolobus?"
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "old-secret")
+        first = json.loads(_post(question)["body"])
+
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "new-secret")
+        cached = json.loads(_post(question)["body"])
+
+        assert cached["answer"] == first["answer"]
+        assert cached["sig"] != first["sig"]
+        assert cached["sig"] == web_handler._sign_turn(question, cached["answer"])
+        assert web_handler._ANSWER_CACHE
+        assert all("sig" not in payload for payload in web_handler._ANSWER_CACHE.values())
 
 
 class TestFeedback:

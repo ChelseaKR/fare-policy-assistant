@@ -3,9 +3,11 @@
     GET  /          → web/index.html
     POST /api/ask   → {"question": "..."} → answer JSON with citations
 
-Privacy: rider questions are answered and discarded. Nothing a rider types is
-logged or stored; request logs carry only the response kind, language, and
-timing so abuse stays visible without keeping content (see ADR 0004).
+Privacy: plaintext rider questions are not logged or retained in the server
+cache. Successful requests are processed in memory and sent to the configured
+model; the bounded answer cache uses a process-local keyed digest rather than
+plaintext question/history. Request logs carry only response kind, language,
+length, timing, and operational flags (see ADR 0004 and docs/dpia.md).
 
 Cost guards, in order: the API Gateway stage throttle (set by
 infra/deploy.sh, derived from its reserved-concurrency value) is the true
@@ -35,7 +37,7 @@ _ROOT = Path(__file__).resolve().parent.parent  # bundle root mirrors the repo r
 sys.path.insert(0, str(_ROOT / "src"))
 
 from assistant import config, guards  # noqa: E402
-from assistant.answer import answer_question  # noqa: E402
+from assistant.answer import AnswerResult, answer_question  # noqa: E402
 from assistant.contract import build_structured_answer  # noqa: E402
 from assistant.models import get_model  # noqa: E402
 from assistant.retrieve import default_retriever  # noqa: E402
@@ -71,11 +73,24 @@ def _history_hmac_key() -> str:
 
 
 def _sign_turn(q: str, a: str) -> str:
-    """HMAC-SHA256 over a server-issued turn. The question is length-prefixed so
-    the `|` delimiter cannot be shifted between the two fields (a plain `q|a`
-    join would collide for `("x|y", "z")` and `("x", "y|z")`)."""
+    """HMAC-SHA256 over a server-issued turn and its evidence-policy state.
+
+    Binding the corpus version and disabled-source set means a turn signed
+    before a corpus rollout or containment change cannot be replayed as current
+    context afterward. JSON encoding keeps field boundaries unambiguous.
+    """
     key = _history_hmac_key()
-    return hmac.new(key.encode(), f"{len(q)}:{q}|{a}".encode(), hashlib.sha256).hexdigest()
+    material = json.dumps(
+        [
+            q,
+            a,
+            _corpus_summary()["corpus_version"],
+            _disabled_document_ids(),
+        ],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hmac.new(key.encode(), material, hashlib.sha256).hexdigest()
 
 
 _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
@@ -84,28 +99,57 @@ _INDEX_HTML = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 _INDEX_CSP = html_csp(_INDEX_HTML)
 # Rendered once per container from the committed corpus; it changes only when the
 # corpus does, which means a new deploy.
-_OFFLINE_HTML: str | None = None
-_GUIDE_HTML: str | None = None
+_OFFLINE_HTML: tuple[tuple[str, ...], str] | None = None
+_GUIDE_HTML: tuple[tuple[str, ...], str] | None = None
+
+
+def _disabled_document_ids() -> tuple[str, ...]:
+    """Normalized operator-disabled source IDs, stable for cache keys."""
+    return tuple(
+        sorted(
+            {
+                doc_id.strip()
+                for doc_id in os.environ.get("FPA_DISABLED_DOC_IDS", "").split(",")
+                if doc_id.strip()
+            }
+        )
+    )
 
 
 def _offline_html() -> str:
     global _OFFLINE_HTML
-    if _OFFLINE_HTML is None:
+    disabled = _disabled_document_ids()
+    if _OFFLINE_HTML is None or _OFFLINE_HTML[0] != disabled:
         from assistant.ingest import load_chunks
         from web.offline import render_offline_reference
 
-        _OFFLINE_HTML = render_offline_reference(load_chunks())
-    return _OFFLINE_HTML
+        chunks = [chunk for chunk in load_chunks() if chunk.doc_id not in disabled]
+        _OFFLINE_HTML = (
+            disabled,
+            render_offline_reference(
+                chunks,
+                full_corpus_version=_corpus_summary()["corpus_version"],
+            ),
+        )
+    return _OFFLINE_HTML[1]
 
 
 def _guide_html() -> str:
     global _GUIDE_HTML
-    if _GUIDE_HTML is None:
+    disabled = _disabled_document_ids()
+    if _GUIDE_HTML is None or _GUIDE_HTML[0] != disabled:
         from assistant.ingest import load_chunks
         from web.guide import render_guide
 
-        _GUIDE_HTML = render_guide(load_chunks())
-    return _GUIDE_HTML
+        chunks = [chunk for chunk in load_chunks() if chunk.doc_id not in disabled]
+        _GUIDE_HTML = (
+            disabled,
+            render_guide(
+                chunks,
+                full_corpus_version=_corpus_summary()["corpus_version"],
+            ),
+        )
+    return _GUIDE_HTML[1]
 
 
 # Corpus identity, computed once per container.
@@ -156,6 +200,7 @@ def _version_payload() -> dict:
         summary["stale"] = age > budget
 
     summary["known_versions"] = _known_versions()
+    summary["disabled_documents"] = list(_disabled_document_ids())
     pinned = os.environ.get("FPA_PINNED_CORPUS_VERSION")
     if pinned:
         summary["pinned"] = pinned
@@ -176,9 +221,27 @@ def _version_payload() -> dict:
 _RECENT: deque[float] = deque()
 # Per-container answer cache: identical questions return the recorded payload
 # without a model call, since the corpus is fixed and the model runs at
-# temperature 0. Stores only the response payload (no rider content beyond the
-# question key, which lives in memory and dies with the container). Bounded LRU.
+# temperature 0. Cache keys are process-local keyed HMAC digests, never plaintext
+# questions or history. The random key is deliberately not configurable or
+# persisted: a warm container can recognize its own repeated requests, while a
+# cache snapshot or diagnostic cannot be used to guess a rider's question with
+# an offline dictionary. The bounded LRU and its key both die with the container.
 _ANSWER_CACHE: OrderedDict[str, dict] = OrderedDict()
+_ANSWER_CACHE_HMAC_KEY = os.urandom(32)
+
+
+def _cache_key(question: str, history: list[tuple[str, str]]) -> str:
+    """Return an opaque digest for the question, context, and source policy.
+
+    Including the disabled-source set prevents a warm answer cached before an
+    operator containment change from surviving that change.
+    """
+    material = json.dumps(
+        [question.casefold(), history, _disabled_document_ids()],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hmac.new(_ANSWER_CACHE_HMAC_KEY, material, hashlib.sha256).hexdigest()
 
 
 def _cache_get(key: str) -> dict | None:
@@ -189,7 +252,12 @@ def _cache_get(key: str) -> dict | None:
 
 
 def _cache_put(key: str, payload: dict) -> None:
-    _ANSWER_CACHE[key] = payload
+    # A response signature belongs to the current history-signing key, which
+    # operators may rotate without replacing a warm container. Cache only the
+    # stable answer payload and sign each response at delivery time.
+    cached = dict(payload)
+    cached.pop("sig", None)
+    _ANSWER_CACHE[key] = cached
     _ANSWER_CACHE.move_to_end(key)
     while len(_ANSWER_CACHE) > ANSWER_CACHE_SIZE:
         _ANSWER_CACHE.popitem(last=False)
@@ -317,6 +385,34 @@ def _parse_history(raw: object) -> list[tuple[str, str]]:
     return turns
 
 
+def _request_input_check(question: str, raw_history: object) -> guards.InputCheck:
+    """Guard current and prior rider questions before parsing history or cache.
+
+    History is client-held and therefore untrusted even when turn signing is
+    enabled only optionally. Checking each raw ``q`` first prevents PII,
+    injection text, or another refused rider input from reaching retrieval, a
+    model, or an answer-cache key. The ``a`` field is not input-guarded here:
+    server answers can legitimately contain public agency phone numbers that
+    resemble personal contact data. Output guards still police every new answer,
+    and optional history signing authenticates prior answers. Only the last
+    turns the request could actually use are inspected.
+    """
+    current = guards.check_input(question)
+    if not current.ok or not isinstance(raw_history, list):
+        return current
+
+    for item in raw_history[-MAX_HISTORY_TURNS:]:
+        if not isinstance(item, dict):
+            continue
+        value = item.get("q")
+        if not isinstance(value, str):
+            continue
+        checked = guards.check_input(value)
+        if not checked.ok:
+            return checked
+    return current
+
+
 def _ask(event: dict) -> dict:
     try:
         body = event.get("body") or ""
@@ -337,42 +433,64 @@ def _ask(event: dict) -> dict:
         return _json(
             400, {"error": f"Please keep questions under {MAX_QUESTION_CHARS} characters."}
         )
-    history = _parse_history(data.get("history"))
-
-    # Cache hits cost no model call, so they bypass the per-minute budget (which
-    # exists to bound Bedrock spend) but are still logged. The key includes the
-    # history, since a follow-up's answer depends on the turns before it.
-    # JSON-encoded so the key is unambiguous: a "|" or ">" inside the question
-    # or a history turn cannot shift the delimiters and make two different
-    # (question, history) pairs collide onto one cached answer (same class of
-    # ambiguity _sign_turn guards against with its length prefix).
-    key = json.dumps([question.casefold(), history], ensure_ascii=False)
-    cached = _cache_get(key)
-    if cached is not None:
-        print(
-            json.dumps(
-                {
-                    "kind": cached["kind"],
-                    "language": cached["language"],
-                    "question_chars": len(question),
-                    "turns": len(history),
-                    "cache": "hit",
-                }
-            )
-        )
-        return _json(200, cached)
-
-    if _over_budget(time.monotonic()):
-        return _json(429, {"error": "Too many requests right now. Please try again in a minute."})
-
-    cfg = _make_cfg()
     started = time.monotonic()
-    result = answer_question(
-        question,
-        history=history or None,
-        model=get_model(cfg.models.provider, cfg.models.answer_model),
-        cfg=cfg,
-    )
+    raw_history = data.get("history")
+    pre = _request_input_check(question, raw_history)
+    history: list[tuple[str, str]] = []
+    key: str | None = None
+
+    if not pre.ok:
+        # Build the same public result contract as answer_question's input-guard
+        # path, but do so before history parsing, cache access, budget accounting,
+        # retrieval, or model construction.
+        result = AnswerResult(
+            question=question,
+            answer=pre.message or "",
+            kind="refused_input",
+            guard_flags=pre.flags,
+        )
+    else:
+        history = _parse_history(raw_history)
+
+        # Cache hits cost no model call, so they bypass the per-minute budget
+        # (which exists to bound Bedrock spend) but are still logged. The HMAC
+        # covers an unambiguous JSON encoding of both question and history.
+        key = _cache_key(question, history)
+        cached = _cache_get(key)
+        if cached is not None:
+            # Return a copy so signing-key rotation cannot mutate the stable
+            # cached payload or send a signature made with the previous key.
+            cached = dict(cached)
+            if _history_hmac_key():
+                cached["sig"] = _sign_turn(question, cached["answer"])
+            else:
+                cached.pop("sig", None)
+            print(
+                json.dumps(
+                    {
+                        "kind": cached["kind"],
+                        "language": cached["language"],
+                        "question_chars": len(question),
+                        "turns": len(history),
+                        "cache": "hit",
+                        "model_called": False,
+                    }
+                )
+            )
+            return _json(200, cached)
+
+        if _over_budget(time.monotonic()):
+            return _json(
+                429, {"error": "Too many requests right now. Please try again in a minute."}
+            )
+
+        cfg = _make_cfg()
+        result = answer_question(
+            question,
+            history=history or None,
+            model=get_model(cfg.models.provider, cfg.models.answer_model),
+            cfg=cfg,
+        )
     # EXP-04 (docs/ideation/03-expansions.md): the typed contract alongside
     # the existing prose `answer`. `structured` is additive — every prior
     # field stays, so existing clients are unaffected — and is null when the
@@ -409,9 +527,13 @@ def _ask(event: dict) -> dict:
     # Forged-history hardening: when a key is set, sign the turn so the client can
     # echo the signature back with its next follow-up and _parse_history can
     # confirm this turn was server-issued. Off by default (empty key → no field).
-    if _history_hmac_key():
+    if _history_hmac_key() and result.kind == "answered":
         payload["sig"] = _sign_turn(question, result.answer)
-    _cache_put(key, payload)
+    # Never retain any guarded or refused response. Input-guard refusals bypass
+    # cache access entirely above; this narrower allowlist also prevents output
+    # guard and no-support results from entering the cache.
+    if key is not None and result.kind == "answered":
+        _cache_put(key, payload)
     # Operational log only: no question text, no answer text (ADR 0004).
     # structured_ok/reason reference schema field paths, not rider content.
     print(
@@ -422,7 +544,11 @@ def _ask(event: dict) -> dict:
                 "question_chars": len(question),
                 "turns": len(history),
                 "duration_ms": round(1000 * (time.monotonic() - started)),
-                "cache": "miss",
+                "cache": "miss" if key is not None and result.kind == "answered" else "bypass",
+                # A guarded response still consumed a model call even though it
+                # is intentionally not cacheable. Keep spend telemetry
+                # independent from cache policy.
+                "model_called": bool(result.model),
                 "structured_ok": structured.structured_ok,
                 "structured_fallback_reason": structured.fallback_reason or None,
             }
