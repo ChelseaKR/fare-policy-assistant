@@ -1,6 +1,7 @@
 # 0018 — Immutable Lambda release control
 
-Date: 2026-07-30. Status: accepted; logging gate amended by ADR 0019.
+Date: 2026-07-30. Status: accepted; logging gate amended by ADR 0019;
+reproducible bundle amendment accepted 2026-07-30.
 
 ## Context
 
@@ -30,7 +31,9 @@ integration.
 
 Each release follows this sequence:
 
-1. Build the reviewed artifact from a clean Git revision.
+1. Build the reviewed artifact from a clean Git revision. The ZIP builder sorts
+   paths and normalizes timestamps, modes, and ZIP metadata so the same file
+   bytes produce the same Lambda `CodeSha256`.
 2. Stage complete code and configuration on `$LATEST`.
 3. Publish or identify an exact numbered version using both the code hash and
    Lambda revision identifier.
@@ -67,6 +70,18 @@ complete intended environment, and every managed runtime/configuration value.
 The initial `live` version and alias revision remain the release-wide baseline;
 a concurrent promotion causes this deployment to abort instead of combining
 the old environment with the newer alias target.
+
+The prepared dependency tree contains installation-time mtimes, and ordinary
+`zip` preserves those values. That previously caused an unchanged Git revision
+to publish a new numbered Lambda version when it was rebuilt during a rollback
+drill. `scripts/build_lambda_zip.py` now includes only regular files, rejects
+symlinks and other special entries, sorts POSIX archive names, and writes a
+fixed timestamp and mode. Python bytecode caches and wheel `RECORD` files stay
+excluded. Dependency-generated top-level `bin/` entry points are also excluded:
+the Lambda handler does not use them, and their installer-written shebangs
+contain the builder's absolute virtual-environment path. Exact-version reuse
+can therefore depend on the artifact digest rather than incidental builder
+filesystem metadata.
 
 `rollback` retains the prior known-good numeric version. `infra/rollback.sh`
 validates that version directly, checks its runtime mode and containment
@@ -139,6 +154,9 @@ workflow or must remain disabled.
 - Published versions consume Lambda code storage. Never delete the versions
   targeted by `live` or `rollback`; add a conservative retention process only
   when storage usage warrants it.
+- Rebuilding identical bundle inputs with the same compression implementation
+  is byte-reproducible. Dependency wheel bytes remain protected separately by
+  the hash-pinned requirements file.
 
 ## Rejected alternatives
 

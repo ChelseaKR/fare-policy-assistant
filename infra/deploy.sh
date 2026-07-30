@@ -28,7 +28,7 @@ if [[ "${FPA_ALLOW_DIRTY_DEPLOY:-}" != "1" \
   exit 2
 fi
 
-for required_command in aws curl jq openssl uv zip; do
+for required_command in aws curl jq openssl uv; do
   command -v "$required_command" >/dev/null 2>&1 || {
     echo "$required_command is required" >&2
     exit 2
@@ -1283,7 +1283,10 @@ cp "$ROOT/web/__init__.py" "$ROOT/web/handler.py" "$ROOT/web/index.html" \
    "$ROOT/web/offline.py" "$ROOT/web/guide.py" "$ROOT/web/embed.py" \
    "$ROOT/web/csp.py" "$BUNDLE/web/"
 
-(cd "$BUNDLE" && zip -qr "$BUILD/bundle.zip" . -x '*__pycache__*' -x '*.dist-info/RECORD')
+(
+  cd "$ROOT"
+  uv run python scripts/build_lambda_zip.py "$BUNDLE" "$BUILD/bundle.zip"
+)
 LOCAL_CODE_SHA="$(
   openssl dgst -sha256 -binary "$BUILD/bundle.zip" \
     | openssl base64 -A
