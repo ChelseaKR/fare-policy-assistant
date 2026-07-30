@@ -8,11 +8,15 @@ section/table tests (test_ingest.py, test_pdf_ingest.py) do not.
 
 from __future__ import annotations
 
+import hashlib
+
 import httpx
+import pytest
 import yaml
 
 from assistant import config
 from assistant.ingest import load_chunks, main, process_all
+from assistant.snapshots import SnapshotArchiveError
 
 # Capture the genuine client class before any test patches the (shared) httpx
 # module, so the mock factory can build a real client with a MockTransport
@@ -36,6 +40,7 @@ def _point_config_at(tmp_path, monkeypatch, manifest: dict):
     # process_all() archives into VERSIONS_DIR (EXP-05); keep that under
     # tmp_path too so tests never write into the repo's real corpus/versions/.
     monkeypatch.setattr(config, "VERSIONS_DIR", tmp_path / "versions")
+    monkeypatch.setattr(config, "SNAPSHOTS_DIR", tmp_path / "snapshots")
     monkeypatch.setattr(config, "FACTS_PATH", processed / "facts.jsonl")
     return raw, processed
 
@@ -47,6 +52,32 @@ _HTML_DOC = """<html><head><title>Fares</title></head><body><main>
 disabilities. Proof of age such as a Medicare card is required when boarding the
 bus on any fixed-route service the district runs across the county.</p>
 </main></body></html>"""
+
+
+def _write_html_snapshot(
+    raw,
+    *,
+    doc_id: str = "mst-fares",
+    url: str = "https://mst.org/fares/",
+    fetch_date: str = "2026-06-12",
+) -> None:
+    content = _HTML_DOC.encode()
+    raw.mkdir(parents=True, exist_ok=True)
+    (raw / f"{doc_id}.html").write_bytes(content)
+    receipt = {
+        "doc_id": doc_id,
+        "url": url,
+        "final_url": url,
+        "fetch_date": fetch_date,
+        "http_status": 200,
+        "format": "html",
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "bytes": len(content),
+    }
+    (raw / f"{doc_id}.meta.yaml").write_text(
+        yaml.safe_dump(receipt, sort_keys=False),
+        encoding="utf-8",
+    )
 
 
 # ── fetch (mocked transport) ─────────────────────────────────────────────────
@@ -214,11 +245,7 @@ def test_process_all_round_trips_through_load_chunks(tmp_path, monkeypatch):
         ],
     }
     raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
-    raw.mkdir(parents=True)
-    (raw / "mst-fares.html").write_text(_HTML_DOC, encoding="utf-8")
-    (raw / "mst-fares.meta.yaml").write_text(
-        yaml.safe_dump({"fetch_date": "2026-06-12"}), encoding="utf-8"
-    )
+    _write_html_snapshot(raw)
 
     process_all()
 
@@ -252,11 +279,7 @@ def test_process_all_archives_the_corpus_version(tmp_path, monkeypatch):
         ],
     }
     raw, _ = _point_config_at(tmp_path, monkeypatch, manifest)
-    raw.mkdir(parents=True)
-    (raw / "mst-fares.html").write_text(_HTML_DOC, encoding="utf-8")
-    (raw / "mst-fares.meta.yaml").write_text(
-        yaml.safe_dump({"fetch_date": "2026-06-12"}), encoding="utf-8"
-    )
+    _write_html_snapshot(raw)
 
     process_all()
 
@@ -267,9 +290,16 @@ def test_process_all_archives_the_corpus_version(tmp_path, monkeypatch):
     assert version in corpus.list_versions()
     snapshot = config.VERSIONS_DIR / version / "manifest.snapshot.yaml"
     assert "mst-fares" in snapshot.read_text(encoding="utf-8")
+    from assistant.snapshots import list_snapshots, load_snapshot_chunks
+
+    snapshots = list_snapshots()
+    assert len(snapshots) == 1
+    assert [c.chunk_id for c in load_snapshot_chunks(snapshots[0])] == [
+        c.chunk_id for c in live_chunks
+    ]
 
 
-def test_process_all_skips_documents_without_a_snapshot(tmp_path, monkeypatch, capsys):
+def test_process_all_fails_if_any_manifest_document_has_no_snapshot(tmp_path, monkeypatch):
     manifest = {
         "user_agent": "test-agent/0.1",
         "crawl_delay_seconds": 0,
@@ -286,9 +316,134 @@ def test_process_all_skips_documents_without_a_snapshot(tmp_path, monkeypatch, c
     }
     _, processed = _point_config_at(tmp_path, monkeypatch, manifest)
     processed.mkdir(parents=True)
-    process_all()  # no raw snapshot → skipped, not crashed
-    assert "skip" in capsys.readouterr().err
-    assert load_chunks() == []
+    with pytest.raises(SnapshotArchiveError, match="metadata for missing"):
+        process_all()
+    assert not config.CHUNKS_PATH.exists()
+
+
+def test_process_all_archives_the_exact_bytes_used_to_derive_chunks(
+    tmp_path,
+    monkeypatch,
+):
+    from assistant import ingest
+    from assistant.snapshots import list_snapshots
+
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
+    }
+    raw, _ = _point_config_at(tmp_path, monkeypatch, manifest)
+    _write_html_snapshot(raw)
+    original_bytes = (raw / "mst-fares.html").read_bytes()
+    replacement_bytes = original_bytes.replace(b"65 years", b"99 years")
+    original_sections_from_html = ingest.sections_from_html
+
+    def replace_working_source_after_parse(html: str):
+        sections = original_sections_from_html(html)
+        (raw / "mst-fares.html").write_bytes(replacement_bytes)
+        replacement_receipt = {
+            "doc_id": "mst-fares",
+            "url": "https://mst.org/fares/",
+            "final_url": "https://mst.org/fares/",
+            "fetch_date": "2026-06-12",
+            "http_status": 200,
+            "format": "html",
+            "sha256": hashlib.sha256(replacement_bytes).hexdigest(),
+            "bytes": len(replacement_bytes),
+        }
+        (raw / "mst-fares.meta.yaml").write_text(
+            yaml.safe_dump(replacement_receipt, sort_keys=False),
+            encoding="utf-8",
+        )
+        return sections
+
+    monkeypatch.setattr(
+        ingest,
+        "sections_from_html",
+        replace_working_source_after_parse,
+    )
+    process_all()
+
+    live_text = " ".join(chunk.text for chunk in load_chunks())
+    assert "65 years" in live_text
+    assert "99 years" not in live_text
+    [snapshot_id] = list_snapshots()
+    archived_raw = (config.SNAPSHOTS_DIR / snapshot_id / "raw" / "mst-fares.html").read_bytes()
+    assert archived_raw == original_bytes
+    assert (raw / "mst-fares.html").read_bytes() == replacement_bytes
+
+
+def test_archive_failure_leaves_prior_live_chunks_untouched(tmp_path, monkeypatch):
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
+    }
+    raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
+    _write_html_snapshot(raw)
+    processed.mkdir(parents=True)
+    original = b'{"prior":"serving"}\n'
+    config.CHUNKS_PATH.write_bytes(original)
+
+    def fail_archive(*args, **kwargs):
+        raise RuntimeError("injected archive failure")
+
+    monkeypatch.setattr("assistant.snapshots.archive_snapshot", fail_archive)
+    with pytest.raises(RuntimeError, match="injected archive failure"):
+        process_all()
+    assert config.CHUNKS_PATH.read_bytes() == original
+
+
+def test_legacy_archive_failure_leaves_prior_live_chunks_untouched(
+    tmp_path,
+    monkeypatch,
+):
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "Monterey-Salinas Transit",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
+    }
+    raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
+    _write_html_snapshot(raw)
+    processed.mkdir(parents=True)
+    original = b'{"prior":"serving"}\n'
+    config.CHUNKS_PATH.write_bytes(original)
+
+    def fail_legacy_archive(*args, **kwargs):
+        raise RuntimeError("injected legacy archive failure")
+
+    monkeypatch.setattr("assistant.corpus.archive_version", fail_legacy_archive)
+    with pytest.raises(RuntimeError, match="injected legacy archive failure"):
+        process_all()
+    assert config.CHUNKS_PATH.read_bytes() == original
 
 
 # ── CLI dispatch ─────────────────────────────────────────────────────────────
@@ -310,11 +465,7 @@ def test_main_process_dispatch(tmp_path, monkeypatch):
         ],
     }
     raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
-    raw.mkdir(parents=True)
-    (raw / "mst-fares.html").write_text(_HTML_DOC, encoding="utf-8")
-    (raw / "mst-fares.meta.yaml").write_text(
-        yaml.safe_dump({"fetch_date": "2026-06-12"}), encoding="utf-8"
-    )
+    _write_html_snapshot(raw)
     monkeypatch.setattr("sys.argv", ["ingest", "process"])
     main()
     assert (processed / "chunks.jsonl").exists()

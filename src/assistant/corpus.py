@@ -39,15 +39,24 @@ never inside the deployed Lambda — the console reads the resulting
 from __future__ import annotations
 
 import dataclasses
+import fcntl
 import hashlib
 import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
+import threading
+from collections.abc import Mapping
+from contextlib import contextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 
 import yaml
 
 from assistant import config
+from assistant.identity import content_version
 from assistant.ingest import Chunk, load_manifest
 from assistant.ingest import load_chunks as _load_current_chunks
 
@@ -55,6 +64,12 @@ from assistant.ingest import load_chunks as _load_current_chunks
 # like user_agent/crawl_delay_seconds, which are not part of the corpus's
 # retained identity).
 _MANIFEST_DOC_FIELDS = ("id", "agency", "agency_full", "title", "url", "format", "language")
+_LEGACY_ARCHIVE_FILES = frozenset({"chunks.jsonl", "manifest.snapshot.yaml", "version.json"})
+_PROCESS_ARCHIVE_LOCK = threading.Lock()
+
+
+class CorpusArchiveError(ValueError):
+    """A legacy corpus archive is incomplete, corrupt, or conflicting."""
 
 
 def _digest(parts: list[str]) -> str:
@@ -79,6 +94,7 @@ def corpus_summary(chunks: list[Chunk] | None = None) -> dict:
     chunks = chunks if chunks is not None else load_chunks()
     return {
         "corpus_version": corpus_version(chunks),
+        "content_version": content_version(chunks),
         "as_of": max((c.fetch_date for c in chunks), default=""),
         "agencies": sorted({c.agency for c in chunks}),
         "documents": len({c.doc_id for c in chunks}),
@@ -139,7 +155,7 @@ def list_versions() -> list[str]:
         return []
     entries: list[tuple[str, str]] = []
     for d in config.VERSIONS_DIR.iterdir():
-        if not d.is_dir():
+        if d.name.startswith(".") or d.is_symlink() or not d.is_dir():
             continue
         archived_at = ""
         meta_path = d / "version.json"
@@ -155,41 +171,295 @@ def list_versions() -> list[str]:
     return [name for _, name in entries]
 
 
-def archive_version(chunks: list[Chunk] | None = None, manifest: dict | None = None) -> str:
-    """Retain this corpus content permanently under `corpus/versions/<id>/`.
+def _legacy_chunks_bytes(chunks: list[Chunk]) -> bytes:
+    return "".join(
+        json.dumps(dataclasses.asdict(chunk), ensure_ascii=False) + "\n" for chunk in chunks
+    ).encode("utf-8")
 
-    Called at the end of `assistant.ingest.process_all()`, once per distinct
-    `corpus_version`; a re-run whose content hash already exists is a no-op
-    (the first `archived_at` is kept, not overwritten). Retention is
-    processed-only — chunks and a slim manifest snapshot, no raw HTML — per the
-    EXP-05 repo-size mitigation; raw snapshots still live (unversioned) in
-    `corpus/raw/` for the current pull only. Returns the archived version id.
-    """
-    chunks = chunks if chunks is not None else _load_current_chunks()
-    version = corpus_version(chunks)
-    version_dir = config.VERSIONS_DIR / version
-    chunks_path = version_dir / "chunks.jsonl"
-    if chunks_path.exists():
-        return version
 
-    version_dir.mkdir(parents=True, exist_ok=True)
-    with chunks_path.open("w", encoding="utf-8") as f:
-        for c in chunks:
-            f.write(json.dumps(dataclasses.asdict(c), ensure_ascii=False) + "\n")
+def _legacy_manifest_snapshot(manifest: Mapping[str, object]) -> dict[str, object]:
+    documents = manifest.get("documents")
+    if not isinstance(documents, list) or not documents:
+        raise CorpusArchiveError("legacy archive manifest must contain documents")
+    normalized: list[dict[str, object]] = []
+    for index, document in enumerate(documents):
+        if not isinstance(document, Mapping):
+            raise CorpusArchiveError(f"legacy archive manifest document {index} must be a mapping")
+        normalized.append({key: document.get(key) for key in _MANIFEST_DOC_FIELDS})
+    return {"documents": normalized}
 
-    manifest = manifest if manifest is not None else _safe_load_manifest()
-    docs = manifest.get("documents", []) if manifest else []
-    manifest_snapshot = {"documents": [{k: d.get(k) for k in _MANIFEST_DOC_FIELDS} for d in docs]}
-    (version_dir / "manifest.snapshot.yaml").write_text(
-        yaml.safe_dump(manifest_snapshot, sort_keys=False), encoding="utf-8"
+
+def _validate_legacy_manifest(
+    manifest_snapshot: Mapping[str, object],
+    chunks: list[Chunk],
+) -> None:
+    documents = manifest_snapshot.get("documents")
+    if not isinstance(documents, list) or not documents:
+        raise CorpusArchiveError("legacy archive manifest must contain documents")
+
+    chunks_by_document: dict[str, list[Chunk]] = {}
+    for chunk in chunks:
+        chunks_by_document.setdefault(chunk.doc_id, []).append(chunk)
+    manifest_ids: set[str] = set()
+    for index, document in enumerate(documents):
+        if not isinstance(document, Mapping):
+            raise CorpusArchiveError(f"legacy archive manifest document {index} must be a mapping")
+        doc_id = document.get("id")
+        if not isinstance(doc_id, str) or not doc_id:
+            raise CorpusArchiveError(f"legacy archive manifest document {index} has no valid id")
+        if doc_id in manifest_ids:
+            raise CorpusArchiveError(
+                f"legacy archive manifest contains duplicate document id: {doc_id}"
+            )
+        manifest_ids.add(doc_id)
+        document_chunks = chunks_by_document.get(doc_id)
+        if not document_chunks:
+            raise CorpusArchiveError(f"legacy archive manifest document {doc_id!r} has no chunks")
+        expected = {
+            "agency": document.get("agency"),
+            "agency_full": document.get("agency_full"),
+            "doc_title": document.get("title"),
+            "url": document.get("url"),
+            "language": document.get("language"),
+        }
+        for field, value in expected.items():
+            if not isinstance(value, str) or not value:
+                raise CorpusArchiveError(
+                    f"legacy archive manifest document {doc_id!r} has no valid {field}"
+                )
+            if any(getattr(chunk, field) != value for chunk in document_chunks):
+                raise CorpusArchiveError(
+                    f"legacy archive manifest document {doc_id!r} conflicts with {field}"
+                )
+    unexpected = sorted(set(chunks_by_document) - manifest_ids)
+    if unexpected:
+        raise CorpusArchiveError(
+            "legacy archive chunks are absent from the manifest: " + ", ".join(unexpected)
+        )
+
+
+def _read_regular_file(path: Path, context: str) -> bytes:
+    if path.is_symlink() or not path.is_file():
+        raise CorpusArchiveError(f"{context} is missing or is not a regular file")
+    return path.read_bytes()
+
+
+def _load_json_mapping(path: Path, context: str) -> Mapping[str, object]:
+    try:
+        payload = json.loads(_read_regular_file(path, context))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise CorpusArchiveError(f"{context} is invalid JSON") from exc
+    if not isinstance(payload, Mapping):
+        raise CorpusArchiveError(f"{context} must be a JSON object")
+    return payload
+
+
+def _load_legacy_chunks(path: Path) -> list[Chunk]:
+    try:
+        text = _read_regular_file(path, "legacy archive chunks").decode("utf-8")
+        return [Chunk(**json.loads(line)) for line in text.splitlines()]
+    except (UnicodeError, json.JSONDecodeError, TypeError, KeyError) as exc:
+        raise CorpusArchiveError("legacy archive chunks are malformed or unreadable") from exc
+
+
+def _validate_legacy_archive(
+    path: Path,
+    *,
+    expected_version: str,
+    expected_chunks: list[Chunk],
+    expected_manifest: Mapping[str, object],
+    require_version_directory_name: bool = True,
+) -> None:
+    """Validate every compatibility-archive artifact against the intended input."""
+    if path.is_symlink() or not path.is_dir():
+        raise CorpusArchiveError("legacy corpus archive is not a regular directory")
+    entries = {entry.name for entry in path.iterdir()}
+    if entries != _LEGACY_ARCHIVE_FILES:
+        missing = sorted(_LEGACY_ARCHIVE_FILES - entries)
+        unexpected = sorted(entries - _LEGACY_ARCHIVE_FILES)
+        details: list[str] = []
+        if missing:
+            details.append("missing: " + ", ".join(missing))
+        if unexpected:
+            details.append("unexpected: " + ", ".join(unexpected))
+        raise CorpusArchiveError(
+            "legacy corpus archive has an invalid artifact set (" + "; ".join(details) + ")"
+        )
+    if require_version_directory_name and path.name != expected_version:
+        raise CorpusArchiveError("legacy corpus archive directory does not match its version")
+
+    archived_chunks = _load_legacy_chunks(path / "chunks.jsonl")
+    if archived_chunks != expected_chunks:
+        raise CorpusArchiveError("legacy archive chunks conflict with the requested corpus")
+    if corpus_version(archived_chunks) != expected_version:
+        raise CorpusArchiveError("legacy archive chunks do not match corpus_version")
+
+    manifest_bytes = _read_regular_file(
+        path / "manifest.snapshot.yaml",
+        "legacy archive manifest",
     )
+    try:
+        archived_manifest = yaml.safe_load(manifest_bytes)
+    except yaml.YAMLError as exc:
+        raise CorpusArchiveError("legacy archive manifest is invalid YAML") from exc
+    if not isinstance(archived_manifest, Mapping):
+        raise CorpusArchiveError("legacy archive manifest must be a mapping")
+    if archived_manifest != expected_manifest:
+        raise CorpusArchiveError("legacy archive manifest conflicts with the requested corpus")
+    _validate_legacy_manifest(archived_manifest, archived_chunks)
 
+    metadata = _load_json_mapping(path / "version.json", "legacy archive metadata")
+    allowed_fields = {
+        "corpus_version",
+        "content_version",
+        "as_of",
+        "agencies",
+        "documents",
+        "chunks",
+        "archived_at",
+    }
+    if not set(metadata).issubset(allowed_fields):
+        raise CorpusArchiveError("legacy archive metadata has unexpected fields")
+    required_fields = allowed_fields - {"content_version"}
+    if not required_fields.issubset(metadata):
+        raise CorpusArchiveError("legacy archive metadata is incomplete")
+
+    expected_summary = corpus_summary(archived_chunks)
+    for key in ("corpus_version", "as_of", "agencies", "documents", "chunks"):
+        if metadata.get(key) != expected_summary[key]:
+            raise CorpusArchiveError(f"legacy archive metadata field {key} does not match")
+    if (
+        "content_version" in metadata
+        and metadata["content_version"] != expected_summary["content_version"]
+    ):
+        raise CorpusArchiveError("legacy archive metadata field content_version does not match")
+    archived_at = metadata.get("archived_at")
+    if not isinstance(archived_at, str):
+        raise CorpusArchiveError("legacy archive archived_at must be an ISO timestamp")
+    try:
+        parsed_archived_at = datetime.fromisoformat(archived_at)
+    except ValueError as exc:
+        raise CorpusArchiveError("legacy archive archived_at must be an ISO timestamp") from exc
+    if parsed_archived_at.tzinfo is None:
+        raise CorpusArchiveError("legacy archive archived_at must include a timezone")
+
+
+def _write_legacy_file(path: Path, content: bytes) -> None:
+    """Durably create one staged compatibility artifact; also a test seam."""
+    with path.open("xb") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+@contextmanager
+def _legacy_archive_root_lock(root: Path):
+    """Serialize cooperative compatibility-archive writers."""
+    lock_path = root / ".archive.lock"
+    with _PROCESS_ARCHIVE_LOCK:
+        descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
+
+
+def _write_staged_legacy_archive(
+    stage: Path,
+    chunks: list[Chunk],
+    manifest_snapshot: Mapping[str, object],
+    *,
+    archived_at: str,
+) -> None:
+    _write_legacy_file(stage / "chunks.jsonl", _legacy_chunks_bytes(chunks))
+    _write_legacy_file(
+        stage / "manifest.snapshot.yaml",
+        yaml.safe_dump(dict(manifest_snapshot), sort_keys=False).encode("utf-8"),
+    )
     summary = corpus_summary(chunks)
-    summary["archived_at"] = datetime.now(UTC).isoformat(timespec="seconds")
-    (version_dir / "version.json").write_text(
-        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+    summary["archived_at"] = archived_at
+    _write_legacy_file(
+        stage / "version.json",
+        (json.dumps(summary, indent=2) + "\n").encode("utf-8"),
     )
-    return version
+    _fsync_directory(stage)
+
+
+def archive_version(chunks: list[Chunk] | None = None, manifest: dict | None = None) -> str:
+    """Atomically retain this corpus under ``corpus/versions/<legacy-id>/``.
+
+    Publication is immutable and fail-closed: a complete archive is built and
+    validated in a hidden same-filesystem stage before one atomic rename.
+    Existing archives are never modified. Pre-layered archives whose valid
+    ``version.json`` predates ``content_version`` remain accepted.
+    """
+    chunks = list(chunks if chunks is not None else _load_current_chunks())
+    version = corpus_version(chunks)
+    source_manifest = manifest if manifest is not None else _safe_load_manifest()
+    if not isinstance(source_manifest, Mapping):
+        raise CorpusArchiveError("legacy archive manifest must be a mapping")
+    manifest_snapshot = _legacy_manifest_snapshot(source_manifest)
+    _validate_legacy_manifest(manifest_snapshot, chunks)
+
+    root = config.VERSIONS_DIR
+    root.mkdir(parents=True, exist_ok=True)
+    final = root / version
+    with _legacy_archive_root_lock(root):
+        if final.exists() or final.is_symlink():
+            _validate_legacy_archive(
+                final,
+                expected_version=version,
+                expected_chunks=chunks,
+                expected_manifest=manifest_snapshot,
+            )
+            return version
+
+    stage = Path(tempfile.mkdtemp(prefix=f".{version}.", dir=root))
+    try:
+        _write_staged_legacy_archive(
+            stage,
+            chunks,
+            manifest_snapshot,
+            archived_at=datetime.now(UTC).isoformat(timespec="seconds"),
+        )
+        _validate_legacy_archive(
+            stage,
+            expected_version=version,
+            expected_chunks=chunks,
+            expected_manifest=manifest_snapshot,
+            require_version_directory_name=False,
+        )
+        with _legacy_archive_root_lock(root):
+            if final.exists() or final.is_symlink():
+                _validate_legacy_archive(
+                    final,
+                    expected_version=version,
+                    expected_chunks=chunks,
+                    expected_manifest=manifest_snapshot,
+                )
+                return version
+            os.rename(stage, final)
+            _fsync_directory(root)
+        _validate_legacy_archive(
+            final,
+            expected_version=version,
+            expected_chunks=chunks,
+            expected_manifest=manifest_snapshot,
+        )
+        return version
+    finally:
+        if stage.exists():
+            shutil.rmtree(stage)
 
 
 def _safe_load_manifest() -> dict:
@@ -275,11 +545,15 @@ def main(argv: list[str] | None = None) -> int:
         payload = corpus_summary()
     elif cmd == "versions":
         payload = list_versions()
+    elif cmd == "snapshots":
+        from assistant.snapshots import list_snapshots
+
+        payload = list_snapshots()
     elif cmd == "changelog":
         payload = changelog()
     else:
         print(
-            f"unknown command: {cmd} (expected summary|versions|changelog|history)",
+            f"unknown command: {cmd} (expected summary|versions|snapshots|changelog|history)",
             file=sys.stderr,
         )
         return 2

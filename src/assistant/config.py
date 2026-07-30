@@ -23,6 +23,10 @@ CHUNKS_PATH = PROCESSED_DIR / "chunks.jsonl"
 # Retained corpus history (EXP-05): one subdirectory per distinct corpus_version,
 # written by assistant.corpus.archive_version and never overwritten in place.
 VERSIONS_DIR = CORPUS_DIR / "versions"
+# Schema-v2, source-complete snapshots keyed by their full snapshot identity.
+# Unlike the legacy processed-only archives above, each snapshot carries the
+# exact raw bytes and fetch receipt needed to re-verify its provenance.
+SNAPSHOTS_DIR = CORPUS_DIR / "snapshots"
 FACTS_PATH = PROCESSED_DIR / "facts.jsonl"
 PROMPTS_DIR = REPO_ROOT / "prompts"
 EVAL_SUITES_DIR = REPO_ROOT / "evals" / "suites"

@@ -27,6 +27,17 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Added
+- Layered corpus identity and source-complete archives: a full
+  `content_version` now covers every behavior-relevant stored chunk field and
+  order while excluding observation date; `snapshot_version` adds verified
+  URL/status/format/date/raw-digest evidence. Schema-2 archives retain exact
+  raw bytes and receipts, validate every artifact in a hidden stage, and publish
+  atomically before the live chunk index can change. Processing and archival
+  share one validated in-memory source capture, and legacy compatibility
+  archives now use the same staged, validated, immutable publication discipline.
+  Git attributes preserve the exact evidence bytes across add/checkout instead
+  of applying line-ending conversion. The existing `corpus_version` and
+  deployment pin remain compatible during the additive rollout.
 - Production smoke coverage for the separate evidence and assistant origins,
   every public GET route, security headers, PII refusal, corpus pin/source
   containment (including active Yolobus refusal and static-page removal), and a
