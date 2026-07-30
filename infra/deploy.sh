@@ -1470,13 +1470,10 @@ if [[ "$FUNCTION_EXISTS" == "true" ]]; then
       --zip-file "fileb://$BUILD/bundle.zip" \
       --output json
   )"
-  EXPECTED_CANDIDATE_REVISION="$(jq -r '.RevisionId // ""' <<<"$STAGED_CODE_RESPONSE")"
-  [[ -n "$EXPECTED_CANDIDATE_REVISION" ]] || {
+  [[ -n "$(jq -r '.RevisionId // ""' <<<"$STAGED_CODE_RESPONSE")" ]] || {
     echo "code staging returned no revision id" >&2
     exit 1
   }
-  assert_managed_release_config \
-    "$STAGED_CODE_RESPONSE" "code staging response" "$EXPECTED_CANDIDATE_REVISION"
 else
   STAGED_CODE_RESPONSE="$(
     aws lambda create-function --function-name "$FN" --region "$REGION" \
@@ -1486,16 +1483,16 @@ else
       --zip-file "fileb://$BUILD/bundle.zip" \
       --output json
   )"
-  EXPECTED_CANDIDATE_REVISION="$(jq -r '.RevisionId // ""' <<<"$STAGED_CODE_RESPONSE")"
-  [[ -n "$EXPECTED_CANDIDATE_REVISION" ]] || {
+  [[ -n "$(jq -r '.RevisionId // ""' <<<"$STAGED_CODE_RESPONSE")" ]] || {
     echo "function creation returned no revision id" >&2
     exit 1
   }
-  assert_managed_release_config \
-    "$STAGED_CODE_RESPONSE" "function creation response" "$EXPECTED_CANDIDATE_REVISION"
 fi
 aws lambda wait function-updated --function-name "$FN" --region "$REGION"
 
+# UpdateFunctionCode/CreateFunction responses can contain a transient view of
+# configuration while Lambda is still applying the operation. Promotion is
+# bound only to the settled, re-read snapshot and its current revision.
 CANDIDATE_CONFIG="$(
   aws lambda get-function-configuration \
     --function-name "$FN" --region "$REGION" --output json
@@ -1506,6 +1503,11 @@ if [[ -n "$LIVE_REVIEWED_CONFIG" ]]; then
 fi
 CANDIDATE_CODE_SHA="$(jq -r '.CodeSha256' <<<"$CANDIDATE_CONFIG")"
 CANDIDATE_REVISION="$(jq -r '.RevisionId' <<<"$CANDIDATE_CONFIG")"
+EXPECTED_CANDIDATE_REVISION="$CANDIDATE_REVISION"
+[[ -n "$EXPECTED_CANDIDATE_REVISION" ]] || {
+  echo "settled candidate has no revision id" >&2
+  exit 1
+}
 assert_managed_release_config \
   "$CANDIDATE_CONFIG" "staged candidate" "$EXPECTED_CANDIDATE_REVISION"
 RELEASE_DESCRIPTION="git=${SOURCE_REVISION:0:12} corpus=$PINNED_CORPUS_VERSION utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

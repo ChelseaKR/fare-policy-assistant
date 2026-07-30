@@ -313,6 +313,9 @@ if args[:2] == ["lambda", "update-function-code"]:
     latest["CodeSize"] = 4242
     latest["RevisionId"] = next_revision("latest")
     response = copy.deepcopy(latest)
+    if state.get("transient_code_response"):
+        response.pop("Environment", None)
+        state["settle_code_revision_pending"] = True
     record(
         "lambda.update-function-code",
         from_revision=before,
@@ -491,6 +494,18 @@ if args[:2] == ["lambda", "wait"]:
         latest["RevisionId"] = next_revision("latest-settled")
         record(
             "lambda.configuration-settled",
+            from_revision=before,
+            to_revision=latest["RevisionId"],
+        )
+    if (
+        args[2] == "function-updated"
+        and state.pop("settle_code_revision_pending", False)
+    ):
+        latest = state["configs"]["$LATEST"]
+        before = latest["RevisionId"]
+        latest["RevisionId"] = next_revision("latest-code-settled")
+        record(
+            "lambda.code-settled",
             from_revision=before,
             to_revision=latest["RevisionId"],
         )
@@ -834,6 +849,7 @@ def _initial_state(
     bootstrap_mode: bool = False,
     bootstrap_env_race_read: int = 0,
     config_revision_changes_on_wait: bool = False,
+    transient_code_response: bool = False,
     partial_retry_unknown_drift: bool = False,
 ) -> dict[str, Any]:
     version_five = _lambda_config("5", "old-five-sha", "version-5-r1")
@@ -856,6 +872,7 @@ def _initial_state(
         "competing_latest_after_code": competing_latest_after_code,
         "competing_live_on_read": competing_live_on_read,
         "config_revision_changes_on_wait": config_revision_changes_on_wait,
+        "transient_code_response": transient_code_response,
         "role_arn": f"arn:aws:iam::{ACCOUNT}:role/{FUNCTION}-role",
         "alias_permission": True,
         "aliases": {
@@ -919,6 +936,7 @@ def _run_deploy(
     bootstrap_mode: bool = False,
     bootstrap_env_race_read: int = 0,
     config_revision_changes_on_wait: bool = False,
+    transient_code_response: bool = False,
     partial_retry_unknown_drift: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     bin_dir = tmp_path / "bin"
@@ -938,6 +956,7 @@ def _run_deploy(
                 bootstrap_mode=bootstrap_mode,
                 bootstrap_env_race_read=bootstrap_env_race_read,
                 config_revision_changes_on_wait=config_revision_changes_on_wait,
+                transient_code_response=transient_code_response,
                 partial_retry_unknown_drift=partial_retry_unknown_drift,
             )
         ),
@@ -1080,6 +1099,24 @@ def test_code_staging_uses_revision_observed_after_configuration_settles(
     settled_event = state["events"][settled]
     code_event = state["events"][code]
     assert code_event["from_revision"] == settled_event["to_revision"]
+
+
+def test_code_staging_validates_settled_candidate_not_transient_response(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, transient_code_response=True)
+
+    assert result.returncode == 0, result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "6"
+    assert state["configs"]["6"]["Environment"] == state["configs"]["5"]["Environment"]
+    publish = _event_index(
+        state["events"],
+        "lambda.publish-version",
+        version="6",
+    )
+    code = _event_index(state["events"], "lambda.update-function-code")
+    settled = _event_index(state["events"], "lambda.code-settled")
+    assert code < settled < publish
 
 
 def test_explicit_empty_containment_is_used_by_candidate_public_smoke(
