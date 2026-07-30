@@ -72,6 +72,45 @@ def next_revision(prefix):
     return f"{prefix}-r{state['revision_counter']}"
 
 
+def shorthand_object(raw):
+    return {
+        key: value
+        for item in raw.split(",")
+        for key, value in [item.split("=", 1)]
+    }
+
+
+def metric_pattern_matches(pattern, event):
+    expression = pattern.strip()
+    if expression.startswith("{") and expression.endswith("}"):
+        expression = expression[1:-1].strip()
+    for raw_clause in expression.split("&&"):
+        clause = raw_clause.strip()
+        if " IS TRUE" in clause:
+            field = clause.split(" IS TRUE", 1)[0].strip().removeprefix("$.")
+            if event.get(field) is not True:
+                return False
+            continue
+        if " IS FALSE" in clause:
+            field = clause.split(" IS FALSE", 1)[0].strip().removeprefix("$.")
+            if event.get(field) is not False:
+                return False
+            continue
+        if " = " not in clause:
+            return False
+        field, expected = (part.strip() for part in clause.split(" = ", 1))
+        field = field.removeprefix("$.")
+        if expected == "*":
+            if field not in event or event[field] is None:
+                return False
+            continue
+        if expected.startswith('"') and expected.endswith('"'):
+            expected = json.loads(expected)
+        if event.get(field) != expected:
+            return False
+    return True
+
+
 def alias_policy():
     source = (
         f"arn:aws:execute-api:{state['region']}:{state['account']}:"
@@ -211,6 +250,63 @@ def invoke_payload(event, qualifier):
     return {"statusCode": 200, "headers": headers, "body": body}
 
 
+def structured_log_tail(qualifier):
+    request_id = f"fake-request-{qualifier}"
+    events = [
+        {
+            "timestamp": "2026-07-29T00:00:00.000Z",
+            "level": "INFO",
+            "message": "genai_call",
+            "logger": "fare_assistant",
+            "requestId": request_id,
+            "event": "genai_call",
+            "aws_request_id": request_id,
+            "function_version": qualifier,
+            "gen_ai.system": "anthropic",
+            "gen_ai.operation.name": "chat",
+            "gen_ai.request.model": "claude-haiku-4-5",
+            "gen_ai.response.model": "claude-haiku-4-5",
+            "gen_ai.usage.input_tokens": 48,
+            "gen_ai.usage.output_tokens": 12,
+            "gen_ai.client.operation.duration": 0.125,
+            "portfolio.gen_ai.cost.usd": 0.000123,
+            "input_tokens": 48,
+            "output_tokens": 12,
+            "model_duration_ms": 125,
+            "estimated_cost_usd": 0.000123,
+            "cost_estimate_available": True,
+            "completion_recorded": True,
+            "error_type": None,
+        },
+        {
+            "timestamp": "2026-07-29T00:00:00.126Z",
+            "level": "INFO",
+            "message": "answer_request",
+            "logger": "fare_assistant",
+            "requestId": request_id,
+            "event": "answer_request",
+            "aws_request_id": request_id,
+            "function_version": qualifier,
+            "kind": "answered",
+            "language": "en",
+            "question_chars": 49,
+            "turns": 0,
+            "duration_ms": 126,
+            "request_duration_ms": 126,
+            "cache": "bypass",
+            "model_called": True,
+            "structured_ok": True,
+            "status_code": 200,
+            "direct_health": True,
+            "input_tokens": 48,
+            "output_tokens": 12,
+            "completion_recorded": True,
+        },
+    ]
+    text = "\n".join(json.dumps(event, separators=(",", ":")) for event in events)
+    return base64.b64encode((text + "\n").encode()).decode()
+
+
 if args[:2] == ["sts", "get-caller-identity"]:
     record("sts.get-caller-identity")
     if value("--query") == "Account" and value("--output") == "text":
@@ -283,6 +379,9 @@ if args[:2] == ["lambda", "update-function-configuration"]:
     latest["MemorySize"] = int(value("--memory-size"))
     latest["Role"] = value("--role")
     latest["Environment"] = json.loads(value("--environment"))
+    logging_config = value("--logging-config")
+    if logging_config is not None:
+        latest["LoggingConfig"] = shorthand_object(logging_config)
     latest["RevisionId"] = next_revision("latest")
     response = copy.deepcopy(latest)
     if state.get("config_revision_changes_on_wait"):
@@ -291,6 +390,7 @@ if args[:2] == ["lambda", "update-function-configuration"]:
         "lambda.update-function-configuration",
         from_revision=before,
         to_revision=latest["RevisionId"],
+        logging_config=copy.deepcopy(latest["LoggingConfig"]),
     )
     finish(response)
 
@@ -387,8 +487,18 @@ if args[:2] == ["lambda", "invoke"]:
     event = json.loads(event_path.read_text(encoding="utf-8"))
     output_path = pathlib.Path(args[-1])
     output_path.write_text(json.dumps(invoke_payload(event, qualifier)), encoding="utf-8")
-    record("lambda.invoke", qualifier=qualifier, path=event["rawPath"])
-    finish({"StatusCode": 200, "ExecutedVersion": qualifier})
+    log_tail = value("--log-type") == "Tail"
+    record(
+        "lambda.invoke",
+        qualifier=qualifier,
+        path=event["rawPath"],
+        health_marker=event.get("fare_assistant_health"),
+        log_tail=log_tail,
+    )
+    metadata = {"StatusCode": 200, "ExecutedVersion": qualifier}
+    if log_tail:
+        metadata["LogResult"] = structured_log_tail(qualifier)
+    finish(metadata)
 
 if args[:2] == ["lambda", "get-policy"]:
     qualifier = value("--qualifier")
@@ -579,10 +689,66 @@ if args[:2] == ["sns", "create-topic"]:
         finish(topic_arn, text=True)
     finish({"TopicArn": topic_arn})
 
+if args[:2] == ["sns", "list-subscriptions-by-topic"]:
+    record("sns.list-subscriptions-by-topic")
+    finish({"Subscriptions": state.get("subscriptions", [])})
+
+if args[:2] == ["logs", "put-metric-filter"]:
+    filter_name = value("--filter-name")
+    transformation = shorthand_object(value("--metric-transformations"))
+    if "defaultValue" in transformation:
+        transformation["defaultValue"] = float(transformation["defaultValue"])
+    metric_filter = {
+        "filterName": filter_name,
+        "filterPattern": value("--filter-pattern"),
+        "metricTransformations": [transformation],
+        "logGroupName": value("--log-group-name"),
+    }
+    state.setdefault("metric_filters", {})[filter_name] = metric_filter
+    record(
+        "logs.put-metric-filter",
+        filter_name=filter_name,
+        filter_pattern=metric_filter["filterPattern"],
+    )
+    finish({})
+
+if args[:2] == ["logs", "describe-metric-filters"]:
+    prefix = value("--filter-name-prefix", "")
+    metric_filters = [
+        metric_filter
+        for filter_name, metric_filter in state.get("metric_filters", {}).items()
+        if filter_name.startswith(prefix)
+    ]
+    record("logs.describe-metric-filters", filter_name_prefix=prefix)
+    finish({"metricFilters": metric_filters})
+
+if args[:2] == ["logs", "test-metric-filter"]:
+    pattern = value("--filter-pattern")
+    messages = json.loads(value("--log-event-messages"))
+    matches = []
+    for index, message in enumerate(messages, start=1):
+        try:
+            event = message if isinstance(message, dict) else json.loads(message)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if metric_pattern_matches(pattern, event):
+            matches.append(
+                {
+                    "eventNumber": index,
+                    "eventMessage": message,
+                    "extractedValues": {},
+                }
+            )
+    record(
+        "logs.test-metric-filter",
+        filter_pattern=pattern,
+        match_count=len(matches),
+    )
+    finish({"matches": matches})
+
 allowed_noop_operations = {
     ("logs", "create-log-group"),
     ("logs", "put-retention-policy"),
-    ("logs", "put-metric-filter"),
     ("cloudwatch", "put-metric-alarm"),
     ("cloudwatch", "put-dashboard"),
 }
@@ -1018,8 +1184,16 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
     assert state["aliases"]["rollback"]["RoutingConfig"] == {"AdditionalVersionWeights": {}}
     assert state["integration"]["IntegrationUri"] == ALIAS_URI
     assert state["runtime_modes"]["6"] == "FunctionUpdate"
+    assert state["configs"]["6"]["LoggingConfig"] == {
+        "LogFormat": "JSON",
+        "ApplicationLogLevel": "INFO",
+        "SystemLogLevel": "WARN",
+        "LogGroup": f"/aws/lambda/{FUNCTION}",
+    }
+    assert state["configs"]["5"]["LoggingConfig"]["LogFormat"] == "Text"
     assert "live Lambda version: 6" in result.stdout
     assert "retained rollback version: 5" in result.stdout
+    assert "has no confirmed subscriber" in result.stderr
 
     events = state["events"]
     update_config = _event_index(events, "lambda.update-function-configuration")
@@ -1048,8 +1222,54 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
         live_version="6",
     )
     dashboard = _event_index(events, "cloudwatch.put-dashboard")
+    subscription_check = _event_index(events, "sns.list-subscriptions-by-topic")
+    structured_filter_checks = [
+        event for event in events if event.get("op") == "logs.test-metric-filter"
+    ]
+    tailed_candidate = [
+        event
+        for event in events
+        if event.get("op") == "lambda.invoke"
+        and event.get("qualifier") == "6"
+        and event.get("log_tail")
+    ]
 
     assert len(direct_candidate) == 5
+    assert tailed_candidate == [
+        {
+            "op": "lambda.invoke",
+            "qualifier": "6",
+            "path": "/api/ask",
+            "health_marker": "release-v1",
+            "log_tail": True,
+        }
+    ]
+    assert structured_filter_checks
+    assert [event["match_count"] for event in structured_filter_checks] == [
+        1,
+        1,
+        0,
+        1,
+        0,
+        1,
+        1,
+    ]
+    assert {
+        f"{FUNCTION}-genai-calls",
+        f"{FUNCTION}-estimated-model-cost",
+        f"{FUNCTION}-unpriced-model-calls",
+        f"{FUNCTION}-model-duration",
+        f"{FUNCTION}-answer-duration",
+        f"{FUNCTION}-feedback-down-v2",
+    }.issubset(state["metric_filters"])
+    assert (
+        "defaultValue"
+        not in state["metric_filters"][f"{FUNCTION}-model-duration"]["metricTransformations"][0]
+    )
+    assert (
+        "defaultValue"
+        not in state["metric_filters"][f"{FUNCTION}-answer-duration"]["metricTransformations"][0]
+    )
     assert (
         update_config
         < update_code
@@ -1059,6 +1279,7 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
         < rollback_pointer
         < live_promotion
         < candidate_public_smoke
+        < subscription_check
         < dashboard
     )
 

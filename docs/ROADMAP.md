@@ -95,7 +95,7 @@ bug for this repo specifically.
 
 What a real operator needs before trusting the thing unattended.
 
-> **Status (2026-07-11):** items 1 through 5 done. Weekly corpus-freshness
+> **Status (2026-07-30):** items 1 through 5 done. Weekly corpus-freshness
 > automation opens a PR on drift (`.github/workflows/corpus-freshness.yml`) and
 > the UI shows how long ago the cited policies were fetched; a per-container
 > answer cache fronts the model call in the deployed handler; the CI badge is
@@ -104,9 +104,12 @@ What a real operator needs before trusting the thing unattended.
 > `git diff -- corpus/`, `tools/corpus_refresh_report.py` writes the changelog
 > entry and doc-level diff into the PR body and lints the eval suites for stale
 > facts, and `/version` reports `staleness_days` against a budget. `deploy.sh`
-> provisions metric filters, alarms, and a CloudWatch dashboard. The deployed
-> account also has the documented $20/month `fare-demo` AWS Budget; subscribing
-> a human email endpoint to the alerts topic remains an operator-specific step.
+> provisions and verifies metric filters, alarms, and a CloudWatch dashboard.
+> A numeric candidate must emit a real correlated, content-free model/answer
+> event pair whose cost/token/duration fields satisfy those filters before its
+> alias can be promoted. The deployed account also has the documented $20/month
+> `fare-demo` AWS Budget; subscribing a human email endpoint to the alerts topic
+> remains an operator-specific step.
 >
 > **Status (2026-07-08):** item 4 done. The API Gateway stage throttle added
 > alongside the HTTP API (ADR 0004 amendment, 2026-06-12) already held across
@@ -138,9 +141,14 @@ What a real operator needs before trusting the thing unattended.
    explicit hit rates, preserves original cache-token provenance, and counts a
    served hit as zero provider tokens for the current run.
 3. **Observability and cost backstop.** ✅ **Done in code and infrastructure.**
-   PII-free canonical GenAI measurements include provider/model, duration,
-   fresh/cache token buckets, and estimated cost. `infra/deploy.sh` provisions
-   CloudWatch metric filters, alarms, and a dashboard plus the documented
+   Privacy-safe canonical GenAI measurements include provider/model, duration,
+   fresh/cache token buckets, and token-derived estimated cost. Lambda-owned
+   request IDs correlate the terminal answer without accepting client IDs or
+   logging content/request metadata. `infra/deploy.sh` provisions and re-reads
+   CloudWatch filters, captures one paid numeric-candidate log tail, validates
+   its privacy/schema contract, proves the filters against those actual events,
+   and only then permits promotion. Alarms include unpriced completions; the
+   dashboard labels estimated cost separately from the billing-authoritative
    $20/month AWS Budget. Supplying the SNS subscriber is intentionally an
    operator deployment step, not repository work.
 4. **A true rate limit.** ✅ **Done.** The API Gateway stage throttle is the

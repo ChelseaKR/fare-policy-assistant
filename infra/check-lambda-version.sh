@@ -16,6 +16,8 @@ else
   EXPECTED_DISABLED_DOC_IDS="yolobus-fares"
 fi
 DEADLINE_EPOCH=""
+REQUIRE_STRUCTURED_TELEMETRY=false
+TELEMETRY_OUTPUT=""
 
 usage() {
   cat <<'EOF'
@@ -28,6 +30,10 @@ Options:
   --expected-disabled-docs IDS  Required comma-separated disabled document ids
                                 (default: yolobus-fares; "" means none)
   --deadline-epoch EPOCH        Stop network checks by this Unix timestamp
+  --require-structured-telemetry
+                                Require privacy-safe correlated JSON events from
+                                the paid answer-model check
+  --telemetry-output PATH       Write the validated event pair to PATH
   --region REGION               AWS region (default: AWS_REGION or us-west-2)
   -h, --help                    Show this help
 EOF
@@ -65,6 +71,15 @@ while (($#)); do
       DEADLINE_EPOCH="$2"
       shift 2
       ;;
+    --require-structured-telemetry)
+      REQUIRE_STRUCTURED_TELEMETRY=true
+      shift
+      ;;
+    --telemetry-output)
+      (($# >= 2)) || fail "--telemetry-output requires a value"
+      TELEMETRY_OUTPUT="$2"
+      shift 2
+      ;;
     --region)
       (($# >= 2)) || fail "--region requires a value"
       REGION="$2"
@@ -82,6 +97,9 @@ done
 
 command -v aws >/dev/null 2>&1 || fail "aws is required"
 command -v jq >/dev/null 2>&1 || fail "jq is required"
+if [[ "$REQUIRE_STRUCTURED_TELEMETRY" == "true" ]]; then
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required for telemetry validation"
+fi
 [[ "$QUALIFIER" =~ ^[1-9][0-9]*$ ]] || fail "--qualifier must be a numeric published version"
 if [[ -n "$EXPECTED_CORPUS" && ! "$EXPECTED_CORPUS" =~ ^[0-9a-f]{12}$ ]]; then
   fail "--expected-corpus must be a 12-character lowercase hex digest"
@@ -93,12 +111,16 @@ fi
 if [[ -n "$DEADLINE_EPOCH" && ! "$DEADLINE_EPOCH" =~ ^[1-9][0-9]*$ ]]; then
   fail "--deadline-epoch must be a positive Unix timestamp"
 fi
+if [[ -n "$TELEMETRY_OUTPUT" && "$REQUIRE_STRUCTURED_TELEMETRY" != "true" ]]; then
+  fail "--telemetry-output requires --require-structured-telemetry"
+fi
 
 HEALTH_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/fare-assistant-version-health.XXXXXX")"
 chmod 700 "$HEALTH_TMPDIR"
 trap 'rm -rf "$HEALTH_TMPDIR"' EXIT
 
 LAST_PAYLOAD=""
+LAST_LOG_TAIL=""
 REQUEST_NUMBER=0
 
 run_before_deadline() {
@@ -161,20 +183,26 @@ invoke_event() {
   local path="$2"
   local body="${3:-}"
   local label="$4"
+  local capture_logs="${5:-false}"
+  local direct_health="${6:-false}"
   local event_path
   local metadata_path
   local payload_path
+  local log_path
 
   REQUEST_NUMBER=$((REQUEST_NUMBER + 1))
   event_path="$HEALTH_TMPDIR/event-$REQUEST_NUMBER.json"
   metadata_path="$HEALTH_TMPDIR/metadata-$REQUEST_NUMBER.json"
   payload_path="$HEALTH_TMPDIR/payload-$REQUEST_NUMBER.json"
+  log_path="$HEALTH_TMPDIR/log-$REQUEST_NUMBER.txt"
   LAST_PAYLOAD="$payload_path"
+  LAST_LOG_TAIL=""
 
   jq -nc \
     --arg method "$method" \
     --arg path "$path" \
     --arg body "$body" \
+    --arg direct_health "$direct_health" \
     '{
       version: "2.0",
       routeKey: "$default",
@@ -195,11 +223,20 @@ invoke_event() {
         timeEpoch: 0
       },
       isBase64Encoded: false
-    } + if $body == "" then {} else {body: $body} end' >"$event_path"
+    }
+    + if $body == "" then {} else {body: $body} end
+    + if $direct_health == "true"
+      then {fare_assistant_health: "release-v1"}
+      else {}
+      end' >"$event_path"
 
   local -a aws_timeout_options=()
+  local -a log_options=()
   local remaining
   local connect_timeout
+  if [[ "$capture_logs" == "true" ]]; then
+    log_options=(--log-type Tail)
+  fi
   if [[ -n "$DEADLINE_EPOCH" ]]; then
     remaining=$((DEADLINE_EPOCH - $(date +%s)))
     ((remaining > 0)) || fail "$label exceeded the release-operation deadline"
@@ -216,6 +253,7 @@ invoke_event() {
     --qualifier "$QUALIFIER" \
     --invocation-type RequestResponse \
     --cli-binary-format raw-in-base64-out \
+    "${log_options[@]}" \
     --payload "fileb://$event_path" \
     --region "$REGION" \
     --output json \
@@ -233,6 +271,114 @@ invoke_event() {
     || fail "$label did not execute cleanly on exact version $QUALIFIER"
   jq -e '.statusCode == 200 and (.headers | type == "object")' "$payload_path" >/dev/null \
     || fail "$label handler response was not HTTP 200"
+
+  if [[ "$capture_logs" == "true" ]]; then
+    if ! jq -er '.LogResult | select(type == "string" and length > 0)' \
+      "$metadata_path" | openssl base64 -d -A >"$log_path"; then
+      fail "$label did not return a decodable Lambda log tail"
+    fi
+    chmod 600 "$log_path"
+    LAST_LOG_TAIL="$log_path"
+  fi
+}
+
+validate_structured_telemetry() {
+  local log_path="$1"
+  local events_path="$HEALTH_TMPDIR/structured-events.json"
+  local validated_path="$HEALTH_TMPDIR/validated-telemetry.json"
+
+  [[ -s "$log_path" ]] || fail "safe paid answer returned no structured log tail"
+  if ! jq -Rsc '
+    split("\n")
+    | map(select(length > 0) | fromjson)
+  ' "$log_path" >"$events_path"; then
+    fail "safe paid answer log tail was not newline-delimited JSON"
+  fi
+  chmod 600 "$events_path"
+
+  if ! jq -e --arg version "$QUALIFIER" '
+    ([.[] | select(.event == "genai_call")]) as $model
+    | ([.[] | select(.event == "answer_request")]) as $answer
+    | ($model | length) == 1
+      and ($answer | length) == 1
+      and ($model[0].level == "INFO")
+      and ($answer[0].level == "INFO")
+      and ($model[0].aws_request_id | type == "string" and length > 0)
+      and ($model[0].requestId == $model[0].aws_request_id)
+      and ($answer[0].requestId == $answer[0].aws_request_id)
+      and ($answer[0].aws_request_id == $model[0].aws_request_id)
+      and ($model[0].function_version == $version)
+      and ($answer[0].function_version == $version)
+      and ($model[0].completion_recorded == true)
+      and ($model[0].cost_estimate_available == true)
+      and ($model[0].input_tokens | type == "number" and floor == . and . >= 0)
+      and ($model[0].output_tokens | type == "number" and floor == . and . >= 0)
+      and ($model[0].model_duration_ms | type == "number" and . >= 0)
+      and ($model[0].estimated_cost_usd | type == "number" and . >= 0)
+      and ($model[0]."gen_ai.usage.input_tokens" == $model[0].input_tokens)
+      and ($model[0]."gen_ai.usage.output_tokens" == $model[0].output_tokens)
+      and ($model[0]."portfolio.gen_ai.cost.usd" == $model[0].estimated_cost_usd)
+      and ($model[0]."gen_ai.operation.name" == "chat")
+      and ($model[0]."gen_ai.system" | type == "string" and length > 0)
+      and ($model[0]."gen_ai.request.model" | type == "string" and length > 0)
+      and ($model[0]."gen_ai.response.model" | type == "string" and length > 0)
+      and ($model[0]."gen_ai.client.operation.duration"
+        | type == "number" and . >= 0)
+      and (((1000 * $model[0]."gen_ai.client.operation.duration")
+        - $model[0].model_duration_ms) | fabs <= 1)
+      and ($answer[0].direct_health == true)
+      and ($answer[0].cache == "bypass")
+      and ($answer[0].model_called == true)
+      and ($answer[0].completion_recorded == true)
+      and ($answer[0].duration_ms | type == "number" and . >= 0)
+      and ($answer[0].input_tokens == $model[0].input_tokens)
+      and ($answer[0].output_tokens == $model[0].output_tokens)
+  ' "$events_path" >/dev/null; then
+    fail "safe paid answer did not emit one valid, correlated model/answer event pair"
+  fi
+
+  if ! jq -e '
+    [
+      .[]
+      | select(.event == "genai_call" or .event == "answer_request")
+      | paths(scalars) as $path
+      | ($path[-1] | tostring)
+      | select(. == "question"
+          or . == "answer"
+          or . == "prompt"
+          or . == "system_prompt"
+          or . == "messages"
+          or . == "history"
+          or . == "citations"
+          or . == "content"
+          or . == "headers"
+          or . == "sourceIp"
+          or . == "userAgent"
+          or . == "exception"
+          or . == "stack_trace"
+          or . == "gen_ai.system_instructions"
+          or . == "gen_ai.input.messages"
+          or . == "gen_ai.output.messages")
+    ] | length == 0
+  ' "$events_path" >/dev/null; then
+    fail "safe paid answer telemetry contained a prohibited content or request field"
+  fi
+  if grep -Fq "What proof do I need for the veteran fare on MST?" "$log_path" \
+    || grep -Fq "$PII_SENTINEL" "$log_path"; then
+    fail "safe paid answer telemetry contained rider content"
+  fi
+
+  jq '
+    {
+      genai_call: first(.[] | select(.event == "genai_call")),
+      answer_request: first(.[] | select(.event == "answer_request"))
+    }
+  ' "$events_path" >"$validated_path"
+  chmod 600 "$validated_path"
+  if [[ -n "$TELEMETRY_OUTPUT" ]]; then
+    cp "$validated_path" "$TELEMETRY_OUTPUT"
+    chmod 600 "$TELEMETRY_OUTPUT"
+  fi
 }
 
 invoke_event GET / "" "root"
@@ -293,7 +439,11 @@ SAFE_BODY="$(
   jq -nc --arg question "What proof do I need for the veteran fare on MST?" \
     '{question: $question}'
 )"
-invoke_event POST /api/ask "$SAFE_BODY" "safe paid answer"
+if [[ "$REQUIRE_STRUCTURED_TELEMETRY" == "true" ]]; then
+  invoke_event POST /api/ask "$SAFE_BODY" "safe paid answer" true true
+else
+  invoke_event POST /api/ask "$SAFE_BODY" "safe paid answer"
+fi
 jq -e '
   (.body | fromjson) as $body
   | $body.kind == "answered"
@@ -307,5 +457,9 @@ jq -e '
     )
 ' "$LAST_PAYLOAD" >/dev/null || fail "known-good MST question was not answered with dated citations"
 echo "version health: ok: safe paid answer"
+if [[ "$REQUIRE_STRUCTURED_TELEMETRY" == "true" ]]; then
+  validate_structured_telemetry "$LAST_LOG_TAIL"
+  echo "version health: ok: privacy-safe structured telemetry"
+fi
 
 echo "version health: PASS: $FN:$QUALIFIER"

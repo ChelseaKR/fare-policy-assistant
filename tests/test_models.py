@@ -139,12 +139,15 @@ def test_anthropic_emits_canonical_pii_free_telemetry(fake_anthropic, caplog):
         models.AnthropicModel("claude-haiku-4-5").complete(
             system="sensitive system", user="sensitive rider question", max_tokens=64, temperature=0
         )
-    event = json.loads(caplog.records[-1].message)
+    event = vars(caplog.records[-1])
     assert event[GEN_AI_SYSTEM] == "anthropic"
     assert event[GEN_AI_REQUEST_MODEL] == "claude-haiku-4-5"
     assert event[GEN_AI_USAGE_INPUT_TOKENS] == 42
     assert event[METRIC_OPERATION_DURATION] >= 0
-    assert "sensitive" not in caplog.text
+    assert event["input_tokens"] == 42
+    assert event["output_tokens"] == 13
+    assert event["completion_recorded"] is True
+    assert "sensitive" not in repr(event)
 
 
 def test_bedrock_uses_region_and_reads_usage(fake_anthropic, monkeypatch):
@@ -188,7 +191,7 @@ def test_hosted_completion_emits_actual_response_model_but_prices_request_model(
     model._client = _FakeClient(response, {})
     with caplog.at_level(logging.INFO, logger="fare_assistant"):
         completion = model.complete("system", "question", 64, 0.0)
-    event = json.loads(caplog.records[-1].message)
+    event = vars(caplog.records[-1])
     assert completion.model == "provider-resolved-model"
     assert event[GEN_AI_REQUEST_MODEL] == request_model
     assert event[GEN_AI_RESPONSE_MODEL] == "provider-resolved-model"
@@ -217,7 +220,7 @@ def test_hosted_cache_usage_is_normalized_and_priced_once(
     model._client = _FakeClient(response, {})
     with caplog.at_level(logging.INFO, logger="fare_assistant"):
         completion = model.complete("system", "question", 64, 0.0)
-    event = json.loads(caplog.records[-1].message)
+    event = vars(caplog.records[-1])
     assert completion.input_tokens == 1_000_000
     assert completion.cache_creation_input_tokens == 200_000
     assert completion.cache_read_input_tokens == 300_000

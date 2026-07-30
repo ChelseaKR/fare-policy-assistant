@@ -13,6 +13,8 @@ REGION="${AWS_REGION:-us-west-2}"
 FN="${FPA_FUNCTION_NAME:-fare-policy-assistant-demo}"
 LIVE_ALIAS="${FPA_LIVE_ALIAS:-live}"
 ROLLBACK_ALIAS="${FPA_ROLLBACK_ALIAS:-rollback}"
+LOG_GROUP="/aws/lambda/$FN"
+LOGGING_CONFIG="LogFormat=JSON,ApplicationLogLevel=INFO,SystemLogLevel=WARN,LogGroup=$LOG_GROUP"
 ROLE_NAME="$FN-role"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/infra/build"
@@ -52,6 +54,17 @@ RESERVED_CONCURRENCY=2
 # (web/handler.py), which resets per container and is not shared across them.
 THROTTLE_RATE_LIMIT="$RESERVED_CONCURRENCY"
 THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
+
+# CloudWatch JSON metric contracts. Keep the legacy handler/call/feedback
+# filters through one rollback-compatible release; the additive v2 filters
+# consume structured application events emitted by JSON/INFO Lambda logging.
+HANDLER_ERROR_V2_FILTER='{ $.event = "handler_error" }'
+FEEDBACK_DOWN_V2_FILTER='{ $.event = "feedback" && $.verdict = "down" }'
+GENAI_CALL_FILTER='{ $.event = "genai_call" && $.completion_recorded IS TRUE }'
+MODEL_COST_FILTER='{ $.event = "genai_call" && $.cost_estimate_available IS TRUE && $.estimated_cost_usd = * }'
+UNPRICED_MODEL_FILTER='{ $.event = "genai_call" && $.completion_recorded IS TRUE && $.cost_estimate_available IS FALSE }'
+MODEL_DURATION_FILTER='{ $.event = "genai_call" && $.model_duration_ms = * }'
+ANSWER_DURATION_FILTER='{ $.event = "answer_request" && $.duration_ms = * }'
 
 # Preserve operator-owned Lambda settings from the actual live version. AWS
 # replaces the entire Variables map on update, so constructing it from only
@@ -426,6 +439,7 @@ managed_or_derived = {
     "LastUpdateStatus",
     "LastUpdateStatusReason",
     "LastUpdateStatusReasonCode",
+    "LoggingConfig",
     "MasterArn",
     "MemorySize",
     "RevisionId",
@@ -459,21 +473,6 @@ snapshot["VpcConfig"] = {
 }
 snap_start = snapshot.get("SnapStart") or {}
 snapshot["SnapStart"] = {"ApplyOn": snap_start.get("ApplyOn", "None")}
-logging = snapshot.get("LoggingConfig") or {}
-snapshot["LoggingConfig"] = {
-    "LogFormat": logging.get("LogFormat", "Text"),
-    "LogGroup": logging.get("LogGroup", "/aws/lambda/" + config["FunctionName"]),
-    **(
-        {"ApplicationLogLevel": logging["ApplicationLogLevel"]}
-        if "ApplicationLogLevel" in logging
-        else {}
-    ),
-    **(
-        {"SystemLogLevel": logging["SystemLogLevel"]}
-        if "SystemLogLevel" in logging
-        else {}
-    ),
-}
 print(json.dumps(snapshot, sort_keys=True, separators=(",", ":")))
 '
   )
@@ -520,6 +519,7 @@ assert_managed_release_config() {
 
   if ! jq -e \
     --arg code_sha "$LOCAL_CODE_SHA" \
+    --arg log_group "$LOG_GROUP" \
     --arg role "$ROLE_ARN" \
     --arg revision "$expected_revision" \
     --argjson environment "$LAMBDA_ENV" '
@@ -532,6 +532,12 @@ assert_managed_release_config() {
       and .Environment == $environment
       and .PackageType == "Zip"
       and .Architectures == ["arm64"]
+      and .LoggingConfig == {
+        "LogFormat": "JSON",
+        "ApplicationLogLevel": "INFO",
+        "SystemLogLevel": "WARN",
+        "LogGroup": $log_group
+      }
       and ($revision == "" or .RevisionId == $revision)
     ' <<<"$config_json" >/dev/null; then
     echo "$context does not match the locally built artifact and complete managed configuration" >&2
@@ -1372,6 +1378,106 @@ else
 fi
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 
+# Create the reviewed log destination and metric filters before candidate
+# verification. The paid numeric-version check must produce a real structured
+# event against the same filter contract that will observe public traffic.
+aws logs create-log-group --log-group-name "$LOG_GROUP" --region "$REGION" \
+  2>/dev/null || true
+aws logs put-retention-policy --log-group-name "$LOG_GROUP" \
+  --retention-in-days 14 --region "$REGION"
+
+_metric_filter() {  # filter name, pattern, transformation
+  aws logs put-metric-filter --region "$REGION" \
+    --log-group-name "$LOG_GROUP" \
+    --filter-name "$FN-$1" \
+    --filter-pattern "$2" \
+    --metric-transformations "$3" >/dev/null
+}
+
+_assert_metric_filter() {  # filter name, pattern, metric name, metric value, default mode
+  local filter_name="$FN-$1"
+  local default_mode="${5:-zero}"
+  local attempt
+  local installed
+  for attempt in 1 2 3 4 5; do
+    installed="$(
+      aws logs describe-metric-filters --region "$REGION" \
+        --log-group-name "$LOG_GROUP" \
+        --filter-name-prefix "$filter_name" \
+        --output json
+    )"
+    if jq -e \
+      --arg filter_name "$filter_name" \
+      --arg pattern "$2" \
+      --arg namespace "$FN" \
+      --arg metric_name "$3" \
+      --arg metric_value "$4" \
+      --arg default_mode "$default_mode" '
+        [.metricFilters[]
+         | select(.filterName == $filter_name)
+         | select(.filterPattern == $pattern)
+         | select(
+             (.metricTransformations | length) == 1
+             and .metricTransformations[0].metricNamespace == $namespace
+             and .metricTransformations[0].metricName == $metric_name
+             and .metricTransformations[0].metricValue == $metric_value
+             and (
+               if $default_mode == "absent"
+               then (.metricTransformations[0] | has("defaultValue") | not)
+               else .metricTransformations[0].defaultValue == 0
+               end
+             )
+           )]
+        | length == 1
+      ' <<<"$installed" >/dev/null; then
+      return 0
+    fi
+    ((attempt == 5)) || sleep 2
+  done
+  echo "metric filter $filter_name did not settle on its reviewed contract" >&2
+  exit 1
+}
+
+# Legacy filters remain valid for the retained plaintext/WARN rollback release.
+_metric_filter handler-errors '{ $.error = * }' \
+  "metricName=HandlerErrors,metricNamespace=$FN,metricValue=1,defaultValue=0"
+_metric_filter bedrock-calls '{ $.model_called IS TRUE }' \
+  "metricName=BedrockAnswerCalls,metricNamespace=$FN,metricValue=1,defaultValue=0"
+_metric_filter feedback-down '{ $.feedback = "down" }' \
+  "metricName=FeedbackDown,metricNamespace=$FN,metricValue=1,defaultValue=0"
+
+# Structured v2 metrics. Cost is an application estimate, not AWS billing.
+_metric_filter handler-errors-v2 "$HANDLER_ERROR_V2_FILTER" \
+  "metricName=HandlerErrors,metricNamespace=$FN,metricValue=1,defaultValue=0"
+_metric_filter feedback-down-v2 "$FEEDBACK_DOWN_V2_FILTER" \
+  "metricName=FeedbackDown,metricNamespace=$FN,metricValue=1,defaultValue=0"
+_metric_filter genai-calls "$GENAI_CALL_FILTER" \
+  "metricName=GenAICalls,metricNamespace=$FN,metricValue=1,defaultValue=0"
+_metric_filter estimated-model-cost "$MODEL_COST_FILTER" \
+  "metricName=EstimatedModelCostUsd,metricNamespace=$FN,metricValue=\$.estimated_cost_usd,defaultValue=0"
+_metric_filter unpriced-model-calls "$UNPRICED_MODEL_FILTER" \
+  "metricName=UnpricedModelCalls,metricNamespace=$FN,metricValue=1,defaultValue=0"
+# Histogram-like metrics must not inject zero samples during minutes that
+# contain unrelated logs; those defaults would falsify latency percentiles.
+_metric_filter model-duration "$MODEL_DURATION_FILTER" \
+  "metricName=ModelDurationMs,metricNamespace=$FN,metricValue=\$.model_duration_ms"
+_metric_filter answer-duration "$ANSWER_DURATION_FILTER" \
+  "metricName=AnswerDurationMs,metricNamespace=$FN,metricValue=\$.duration_ms"
+
+_assert_metric_filter handler-errors '{ $.error = * }' HandlerErrors 1
+_assert_metric_filter bedrock-calls '{ $.model_called IS TRUE }' BedrockAnswerCalls 1
+_assert_metric_filter feedback-down '{ $.feedback = "down" }' FeedbackDown 1
+_assert_metric_filter handler-errors-v2 "$HANDLER_ERROR_V2_FILTER" HandlerErrors 1
+_assert_metric_filter feedback-down-v2 "$FEEDBACK_DOWN_V2_FILTER" FeedbackDown 1
+_assert_metric_filter genai-calls "$GENAI_CALL_FILTER" GenAICalls 1
+_assert_metric_filter estimated-model-cost "$MODEL_COST_FILTER" \
+  EstimatedModelCostUsd '$.estimated_cost_usd'
+_assert_metric_filter unpriced-model-calls "$UNPRICED_MODEL_FILTER" UnpricedModelCalls 1
+_assert_metric_filter model-duration "$MODEL_DURATION_FILTER" \
+  ModelDurationMs '$.model_duration_ms' absent
+_assert_metric_filter answer-duration "$ANSWER_DURATION_FILTER" \
+  AnswerDurationMs '$.duration_ms' absent
+
 # ── Lambda ───────────────────────────────────────────────────────────────────
 OLD_VERSION=""
 OLD_LIVE_REVISION=""
@@ -1443,6 +1549,7 @@ if [[ "$FUNCTION_EXISTS" == "true" ]]; then
       --timeout 25 --memory-size 512 --role "$ROLE_ARN" \
       --revision-id "$LATEST_REVISION" \
       --environment "$LAMBDA_ENV" \
+      --logging-config "$LOGGING_CONFIG" \
       --output json
   )"
   aws lambda wait function-updated --function-name "$FN" --region "$REGION"
@@ -1480,6 +1587,7 @@ else
       --runtime python3.12 --handler web.handler.handler --architectures arm64 \
       --timeout 25 --memory-size 512 --role "$ROLE_ARN" \
       --environment "$LAMBDA_ENV" \
+      --logging-config "$LOGGING_CONFIG" \
       --zip-file "fileb://$BUILD/bundle.zip" \
       --output json
   )"
@@ -1561,12 +1669,50 @@ PUBLISHED_CODE_SHA="$(jq -r '.CodeSha256' <<<"$PUBLISHED_CONFIG")"
   exit 1
 }
 assert_managed_release_config "$PUBLISHED_CONFIG" "published version"
+CANDIDATE_TELEMETRY="$BUILD/candidate-telemetry.json"
 "$ROOT/infra/check-lambda-version.sh" \
   --function-name "$FN" \
   --qualifier "$NEW_VERSION" \
   --expected-corpus "$PINNED_CORPUS_VERSION" \
   --expected-disabled-docs "$DISABLED_DOC_IDS" \
+  --require-structured-telemetry \
+  --telemetry-output "$CANDIDATE_TELEMETRY" \
   --region "$REGION"
+
+_test_metric_filter_event() {  # filter name, pattern, event selector, expected matches
+  local event_message
+  local messages
+  local result
+  event_message="$(jq -c "$3" "$CANDIDATE_TELEMETRY")"
+  [[ "$event_message" != "null" ]] || {
+    echo "candidate telemetry did not contain the $3 event" >&2
+    exit 1
+  }
+  messages="$(jq -nc --arg message "$event_message" '[$message]')"
+  result="$(
+    aws logs test-metric-filter --region "$REGION" \
+      --filter-pattern "$2" \
+      --log-event-messages "$messages" \
+      --output json
+  )"
+  jq -e --argjson expected "$4" \
+    '(.matches | type == "array") and (.matches | length) == $expected' \
+    <<<"$result" >/dev/null || {
+    echo "metric filter $FN-$1 did not match candidate telemetry as expected" >&2
+    exit 1
+  }
+}
+
+# Prove the installed patterns against the actual numbered candidate's events
+# before any public alias moves. Negative checks catch accidental overlap as
+# well as filters that never match.
+_test_metric_filter_event genai-calls "$GENAI_CALL_FILTER" .genai_call 1
+_test_metric_filter_event estimated-model-cost "$MODEL_COST_FILTER" .genai_call 1
+_test_metric_filter_event unpriced-model-calls "$UNPRICED_MODEL_FILTER" .genai_call 0
+_test_metric_filter_event model-duration "$MODEL_DURATION_FILTER" .genai_call 1
+_test_metric_filter_event handler-errors-v2 "$HANDLER_ERROR_V2_FILTER" .answer_request 0
+_test_metric_filter_event bedrock-calls '{ $.model_called IS TRUE }' .answer_request 1
+_test_metric_filter_event answer-duration "$ANSWER_DURATION_FILTER" .answer_request 1
 
 # Apply the function-wide cost ceiling before a first deployment creates any
 # public route. Existing releases already carry this value; reapplying it is
@@ -1730,40 +1876,23 @@ aws apigatewayv2 update-stage --region "$REGION" --api-id "$API_ID" \
   --default-route-settings "{\"ThrottlingRateLimit\": $THROTTLE_RATE_LIMIT, \"ThrottlingBurstLimit\": $THROTTLE_BURST_LIMIT}" \
   >/dev/null
 
-# Short log retention: logs hold counts and timings, never rider questions.
-aws logs create-log-group --log-group-name "/aws/lambda/$FN" --region "$REGION" 2>/dev/null || true
-aws logs put-retention-policy --log-group-name "/aws/lambda/$FN" \
-  --retention-in-days 14 --region "$REGION"
-
-# ── observability: alarms on errors, throttles, latency, and Bedrock calls ───
+# ── observability: alarms on errors, throttles, latency, and model cost ──────
 # Alarms publish to an SNS topic; subscribe an email once to be paged:
 #   aws sns subscribe --topic-arn <arn> --protocol email --notification-endpoint you@example.com
 TOPIC_ARN="$(aws sns create-topic --name "$FN-alerts" --region "$REGION" \
   --query TopicArn --output text)"
-
-# A metric filter turns the handler's structured error log into a metric. The
-# handler logs {"error": "<Type>"} only on a 500 (never rider content).
-aws logs put-metric-filter --region "$REGION" \
-  --log-group-name "/aws/lambda/$FN" \
-  --filter-name "$FN-handler-errors" \
-  --filter-pattern '{ $.error = * }' \
-  --metric-transformations \
-    "metricName=HandlerErrors,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
-# A second filter counts answer-model calls as a spend proxy. This is separate
-# from cache status because a fail-closed output guard still consumed Bedrock.
-aws logs put-metric-filter --region "$REGION" \
-  --log-group-name "/aws/lambda/$FN" \
-  --filter-name "$FN-bedrock-calls" \
-  --filter-pattern '{ $.model_called IS TRUE }' \
-  --metric-transformations \
-    "metricName=BedrockAnswerCalls,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
-# Thumbs-down feedback (verdict only, no content) as a quality signal.
-aws logs put-metric-filter --region "$REGION" \
-  --log-group-name "/aws/lambda/$FN" \
-  --filter-name "$FN-feedback-down" \
-  --filter-pattern '{ $.feedback = "down" }' \
-  --metric-transformations \
-    "metricName=FeedbackDown,metricNamespace=$FN,metricValue=1,defaultValue=0" >/dev/null
+SUBSCRIPTIONS="$(
+  aws sns list-subscriptions-by-topic \
+    --topic-arn "$TOPIC_ARN" --region "$REGION" --output json
+)"
+CONFIRMED_SUBSCRIPTIONS="$(
+  jq '[.Subscriptions[]?
+       | select(.SubscriptionArn != "PendingConfirmation")] | length' \
+    <<<"$SUBSCRIPTIONS"
+)"
+if [[ "$CONFIRMED_SUBSCRIPTIONS" == "0" ]]; then
+  echo "WARNING: $TOPIC_ARN has no confirmed subscriber; alarms are configured but cannot page an operator" >&2
+fi
 
 _alarm() {  # name, namespace, metric, statistic, period, threshold, dimensions...
   aws cloudwatch put-metric-alarm --region "$REGION" \
@@ -1776,6 +1905,7 @@ LAMBDA_DIM="Name=FunctionName,Value=$FN"
 _alarm handler-errors "$FN" HandlerErrors Sum 300 0
 _alarm lambda-errors AWS/Lambda Errors Sum 300 0 --dimensions "$LAMBDA_DIM"
 _alarm lambda-throttles AWS/Lambda Throttles Sum 300 0 --dimensions "$LAMBDA_DIM"
+_alarm unpriced-model-calls "$FN" UnpricedModelCalls Sum 300 0
 # p99 latency over 20s (the function timeout is 25s); Duration is in ms.
 aws cloudwatch put-metric-alarm --region "$REGION" \
   --alarm-name "$FN-latency-p99" --namespace AWS/Lambda --metric-name Duration \
@@ -1786,11 +1916,10 @@ aws cloudwatch put-metric-alarm --region "$REGION" \
 # demo traffic and trips before spend runs away (concurrency caps it anyway).
 _alarm bedrock-surge "$FN" BedrockAnswerCalls Sum 300 500
 
-# ── dashboard: per-day cost proxy, live traffic, and alarm status ────────────
-# put-dashboard creates or overwrites by name, so this is idempotent. The
-# BedrockAnswerCalls widget uses a 1-day period so per-day call volume (the
-# cost proxy) is legible; a second widget shows 5-minute traffic. The alarm
-# widget surfaces the five alarms above without leaving the dashboard.
+# ── dashboard: estimated cost, real request/model latency, and alarms ─────────
+# put-dashboard creates or overwrites by name, so this is idempotent. Cost is
+# estimated from observed model/token usage and the repository-pinned price
+# table; it is explicitly not an AWS billing metric or a substitute for Budget.
 _alarm_arn() { echo "arn:aws:cloudwatch:$REGION:$ACCOUNT:alarm:$FN-$1"; }
 DASHBOARD_BODY=$(cat <<EOF
 {
@@ -1798,9 +1927,17 @@ DASHBOARD_BODY=$(cat <<EOF
     {
       "type": "metric", "x": 0, "y": 0, "width": 12, "height": 6,
       "properties": {
-        "title": "Bedrock answer calls per day (cost proxy)",
-        "region": "$REGION", "view": "timeSeries", "stat": "Sum", "period": 86400,
-        "metrics": [["$FN", "BedrockAnswerCalls"]]
+        "title": "Application-estimated model cost and calls per day",
+        "region": "$REGION", "view": "timeSeries", "period": 86400,
+        "metrics": [
+          ["$FN", "EstimatedModelCostUsd", {"label": "Estimated USD", "stat": "Sum", "yAxis": "left"}],
+          ["$FN", "GenAICalls", {"label": "Completed model calls", "stat": "Sum", "yAxis": "right"}],
+          ["$FN", "UnpricedModelCalls", {"label": "Unpriced calls", "stat": "Sum", "yAxis": "right"}]
+        ],
+        "yAxis": {
+          "left": {"label": "Estimated USD", "showUnits": false},
+          "right": {"label": "Calls", "showUnits": false}
+        }
       }
     },
     {
@@ -1820,9 +1957,15 @@ DASHBOARD_BODY=$(cat <<EOF
     {
       "type": "metric", "x": 0, "y": 6, "width": 12, "height": 6,
       "properties": {
-        "title": "Duration p99 (ms)",
-        "region": "$REGION", "view": "timeSeries", "stat": "p99", "period": 300,
-        "metrics": [["AWS/Lambda", "Duration", "FunctionName", "$FN"]]
+        "title": "Request, model, and Lambda duration (ms)",
+        "region": "$REGION", "view": "timeSeries", "period": 300,
+        "metrics": [
+          ["$FN", "AnswerDurationMs", {"label": "Answer p50", "stat": "p50"}],
+          ["$FN", "AnswerDurationMs", {"label": "Answer p95", "stat": "p95"}],
+          ["$FN", "AnswerDurationMs", {"label": "Answer p99", "stat": "p99"}],
+          ["$FN", "ModelDurationMs", {"label": "Model p95", "stat": "p95"}],
+          ["AWS/Lambda", "Duration", "FunctionName", "$FN", {"label": "Lambda p99", "stat": "p99"}]
+        ]
       }
     },
     {
@@ -1833,6 +1976,7 @@ DASHBOARD_BODY=$(cat <<EOF
           "$(_alarm_arn handler-errors)",
           "$(_alarm_arn lambda-errors)",
           "$(_alarm_arn lambda-throttles)",
+          "$(_alarm_arn unpriced-model-calls)",
           "$(_alarm_arn latency-p99)",
           "$(_alarm_arn bedrock-surge)"
         ]

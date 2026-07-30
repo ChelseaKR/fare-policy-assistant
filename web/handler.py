@@ -36,7 +36,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent  # bundle root mirrors the repo root
 sys.path.insert(0, str(_ROOT / "src"))
 
-from assistant import config, guards  # noqa: E402
+from assistant import config, guards, telemetry  # noqa: E402
 from assistant.answer import AnswerResult, answer_question  # noqa: E402
 from assistant.contract import build_structured_answer  # noqa: E402
 from assistant.models import get_model  # noqa: E402
@@ -64,6 +64,13 @@ MAX_HISTORY_ANSWER_CHARS = 1200  # truncate prior answers kept as context
 # any turn whose signature does not verify. Read at call time so tests (and a
 # key rotation) take effect without a container restart. Default "" = off.
 _HISTORY_HMAC_KEY = os.environ.get("FPA_HISTORY_HMAC_KEY", "")
+
+# Deployment health checks use the ordinary paid /api/ask path, but must not
+# accidentally reuse or populate a warm answer cache. Lambda direct invocation
+# can add this top-level marker to the API Gateway-shaped event. A rider can put
+# the same text in a request body or header, but neither location is consulted.
+_DIRECT_HEALTH_FIELD = "fare_assistant_health"
+_DIRECT_HEALTH_VALUE = "release-v1"
 
 
 def _history_hmac_key() -> str:
@@ -206,14 +213,9 @@ def _version_payload() -> dict:
         summary["pinned"] = pinned
         summary["matches_pin"] = pinned == summary["corpus_version"]
         if not summary["matches_pin"]:
-            print(
-                json.dumps(
-                    {
-                        "warning": "corpus_version_mismatch",
-                        "serving": summary["corpus_version"],
-                        "pinned": pinned,
-                    }
-                )
+            telemetry.log_corpus_version_mismatch(
+                serving=summary["corpus_version"],
+                pinned=pinned,
             )
     return summary
 
@@ -353,6 +355,11 @@ def _over_budget(now: float) -> bool:
     return False
 
 
+def _direct_health_bypass(event: dict) -> bool:
+    """Recognize only the deployer's top-level direct-invocation marker."""
+    return event.get(_DIRECT_HEALTH_FIELD) == _DIRECT_HEALTH_VALUE
+
+
 def _parse_history(raw: object) -> list[tuple[str, str]]:
     """Validate and bound client-supplied prior turns.
 
@@ -434,6 +441,7 @@ def _ask(event: dict) -> dict:
             400, {"error": f"Please keep questions under {MAX_QUESTION_CHARS} characters."}
         )
     started = time.monotonic()
+    direct_health = _direct_health_bypass(event)
     raw_history = data.get("history")
     pre = _request_input_check(question, raw_history)
     history: list[tuple[str, str]] = []
@@ -455,31 +463,41 @@ def _ask(event: dict) -> dict:
         # Cache hits cost no model call, so they bypass the per-minute budget
         # (which exists to bound Bedrock spend) but are still logged. The HMAC
         # covers an unambiguous JSON encoding of both question and history.
-        key = _cache_key(question, history)
-        cached = _cache_get(key)
-        if cached is not None:
-            # Return a copy so signing-key rotation cannot mutate the stable
-            # cached payload or send a signature made with the previous key.
-            cached = dict(cached)
-            if _history_hmac_key():
-                cached["sig"] = _sign_turn(question, cached["answer"])
-            else:
-                cached.pop("sig", None)
-            print(
-                json.dumps(
-                    {
-                        "kind": cached["kind"],
-                        "language": cached["language"],
-                        "question_chars": len(question),
-                        "turns": len(history),
-                        "cache": "hit",
-                        "model_called": False,
-                    }
+        if not direct_health:
+            key = _cache_key(question, history)
+            cached = _cache_get(key)
+            if cached is not None:
+                # Return a copy so signing-key rotation cannot mutate the stable
+                # cached payload or send a signature made with the previous key.
+                cached = dict(cached)
+                if _history_hmac_key():
+                    cached["sig"] = _sign_turn(question, cached["answer"])
+                else:
+                    cached.pop("sig", None)
+                telemetry.log_answer_request(
+                    kind=cached["kind"],
+                    language=cached["language"],
+                    question_chars=len(question),
+                    turns=len(history),
+                    request_duration_ms=round(1000 * (time.monotonic() - started)),
+                    cache="hit",
+                    model_called=False,
+                    structured_ok=cached["structured"] is not None,
                 )
-            )
-            return _json(200, cached)
+                return _json(200, cached)
 
-        if _over_budget(time.monotonic()):
+        if not direct_health and _over_budget(time.monotonic()):
+            telemetry.log_answer_request(
+                kind="rate_limited",
+                language=None,
+                question_chars=len(question),
+                turns=len(history),
+                request_duration_ms=round(1000 * (time.monotonic() - started)),
+                cache="miss",
+                model_called=False,
+                structured_ok=None,
+                status_code=429,
+            )
             return _json(
                 429, {"error": "Too many requests right now. Please try again in a minute."}
             )
@@ -534,25 +552,21 @@ def _ask(event: dict) -> dict:
     # guard and no-support results from entering the cache.
     if key is not None and result.kind == "answered":
         _cache_put(key, payload)
-    # Operational log only: no question text, no answer text (ADR 0004).
-    # structured_ok/reason reference schema field paths, not rider content.
-    print(
-        json.dumps(
-            {
-                "kind": result.kind,
-                "language": payload["language"],
-                "question_chars": len(question),
-                "turns": len(history),
-                "duration_ms": round(1000 * (time.monotonic() - started)),
-                "cache": "miss" if key is not None and result.kind == "answered" else "bypass",
-                # A guarded response still consumed a model call even though it
-                # is intentionally not cacheable. Keep spend telemetry
-                # independent from cache policy.
-                "model_called": bool(result.model),
-                "structured_ok": structured.structured_ok,
-                "structured_fallback_reason": structured.fallback_reason or None,
-            }
-        )
+    # Operational record only: no question, answer, history, citation, or
+    # schema error text. A guarded response still consumed a model call even
+    # though it is intentionally not cacheable.
+    telemetry.log_answer_request(
+        kind=result.kind,
+        language=payload["language"],
+        question_chars=len(question),
+        turns=len(history),
+        request_duration_ms=round(1000 * (time.monotonic() - started)),
+        cache="miss" if key is not None and result.kind == "answered" else "bypass",
+        model_called=bool(result.model),
+        structured_ok=structured.structured_ok,
+        direct_health=direct_health,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
     )
     return _json(200, payload)
 
@@ -570,19 +584,18 @@ def _feedback(event: dict) -> dict:
         return _json(400, {"error": 'Send {"verdict": "up" | "down"}.'})
     kind = data.get("kind")
     language = data.get("language")
-    print(
-        json.dumps(
-            {
-                "feedback": verdict,
-                "kind": kind if isinstance(kind, str) else None,
-                "language": language if isinstance(language, str) else None,
-            }
-        )
+    telemetry.log_feedback(
+        verdict=verdict,
+        kind=kind
+        if isinstance(kind, str)
+        and kind in {"answered", "answered_guarded", "refused_input", "refused_no_support"}
+        else None,
+        language=language if isinstance(language, str) and language in {"en", "es", "tl"} else None,
     )
     return _json(200, {"ok": True})
 
 
-def handler(event: dict, context: object = None) -> dict:
+def _handle_event(event: dict) -> dict:
     http = event.get("requestContext", {}).get("http", {})
     method = http.get("method", "GET")
     path = event.get("rawPath", "/")
@@ -607,6 +620,18 @@ def handler(event: dict, context: object = None) -> dict:
         try:
             return _ask(event) if path == "/api/ask" else _feedback(event)
         except Exception as exc:  # never leak internals; never log content
-            print(json.dumps({"error": type(exc).__name__}))
+            telemetry.log_handler_error(
+                route="api_ask" if path == "/api/ask" else "api_feedback",
+                error_type=type(exc).__name__,
+            )
             return _json(500, {"error": "Something went wrong on our side. Please try again."})
     return _json(404, {"error": "Not found."})
+
+
+def handler(event: dict, context: object = None) -> dict:
+    """Handle one Lambda invocation with runtime-owned anonymous correlation."""
+    request_id = getattr(context, "aws_request_id", None)
+    if not isinstance(request_id, str):
+        request_id = None
+    with telemetry.request_correlation(request_id):
+        return _handle_event(event)
