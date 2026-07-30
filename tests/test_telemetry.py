@@ -102,7 +102,7 @@ def test_completion_is_structured_with_canonical_and_filter_safe_fields(
     fields = vars(record)
     assert record.message == "genai_call"
     assert fields["event"] == "genai_call"
-    assert fields["aws_request_id"] == "lambda-request-123"
+    assert fields["runtime_request_id"] == "lambda-request-123"
     assert fields["function_version"] == "17"
     assert fields[GEN_AI_REQUEST_MODEL] == "requested-model"
     assert fields[GEN_AI_RESPONSE_MODEL] == "served-model"

@@ -413,7 +413,7 @@ class TestStructuredObservability:
 
         assert response["statusCode"] == 200
         records = _log_records(caplog, "genai_call") + _log_records(caplog, "answer_request")
-        assert {record.aws_request_id for record in records} == {"AWS-RUNTIME-REQUEST-ID"}
+        assert {record.runtime_request_id for record in records} == {"AWS-RUNTIME-REQUEST-ID"}
         assert {record.function_version for record in records} == {"23"}
         serialized = repr([vars(record) for record in records])
         for forbidden in (
@@ -498,8 +498,8 @@ class TestStructuredObservability:
         assert direct_record.direct_health is True
         assert direct_record.model_called is True
         model_record = _log_records(caplog, "genai_call")[-1]
-        assert direct_record.aws_request_id == model_record.aws_request_id
-        assert direct_record.aws_request_id == "DIRECT-HEALTH-REQUEST-ID"
+        assert direct_record.runtime_request_id == model_record.runtime_request_id
+        assert direct_record.runtime_request_id == "DIRECT-HEALTH-REQUEST-ID"
         assert len(web_handler._ANSWER_CACHE) == 1
 
     def test_handler_error_is_class_only_without_exception_or_request_content(
@@ -519,7 +519,7 @@ class TestStructuredObservability:
         assert record.levelno == logging.ERROR
         assert record.error_type == "RuntimeError"
         assert record.route == "api_ask"
-        assert record.aws_request_id == "AWS-RUNTIME-ERROR-ID"
+        assert record.runtime_request_id == "AWS-RUNTIME-ERROR-ID"
         assert record.exc_info is None
         serialized = repr(vars(record))
         assert "SECRET-EXCEPTION-MESSAGE" not in serialized

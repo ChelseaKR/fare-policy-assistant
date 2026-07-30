@@ -40,12 +40,15 @@ Application records use fixed messages and structured `LogRecord` extras:
 | `handler_error` | `ERROR` | Route class and exception class only |
 | `feedback` | `INFO` | Allowlisted verdict, result kind, and language only |
 
-`context.aws_request_id` is the sole correlation source. The same anonymous
-identifier and immutable `AWS_LAMBDA_FUNCTION_VERSION` appear on the model and
-answer records. The handler does not accept a correlation identifier from a
-body or header and does not log request headers, IP address, user agent,
-question, answer, prompt, history, citations, exception message, or stack.
-Request IDs are fields for log investigation, never metric dimensions.
+`context.aws_request_id` is the sole correlation source. It is serialized as
+`runtime_request_id` because Lambda's Python JSON formatter reserves and omits
+an `aws_request_id` extra; promotion requires the alias to equal Lambda's
+built-in `requestId`. The same anonymous identifier and immutable
+`AWS_LAMBDA_FUNCTION_VERSION` appear on the model and answer records. The
+handler does not accept a correlation identifier from a body or header and
+does not log request headers, IP address, user agent, question, answer, prompt,
+history, citations, exception message, or stack. Request IDs are fields for
+log investigation, never metric dimensions.
 
 Cost is calculated from observed token usage and the repository-pinned pricing
 table. `EstimatedModelCostUsd` is an application estimate, not an AWS billing
