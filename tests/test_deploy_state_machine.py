@@ -284,12 +284,15 @@ if args[:2] == ["lambda", "update-function-configuration"]:
     latest["Role"] = value("--role")
     latest["Environment"] = json.loads(value("--environment"))
     latest["RevisionId"] = next_revision("latest")
+    response = copy.deepcopy(latest)
+    if state.get("config_revision_changes_on_wait"):
+        state["settle_config_revision_pending"] = True
     record(
         "lambda.update-function-configuration",
         from_revision=before,
         to_revision=latest["RevisionId"],
     )
-    finish(latest)
+    finish(response)
 
 if args[:2] == ["lambda", "update-function-code"]:
     latest = state["configs"]["$LATEST"]
@@ -388,15 +391,40 @@ if args[:2] == ["lambda", "get-policy"]:
     qualifier = value("--qualifier")
     record("lambda.get-policy", qualifier=qualifier)
     if qualifier == "live" and state["alias_permission"]:
-        finish({"Policy": json.dumps(alias_policy())})
+        finish(
+            {
+                "Policy": json.dumps(alias_policy()),
+                "RevisionId": state["aliases"]["live"]["RevisionId"],
+            }
+        )
     fail("ResourceNotFoundException", status=1, op="lambda.get-policy.missing")
 
 if args[:2] == ["lambda", "add-permission"]:
     if value("--qualifier") != "live" or value("--statement-id") != "apigw-live":
         fail("unexpected permission scope", op="lambda.add-permission.invalid")
+    alias = state["aliases"]["live"]
+    if alias["RevisionId"] != value("--revision-id"):
+        fail(
+            "PreconditionFailedException",
+            status=1,
+            op="lambda.add-permission.conflict",
+        )
+    before = alias["RevisionId"]
+    alias["RevisionId"] = next_revision("live-policy")
     state["alias_permission"] = True
-    record("lambda.add-permission", qualifier="live", statement_id="apigw-live")
-    finish({"Statement": json.dumps(alias_policy()["Statement"][0])})
+    record(
+        "lambda.add-permission",
+        qualifier="live",
+        statement_id="apigw-live",
+        from_revision=before,
+        to_revision=alias["RevisionId"],
+    )
+    finish(
+        {
+            "Statement": json.dumps(alias_policy()["Statement"][0]),
+            "RevisionId": alias["RevisionId"],
+        }
+    )
 
 if args[:2] == ["lambda", "remove-permission"]:
     statement_id = value("--statement-id")
@@ -454,6 +482,18 @@ if args[:2] == ["lambda", "create-alias"]:
     finish(alias)
 
 if args[:2] == ["lambda", "wait"]:
+    if (
+        args[2] == "function-updated"
+        and state.pop("settle_config_revision_pending", False)
+    ):
+        latest = state["configs"]["$LATEST"]
+        before = latest["RevisionId"]
+        latest["RevisionId"] = next_revision("latest-settled")
+        record(
+            "lambda.configuration-settled",
+            from_revision=before,
+            to_revision=latest["RevisionId"],
+        )
     record("lambda.wait", waiter=args[2])
     finish()
 
@@ -791,7 +831,9 @@ def _initial_state(
     latest_layer_drift: bool = False,
     competing_latest_after_code: bool = False,
     competing_live_on_read: int = 0,
+    bootstrap_mode: bool = False,
     bootstrap_env_race_read: int = 0,
+    config_revision_changes_on_wait: bool = False,
     partial_retry_unknown_drift: bool = False,
 ) -> dict[str, Any]:
     version_five = _lambda_config("5", "old-five-sha", "version-5-r1")
@@ -813,6 +855,7 @@ def _initial_state(
         "revision_counter": 10,
         "competing_latest_after_code": competing_latest_after_code,
         "competing_live_on_read": competing_live_on_read,
+        "config_revision_changes_on_wait": config_revision_changes_on_wait,
         "role_arn": f"arn:aws:iam::{ACCOUNT}:role/{FUNCTION}-role",
         "alias_permission": True,
         "aliases": {
@@ -845,7 +888,7 @@ def _initial_state(
         },
         "events": [],
     }
-    if bootstrap_env_race_read:
+    if bootstrap_mode or bootstrap_env_race_read:
         state["aliases"] = {}
         state["alias_permission"] = False
         state["integration"]["IntegrationUri"] = (
@@ -873,7 +916,9 @@ def _run_deploy(
     competing_latest_after_code: bool = False,
     competing_live_on_read: int = 0,
     disabled_docs: str = "yolobus-fares",
+    bootstrap_mode: bool = False,
     bootstrap_env_race_read: int = 0,
+    config_revision_changes_on_wait: bool = False,
     partial_retry_unknown_drift: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     bin_dir = tmp_path / "bin"
@@ -890,7 +935,9 @@ def _run_deploy(
                 latest_layer_drift=latest_layer_drift,
                 competing_latest_after_code=competing_latest_after_code,
                 competing_live_on_read=competing_live_on_read,
+                bootstrap_mode=bootstrap_mode,
                 bootstrap_env_race_read=bootstrap_env_race_read,
+                config_revision_changes_on_wait=config_revision_changes_on_wait,
                 partial_retry_unknown_drift=partial_retry_unknown_drift,
             )
         ),
@@ -995,6 +1042,44 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
         < candidate_public_smoke
         < dashboard
     )
+
+
+def test_first_bootstrap_accounts_for_alias_permission_revision_change(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, bootstrap_mode=True)
+
+    assert result.returncode == 0, result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "6"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "5"
+    assert state["integration"]["IntegrationUri"] == ALIAS_URI
+    permission = _event_index(
+        state["events"],
+        "lambda.add-permission",
+        qualifier="live",
+        statement_id="apigw-live",
+    )
+    route_cutover = _event_index(state["events"], "apigatewayv2.update-integration")
+    candidate_publish = _event_index(
+        state["events"],
+        "lambda.publish-version",
+        version="6",
+    )
+    assert permission < route_cutover < candidate_publish
+
+
+def test_code_staging_uses_revision_observed_after_configuration_settles(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, config_revision_changes_on_wait=True)
+
+    assert result.returncode == 0, result.stderr
+    settled = _event_index(state["events"], "lambda.configuration-settled")
+    code = _event_index(state["events"], "lambda.update-function-code")
+    assert settled < code
+    settled_event = state["events"][settled]
+    code_event = state["events"][code]
+    assert code_event["from_revision"] == settled_event["to_revision"]
 
 
 def test_explicit_empty_containment_is_used_by_candidate_public_smoke(
