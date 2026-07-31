@@ -25,7 +25,7 @@ def test_failed_full_eval_still_uploads_evidence():
 def test_pull_request_eval_is_explicitly_offline_and_cannot_mint_oidc_tokens():
     _, workflow = _ci_workflow()
     jobs = workflow["jobs"]
-    offline = jobs["smoke-evals-offline"]
+    offline = jobs["smoke-evals"]
 
     assert offline["if"] == "github.event_name == 'pull_request'"
     assert offline["permissions"] == {"contents": "read"}
