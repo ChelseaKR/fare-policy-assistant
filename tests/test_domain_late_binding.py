@@ -69,8 +69,10 @@ def test_default_retriever_cache_is_keyed_by_profile(monkeypatch):
     # the cache is keyed on the profile name rather than pinned to the first
     # profile seen.
     class FakeRetriever:
-        def __init__(self):
+        def __init__(self, chunks, cfg):
             self.profile_name = domain.get_profile().name
+            self.chunks = chunks
+            self.cfg = cfg
 
     monkeypatch.setattr(retrieve, "Retriever", FakeRetriever)
     retrieve._retriever_for.cache_clear()
@@ -87,5 +89,10 @@ def test_default_retriever_cache_is_keyed_by_profile(monkeypatch):
     # The switch is honored: a distinct retriever bound to the new profile.
     assert housing_retriever is not transit_retriever
     assert housing_retriever.profile_name == HOUSING.name
+
+    monkeypatch.setenv("FPA_DENSE", "1")
+    dense_retriever = retrieve.default_retriever()
+    assert dense_retriever is not housing_retriever
+    assert dense_retriever.cfg.use_dense is True
 
     retrieve._retriever_for.cache_clear()

@@ -5,11 +5,16 @@ from __future__ import annotations
 import dataclasses
 import json
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pytest
 
 from assistant import config
+from assistant import corpus as corpus_module
 from assistant.corpus import (
+    CorpusArchiveError,
     archive_version,
     changelog,
     corpus_summary,
@@ -17,6 +22,7 @@ from assistant.corpus import (
     diff_corpus,
 )
 from assistant.corpus import load_chunks as corpus_load_chunks
+from assistant.identity import content_version
 
 
 def test_version_is_deterministic_and_order_independent(chunks):
@@ -41,9 +47,18 @@ def test_version_changes_when_fetch_date_changes(chunks):
 def test_summary_reports_agencies_and_counts(chunks):
     s = corpus_summary(chunks)
     assert s["corpus_version"] == corpus_version(chunks)
+    assert s["content_version"] == content_version(chunks)
+    assert len(s["content_version"]) == 64
     assert "MST" in s["agencies"] and "Yolobus" in s["agencies"]
     assert s["documents"] >= 1
     assert s["chunks"] == len(chunks)
+
+
+def test_date_only_change_moves_legacy_version_but_not_content_identity(chunks):
+    changed = [dataclasses.replace(chunk, fetch_date="2027-01-01") for chunk in chunks]
+
+    assert corpus_version(changed) != corpus_version(chunks)
+    assert content_version(changed) == content_version(chunks)
 
 
 def test_main_prints_summary_json(capsys, monkeypatch):
@@ -133,6 +148,161 @@ def test_archive_version_is_idempotent(chunks, versions_dir):
     assert meta_path.read_text(encoding="utf-8") == first_write
 
 
+def test_archive_version_accepts_complete_pre_content_identity_metadata(
+    chunks,
+    versions_dir,
+):
+    version = archive_version(chunks, _manifest_for(chunks))
+    metadata_path = versions_dir / version / "version.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    del metadata["content_version"]
+    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    legacy_bytes = metadata_path.read_bytes()
+
+    assert archive_version(chunks, _manifest_for(chunks)) == version
+    assert metadata_path.read_bytes() == legacy_bytes
+
+
+def test_archive_version_rejects_partial_destination_without_repairing_it(
+    chunks,
+    versions_dir,
+):
+    version = corpus_version(chunks)
+    destination = versions_dir / version
+    destination.mkdir(parents=True)
+    chunks_bytes = "".join(
+        json.dumps(dataclasses.asdict(chunk), ensure_ascii=False) + "\n" for chunk in chunks
+    ).encode()
+    (destination / "chunks.jsonl").write_bytes(chunks_bytes)
+
+    with pytest.raises(CorpusArchiveError, match="invalid artifact set"):
+        archive_version(chunks, _manifest_for(chunks))
+
+    assert list(destination.iterdir()) == [destination / "chunks.jsonl"]
+    assert (destination / "chunks.jsonl").read_bytes() == chunks_bytes
+
+
+def test_archive_version_rejects_corrupt_destination_without_overwriting_it(
+    chunks,
+    versions_dir,
+):
+    version = archive_version(chunks, _manifest_for(chunks))
+    destination = versions_dir / version
+    metadata_path = destination / "version.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["chunks"] += 1
+    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    before = {path.name: path.read_bytes() for path in destination.iterdir() if path.is_file()}
+
+    with pytest.raises(CorpusArchiveError, match="field chunks does not match"):
+        archive_version(chunks, _manifest_for(chunks))
+
+    assert {
+        path.name: path.read_bytes() for path in destination.iterdir() if path.is_file()
+    } == before
+
+
+def test_archive_version_rejects_symbolic_link_artifact(
+    chunks,
+    versions_dir,
+):
+    version = archive_version(chunks, _manifest_for(chunks))
+    chunks_path = versions_dir / version / "chunks.jsonl"
+    outside = versions_dir.parent / "outside-chunks.jsonl"
+    outside.write_bytes(chunks_path.read_bytes())
+    chunks_path.unlink()
+    chunks_path.symlink_to(outside)
+
+    with pytest.raises(CorpusArchiveError, match="not a regular file"):
+        archive_version(chunks, _manifest_for(chunks))
+
+    assert chunks_path.is_symlink()
+    assert outside.exists()
+
+
+def test_archive_version_rejects_same_legacy_id_with_conflicting_chunk_metadata(
+    chunks,
+    versions_dir,
+):
+    version = archive_version(chunks, _manifest_for(chunks))
+    destination = versions_dir / version
+    before = {path.name: path.read_bytes() for path in destination.iterdir() if path.is_file()}
+    changed_document = chunks[0].doc_id
+    conflicting = [
+        dataclasses.replace(
+            chunk,
+            agency_full="A conflicting agency name omitted from the legacy digest",
+        )
+        if chunk.doc_id == changed_document
+        else chunk
+        for chunk in chunks
+    ]
+    assert corpus_version(conflicting) == version
+
+    with pytest.raises(CorpusArchiveError, match="chunks conflict"):
+        archive_version(conflicting, _manifest_for(conflicting))
+
+    assert {
+        path.name: path.read_bytes() for path in destination.iterdir() if path.is_file()
+    } == before
+
+
+@pytest.mark.parametrize("fail_on_write", [1, 2, 3])
+def test_archive_version_staged_write_failure_publishes_nothing(
+    chunks,
+    versions_dir,
+    monkeypatch,
+    fail_on_write,
+):
+    original = corpus_module._write_legacy_file
+    writes = 0
+
+    def fail_selected_write(path: Path, content: bytes) -> None:
+        nonlocal writes
+        writes += 1
+        if writes == fail_on_write:
+            raise OSError("injected compatibility archive write failure")
+        original(path, content)
+
+    monkeypatch.setattr(corpus_module, "_write_legacy_file", fail_selected_write)
+
+    with pytest.raises(OSError, match="injected compatibility archive write failure"):
+        archive_version(chunks, _manifest_for(chunks))
+
+    assert all(path.name == ".archive.lock" for path in versions_dir.iterdir())
+
+
+def test_archive_version_concurrent_identical_writers_publish_one_archive(
+    chunks,
+    versions_dir,
+    monkeypatch,
+):
+    original = corpus_module._write_staged_legacy_archive
+    staged = threading.Barrier(2)
+
+    def synchronize_after_staging(*args, **kwargs):
+        original(*args, **kwargs)
+        staged.wait(timeout=5)
+
+    monkeypatch.setattr(
+        corpus_module,
+        "_write_staged_legacy_archive",
+        synchronize_after_staging,
+    )
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(archive_version, chunks, _manifest_for(chunks)) for _ in range(2)
+        ]
+        versions = [future.result(timeout=10) for future in futures]
+
+    assert versions[0] == versions[1]
+    visible = [path for path in versions_dir.iterdir() if not path.name.startswith(".")]
+    assert visible == [versions_dir / versions[0]]
+    before = (visible[0] / "version.json").read_bytes()
+    assert archive_version(chunks, _manifest_for(chunks)) == versions[0]
+    assert (visible[0] / "version.json").read_bytes() == before
+
+
 def test_archive_version_does_not_overwrite_prior_content(chunks, versions_dir):
     """Distinct content hashes get distinct, permanent directories: this is the
     guarantee EXP-05 exists for (stop overwriting corpus history in place)."""
@@ -173,6 +343,26 @@ def test_list_versions_reflects_archives(chunks, versions_dir):
     assert set(list_versions()) == {v1, v2}
 
 
+def test_list_versions_ignores_hidden_stages_and_directory_symlinks(
+    chunks,
+    versions_dir,
+):
+    from assistant.corpus import list_versions
+
+    version = archive_version(chunks, _manifest_for(chunks))
+    hidden_stage = versions_dir / ".in-progress-stage"
+    hidden_stage.mkdir()
+    (hidden_stage / "version.json").write_text(
+        '{"archived_at":"1900-01-01T00:00:00+00:00"}\n',
+        encoding="utf-8",
+    )
+    external = versions_dir.parent / "external-version"
+    external.mkdir()
+    (versions_dir / "linked-version").symlink_to(external, target_is_directory=True)
+
+    assert list_versions() == [version]
+
+
 def test_changelog_chains_diffs_across_versions(chunks, versions_dir):
     v1 = archive_version(chunks, _manifest_for(chunks))
     removed_doc = chunks[-1].doc_id
@@ -205,6 +395,15 @@ def test_main_versions_and_changelog_dispatch(chunks, versions_dir, monkeypatch,
     assert main() == 0
     changelog_out = json.loads(capsys.readouterr().out)
     assert changelog_out == []
+
+
+def test_main_snapshots_dispatch(tmp_path, monkeypatch, capsys):
+    from assistant.corpus import main
+
+    monkeypatch.setattr(config, "SNAPSHOTS_DIR", tmp_path / "snapshots")
+    monkeypatch.setattr("sys.argv", ["corpus", "snapshots"])
+    assert main() == 0
+    assert json.loads(capsys.readouterr().out) == []
 
 
 class TestVersionHistory:

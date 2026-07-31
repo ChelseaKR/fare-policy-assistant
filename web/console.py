@@ -1,25 +1,27 @@
 """Agency operator console (EXP-09, `docs/ideation/03-expansions.md`).
 
-Today, approving a corpus version, reviewing what changed, and setting the
-embed widget's allowed origins all mean editing the rider Lambda's environment
-variables by hand — a mechanism (R2-6/RR-era work: the pin flow, `/version`,
-`diff_corpus`) with no operator experience. No agency comms manager (persona
-P12) will ever do that. This module is the operator experience: a small
-authenticated surface that turns those three actions into a page with a button.
+Today, reviewing corpus versions and the immutable rider release still requires
+AWS-console knowledge. This module is the read-only operator experience for
+those facts. Earlier versions also wrote pin and embed settings directly to the
+rider Lambda's unqualified ``$LATEST`` configuration. Once production traffic
+is routed through an immutable ``live`` alias, such a write cannot affect the
+published version and a success response would be dangerously misleading.
+Those mutation routes therefore fail closed until a durable approval store and
+release-promotion workflow exist.
 
 Deployment model (the design question EXP-09 names as central): this is its
 own Lambda handler (`console_handler`), built and deployed by
 `infra/deploy-console.sh` as a *second*, separate function with its own API
 Gateway route and its own least-privilege IAM role — never merged into the
-rider-facing `web/handler.py` Lambda, and never granted anything beyond
-`lambda:GetFunctionConfiguration` / `lambda:UpdateFunctionConfiguration` scoped
-to that one rider function's ARN. No rider data exists to expose here (no
-question or answer text ever reaches this module); the actions are config
-reads/writes only.
+rider-facing `web/handler.py` Lambda, and granted only read access to the
+configured rider alias and its resolved function configuration. No rider data
+exists to expose here (no question or answer text ever reaches this module).
 
 Authentication fails closed on every data and action API: requests must carry
-`Authorization: Bearer <token>` matching `FPA_CONSOLE_TOKEN`, and if that
-variable is unset the APIs refuse every request rather than defaulting open.
+`Authorization: Bearer <token>` matching the encrypted SSM parameter named by
+`FPA_CONSOLE_TOKEN_PARAMETER_NAME`. If neither that parameter nor the local-dev
+`FPA_CONSOLE_TOKEN` fallback resolves, the APIs refuse every request rather
+than defaulting open.
 The static `/console` HTML shell is public so an ordinary browser can render
 the token-entry form; it contains no corpus data or configuration, and cannot
 read or change anything until the operator supplies the token. A shared bearer
@@ -71,9 +73,12 @@ _SECURITY_HEADERS = {
 }
 
 # Test/dev hook: set to a zero-arg callable returning a fake "lambda" client
-# (an object with get_function_configuration / update_function_configuration
-# methods) so pin/embed-config actions are testable without AWS credentials.
+# (an object with get_alias / get_function_configuration methods) so the live
+# release status is testable without AWS credentials.
 _client_factory = None
+_ssm_client_factory = None
+_resolved_console_token: str | None = None
+_console_token_resolved = False
 
 
 def _response(status: int, body: str, content_type: str = "application/json") -> dict:
@@ -91,8 +96,48 @@ def _json(status: int, payload: dict) -> dict:
 # ── auth ─────────────────────────────────────────────────────────────────────
 
 
-def _authorized(event: dict) -> bool:
+def _console_token() -> str | None:
+    """Resolve the operator token once per warm container.
+
+    Production uses an encrypted SSM parameter; the literal environment value
+    remains only as a local/test fallback. A lookup error fails closed but is
+    not cached, so a transient SSM outage can recover on the next request.
+    """
+    global _console_token_resolved, _resolved_console_token
+    if _console_token_resolved:
+        return _resolved_console_token
+
+    parameter_name = os.environ.get("FPA_CONSOLE_TOKEN_PARAMETER_NAME")
+    if parameter_name:
+        try:
+            if _ssm_client_factory is not None:
+                client = _ssm_client_factory()
+            else:
+                import boto3
+
+                client = boto3.client("ssm", region_name=os.environ.get("AWS_REGION", "us-west-2"))
+            value = client.get_parameter(Name=parameter_name, WithDecryption=True)
+            token = value.get("Parameter", {}).get("Value", "").strip()
+            _resolved_console_token = token or None
+            _console_token_resolved = True
+            return _resolved_console_token
+        except Exception:  # noqa: BLE001 - authentication must fail closed on any AWS error
+            return None
+
     token = os.environ.get("FPA_CONSOLE_TOKEN")
+    _resolved_console_token = token or None
+    _console_token_resolved = True
+    return _resolved_console_token
+
+
+def _reset_console_token_for_tests() -> None:
+    global _console_token_resolved, _resolved_console_token
+    _resolved_console_token = None
+    _console_token_resolved = False
+
+
+def _authorized(event: dict) -> bool:
+    token = _console_token()
     if not token:
         return False  # unset means misconfigured: refuse everything, never default open
     headers = {str(k).lower(): v for k, v in (event.get("headers") or {}).items()}
@@ -148,7 +193,7 @@ def version_diff(from_ref: str, to_ref: str) -> dict:
     return result
 
 
-# ── rider Lambda config actions (the "no more editing env vars by hand" bit) ─
+# ── immutable rider release status ──────────────────────────────────────────
 
 
 def _lambda_client():
@@ -169,35 +214,45 @@ def _rider_function_name() -> str:
     return name
 
 
-def _patch_rider_env(patch: dict[str, str]) -> dict:
-    """Merge `patch` into the rider Lambda's environment variables. Read-modify-
-    write, same as `aws lambda update-function-configuration` always is, so a
-    pin action never clobbers unrelated settings (answer model, provider,
-    FPA_DENSE, ...) it does not manage."""
+def _rider_alias_name() -> str:
+    return os.environ.get("FPA_RIDER_ALIAS", "live")
+
+
+def live_release_status() -> dict:
+    """Return configuration from the immutable alias that receives traffic.
+
+    Reading ``$LATEST`` here would report a failed or partially staged deploy as
+    production. Resolve the alias first, then read through that same alias so
+    the version pointer and configuration describe one atomic release.
+    """
     client = _lambda_client()
     fn = _rider_function_name()
-    current = client.get_function_configuration(FunctionName=fn)
+    alias_name = _rider_alias_name()
+    alias = client.get_alias(FunctionName=fn, Name=alias_name)
+    weights = alias.get("RoutingConfig", {}).get("AdditionalVersionWeights", {})
+    if not isinstance(weights, dict) or weights:
+        raise RuntimeError(
+            f"rider alias {alias_name!r} has weighted routing; live status is ambiguous"
+        )
+    version = alias.get("FunctionVersion")
+    if not isinstance(version, str) or not version.isdigit():
+        raise RuntimeError(f"rider alias {alias_name!r} does not resolve to a numbered version")
+    current = client.get_function_configuration(FunctionName=fn, Qualifier=alias_name)
+    configured_version = str(current.get("Version", ""))
+    if configured_version and configured_version != version:
+        raise RuntimeError(
+            f"rider alias {alias_name!r} changed while status was read; retry the request"
+        )
     env = dict(current.get("Environment", {}).get("Variables", {}))
-    env.update(patch)
-    client.update_function_configuration(FunctionName=fn, Environment={"Variables": env})
-    return env
-
-
-def pin_corpus_version(corpus_version: str) -> dict:
-    if not corpus_version or not all(c in "0123456789abcdef" for c in corpus_version.lower()):
-        raise ValueError("corpus_version must be a hex digest, e.g. from /console/api/versions")
-    return _patch_rider_env({"FPA_PINNED_CORPUS_VERSION": corpus_version})
-
-
-def _valid_origin(origin: str) -> bool:
-    return origin == "'self'" or origin.startswith("https://")
-
-
-def set_embed_ancestors(ancestors: str) -> dict:
-    origins = ancestors.split()
-    if not origins or not all(_valid_origin(o) for o in origins):
-        raise ValueError("ancestors must be https:// origins (or 'self'), space-separated")
-    return _patch_rider_env({"FPA_EMBED_ANCESTORS": " ".join(origins)})
+    return {
+        "alias": alias_name,
+        "function_version": version,
+        "pinned_corpus_version": env.get("FPA_PINNED_CORPUS_VERSION"),
+        "disabled_documents": sorted(
+            doc_id for doc_id in env.get("FPA_DISABLED_DOC_IDS", "").split(",") if doc_id
+        ),
+        "embed_ancestors": env.get("FPA_EMBED_ANCESTORS", "'self'"),
+    }
 
 
 # ── eval report ──────────────────────────────────────────────────────────────
@@ -230,13 +285,12 @@ def _read_body(event: dict) -> dict:
 
 
 def _status(event: dict) -> dict:
-    summary = corpus_summary()
+    live = live_release_status()
     return _json(
         200,
         {
-            "corpus": summary,
-            "pinned": os.environ.get("FPA_PINNED_CORPUS_VERSION"),
-            "embed_ancestors": os.environ.get("FPA_EMBED_ANCESTORS", "'self'"),
+            "available_corpus": corpus_summary(),
+            "live": live,
             "rider_function": os.environ.get("FPA_RIDER_FUNCTION_NAME"),
         },
     )
@@ -263,41 +317,33 @@ def _diff(event: dict) -> dict:
 
 
 def _pin(event: dict) -> dict:
-    try:
-        data = _read_body(event)
-    except (ValueError, TypeError, json.JSONDecodeError):
-        return _json(400, {"error": "Send JSON."})
-    version = data.get("corpus_version")
-    if not isinstance(version, str):
-        return _json(400, {"error": 'Send {"corpus_version": "<hex digest>"}.'})
-    try:
-        env = pin_corpus_version(version)
-    except ValueError as exc:
-        return _json(400, {"error": str(exc)})
-    except RuntimeError as exc:
-        return _json(500, {"error": str(exc)})
-    return _json(200, {"pinned": env.get("FPA_PINNED_CORPUS_VERSION")})
+    return _json(
+        409,
+        {
+            "error": (
+                "Live releases are immutable. Submit and approve the corpus change, "
+                "then promote it with the reviewed deployment workflow."
+            ),
+            "code": "immutable_release_requires_promotion",
+        },
+    )
 
 
 def _embed_config_get(event: dict) -> dict:
-    return _json(200, {"ancestors": os.environ.get("FPA_EMBED_ANCESTORS", "'self'")})
+    return _json(200, {"ancestors": live_release_status()["embed_ancestors"]})
 
 
 def _embed_config_post(event: dict) -> dict:
-    try:
-        data = _read_body(event)
-    except (ValueError, TypeError, json.JSONDecodeError):
-        return _json(400, {"error": "Send JSON."})
-    ancestors = data.get("ancestors")
-    if not isinstance(ancestors, str):
-        return _json(400, {"error": 'Send {"ancestors": "https://a.example https://b.example"}.'})
-    try:
-        env = set_embed_ancestors(ancestors)
-    except ValueError as exc:
-        return _json(400, {"error": str(exc)})
-    except RuntimeError as exc:
-        return _json(500, {"error": str(exc)})
-    return _json(200, {"ancestors": env.get("FPA_EMBED_ANCESTORS")})
+    return _json(
+        409,
+        {
+            "error": (
+                "Live releases are immutable. Submit and approve the embed change, "
+                "then promote it with the reviewed deployment workflow."
+            ),
+            "code": "immutable_release_requires_promotion",
+        },
+    )
 
 
 def _eval_report(event: dict) -> dict:
@@ -374,10 +420,9 @@ CONSOLE_HTML = """<!doctype html>
 <body>
 <main>
   <h1>Agency operator console</h1>
-  <p class="note">Approve a corpus version, review what changed, and set the
-    embed widget's allowed origins &mdash; without touching AWS consoles. Reference
-    implementation; see <code>infra/README.md</code> for deployment and
-    authentication.</p>
+  <p class="note">Review the immutable live release, corpus history, and
+    evaluation evidence. Release-setting changes require the reviewed promotion
+    workflow; see <code>infra/README.md</code>.</p>
 
   <section aria-labelledby="auth-h">
     <h2 id="auth-h">Access token</h2>
@@ -389,8 +434,8 @@ CONSOLE_HTML = """<!doctype html>
   </section>
 
   <section aria-labelledby="status-h">
-    <h2 id="status-h">Serving now</h2>
-    <div id="status-body">Load the status above to see the live corpus.</div>
+    <h2 id="status-h">Live release</h2>
+    <div id="status-body">Load status to resolve the production alias.</div>
     <button id="refresh-status" type="button">Refresh</button>
   </section>
 
@@ -412,9 +457,8 @@ CONSOLE_HTML = """<!doctype html>
 
   <section aria-labelledby="embed-h">
     <h2 id="embed-h">Embed settings</h2>
-    <label for="ancestors">Allowed embed origins (space-separated, https://)</label>
-    <textarea id="ancestors" rows="2"></textarea>
-    <button id="save-embed" type="button">Save embed settings</button>
+    <p class="note">The live allowlist is shown in release status. Changes are
+      immutable release inputs and cannot be applied from this console.</p>
   </section>
 
   <section aria-labelledby="eval-h">
@@ -462,15 +506,18 @@ CONSOLE_HTML = """<!doctype html>
     api("/console/api/status").then(function (r) {
       if (!r.ok) { say(r.data.error || "Could not load status.", true); return; }
       var d = r.data;
-      var mismatch = "DOES NOT MATCH PIN " + esc(d.pinned);
-      var badge = d.pinned
-        ? (d.pinned === d.corpus.corpus_version ? "matches pin" : mismatch)
-        : "no pin set";
+      var live = d.live;
+      var pin = live.pinned_corpus_version || "no pin set";
       document.getElementById("status-body").innerHTML =
-        "<p>Serving <code>" + esc(d.corpus.corpus_version) + "</code> as of " +
-        esc(d.corpus.as_of) + " &mdash; <span class=\\"pin-badge\\">" + badge + "</span></p>" +
-        "<p>Agencies: " + esc(d.corpus.agencies.join(", ")) + "</p>" +
-        "<p>Embed origins: <code>" + esc(d.embed_ancestors) + "</code></p>";
+        "<p>Alias <code>" + esc(live.alias) + "</code> points to immutable Lambda " +
+        "version <code>" + esc(live.function_version) + "</code>.</p>" +
+        "<p>Approved corpus pin: <code>" + esc(pin) + "</code></p>" +
+        "<p>Contained documents: <code>" +
+        esc(live.disabled_documents.join(", ") || "none") + "</code></p>" +
+        "<p>Embed origins: <code>" + esc(live.embed_ancestors) + "</code></p>" +
+        "<p>Console catalog bundle: <code>" +
+        esc(d.available_corpus.corpus_version) + "</code> as of " +
+        esc(d.available_corpus.as_of) + ".</p>";
       say("Status refreshed.");
     }).catch(function () { say("Could not reach the console API.", true); });
   });
@@ -481,24 +528,11 @@ CONSOLE_HTML = """<!doctype html>
       var rows = r.data.versions.map(function (v) {
         return "<tr><td><code>" + esc(v.corpus_version) + "</code></td><td>" + esc(v.commit) +
           "</td><td>" + esc(v.committed_at) + "</td><td>" + esc(v.documents) +
-          "</td><td><button type=\\"button\\" class=\\"secondary pin-btn\\" data-version=\\"" +
-          esc(v.corpus_version) + "\\">Pin</button></td></tr>";
+          "</td></tr>";
       }).join("");
       document.getElementById("versions-body").innerHTML =
         "<table><thead><tr><th>corpus_version</th><th>commit</th><th>committed</th>" +
-        "<th>docs</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>";
-      document.querySelectorAll(".pin-btn").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          api("/console/api/pin", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ corpus_version: btn.getAttribute("data-version") })
-          }).then(function (r) {
-            if (!r.ok) { say(r.data.error || "Could not pin.", true); return; }
-            say("Pinned " + r.data.pinned + ".");
-          }).catch(function () { say("Could not reach the console API.", true); });
-        });
-      });
+        "<th>docs</th></tr></thead><tbody>" + rows + "</tbody></table>";
       say("Versions loaded.");
     }).catch(function () { say("Could not reach the console API.", true); });
   });
@@ -519,17 +553,6 @@ CONSOLE_HTML = """<!doctype html>
           "<p><strong>Changed</strong></p>" + list(d.changed);
         say("Diff loaded.");
       }).catch(function () { say("Could not reach the console API.", true); });
-  });
-
-  document.getElementById("save-embed").addEventListener("click", function () {
-    api("/console/api/embed-config", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ancestors: document.getElementById("ancestors").value.trim() })
-    }).then(function (r) {
-      if (!r.ok) { say(r.data.error || "Could not save embed settings.", true); return; }
-      say("Embed origins saved: " + r.data.ancestors);
-    }).catch(function () { say("Could not reach the console API.", true); });
   });
 
   document.getElementById("refresh-eval").addEventListener("click", function () {

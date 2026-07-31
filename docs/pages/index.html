@@ -24,8 +24,19 @@
     padding: 1rem 1.1rem; margin: 1rem 0;
   }
   .card h2 { font-size: 1.1rem; margin: 0 0 0.4rem; }
+  .assistant-link {
+    display: inline-block; background: #14532d; color: #fff; border-radius: 6px;
+    padding: 0.55rem 0.9rem; font-weight: 600; text-decoration: none;
+  }
+  .eval-status {
+    background: #fff8e6; border: 1px solid #d9c27a; border-radius: 6px;
+    padding: 0.65rem 0.8rem;
+  }
+  .eval-status p { margin: 0.25rem 0; }
+  .eval-status .red { border-left: 4px solid #991b1b; padding-left: 0.65rem; }
   a { color: #1d4ed8; }
-  a:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+  a:focus-visible { outline: 4px solid #1d4ed8; outline-offset: 3px;
+    box-shadow: 0 0 0 2px #fff; }
   ul { margin: 0.4rem 0 0.2rem 1.2rem; padding: 0; }
   li { margin: 0.25rem 0; }
   .trend img { width: 100%; height: auto; max-width: 100%; border: 1px solid #d6d3cb; border-radius: 6px; }
@@ -35,7 +46,9 @@
     .sub, footer { color: #a7adb4; }
     .card { background: #1f2226; border-color: #3a3f45; }
     .banner { background: #2a2716; border-color: #6b5d2a; }
+    .eval-status { background: #2a2716; border-color: #6b5d2a; }
     a { color: #7aa2ff; }
+    .assistant-link { background: #75b798; color: #101814; }
     .trend img { border-color: #3a3f45; }
   }
 </style>
@@ -50,14 +63,28 @@
   <h1>Transit Fare Policy Assistant — evaluation</h1>
   <p class="sub">
     A narrow retrieval assistant for California transit fare policy, wrapped in a
-    public evaluation harness. The harness is the point; the assistant exists so
-    the harness has something to grade.
+    public evaluation harness. This is the evidence hub, not the chat interface:
+    the harness is the point, and the assistant exists so it has something to grade.
   </p>
+
+  <section class="card" aria-labelledby="assistant-h">
+    <h2 id="assistant-h">Try the system being evaluated</h2>
+    <p>The rider-facing assistant is a separate AWS deployment. It answers from
+      dated policy snapshots and links back here to its evaluation evidence.</p>
+    <p><a class="assistant-link"
+      href="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/">Open the live AWS assistant</a></p>
+  </section>
 
   <section class="card" aria-labelledby="report-h">
     <h2 id="report-h">The evaluation report</h2>
     <p>The generated scoreboard, representative failures with full traces, and the
       safety case.</p>
+    <div class="eval-status" role="note" aria-label="Evaluation status">
+      <p><strong>Committed promoted baseline: 192/201 (95.5%).</strong></p>
+      <p class="red"><strong>Latest observed: 190/201 overall and 175/186
+        production-core.</strong> The cross-agency promotion gate is red, so
+        the observed run has not replaced the committed baseline.</p>
+    </div>
     <ul>
       <li><a href="report.html">Full evaluation report (HTML)</a></li>
       <li><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/EVALS.md">EVALS.md on GitHub</a></li>
@@ -93,7 +120,8 @@
 
   <footer>
     <p><a href="https://github.com/ChelseaKR/fare-policy-assistant">Source code</a> ·
-       <a href="https://evals.chelseakr.com/">Live demo</a></p>
+       <a href="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/">Live AWS assistant</a> ·
+       <a href="https://evals.chelseakr.com/" aria-current="page">Evaluation evidence hub</a></p>
   </footer>
 </main>
 </body>

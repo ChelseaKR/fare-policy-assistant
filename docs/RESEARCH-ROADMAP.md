@@ -62,7 +62,7 @@
 | RR7 | **Record the manual a11y walkthrough.** Perform and commit NVDA + VoiceOver + keyboard passes (focus on new turns, polite status, citations not read as brackets, reflow at 400%, target sizes), filling `audits/a11y-walkthrough.md`. | R2,A1 | P1 | M | E10 · **[corroborates** ROADMAP P2-5 / `synthetic-personas-feedback` R1a-1; **blocked: human]** |
 | RR8 | **Title VI / LEP evidence one-pager.** Package the Spanish-parity numbers, language scope, and the no-determination rule as a compliance artifact an agency Title VI officer can attach to a four-factor LEP analysis. | O2,B1 | P1 | S | E7 · **[NET-NEW]** |
 | RR9 | **Two-ways-to-qualify pattern.** A reusable answer template for "same discount, two paths" (Medicare card vs. 65+; free program vs. paid fallback), with edge cases per agency. | R3,R6,O1 | P2 | M | E4,E6 · **[corroborates** `synthetic-personas-feedback` R1-6**]** |
-| RR10 | **NIST AI RMF crosswalk in the procurement brief.** Map the existing docs (guards, eval suites, audit, model card, data provenance) onto Govern/Map/Measure/Manage so a buyer recognizes the posture. | B1,D2 | P2 | S | E13 · **[NET-NEW]** |
+| RR10 | **NIST AI RMF crosswalk in the procurement brief.** Map the existing docs (guards, eval suites, audit, model card, data provenance) onto Govern/Map/Measure/Manage so a buyer recognizes the posture. ✅ Implemented 2026-07-17 (`docs/procurement-brief.md`) | B1,D2 | P2 | S | E13 · **[NET-NEW]** |
 
 ## Expansion backlog (new capability)
 

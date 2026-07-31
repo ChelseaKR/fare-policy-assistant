@@ -7,6 +7,9 @@ model (FPA_PROVIDER=mock), so they exercise the full pipeline offline.
 from __future__ import annotations
 
 import json
+import logging
+import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,6 +34,10 @@ def _event(method: str = "POST", path: str = "/api/ask", body: dict | None = Non
 
 def _post(question: str) -> dict:
     return web_handler.handler(_event(body={"question": question}))
+
+
+def _log_records(caplog, event: str) -> list[logging.LogRecord]:
+    return [record for record in caplog.records if getattr(record, "event", None) == event]
 
 
 class TestRouting:
@@ -166,9 +173,98 @@ class TestVersion:
         assert resp["statusCode"] == 200
         data = json.loads(resp["body"])
         assert len(data["corpus_version"]) == 12
+        assert len(data["content_version"]) == 64
+        assert len(data["snapshot_version"]) == 64
+        assert len(data["config_version"]) == 64
+        assert data["identity_status"] == "development"
+        assert data["source_revision"] is None
+        assert data["release_version"] is None
+        assert data["artifact_code_sha256"] is None
+        assert data["function_version"] == "local"
         assert data["as_of"]
         assert set(data["agencies"]) >= {"MST", "Yolobus", "HTA"}
         assert data["documents"] >= 5
+
+    def test_staleness_default_comes_from_shared_config(self, monkeypatch):
+        monkeypatch.delenv("FPA_STALENESS_BUDGET_DAYS", raising=False)
+        monkeypatch.setattr(web_handler.config, "DEFAULT_STALENESS_BUDGET_DAYS", 137)
+
+        data = json.loads(self._version()["body"])
+
+        assert data["staleness_budget_days"] == 137
+
+    def test_partial_release_environment_fails_closed(self, monkeypatch):
+        monkeypatch.setenv("FPA_SOURCE_REVISION", "a" * 40)
+
+        version = json.loads(self._version()["body"])
+        assert version["identity_status"] == "invalid"
+        assert version["source_revision"] is None
+
+        for path in ("/offline", "/guide", "/embed"):
+            policy = web_handler.handler(_event(method="GET", path=path))
+            assert policy["statusCode"] == 503
+            assert "runtime identity" in json.loads(policy["body"])["error"]
+
+        assert web_handler.handler(_event(method="GET", path="/"))["statusCode"] == 200
+        ask = _post("What is the MST senior fare?")
+        assert ask["statusCode"] == 503
+        assert "runtime identity" in json.loads(ask["body"])["error"]
+
+    def test_mutable_latest_runtime_never_masquerades_as_local(self, monkeypatch):
+        monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
+
+        version = json.loads(self._version()["body"])
+        assert version["identity_status"] == "invalid"
+        assert version["function_version"] is None
+
+        for path in ("/offline", "/guide", "/embed"):
+            assert web_handler.handler(_event(method="GET", path=path))["statusCode"] == 503
+        assert _post("What is the MST senior fare?")["statusCode"] == 503
+        assert web_handler.handler(_event(method="GET", path="/"))["statusCode"] == 200
+
+    def test_verified_descriptor_binds_version_and_answer(self, monkeypatch, tmp_path):
+        from assistant import config as assistant_config
+        from assistant import release_identity
+        from assistant.corpus import corpus_version
+        from assistant.ingest import load_chunks
+
+        chunks = load_chunks()
+        snapshot = release_identity.resolve_current_snapshot()
+        config_identity = release_identity.build_config_identity()
+        descriptor = release_identity.build_release_descriptor(
+            "a" * 40,
+            config_identity,
+            content_version=snapshot.content_version,
+            snapshot_version=snapshot.snapshot_version,
+            corpus_version=corpus_version(chunks),
+        )
+        descriptor_path = tmp_path / "release.json"
+        release_identity.write_release_descriptor(descriptor, descriptor_path)
+        monkeypatch.setattr(assistant_config, "RELEASE_DESCRIPTOR_PATH", descriptor_path)
+        monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "23")
+        monkeypatch.setenv("FPA_SOURCE_REVISION", descriptor.source_revision)
+        monkeypatch.setenv("FPA_CONFIG_VERSION", descriptor.config_version)
+        monkeypatch.setenv("FPA_PINNED_CONTENT_VERSION", descriptor.content_version)
+        monkeypatch.setenv("FPA_PINNED_SNAPSHOT_VERSION", descriptor.snapshot_version)
+        monkeypatch.setenv("FPA_RELEASE_VERSION", descriptor.release_version)
+        monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", descriptor.corpus_version)
+        monkeypatch.setenv("FPA_ARTIFACT_CODE_SHA256", "A" * 43 + "=")
+
+        version = json.loads(self._version()["body"])
+        assert version["identity_status"] == "verified"
+        assert version["release_version"] == descriptor.release_version
+        assert version["function_version"] == "23"
+
+        answer = json.loads(_post("What is the MST senior fare?")["body"])
+        for field in (
+            "source_revision",
+            "config_version",
+            "content_version",
+            "snapshot_version",
+            "release_version",
+        ):
+            assert answer[field] == version[field]
+        assert answer["identity_status"] == "verified"
 
     def test_version_reports_pin_match(self, monkeypatch):
         actual = json.loads(self._version()["body"])["corpus_version"]
@@ -177,17 +273,49 @@ class TestVersion:
         assert data["pinned"] == actual
         assert data["matches_pin"] is True
 
-    def test_version_flags_pin_mismatch(self, monkeypatch, capsys):
+    def test_version_flags_pin_mismatch(self, monkeypatch, caplog):
         monkeypatch.setenv("FPA_PINNED_CORPUS_VERSION", "deadbeefcafe")
-        data = json.loads(self._version()["body"])
+        with caplog.at_level(logging.WARNING, logger="fare_assistant"):
+            data = json.loads(self._version()["body"])
         assert data["matches_pin"] is False
-        assert "corpus_version_mismatch" in capsys.readouterr().out
+        record = _log_records(caplog, "corpus_version_mismatch")[-1]
+        assert record.serving_corpus_version == data["corpus_version"]
+        assert record.pinned_corpus_version == "deadbeefcafe"
 
     def test_version_lists_known_retained_versions(self):
         # EXP-05: the currently served corpus_version is itself a retained
         # version once `make ingest` has archived it.
         data = json.loads(self._version()["body"])
         assert data["corpus_version"] in data["known_versions"]
+
+    def test_version_discloses_operator_disabled_documents(self, monkeypatch):
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares, sbmtd-farechange")
+        data = json.loads(self._version()["body"])
+        assert data["disabled_documents"] == [
+            "sbmtd-farechange",
+            "yolobus-fares",
+        ]
+
+    def test_disabled_documents_are_removed_from_offline_and_guide(self, monkeypatch):
+        marker = "All fares are effective July 1, 2025"
+        monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
+        web_handler._OFFLINE_HTML = None
+        web_handler._GUIDE_HTML = None
+        for path in ("/offline", "/guide"):
+            warm_body = web_handler.handler(_event(method="GET", path=path))["body"]
+            assert marker in warm_body
+
+        # Changing containment policy in a warm process must invalidate both
+        # rendered-page caches and remove the disabled material immediately.
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+        for path in ("/offline", "/guide"):
+            contained_body = web_handler.handler(_event(method="GET", path=path))["body"]
+            assert marker not in contained_body
+            assert (
+                f"Corpus version (full) {web_handler._corpus_summary()['corpus_version']}"
+                in contained_body
+            )
+            assert "active page-view version" in contained_body
 
 
 class TestEmbedWidget:
@@ -223,6 +351,18 @@ class TestEmbedWidget:
         monkeypatch.delenv("FPA_EMBED_ANCESTORS", raising=False)
         csp = self._embed()["headers"]["content-security-policy"]
         assert "frame-ancestors 'self'" in csp
+
+    def test_embed_default_comes_from_shared_config(self, monkeypatch):
+        monkeypatch.delenv("FPA_EMBED_ANCESTORS", raising=False)
+        monkeypatch.setattr(
+            web_handler.config,
+            "DEFAULT_EMBED_ANCESTORS",
+            "https://shared-default.example",
+        )
+
+        csp = self._embed()["headers"]["content-security-policy"]
+
+        assert "frame-ancestors https://shared-default.example" in csp
 
     def test_embed_ancestor_allowlist_is_configurable(self, monkeypatch):
         monkeypatch.setenv("FPA_EMBED_ANCESTORS", "https://sbmtd.gov https://mst.org")
@@ -282,6 +422,10 @@ class TestAnswers:
         assert data["confidence"] in {"medium", "high"}
         # The answer is tied to a corpus version (persona research R2-6).
         assert len(data["corpus_version"]) == 12
+        assert len(data["content_version"]) == 64
+        assert len(data["snapshot_version"]) == 64
+        assert len(data["config_version"]) == 64
+        assert data["identity_status"] == "development"
 
     def test_answered_response_carries_valid_structured_contract(self):
         # EXP-04: the typed payload rides alongside `answer`, validated
@@ -357,6 +501,150 @@ class TestBudget:
         assert _post("Do youth ride free on Yolobus?")["statusCode"] == 200
 
 
+class TestStructuredObservability:
+    def test_model_and_answer_events_share_runtime_owned_correlation(self, monkeypatch, caplog):
+        monkeypatch.setenv("AWS_LAMBDA_FUNCTION_VERSION", "23")
+        monkeypatch.setattr(
+            web_handler,
+            "_release_status",
+            lambda: {
+                "identity_status": "verified",
+                "source_revision": "a" * 40,
+                "config_version": "b" * 64,
+                "content_version": "c" * 64,
+                "snapshot_version": "d" * 64,
+                "release_version": "e" * 64,
+                "artifact_code_sha256": "A" * 43 + "=",
+                "function_version": "23",
+            },
+        )
+        event = _event(body={"question": "What is the MST senior fare?"})
+        event["requestContext"]["requestId"] = "UNTRUSTED-EVENT-ID"
+        event["requestContext"]["http"]["sourceIp"] = "192.0.2.44"
+        event["headers"] = {
+            "user-agent": "SECRET-USER-AGENT",
+            "x-request-id": "UNTRUSTED-HEADER-ID",
+        }
+        context = SimpleNamespace(aws_request_id="AWS-RUNTIME-REQUEST-ID")
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = web_handler.handler(event, context)
+
+        assert response["statusCode"] == 200
+        records = _log_records(caplog, "genai_call") + _log_records(caplog, "answer_request")
+        assert {record.runtime_request_id for record in records} == {"AWS-RUNTIME-REQUEST-ID"}
+        assert {record.function_version for record in records} == {"23"}
+        serialized = repr([vars(record) for record in records])
+        for forbidden in (
+            "What is the MST senior fare?",
+            "UNTRUSTED-EVENT-ID",
+            "192.0.2.44",
+            "SECRET-USER-AGENT",
+            "UNTRUSTED-HEADER-ID",
+        ):
+            assert forbidden not in serialized
+
+    def test_cache_hit_has_terminal_duration(self, caplog):
+        question = "Do youth ride free on Yolobus?"
+        _post(question)
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = _post(question)
+
+        assert response["statusCode"] == 200
+        record = _log_records(caplog, "answer_request")[-1]
+        assert record.levelno == logging.INFO
+        assert record.cache == "hit"
+        assert record.model_called is False
+        assert record.completion_recorded is False
+        assert record.request_duration_ms >= 0
+        assert record.duration_ms == record.request_duration_ms
+
+    def test_rate_limit_has_terminal_observation(self, caplog):
+        now = time.monotonic()
+        web_handler._RECENT.extend([now] * web_handler.REQUESTS_PER_MINUTE)
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = _post("A distinct request that should be rate limited?")
+
+        assert response["statusCode"] == 429
+        record = _log_records(caplog, "answer_request")[-1]
+        assert record.levelno == logging.INFO
+        assert record.kind == "rate_limited"
+        assert record.status_code == 429
+        assert record.cache == "miss"
+        assert record.model_called is False
+        assert record.completion_recorded is False
+        assert record.request_duration_ms >= 0
+        assert record.duration_ms == record.request_duration_ms
+
+    def test_direct_health_marker_forces_paid_path_but_body_and_header_do_not(self, caplog):
+        question = "What is the MST senior fare?"
+        first = _post(question)
+        assert first["statusCode"] == 200
+        assert len(web_handler._ANSWER_CACHE) == 1
+
+        disguised = _event(
+            body={
+                "question": question,
+                web_handler._DIRECT_HEALTH_FIELD: web_handler._DIRECT_HEALTH_VALUE,
+            }
+        )
+        disguised["headers"] = {web_handler._DIRECT_HEALTH_FIELD: web_handler._DIRECT_HEALTH_VALUE}
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            disguised_response = web_handler.handler(disguised)
+        assert disguised_response["statusCode"] == 200
+        assert not _log_records(caplog, "genai_call")
+        disguised_record = _log_records(caplog, "answer_request")[-1]
+        assert disguised_record.cache == "hit"
+        assert disguised_record.direct_health is False
+
+        caplog.clear()
+        now = time.monotonic()
+        web_handler._RECENT.extend([now] * web_handler.REQUESTS_PER_MINUTE)
+        direct = _event(body={"question": question})
+        direct[web_handler._DIRECT_HEALTH_FIELD] = web_handler._DIRECT_HEALTH_VALUE
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            direct_response = web_handler.handler(
+                direct,
+                SimpleNamespace(aws_request_id="DIRECT-HEALTH-REQUEST-ID"),
+            )
+
+        assert direct_response["statusCode"] == 200
+        assert _log_records(caplog, "genai_call")
+        direct_record = _log_records(caplog, "answer_request")[-1]
+        assert direct_record.cache == "bypass"
+        assert direct_record.direct_health is True
+        assert direct_record.model_called is True
+        model_record = _log_records(caplog, "genai_call")[-1]
+        assert direct_record.runtime_request_id == model_record.runtime_request_id
+        assert direct_record.runtime_request_id == "DIRECT-HEALTH-REQUEST-ID"
+        assert len(web_handler._ANSWER_CACHE) == 1
+
+    def test_handler_error_is_class_only_without_exception_or_request_content(
+        self, monkeypatch, caplog
+    ):
+        def fail(_event):
+            raise RuntimeError("SECRET-EXCEPTION-MESSAGE")
+
+        monkeypatch.setattr(web_handler, "_ask", fail)
+        event = _event(body={"question": "SECRET-QUESTION"})
+        context = SimpleNamespace(aws_request_id="AWS-RUNTIME-ERROR-ID")
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = web_handler.handler(event, context)
+
+        assert response["statusCode"] == 500
+        record = _log_records(caplog, "handler_error")[-1]
+        assert record.levelno == logging.ERROR
+        assert record.error_type == "RuntimeError"
+        assert record.route == "api_ask"
+        assert record.runtime_request_id == "AWS-RUNTIME-ERROR-ID"
+        assert record.exc_info is None
+        serialized = repr(vars(record))
+        assert "SECRET-EXCEPTION-MESSAGE" not in serialized
+        assert "SECRET-QUESTION" not in serialized
+
+
 class TestCache:
     def test_repeated_question_is_cached_and_bypasses_budget(self):
         first = _post("Do youth ride free on Yolobus?")
@@ -377,6 +665,109 @@ class TestCache:
         assert a["body"] == b["body"]
         assert len(web_handler._ANSWER_CACHE) == 1
 
+    def test_source_containment_change_cannot_reuse_warm_cached_answer(self, monkeypatch):
+        question = "How much is the local fare on Yolobus?"
+        first = json.loads(_post(question)["body"])
+        assert first["kind"] == "answered"
+
+        key_before = web_handler._cache_key(question, [])
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+        key_after = web_handler._cache_key(question, [])
+        assert key_after != key_before
+
+        contained = json.loads(_post(question)["body"])
+        assert contained["kind"] == "refused_no_support"
+        assert contained != first
+
+    def test_cache_keys_are_process_local_hmac_digests_not_plaintext(self):
+        question = "How much is the unique-marker-7QX senior fare on SBMTD?"
+        _post(question)
+
+        assert len(web_handler._ANSWER_CACHE) == 1
+        key = next(iter(web_handler._ANSWER_CACHE))
+        assert len(key) == 64
+        assert set(key) <= set("0123456789abcdef")
+        assert question.casefold() not in key
+        assert "unique-marker-7qx" not in key
+        assert key == web_handler._cache_key(question, [])
+
+        history = [("prior-marker-8VZ?", "answer-marker-4RM")]
+        history_key = web_handler._cache_key(question, history)
+        assert history_key != key
+        assert all(marker not in history_key for marker in ("prior-marker", "answer-marker"))
+
+    def test_pii_refusal_precedes_history_parse_and_cache_access(self, monkeypatch):
+        def must_not_run(*args, **kwargs):
+            raise AssertionError("guarded input reached history, cache, or answer pipeline")
+
+        monkeypatch.setattr(web_handler, "_parse_history", must_not_run)
+        monkeypatch.setattr(web_handler, "_cache_get", must_not_run)
+        monkeypatch.setattr(web_handler, "answer_question", must_not_run)
+        response = web_handler.handler(
+            _event(
+                body={
+                    "question": "My SSN is 123-45-6789; what is the fare?",
+                    "history": [{"q": "prior question", "a": "prior answer"}],
+                }
+            )
+        )
+
+        assert response["statusCode"] == 200
+        assert json.loads(response["body"])["kind"] == "refused_input"
+        assert not web_handler._ANSWER_CACHE
+
+    def test_pii_in_history_is_refused_before_parse_cache_or_model(self, monkeypatch):
+        def must_not_run(*args, **kwargs):
+            raise AssertionError("guarded history reached parser, cache, or answer pipeline")
+
+        monkeypatch.setattr(web_handler, "_parse_history", must_not_run)
+        monkeypatch.setattr(web_handler, "_cache_get", must_not_run)
+        monkeypatch.setattr(web_handler, "answer_question", must_not_run)
+        response = web_handler.handler(
+            _event(
+                body={
+                    "question": "What is the MST fare?",
+                    "history": [
+                        {
+                            "q": "My email is rider-private@example.com",
+                            "a": "Please do not share personal information.",
+                        }
+                    ],
+                }
+            )
+        )
+
+        assert response["statusCode"] == 200
+        assert json.loads(response["body"])["kind"] == "refused_input"
+        assert not web_handler._ANSWER_CACHE
+
+    @pytest.mark.parametrize("kind", ["refused_no_support", "answered_guarded"])
+    def test_refused_or_guarded_results_are_not_cached(self, monkeypatch, caplog, kind):
+        calls = 0
+
+        def guarded_answer(question, **kwargs):
+            nonlocal calls
+            calls += 1
+            return AnswerResult(
+                question=question,
+                answer="Please contact the transit agency.",
+                kind=kind,
+                model="bedrock:test" if kind == "answered_guarded" else "",
+            )
+
+        monkeypatch.setattr(web_handler, "answer_question", guarded_answer)
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            _post("A safe but unsupported fare-policy question?")
+            _post("A safe but unsupported fare-policy question?")
+
+        assert calls == 2
+        assert not web_handler._ANSWER_CACHE
+        records = _log_records(caplog, "answer_request")
+        assert [record.model_called for record in records[-2:]] == [
+            kind == "answered_guarded",
+            kind == "answered_guarded",
+        ]
+
     def test_cache_evicts_past_bound(self, monkeypatch):
         monkeypatch.setattr(web_handler, "ANSWER_CACHE_SIZE", 3)
         for i in range(5):
@@ -394,6 +785,18 @@ class TestMultiTurn:
     def test_history_ignores_malformed(self):
         assert web_handler._parse_history("nope") == []
         assert web_handler._parse_history([{"q": "only q"}, {"q": 1, "a": 2}]) == []
+
+    def test_history_guard_allows_public_agency_phone_in_prior_answer(self):
+        checked = web_handler._request_input_check(
+            "Where can I apply?",
+            [
+                {
+                    "q": "How do I contact HTA?",
+                    "a": "Call Humboldt Transit Authority at 707-443-0826.",
+                }
+            ],
+        )
+        assert checked.ok
 
     def test_history_distinguishes_cache_entries(self):
         web_handler.handler(_event(body={"question": "What is the fare?", "history": []}))
@@ -437,7 +840,7 @@ class TestHistoryHmac:
         assert "sig" not in data
 
     def test_key_set_drops_unsigned_and_tampered_turns(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         good = web_handler._sign_turn("on MST?", "The fare is $2.")
         raw = [
             {"q": "on MST?", "a": "The fare is $2."},  # unsigned → dropped
@@ -448,7 +851,7 @@ class TestHistoryHmac:
         assert out == [("on MST?", "The fare is $2.")]
 
     def test_key_set_drops_turn_whose_answer_was_edited(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         sig = web_handler._sign_turn("on MST?", "The fare is $2.")
         # Same signature, but the client rewrote the answer → verification fails.
         out = web_handler._parse_history(
@@ -457,7 +860,7 @@ class TestHistoryHmac:
         assert out == []
 
     def test_key_set_response_includes_verifiable_sig(self, monkeypatch):
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         resp = _post("Do youth ride free on Yolobus?")
         data = json.loads(resp["body"])
         assert "sig" in data
@@ -471,11 +874,48 @@ class TestHistoryHmac:
         )
         assert echoed and echoed[0][0] == "Do youth ride free on Yolobus?"
 
-    def test_sign_turn_is_length_prefixed(self, monkeypatch):
-        # The length prefix prevents delimiter ambiguity: ("x|y","z") must not
-        # collide with ("x","y|z").
-        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "test-secret")
+    def test_sign_turn_has_unambiguous_field_boundaries(self, monkeypatch):
+        # Structured signing material prevents delimiter ambiguity:
+        # ("x|y","z") must not collide with ("x","y|z").
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
         assert web_handler._sign_turn("x|y", "z") != web_handler._sign_turn("x", "y|z")
+
+    def test_signed_turn_is_invalid_after_source_containment_change(self, monkeypatch):
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
+        monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
+        question = "How much is a local fare?"
+        answer = "The local fare is $2.00."
+        old_sig = web_handler._sign_turn(question, answer)
+
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+
+        assert old_sig != web_handler._sign_turn(question, answer)
+        assert web_handler._parse_history([{"q": question, "a": answer, "sig": old_sig}]) == []
+
+    def test_refusal_is_not_signed_for_follow_up_history(self, monkeypatch):
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
+        monkeypatch.setenv("FPA_DISABLED_DOC_IDS", "yolobus-fares")
+
+        data = json.loads(_post("How much is the local fare on Yolobus?")["body"])
+
+        assert data["kind"] == "refused_no_support"
+        assert "sig" not in data
+
+    def test_history_key_rotation_crosses_cache_and_signature_boundary(self, monkeypatch):
+        question = "Do youth ride free on Yolobus?"
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "1" * 64)
+        first = json.loads(_post(question)["body"])
+        first_keys = set(web_handler._ANSWER_CACHE)
+
+        monkeypatch.setenv("FPA_HISTORY_HMAC_KEY", "2" * 64)
+        after_rotation = json.loads(_post(question)["body"])
+
+        assert after_rotation["answer"] == first["answer"]
+        assert after_rotation["sig"] != first["sig"]
+        assert after_rotation["sig"] == web_handler._sign_turn(question, after_rotation["answer"])
+        assert set(web_handler._ANSWER_CACHE) != first_keys
+        assert len(web_handler._ANSWER_CACHE) == 2
+        assert all("sig" not in payload for payload in web_handler._ANSWER_CACHE.values())
 
 
 class TestFeedback:
@@ -496,20 +936,39 @@ class TestFeedback:
         assert self._fb({"verdict": "maybe"})["statusCode"] == 400
         assert self._fb({})["statusCode"] == 400
 
-    def test_feedback_logs_no_content(self, capsys):
+    def test_feedback_logs_no_content(self, caplog):
         # Even if a client sends question/answer text, the handler must not log it.
-        self._fb(
-            {
-                "verdict": "down",
-                "kind": "answered",
-                "language": "es",
-                "question": "SECRET-Q",
-                "answer": "SECRET-A",
-            }
-        )
-        out = capsys.readouterr().out
-        assert "SECRET-Q" not in out and "SECRET-A" not in out
-        assert '"feedback": "down"' in out
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            self._fb(
+                {
+                    "verdict": "down",
+                    "kind": "answered",
+                    "language": "es",
+                    "question": "SECRET-Q",
+                    "answer": "SECRET-A",
+                }
+            )
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.verdict == "down"
+        assert record.kind == "answered"
+        assert record.language == "es"
+        assert "SECRET-Q" not in repr(vars(record))
+        assert "SECRET-A" not in repr(vars(record))
+
+    def test_feedback_does_not_log_free_form_classification_fields(self, caplog):
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = self._fb(
+                {
+                    "verdict": "up",
+                    "kind": {"question": "SECRET-KIND"},
+                    "language": ["SECRET-LANGUAGE"],
+                }
+            )
+        assert response["statusCode"] == 200
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.kind is None
+        assert record.language is None
+        assert "SECRET" not in repr(vars(record))
 
     def test_feedback_get_405(self):
         resp = web_handler.handler(

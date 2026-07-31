@@ -198,7 +198,8 @@ def _have_credentials(provider: str) -> bool:
         # normal --offline fallback below applies instead of hanging.
         import httpx
 
-        host = os.environ.get("FPA_OLLAMA_HOST", "http://localhost:11434")
+        host = config.resolve_provider_transport("local").base_url
+        assert host is not None
         try:
             return httpx.get(f"{host}/api/version", timeout=2.0).status_code == 200
         except httpx.HTTPError:
@@ -667,6 +668,13 @@ def run(
         summary["suites"]["sensitivity"]["pairs_passed"] = sum(verdicts.values())
         summary["suites"]["sensitivity"]["pairs_total"] = len(verdicts)
 
+    # Bilingual parity (M-1): record the ES-vs-mirrored-EN delta alongside the
+    # scoreboard so downstream tools (report, history) read one number instead
+    # of re-deriving it from records.
+    parity = parity_delta(records)
+    if parity:
+        summary["parity"] = parity
+
     (run_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -708,6 +716,149 @@ def flip_case_floor(flip_rate: float, n_cases: int, safety: float = 1.0) -> int:
     """
     expected = math.ceil(flip_rate * n_cases * safety)
     return max(2, expected)
+
+
+# ── bilingual parity gate (M-1; audit P1-1; AIEV-10/11, I18N-22) ─────────────
+
+PARITY_SUITE = "multilingual"
+PARITY_THRESHOLD_PP = 5.0
+PARITY_CASE_FLOOR = 2
+MACRO_THRESHOLD_PP = 5.0
+_STRETCH_PREFIX = "stretch_"
+EXPECTED_BELOW_MACRO_PATH = config.REPO_ROOT / "evals" / "expected_below_macro.json"
+
+
+def parity_delta(records: list[dict], suite: str = PARITY_SUITE) -> dict | None:
+    """The ES-vs-mirrored-EN pass delta over `suite`, from one run's records.
+
+    Each case in `suite` that names a `mirror_of` English case present in the
+    same run forms a pair; the delta is the mirrored-English pass rate minus
+    the Spanish pass rate, in percentage points. Positive means the English
+    mirrors passed more often — the equity gap the parity gate exists to catch.
+    Comparing within a single run means judge model, prompts, and corpus cancel
+    out, so the number is meaningful on any mode (offline, smoke, full).
+
+    Pairs whose mirror is absent from the run (e.g. a smoke subset that kept
+    the Spanish case but not its mirror) are skipped; returns None when no
+    complete pair exists, so partial runs skip the gate loudly rather than
+    tripping on noise.
+    """
+    by_id = {r["case_id"]: r for r in records}
+    pairs = [
+        (r, by_id[r["mirror_of"]])
+        for r in records
+        if r["suite"] == suite and r.get("mirror_of") in by_id
+    ]
+    if not pairs:
+        return None
+    passed = sum(1 for r, _ in pairs if r["passed"])
+    mirror_passed = sum(1 for _, en in pairs if en["passed"])
+    n = len(pairs)
+    return {
+        "suite": suite,
+        "pairs": n,
+        "passed": passed,
+        "mirror_passed": mirror_passed,
+        "delta_pp": round((mirror_passed - passed) * 100 / n, 1),
+    }
+
+
+def parity_regressed(
+    parity: dict, threshold: float = PARITY_THRESHOLD_PP, case_floor: int = PARITY_CASE_FLOOR
+) -> bool:
+    """Same two-condition shape as `suite_regressed`: the parity gap must
+    exceed `threshold` points AND at least `case_floor` more mirrored English
+    cases than Spanish cases must have passed. The case floor absorbs the
+    one-case judge-noise flip that would otherwise dominate a small pair set
+    (see `suite_regressed`'s rationale); one flipped pair out of 22 is 4.5
+    points and 1 case — noise, not an equity finding."""
+    gap_cases = parity["mirror_passed"] - parity["passed"]
+    return parity["delta_pp"] > threshold and gap_cases >= case_floor
+
+
+def suites_below_macro(suites: dict, threshold: float = MACRO_THRESHOLD_PP) -> dict[str, dict]:
+    """The general per-suite form of the parity gate (AIEV-10): every gated
+    suite's pass rate must be at least the macro pass rate minus `threshold`
+    points, where macro is the unweighted mean over gated suites.
+
+    `stretch_*` suites are excluded from both the mean and the gate:
+    docs/ROADMAP.md P3-3 and the report's stretch-parity section promise that a
+    stretch language's score is reported honestly but never fails a build.
+
+    Returns {suite: {"pass_rate", "macro", "floor"}} for each offender; floors
+    are compared unrounded and rounded only for display.
+    """
+    gated = {n: s for n, s in suites.items() if not n.startswith(_STRETCH_PREFIX)}
+    if not gated:
+        return {}
+    macro = sum(s["pass_rate"] for s in gated.values()) / len(gated)
+    floor = macro - threshold
+    return {
+        name: {
+            "pass_rate": s["pass_rate"],
+            "macro": round(macro, 1),
+            "floor": round(floor, 1),
+        }
+        for name, s in gated.items()
+        if s["pass_rate"] < floor
+    }
+
+
+def expected_below_macro(path: Path | None = None) -> dict[str, str]:
+    """The loud escape hatch for the below-macro form: a committed JSON file
+    mapping suite name → written rationale (keys starting with "_" are file
+    commentary). An annotated suite is reported, not failed — mirroring the
+    `stale_acknowledged.json` pattern: a gap may be accepted, but only in
+    writing, in the diff, deleted when the suite recovers."""
+    p = path or EXPECTED_BELOW_MACRO_PATH
+    if not p.exists():
+        return {}
+    data = json.loads(p.read_text(encoding="utf-8"))
+    return {k: v for k, v in data.items() if not k.startswith("_")}
+
+
+def parity_problems(
+    records: list[dict], suites: dict, annotations: dict[str, str] | None = None
+) -> list[str]:
+    """All parity-gate findings for one run; empty is clean. Pure so the
+    committed-report checker and tests can exercise it without a run dir."""
+    notes = expected_below_macro() if annotations is None else annotations
+    problems = []
+    parity = parity_delta(records)
+    if parity is None:
+        print("no complete Spanish/English mirror pairs in this run; parity skipped")
+    elif parity_regressed(parity):
+        problems.append(
+            f"Spanish parity: {parity['passed']}/{parity['pairs']} vs mirrored English "
+            f"{parity['mirror_passed']}/{parity['pairs']} — gap {parity['delta_pp']} pp "
+            f"exceeds {PARITY_THRESHOLD_PP:g} pp on {PARITY_CASE_FLOOR}+ cases"
+        )
+    for name, o in sorted(suites_below_macro(suites).items()):
+        if name in notes:
+            continue
+        problems.append(
+            f"{name}: {o['pass_rate']}% is below the macro floor {o['floor']}% "
+            f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) with no written "
+            "annotation in evals/expected_below_macro.json"
+        )
+    return problems
+
+
+def check_parity(run_dir: Path) -> None:
+    """Fail (exit 1) if the run trips the bilingual parity gate: the Spanish
+    vs mirrored-English delta exceeds 5 points on 2+ cases, or any gated suite
+    sits more than 5 points below the macro pass rate without a written
+    annotation. There is no silent skip: fix the gap, or annotate it in
+    `evals/expected_below_macro.json` with a rationale that survives review."""
+    records = [
+        json.loads(line)
+        for line in (run_dir / "results.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    problems = parity_problems(records, summary["suites"])
+    if problems:
+        print("PARITY GATE (M-1):\n  " + "\n  ".join(problems), file=sys.stderr)
+        raise SystemExit(1)
 
 
 def check_regression(run_dir: Path, threshold: float = 2.0) -> None:
@@ -820,6 +971,10 @@ def main() -> None:
         from evals.report import generate
 
         generate(run_dir)
+    # Parity is within-run (ES vs mirrored EN of the same run), so unlike the
+    # baseline regression gate it applies even when the baseline is being
+    # deliberately re-set — a re-baseline must not silence an equity gap.
+    check_parity(run_dir)
     if args.update_baseline:
         update_baseline(run_dir)
     else:

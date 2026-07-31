@@ -19,6 +19,12 @@ mutants/
 html/
 # Built retrieval index (regenerate with `make index`)
 corpus/index/
+# Cooperative archive locks persist so separate processes always flock the same
+# inode; interrupted hidden stages are never published and are safe to clean.
+corpus/versions/.archive.lock
+corpus/versions/.*.*/
+corpus/snapshots/.archive.lock
+corpus/snapshots/.*.*/
 # Per-run eval artifacts (committed reports live in docs/)
 evals/runs/
 # Content-keyed answer/judge cache (evals/cache.py, FIX-12); local speed/cost

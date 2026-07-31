@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan report-regression provenance template gtfs-fetch gtfs-check fares
+.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -85,6 +85,9 @@ dep-scan:     ## Dependency-vulnerability scan over the locked deps (pip-audit; 
 	uv sync --frozen --all-groups
 	uv export --frozen --no-emit-project --all-groups --format requirements-txt -o /tmp/requirements-audit.txt
 	uv run --with pip-audit pip-audit --strict --desc -r /tmp/requirements-audit.txt
+
+deploy-reqs:  ## Regenerate infra/requirements-deploy.txt (hash-pinned rider deploy bundle, M-7/P1-6) from uv.lock
+	uv export --frozen --no-dev --no-emit-project --format requirements-txt -o infra/requirements-deploy.txt
 
 provenance:   ## BLOCKING: EVALS.md/baseline.json/golden.jsonl must declare the prompt+corpus versions HEAD ships, or carry a documented waiver in evals/stale_acknowledged.json (promoted from advisory 2026-07-09, FIX-01/M-2 — a baseline may legitimately lag HEAD, but only loudly)
 	uv run python -m evals.provenance

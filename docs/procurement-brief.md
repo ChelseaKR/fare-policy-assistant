@@ -7,7 +7,7 @@ skeptic can check it. This is a reference implementation, not a product or a
 service offering; the brief describes how the artifact behaves and how it was
 tested.
 
-Last updated 2026-06-20.
+Last updated 2026-07-17.
 
 ## What it is in one paragraph
 
@@ -121,6 +121,27 @@ implying a sign-off that has not happened.
 - The corpus is five agencies and a fixed snapshot date. Fare policy goes stale;
   the answer says so, and snapshots must be refreshed and evals re-run before any
   renewed use.
+
+## NIST AI RMF crosswalk
+
+Some reviewers organize vendor review around the NIST AI Risk Management
+Framework (AI RMF 1.0) and its four functions. The table maps this repository's
+existing artifacts onto those functions so a reviewer can find the evidence
+quickly. It is a self-assessment pointing at files, not a certification; no
+conformity assessment has been performed, and the framework itself is
+voluntary. Each row claims only that the named artifact exists and does what
+its own text says.
+
+| Function | What this project does | Where to check |
+|---|---|---|
+| **Govern** | The hard limits (no eligibility determinations, no PII collection, citation required) are design constraints recorded in the root instruction file and enforced in code and CI, not policies on a shelf. Risk ownership and decisions are written down: an AI risk register, a DPIA, an EU AI Act self-classification, security reporting terms, and a decision log that keeps its negative results instead of deleting them. | [`CLAUDE.md`](../CLAUDE.md), [`docs/ai-risk-register.md`](ai-risk-register.md), [`docs/dpia.md`](dpia.md), [`docs/eu-ai-act-classification.md`](eu-ai-act-classification.md), [`SECURITY.md`](../SECURITY.md), [`docs/decisions/`](decisions/) |
+| **Map** | Scope, intended use, affected riders, and known limits are stated before any capability claim: what the assistant is for and not for, which agencies and languages it covers, where each corpus document comes from and when it was fetched, and what stays out of scope. | [`docs/model-card.md`](model-card.md), [`docs/PROJECT-SCOPE.md`](PROJECT-SCOPE.md), `corpus/manifest.yaml`, the "Known limits" section above |
+| **Measure** | The headline deliverable. A graded eval harness combines deterministic safety checks with a versioned LLM judge held to a different model than the one being graded; judge-versus-human calibration is reported with its sample size; the headline number carries confidence intervals and a leave-one-suite-out check; counterfactual minimal pairs probe eligibility boundaries; a regression gate and a provenance gate block merges; and an outside tool re-grades recorded answers in an independent audit. | [`EVALS.md`](../EVALS.md), `evals/` (suites, `calibration.py`, `robustness.py`, `check_report_regression.py`, `provenance.py`), [`docs/eval-robustness.md`](eval-robustness.md), [`docs/audits/methodology.md`](audits/methodology.md) |
+| **Manage** | Risks are handled in operation, not only at review time: input and output guards run on every request; corpus staleness has a budget, and a scheduled refresh loop opens a reviewable pull request on real drift; spend and error alarms are provisioned by the deploy (subscribing a human endpoint is an operator step); the rate limit holds across containers; models and prompts are pinned and versioned. | `src/assistant/guards.py`, `.github/workflows/corpus-freshness.yml`, [`infra/README.md`](../infra/README.md), `src/assistant/config.py`, `prompts/` |
+
+What this mapping does not cover: the manual assistive-technology walkthrough
+is still pending (see the accessibility section above), and no external party
+has reviewed this crosswalk.
 
 ## What a buyer would do next
 

@@ -84,10 +84,15 @@ class TestBundleRuntimeDependencies:
     """
 
     def test_rider_bundle_includes_structured_contract_runtime(self):
+        # jsonschema arrives via the hash-pinned requirement set (M-7/P1-6);
+        # tests/test_deploy_requirements.py holds that file against uv.lock.
         text = _script_text()
-        assert '"jsonschema>=4.20"' in text
-        assert 'mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/docs"' in text
-        assert 'cp "$ROOT/docs/answer-contract.schema.json" "$BUNDLE/docs/"' in text
+        assert '-r "$ROOT/infra/requirements-deploy.txt"' in text
+        assert "mkdir -p" in text
+        for directory in ("src", "corpus/processed", "docs"):
+            assert f'"$BUNDLE/{directory}"' in text
+        assert "uv run python scripts/copy_tracked_bundle.py" in text
+        assert "--file docs/answer-contract.schema.json" in text
 
     def test_rider_bundle_includes_every_local_web_import(self):
         text = _script_text()
@@ -101,7 +106,7 @@ class TestBundleRuntimeDependencies:
         }
         assert imported_modules, "expected the rider handler to import local web modules"
         for module in imported_modules:
-            bundled_path = f'"$ROOT/{module.replace(".", "/")}.py"'
+            bundled_path = f"--file {module.replace('.', '/')}.py"
             assert bundled_path in text, f"rider bundle omits local import {module}"
 
     def test_console_bundle_includes_ingest_import_dependencies(self):

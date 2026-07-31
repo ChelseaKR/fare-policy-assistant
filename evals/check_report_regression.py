@@ -25,6 +25,15 @@ a passing live run, or (2) a maintainer deliberately runs
 `python -m evals.runner --update-baseline` with a written, owner-approved
 rationale in the PR (AIEV-27). Silently lowering a threshold to pass this check
 would be exactly the failure mode it exists to catch.
+
+This module also re-applies the bilingual parity gate (M-1; audit P1-1;
+AIEV-10/11, I18N-22) to the committed report: the Spanish-vs-mirrored-English
+delta must stay within 5 points (on 2+ cases), and no gated suite may sit more
+than 5 points below the macro pass rate. The parity half *does* have one loud
+escape hatch — `evals/expected_below_macro.json`, a committed suite→rationale
+map for the below-macro form only — because a small suite can honestly trail
+the macro (the failures are documented in the report, not hidden) without that
+being an equity gap. The Spanish-parity delta itself has no waiver.
 """
 
 from __future__ import annotations
@@ -34,7 +43,12 @@ import sys
 
 from assistant import config
 from evals import provenance
-from evals.runner import suite_regressed
+from evals.runner import (
+    expected_below_macro,
+    parity_regressed,
+    suite_regressed,
+    suites_below_macro,
+)
 
 EVALS_MD_PATH = config.REPO_ROOT / "EVALS.md"
 BASELINE_PATH = config.REPO_ROOT / "evals" / "baseline.json"
@@ -66,12 +80,98 @@ def check(evals_md_text: str, baseline: dict) -> list[str]:
     return regressions
 
 
+def _parity_from_table(evals_md_text: str) -> dict | None:
+    """Fallback for committed reports generated before the provenance payload
+    carried `parity`: re-derive the pair outcomes from the rendered
+    `## Spanish parity` table (the exact format `report._parity_table` emits).
+    Rows whose mirror is absent from the run (`—`) are skipped, matching
+    `runner.parity_delta`. Returns None when no table or no complete pair."""
+    lines = evals_md_text.splitlines()
+    try:
+        start = lines.index("## Spanish parity")
+    except ValueError:
+        return None
+    pairs = passed = mirror_passed = 0
+    for line in lines[start + 1 :]:
+        if line.startswith("## "):
+            break
+        stripped = line.strip()
+        if not (stripped.startswith("|") and stripped.endswith("|")):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) != 4:
+            continue
+        if cells[1] not in ("✓", "✗") or cells[3] not in ("✓", "✗"):
+            continue  # header, separator, or a row with a missing mirror (—)
+        pairs += 1
+        passed += cells[1] == "✓"
+        mirror_passed += cells[3] == "✓"
+    if pairs == 0:
+        return None
+    return {
+        "suite": "multilingual",
+        "pairs": pairs,
+        "passed": passed,
+        "mirror_passed": mirror_passed,
+        "delta_pp": round((mirror_passed - passed) * 100 / pairs, 1),
+    }
+
+
+def check_parity_committed(
+    evals_md_text: str, annotations: dict[str, str] | None = None
+) -> list[str]:
+    """Parity findings for the *committed* EVALS.md; empty is clean.
+
+    Reads the machine-readable `parity` payload when present, else falls back
+    to the rendered Spanish-parity table. A report with neither (or with no
+    complete mirror pair) skips the delta half with a note on stdout — partial
+    runs are legitimate — but the below-macro half still applies whenever the
+    suites scoreboard is embedded.
+    """
+    notes = expected_below_macro() if annotations is None else annotations
+    payload = provenance.read_evals_md(evals_md_text) or {}
+    problems = []
+    parity = payload.get("parity") or _parity_from_table(evals_md_text)
+    if parity is None:
+        print("committed EVALS.md carries no complete Spanish/English mirror pairs; delta skipped")
+    elif parity_regressed(parity):
+        problems.append(
+            f"Spanish parity: {parity['passed']}/{parity['pairs']} vs mirrored English "
+            f"{parity['mirror_passed']}/{parity['pairs']} in the committed EVALS.md — "
+            f"gap {parity['delta_pp']} pp exceeds the 5-point gate on 2+ cases"
+        )
+    for name, o in sorted(suites_below_macro(payload.get("suites", {})).items()):
+        if name in notes:
+            continue
+        problems.append(
+            f"{name}: {o['pass_rate']}% in the committed EVALS.md is below the macro floor "
+            f"{o['floor']}% (macro {o['macro']}%) with no written annotation in "
+            "evals/expected_below_macro.json"
+        )
+    return problems
+
+
 def main() -> int:
     if not BASELINE_PATH.exists():
         print("no evals/baseline.json; skipping committed-report regression gate", file=sys.stderr)
         return 0
     baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
     evals_md = EVALS_MD_PATH.read_text(encoding="utf-8")
+    parity_findings = check_parity_committed(evals_md)
+    if parity_findings:
+        print(
+            "COMMITTED-REPORT PARITY (M-1) — EVALS.md trips the bilingual parity gate:",
+            file=sys.stderr,
+        )
+        for p in parity_findings:
+            print(f"  {p}", file=sys.stderr)
+        print(
+            "\nFix the gap and regenerate EVALS.md from a passing live run, or — for the "
+            "below-macro form only — annotate the suite in evals/expected_below_macro.json "
+            "with a written rationale. The Spanish-parity delta has no waiver.",
+            file=sys.stderr,
+        )
+        return 1
     regressions = check(evals_md, baseline)
     if regressions:
         print(
@@ -88,7 +188,10 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print("check_report_regression: EVALS.md does not regress vs. the committed baseline.")
+    print(
+        "check_report_regression: EVALS.md does not regress vs. the committed baseline "
+        "and holds the bilingual parity gate."
+    )
     return 0
 
 

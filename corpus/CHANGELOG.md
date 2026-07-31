@@ -6,6 +6,12 @@ A deployment can approve a version here and pin to it with
 `FPA_PINNED_CORPUS_VERSION`; the `/version` endpoint reports whether the running
 deploy matches.
 
+Schema-2 source snapshots are tracked separately under `corpus/snapshots/` by
+their full `snapshot_version`. They retain exact raw bytes and receipts and
+distinguish semantic `content_version` from later source reverification. The
+12-character entries below remain the compatibility history for deployed pins;
+they are not retroactively relabeled as source-complete evidence.
+
 This history starts with the current snapshot. There is only one snapshot so far,
 so there is nothing to diff against yet. The weekly corpus-freshness automation
 (`.github/workflows/corpus-freshness.yml`) is the intended writer of future
