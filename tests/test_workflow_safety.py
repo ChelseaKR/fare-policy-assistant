@@ -30,7 +30,8 @@ def test_pull_request_eval_is_explicitly_offline_and_cannot_mint_oidc_tokens():
     assert offline["if"] == "github.event_name == 'pull_request'"
     assert offline["permissions"] == {"contents": "read"}
     commands = [step.get("run", "") for step in offline["steps"]]
-    assert any("--smoke --offline --no-cache" in command for command in commands)
+    assert any("make eval-selftest" in command for command in commands)
+    assert all("evals.runner" not in command for command in commands)
     assert all(
         "configure-aws-credentials" not in str(step.get("uses", "")) for step in offline["steps"]
     )

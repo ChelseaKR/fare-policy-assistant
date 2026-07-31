@@ -105,6 +105,11 @@ jobs:
     # offline and omit id-token permission entirely: skipping a credential
     # action is not an authorization boundary because any checked-out code can
     # request a job-scoped OIDC token when id-token: write is present.
+    #
+    # A runner smoke score is not meaningful with the deliberately incapable
+    # mock provider: its correct outcome is a red, non-promotable receipt.
+    # Instead, prove offline that the evaluator catches every planted defect.
+    # The first real served-model smoke receipt is produced only after merge.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -118,14 +123,8 @@ jobs:
           enable-cache: true
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
         run: uv sync --frozen --all-groups
-      - name: Run offline smoke suite
-        run: uv run python -m evals.runner --smoke --offline --no-cache
-      - name: Upload run artifacts
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
-        with:
-          name: eval-run-offline
-          path: evals/runs/
+      - name: Prove evaluator gates catch planted defects offline
+        run: make eval-selftest
 
   smoke-evals-online:
     # Only merged main executes with cloud identity. AWS access comes from
