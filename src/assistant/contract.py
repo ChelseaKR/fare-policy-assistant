@@ -26,7 +26,7 @@ from functools import lru_cache
 
 import jsonschema
 
-from assistant import config
+from assistant import config, guards
 from assistant.answer import AnswerResult
 
 SCHEMA_PATH = config.REPO_ROOT / "docs" / "answer-contract.schema.json"
@@ -50,7 +50,7 @@ _NEXT_STEP_RE = re.compile(
     re.I,
 )
 
-_CITATION_TAG_RE = re.compile(r"\s*\[doc:[a-z0-9-]+\]")
+_CITATION_TAG_RE = re.compile(r"\s*" + guards.CITATION_TAG_RE.pattern)
 
 
 @dataclass
@@ -188,14 +188,13 @@ def build_structured_answer(result: AnswerResult) -> StructuredAnswer:
         by_id = {c["doc_id"]: c for c in citations}
         proof_docs: list[ProofDoc] = []
         seen_proof: set[str] = set()
-        doc_tag_re = re.compile(r"\[doc:([a-z0-9-]+)\]")
         for raw in tagged:
             clean = _CITATION_TAG_RE.sub("", raw).strip()
             if not clean:
                 continue
             sentences.append(clean)
             if _PROOF_RE.search(raw):
-                for doc_id in doc_tag_re.findall(raw):
+                for doc_id in guards.extract_citation_ids(raw):
                     if doc_id in by_id and doc_id not in seen_proof:
                         seen_proof.add(doc_id)
                         proof_docs.append(

@@ -71,9 +71,19 @@ def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> lis
     alias map defaults to the active profile's but can be injected (a different
     domain, or a test) without touching this logic."""
     q = question.lower()
+    selected_aliases = domain.get_profile().aliases if aliases is None else aliases
+    matches: list[tuple[int, int, str]] = []
+    for alias, agency in selected_aliases.items():
+        match = re.search(rf"\b{re.escape(alias)}\b", q)
+        if match:
+            # Text position defines behavior. Alias mapping insertion order is
+            # deliberately irrelevant because canonical configuration identity
+            # sorts object keys.
+            matches.append((match.start(), -len(alias), agency))
+
     found: list[str] = []
-    for alias, agency in (aliases or domain.get_profile().aliases).items():
-        if agency not in found and re.search(rf"\b{re.escape(alias)}\b", q):
+    for _, _, agency in sorted(matches):
+        if agency not in found:
             found.append(agency)
     return found
 
@@ -472,13 +482,35 @@ class Retriever:
         )
 
 
-@lru_cache(maxsize=4)
-def _retriever_for(profile_name: str) -> Retriever:
-    return Retriever()
+@lru_cache(maxsize=8)
+def _retriever_for(
+    profile_name: str,
+    retrieval_config: config.RetrievalConfig,
+    expected_content_version: str,
+) -> Retriever:
+    """Build one index for an exact profile, retrieval policy, and corpus.
+
+    The second load is intentional: the caller's content digest is the cache
+    key, while this function owns the actual chunks used by the index. If an
+    atomic corpus publication lands between those two reads, fail this request
+    instead of caching an index under the wrong identity.
+    """
+    from assistant.identity import content_version
+
+    chunks = load_chunks()
+    if content_version(chunks) != expected_content_version:
+        raise RuntimeError("corpus changed while constructing the default retriever")
+    return Retriever(chunks, retrieval_config)
 
 
 def default_retriever() -> Retriever:
-    """The process-wide retriever for the active domain profile. Keyed on the
-    profile name so switching FPA_DOMAIN yields a distinct cached retriever
-    rather than one pinned to whatever profile was active at first call."""
-    return _retriever_for(domain.get_profile().name)
+    """The process-wide retriever for one complete behavior identity."""
+    from assistant.identity import content_version
+
+    chunks = load_chunks()
+    retrieval_config = config.Config.from_environment().retrieval
+    return _retriever_for(
+        domain.get_profile().name,
+        retrieval_config,
+        content_version(chunks),
+    )

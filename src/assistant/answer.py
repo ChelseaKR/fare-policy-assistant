@@ -6,6 +6,7 @@ flags) because the eval report shows failures end to end.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -124,6 +125,20 @@ def _confidence_band(signals: ConfidenceSignals, rcfg: config.RetrievalConfig) -
     return "high" if signals.z_score >= rcfg.confidence_high_z else "medium"
 
 
+def _disabled_document_ids() -> set[str]:
+    """Operator kill switch for source material awaiting policy review.
+
+    The value is intentionally read for each answer so an operator can contain
+    an expired or disputed source through Lambda configuration without first
+    rebuilding the corpus. Values are comma-separated manifest document IDs.
+    """
+    return {
+        doc_id.strip()
+        for doc_id in os.environ.get("FPA_DISABLED_DOC_IDS", "").split(",")
+        if doc_id.strip()
+    }
+
+
 def answer_question(
     question: str,
     *,
@@ -147,6 +162,28 @@ def answer_question(
     lang = guards.detect_language(question)
     rq = _retrieval_query(question, history)
     results = retriever.search(rq)
+    disabled_ids = _disabled_document_ids()
+    blocked_results = [sc for sc in results if sc.chunk.doc_id in disabled_ids]
+    if blocked_results:
+        # A retrieved source that the operator has disabled may have materially
+        # contributed to the answer. Do not simply drop it and let a weaker,
+        # tangential passage stand in as support; fail closed until review.
+        from assistant.retrieve import detect_agency
+
+        usable_results = [sc for sc in results if sc.chunk.doc_id not in disabled_ids]
+        return AnswerResult(
+            question=question,
+            answer=_no_support_message(detect_agency(question), lang),
+            kind="refused_no_support",
+            passages=usable_results,
+            guard_flags=[
+                f"source_disabled:{doc_id}"
+                for doc_id in sorted({sc.chunk.doc_id for sc in blocked_results})
+            ],
+            as_of_date=max((sc.chunk.fetch_date for sc in usable_results), default=""),
+            retrieval_score=usable_results[0].score if usable_results else 0.0,
+            confidence="low",
+        )
     as_of = max((sc.chunk.fetch_date for sc in results), default="")
     top_score = results[0].score if results else 0.0
     # Band from the same signals confident() decides on, so an answered
@@ -213,8 +250,35 @@ def answer_question(
             confidence=band,
         )
 
-    cited_ids = set(guards.CITATION_RE.findall(text))
+    cited_ids = set(guards.extract_citation_ids(text))
     by_id = {sc.chunk.doc_id: sc.chunk for sc in results}
+    unknown_ids = sorted(cited_ids - set(by_id))
+    if not cited_ids or unknown_ids:
+        # A citation is an authorization boundary, not decorative metadata:
+        # every model-supplied id must resolve to one of the exact passages
+        # retrieved for this request. Never silently drop an invented or
+        # cross-request id while keeping the response marked ``answered``.
+        citation_flags = (
+            ["missing_citation"]
+            if not cited_ids
+            else [f"unretrieved_citation:{doc_id}" for doc_id in unknown_ids]
+        )
+        return AnswerResult(
+            question=question,
+            answer=_no_support_message(None, lang),
+            kind="answered_guarded",
+            passages=results,
+            guard_flags=guard_flags + citation_flags,
+            model=completion.model,
+            as_of_date=as_of,
+            input_tokens=completion.input_tokens,
+            output_tokens=completion.output_tokens,
+            cache_creation_input_tokens=completion.cache_creation_input_tokens,
+            cache_read_input_tokens=completion.cache_read_input_tokens,
+            raw_model_answer=completion.text,
+            retrieval_score=top_score,
+            confidence=band,
+        )
     citations = [
         Citation(
             doc_id=doc_id,

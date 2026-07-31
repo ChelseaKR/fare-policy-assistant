@@ -20,9 +20,12 @@ from assistant.i18n import get_translation, language_uncertain_notice, refusal_m
 # ── input guards ─────────────────────────────────────────────────────────────
 
 PII_PATTERNS: dict[str, re.Pattern[str]] = {
-    "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+    # Accept the common compact, space-separated, and hyphenated forms. These
+    # identifiers are never needed for fare guidance, so privacy wins over
+    # trying to infer whether a nine-digit token was really intended as an SSN.
+    "ssn": re.compile(r"(?<!\d)\d{3}(?P<ssn_sep>[- ]?)\d{2}(?P=ssn_sep)\d{4}(?!\d)"),
     "email": re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b"),
-    "phone": re.compile(r"\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b"),
+    "phone": re.compile(r"(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)"),
     # Multilingual parity (FIX-05): the lead-ins are English, Spanish, and
     # Tagalog, but
     # the digit tail is unchanged, so "nací el 3 de mayo de 1961" trips (the "3"
@@ -35,7 +38,10 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
         r".{0,20}\d",
         re.I,
     ),
-    "medicare_id": re.compile(r"\b\d[A-Z]\d{2}-?[A-Z]\d{2}-?[A-Z]{2}\d{2}\b", re.I),
+    "medicare_id": re.compile(
+        r"\b\d[A-Z][A-Z0-9]\d[\s-]?[A-Z][A-Z0-9]\d[\s-]?[A-Z]{2}\d{2}\b",
+        re.I,
+    ),
 }
 
 
@@ -215,10 +221,32 @@ def redact_determination_language(text: str) -> str:
 
 # Matches each doc-id in both single ``[doc:mst-fares]`` and combined
 # ``[doc:mst-fares, doc:mst-fares-benefits]`` citation tags — the model writes
-# the combined form when one claim draws on several passages, and the earlier
-# single-id-only pattern saw zero citations there and tripped the missing-
-# citation guard on a perfectly grounded answer (eval case fresh-001).
+# the combined form when one claim draws on several passages.
+#
+# ``CITATION_RE`` remains the token-level expression used by existing callers.
+# A rider-facing answer, however, must use a complete bracketed tag; otherwise
+# prose such as ``doc:mst-fares`` or a broken ``[doc:mst-fares`` could satisfy
+# the old presence-only guard without being a citation the UI can reliably
+# remove and resolve.
 CITATION_RE = re.compile(r"doc:([a-z0-9-]+)")
+# Deliberately broader than the valid-tag grammar below. Once valid tags are
+# removed, any remaining marker-looking token — including ``DOC:made-up`` or
+# ``doc :made-up`` — is malformed and must fail closed.
+CITATION_MARKER_RE = re.compile(r"\bdoc\s*:", re.I)
+CITATION_TAG_RE = re.compile(r"\[doc:[a-z0-9-]+(?:,\s*doc:[a-z0-9-]+)*\]")
+
+
+def extract_citation_ids(text: str) -> list[str]:
+    """Return document IDs from complete, well-formed citation tags."""
+    return [doc_id for tag in CITATION_TAG_RE.findall(text) for doc_id in CITATION_RE.findall(tag)]
+
+
+def has_malformed_citation(text: str) -> bool:
+    """True when a ``doc:`` token occurs outside a valid citation tag."""
+    without_valid_tags = CITATION_TAG_RE.sub("", text)
+    return bool(CITATION_MARKER_RE.search(without_valid_tags))
+
+
 # English, Spanish, and Tagalog renderings of the "as of <date>" disclosure. The model
 # phrases the Spanish one several ways ("políticas publicadas al 12 de junio…"),
 # all anchored on "publicado/publicadas" (eval cases ml-003…ml-012).
@@ -272,6 +300,9 @@ def check_output(text: str, *, require_citation: bool = True) -> OutputCheck:
     hits = find_determination_language(text)
     if hits:
         flags.append(f"determination_language:{'; '.join(hits)}")
-    if require_citation and not CITATION_RE.search(text):
-        flags.append("missing_citation")
+    citation_ids = extract_citation_ids(text)
+    if require_citation and not citation_ids:
+        flags.append("malformed_citation" if has_malformed_citation(text) else "missing_citation")
+    elif has_malformed_citation(text):
+        flags.append("malformed_citation")
     return OutputCheck(ok=not flags, flags=flags)

@@ -1,0 +1,127 @@
+{
+  "agencies": [
+    "HTA",
+    "MST",
+    "SBMTD",
+    "SacRT",
+    "Yolobus"
+  ],
+  "archive_schema": 2,
+  "archived_at": "2026-07-30T14:30:59+00:00",
+  "artifacts": {
+    "chunks.jsonl": {
+      "bytes": 95590,
+      "sha256": "a75d0a3ecd3d7c468b4b5b6c1a2b8d26047188f2845956b901847eb065e31bdc"
+    },
+    "manifest.snapshot.yaml": {
+      "bytes": 2032,
+      "sha256": "82156dcf3ffd1f45fc36b80fdd2c850fe663952629e39f67854aac524a5fd9c6"
+    },
+    "raw/hta-fares.html": {
+      "bytes": 45164,
+      "sha256": "aeb16e82af0615a167401c1855595990132b385a5020eb9eb43360ae20de3836"
+    },
+    "raw/hta-fares.meta.yaml": {
+      "bytes": 245,
+      "sha256": "2ccb0c73ae3fabf221f672f47d83ea4a8ecf5a0c07e83b896a62a930e2dcbd7c"
+    },
+    "raw/mst-fares-benefits.html": {
+      "bytes": 110406,
+      "sha256": "6cc02fd72046ae314dfb5f19d96bc518758aee9b1cef3c48d3f0e26da0ee7e80"
+    },
+    "raw/mst-fares-benefits.meta.yaml": {
+      "bytes": 249,
+      "sha256": "bbf7fb0aa58699342c6f53e77e426e10020b601f84d7260e79b5bffe5944111d"
+    },
+    "raw/mst-fares-es.html": {
+      "bytes": 139298,
+      "sha256": "2ceba6538e54ea8f0b90dc1334edc698298f9c2c760456512f86b89b0a18345e"
+    },
+    "raw/mst-fares-es.meta.yaml": {
+      "bytes": 231,
+      "sha256": "3260691993f0900b8edf257b4d52c2a27baa4502968d475342b72fa728401d59"
+    },
+    "raw/mst-fares.html": {
+      "bytes": 139777,
+      "sha256": "fe7fee05a4f5ad75a7775f594fa1dc29fe2a58c18ba5110c9d575baaee8f76fe"
+    },
+    "raw/mst-fares.meta.yaml": {
+      "bytes": 222,
+      "sha256": "4b25ff92b3e52dde8a2d26775eb0cad51a895b23d3ba3b6bae786faaaf3ab540"
+    },
+    "raw/mst-veterans-resource.html": {
+      "bytes": 115584,
+      "sha256": "69144906e9e5ce4cfb5761b37ec20cb0bbf3dab61f1ba09d6208dcbbf7a3857a"
+    },
+    "raw/mst-veterans-resource.meta.yaml": {
+      "bytes": 276,
+      "sha256": "b295c36d6f37178a3d048b6c0e4b16cb9ab1f2e60ebbe62acbf2eeb1c2238433"
+    },
+    "raw/sacrt-fares.html": {
+      "bytes": 285037,
+      "sha256": "6f18d522baacec211bfabe6074d07d5149ea77274d65465fd61a5555eaaae404"
+    },
+    "raw/sacrt-fares.meta.yaml": {
+      "bytes": 236,
+      "sha256": "71bbf3027327e41a557ecc0e256bf0bc85c150caea44950d714fb69547ecbe7a"
+    },
+    "raw/sbmtd-farechange.html": {
+      "bytes": 180496,
+      "sha256": "681b314d1e576d4bea5ace1b90b5c3d389be76d092d6a1e1ec70e3a38c2bf5a4"
+    },
+    "raw/sbmtd-farechange.meta.yaml": {
+      "bytes": 243,
+      "sha256": "fd81aa6bcf1ce888bd01f3f0e1f075e895dc9e9ef2090899b2c43408f6321184"
+    },
+    "raw/sbmtd-fares-passes.html": {
+      "bytes": 123067,
+      "sha256": "741a774a781292930ee1ac0f69f945813088a3f86f6f2a49d439c73655f9c5b4"
+    },
+    "raw/sbmtd-fares-passes.meta.yaml": {
+      "bytes": 249,
+      "sha256": "102f40b6b13ddd8fc231c018748a98bae672f74f73fc1da3e17569407b21b89d"
+    },
+    "raw/yolobus-fares.html": {
+      "bytes": 84761,
+      "sha256": "af66a88a0c070ee652e3d5568ae5ae0dfd6662fc87cdf0b7a6b064d0dcb3398c"
+    },
+    "raw/yolobus-fares.meta.yaml": {
+      "bytes": 233,
+      "sha256": "9e6521fe8ff982f45427be989607164d8aaaf8edc37e58135c83b249780aadac"
+    },
+    "raw/yolobus-purchasing.html": {
+      "bytes": 74417,
+      "sha256": "c09c127a1d4579b7ebca8f4a769354717e0f268669f566526e9799dc5cdd7e74"
+    },
+    "raw/yolobus-purchasing.meta.yaml": {
+      "bytes": 282,
+      "sha256": "c9c2b6b2fa728d7ac404991912527d112bc60e6220bfd855cec138b67e7337d3"
+    },
+    "raw/yolobus-reduced-fare-id.html": {
+      "bytes": 69318,
+      "sha256": "4ff755614b5b8d335ae19229d917b237ffe9575ff8832f872dd3319365395a4e"
+    },
+    "raw/yolobus-reduced-fare-id.meta.yaml": {
+      "bytes": 259,
+      "sha256": "bc681eada92dae7b6952d4dc22a24377954ce379a9056f47272e3557d814cea5"
+    },
+    "source-evidence.json": {
+      "bytes": 4209,
+      "sha256": "614b71f6b57144c64ebbf863b279d38e2541ce49fae0c40b180075044e6f019b"
+    }
+  },
+  "as_of": "2026-06-17",
+  "chunks": 90,
+  "content_version": "58deec7dfdd250d2890c03510230c70618fb34e56d6b982ca2487af69379aa95",
+  "content_version_short": "58deec7dfdd2",
+  "corpus_version": "0938fff0539a",
+  "documents": 11,
+  "evidence": "raw_and_receipts_verified",
+  "identity_schemas": {
+    "content": "fare-assistant.content.v1",
+    "snapshot": "fare-assistant.snapshot.v1"
+  },
+  "scope": "web_policy",
+  "snapshot_version": "b4834677a41abee7c6d1933ffd1f337e22fcadbc5f88442ccfc2b7ee3a84d59e",
+  "snapshot_version_short": "b4834677a41a"
+}

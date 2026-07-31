@@ -20,6 +20,17 @@ class TestAgencyDetection:
         found = detect_agencies("Is the senior discount age the same on MST and Yolobus?")
         assert set(found) == {"MST", "Yolobus"}
 
+    def test_order_depends_on_text_not_alias_mapping_insertion(self):
+        aliases = {"mst": "MST", "sbmtd": "SBMTD"}
+        reversed_aliases = dict(reversed(list(aliases.items())))
+        question = "Compare SBMTD with MST fares."
+
+        assert detect_agencies(question, aliases=aliases) == ["SBMTD", "MST"]
+        assert detect_agencies(question, aliases=reversed_aliases) == ["SBMTD", "MST"]
+
+    def test_explicit_empty_alias_mapping_detects_nothing(self):
+        assert detect_agencies("MST fare", aliases={}) == []
+
     def test_spanish_query_expansion(self):
         expanded = _expand_query(["pasaje", "reducido", "yolobus"])
         assert "fare" in expanded and "reduced" in expanded

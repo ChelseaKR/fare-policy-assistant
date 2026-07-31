@@ -1,9 +1,9 @@
-"""Agency operator console (EXP-09): auth, version history/diff, config
-actions against the rider Lambda, and the eval-report passthrough.
+"""Agency operator console (EXP-09): auth, version history/diff, immutable
+live-release status, and the eval-report passthrough.
 
-The AWS-facing actions (pin, embed-config) are exercised against a fake
-Lambda client (`_client_factory`), never real AWS, so the suite stays
-offline like the rest of the repo's tests.
+AWS reads are exercised against a fake Lambda client (`_client_factory`), never
+real AWS. Configuration POSTs are held fail-closed until an approved promotion
+workflow exists.
 """
 
 from __future__ import annotations
@@ -39,17 +39,27 @@ def _event(method="GET", path="/console/api/status", headers=None, body=None, qs
 
 
 class FakeLambdaClient:
-    def __init__(self, env: dict | None = None):
-        self.env = dict(env or {"FPA_PROVIDER": "bedrock"})
-        self.updated_with = None
+    def __init__(self, env: dict | None = None, *, version: str = "4"):
+        self.env = dict(
+            env
+            or {
+                "FPA_PROVIDER": "bedrock",
+                "FPA_PINNED_CORPUS_VERSION": "0938fff0539a",
+                "FPA_DISABLED_DOC_IDS": "yolobus-fares",
+            }
+        )
+        self.version = version
+        self.calls: list[tuple] = []
 
-    def get_function_configuration(self, FunctionName):  # noqa: N803 (boto3 shape)
-        return {"Environment": {"Variables": dict(self.env)}}
+    def get_alias(self, FunctionName, Name):  # noqa: N803 (boto3 shape)
+        self.calls.append(("get_alias", FunctionName, Name))
+        return {"FunctionVersion": self.version, "RevisionId": "alias-revision"}
 
-    def update_function_configuration(self, FunctionName, Environment):  # noqa: N803
-        self.updated_with = FunctionName
-        self.env = dict(Environment["Variables"])
-        return {}
+    def get_function_configuration(  # noqa: N803 (boto3 shape)
+        self, FunctionName, Qualifier=None
+    ):
+        self.calls.append(("get_function_configuration", FunctionName, Qualifier))
+        return {"Version": self.version, "Environment": {"Variables": dict(self.env)}}
 
 
 @pytest.fixture
@@ -68,7 +78,7 @@ class TestAuth:
         resp = console.console_handler(_event())
         assert resp["statusCode"] == 401
 
-    def test_ssm_parameter_token_is_accepted(self, monkeypatch):
+    def test_ssm_parameter_token_is_accepted(self, monkeypatch, fake_client):
         class FakeSSM:
             def get_parameter(self, **kwargs):
                 assert kwargs == {"Name": "/fare-policy-assistant/token", "WithDecryption": True}
@@ -100,7 +110,7 @@ class TestAuth:
         resp = console.console_handler(_event(headers={"authorization": "Bearer nope"}))
         assert resp["statusCode"] == 401
 
-    def test_correct_token_accepted(self):
+    def test_correct_token_accepted(self, fake_client):
         resp = console.console_handler(_event())
         assert resp["statusCode"] == 200
 
@@ -132,13 +142,57 @@ class TestAuth:
 
 
 class TestStatus:
-    def test_status_reports_corpus_and_pin(self, monkeypatch):
-        monkeypatch.delenv("FPA_PINNED_CORPUS_VERSION", raising=False)
+    def test_status_reads_the_qualified_live_release(self, fake_client):
         resp = console.console_handler(_event(path="/console/api/status"))
         data = json.loads(resp["body"])
-        assert len(data["corpus"]["corpus_version"]) == 12
-        assert data["pinned"] is None
-        assert data["embed_ancestors"] == "'self'"
+        assert len(data["available_corpus"]["corpus_version"]) == 12
+        assert data["live"] == {
+            "alias": "live",
+            "function_version": "4",
+            "pinned_corpus_version": "0938fff0539a",
+            "disabled_documents": ["yolobus-fares"],
+            "embed_ancestors": "'self'",
+        }
+        assert fake_client.calls == [
+            ("get_alias", "fare-policy-assistant-demo", "live"),
+            ("get_function_configuration", "fare-policy-assistant-demo", "live"),
+        ]
+
+    def test_status_fails_if_alias_changes_during_read(self, monkeypatch, fake_client):
+        def changed_config(FunctionName, Qualifier=None):  # noqa: N803
+            return {"Version": "5", "Environment": {"Variables": {}}}
+
+        monkeypatch.setattr(fake_client, "get_function_configuration", changed_config)
+        resp = console.console_handler(_event(path="/console/api/status"))
+        assert resp["statusCode"] == 500
+
+    def test_status_fails_closed_for_weighted_live_alias(self, monkeypatch, fake_client):
+        def weighted_alias(FunctionName, Name):  # noqa: N803
+            return {
+                "FunctionVersion": "4",
+                "RoutingConfig": {"AdditionalVersionWeights": {"3": 0.1}},
+            }
+
+        monkeypatch.setattr(fake_client, "get_alias", weighted_alias)
+        resp = console.console_handler(_event(path="/console/api/status"))
+        assert resp["statusCode"] == 500
+
+
+class TestConsoleDeploymentPolicy:
+    def test_console_is_read_only_and_bound_to_live_alias(self):
+        text = (console.config.REPO_ROOT / "infra" / "deploy-console.sh").read_text(
+            encoding="utf-8"
+        )
+        assert "lambda:GetAlias" in text
+        assert "lambda:GetFunctionConfiguration" in text
+        assert "lambda:UpdateFunctionConfiguration" not in text
+        assert "FPA_RIDER_ALIAS=live" in text
+        assert 'function:$RIDER_FN:live"' in text
+        live_statement = text.split('"Action": "lambda:GetFunctionConfiguration"', 1)[1].split(
+            "}", 1
+        )[0]
+        assert 'function:$RIDER_FN:live"' in live_statement
+        assert 'function:$RIDER_FN"' not in live_statement
 
 
 class TestVersionsAndDiff:
@@ -207,8 +261,7 @@ class TestVersionsAndDiff:
 
 
 class TestPin:
-    def test_pin_updates_rider_env_without_clobbering_other_keys(self, fake_client):
-        fake_client.env["FPA_ANSWER_MODEL"] = "keep-me"
+    def test_pin_is_rejected_until_an_approved_promotion_workflow_exists(self, fake_client):
         resp = console.console_handler(
             _event(
                 method="POST",
@@ -216,39 +269,19 @@ class TestPin:
                 body={"corpus_version": "deadbeefcafe"},
             )
         )
-        assert resp["statusCode"] == 200
+        assert resp["statusCode"] == 409
         data = json.loads(resp["body"])
-        assert data["pinned"] == "deadbeefcafe"
-        assert fake_client.updated_with == "fare-policy-assistant-demo"
-        assert fake_client.env["FPA_ANSWER_MODEL"] == "keep-me"
-        assert fake_client.env["FPA_PINNED_CORPUS_VERSION"] == "deadbeefcafe"
-
-    def test_pin_rejects_non_hex_version(self, fake_client):
-        resp = console.console_handler(
-            _event(method="POST", path="/console/api/pin", body={"corpus_version": "not hex!"})
-        )
-        assert resp["statusCode"] == 400
-        assert fake_client.updated_with is None
-
-    def test_pin_missing_field_400(self, fake_client):
-        resp = console.console_handler(_event(method="POST", path="/console/api/pin", body={}))
-        assert resp["statusCode"] == 400
-
-    def test_pin_without_rider_function_name_500(self, monkeypatch, fake_client):
-        monkeypatch.delenv("FPA_RIDER_FUNCTION_NAME", raising=False)
-        resp = console.console_handler(
-            _event(method="POST", path="/console/api/pin", body={"corpus_version": "abc123"})
-        )
-        assert resp["statusCode"] == 500
+        assert data["code"] == "immutable_release_requires_promotion"
+        assert fake_client.calls == []
 
 
 class TestEmbedConfig:
-    def test_get_defaults_to_self(self, monkeypatch):
-        monkeypatch.delenv("FPA_EMBED_ANCESTORS", raising=False)
+    def test_get_reads_live_alias_configuration(self, fake_client):
+        fake_client.env["FPA_EMBED_ANCESTORS"] = "https://mst.org"
         resp = console.console_handler(_event(path="/console/api/embed-config"))
-        assert json.loads(resp["body"])["ancestors"] == "'self'"
+        assert json.loads(resp["body"])["ancestors"] == "https://mst.org"
 
-    def test_post_updates_rider_env(self, fake_client):
+    def test_post_is_rejected_until_an_approved_promotion_workflow_exists(self, fake_client):
         resp = console.console_handler(
             _event(
                 method="POST",
@@ -256,27 +289,10 @@ class TestEmbedConfig:
                 body={"ancestors": "https://mst.org https://sbmtd.gov"},
             )
         )
-        assert resp["statusCode"] == 200
+        assert resp["statusCode"] == 409
         data = json.loads(resp["body"])
-        assert data["ancestors"] == "https://mst.org https://sbmtd.gov"
-        assert fake_client.env["FPA_EMBED_ANCESTORS"] == "https://mst.org https://sbmtd.gov"
-
-    def test_post_rejects_non_https_origin(self, fake_client):
-        resp = console.console_handler(
-            _event(
-                method="POST",
-                path="/console/api/embed-config",
-                body={"ancestors": "http://insecure.example"},
-            )
-        )
-        assert resp["statusCode"] == 400
-        assert fake_client.updated_with is None
-
-    def test_post_rejects_empty(self, fake_client):
-        resp = console.console_handler(
-            _event(method="POST", path="/console/api/embed-config", body={"ancestors": "   "})
-        )
-        assert resp["statusCode"] == 400
+        assert data["code"] == "immutable_release_requires_promotion"
+        assert fake_client.calls == []
 
 
 class TestEvalReport:
