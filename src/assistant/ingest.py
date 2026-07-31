@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sys
+import tempfile
 import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -302,24 +304,30 @@ def process_all() -> None:
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     all_chunks: list[Chunk] = []
 
+    # Capture and validate every source before deriving any chunks. The same
+    # retained bytes are passed to archive_snapshot below, so a concurrent
+    # fetch cannot make the archive describe different bytes from those parsed.
+    # Local import avoids the snapshots -> ingest Chunk dependency at module
+    # initialization time.
+    from assistant.snapshots import archive_snapshot, capture_source_material
+
+    captured_sources = capture_source_material(manifest, config.RAW_DIR)
+    sources_by_id = {source.observation.doc_id: source for source in captured_sources}
+
     for doc in manifest["documents"]:
-        fmt = doc.get("format", "html")
-        raw_path = config.RAW_DIR / f"{doc['id']}.{'pdf' if fmt == 'pdf' else 'html'}"
-        meta_path = config.RAW_DIR / f"{doc['id']}.meta.yaml"
-        if not raw_path.exists():
-            print(f"skip  {doc['id']} (no snapshot; run `make fetch`)", file=sys.stderr)
-            continue
-        meta = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+        source = sources_by_id[doc["id"]]
+        observation = source.observation
+        fmt = observation.effective_format
         if fmt == "pdf":
             sections = sections_from_text(
-                extract_pdf_text(raw_path.read_bytes(), ocr=doc.get("ocr", False))
+                extract_pdf_text(source.raw_bytes, ocr=doc.get("ocr", False))
             )
         else:
-            sections = sections_from_html(raw_path.read_text(encoding="utf-8", errors="replace"))
+            sections = sections_from_html(source.raw_bytes.decode("utf-8", errors="replace"))
 
         md_lines = [
             f"# {doc['title']} — {doc['agency']}",
-            f"Source: {doc['url']} (fetched {meta['fetch_date']})",
+            f"Source: {doc['url']} (fetched {observation.chunk_fetch_date})",
             "",
         ]
         for i, (heading, body) in enumerate(sections):
@@ -330,7 +338,7 @@ def process_all() -> None:
                 agency_full=doc["agency_full"],
                 doc_title=doc["title"],
                 url=doc["url"],
-                fetch_date=meta["fetch_date"],
+                fetch_date=observation.chunk_fetch_date,
                 language=doc.get("language", "en"),
                 section=heading,
                 text=body,
@@ -340,21 +348,58 @@ def process_all() -> None:
         (config.PROCESSED_DIR / f"{doc['id']}.md").write_text("\n".join(md_lines), encoding="utf-8")
         print(f"ok    {doc['id']}: {len(sections)} sections")
 
-    with config.CHUNKS_PATH.open("w", encoding="utf-8") as f:
-        for chunk in all_chunks:
-            f.write(json.dumps(asdict(chunk), ensure_ascii=False) + "\n")
+    # Local import: assistant.corpus imports Chunk/load_manifest/load_chunks from
+    # this module, so importing it at module scope here would be circular.
+    # Publish a complete source snapshot before the live chunks can change.
+    # A failed/torn archive therefore leaves the prior serving corpus intact.
+    from assistant.corpus import archive_version
+
+    snapshot = archive_snapshot(
+        all_chunks,
+        manifest,
+        sources=captured_sources,
+    )
+
+    # Keep the processed-only 12-character archive for compatibility while
+    # schema-2 snapshot identity rolls out additively.
+    legacy_version = archive_version(all_chunks, manifest)
+    _replace_chunks_atomically(all_chunks)
     print(f"\nwrote {len(all_chunks)} chunks → {config.CHUNKS_PATH}")
+    print(
+        "archived source snapshot "
+        f"{snapshot.snapshot_version} → {config.SNAPSHOTS_DIR / snapshot.snapshot_version}"
+    )
+    print(
+        f"archived legacy corpus version {legacy_version} → {config.VERSIONS_DIR / legacy_version}"
+    )
 
     build_facts()
 
-    # Local import: assistant.corpus imports Chunk/load_manifest/load_chunks from
-    # this module, so importing it at module scope here would be circular.
-    # Retain this content under corpus/versions/<id>/ (EXP-05) so a past eval
-    # run's exact corpus stays loadable by version id after a later re-ingest.
-    from assistant.corpus import archive_version
 
-    version = archive_version(all_chunks, manifest)
-    print(f"archived corpus version {version} → {config.VERSIONS_DIR / version}")
+def _replace_chunks_atomically(chunks: list[Chunk]) -> None:
+    """Durably replace the live chunk index after its archives are verified."""
+    config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=".chunks.",
+        suffix=".jsonl",
+        dir=config.PROCESSED_DIR,
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            for chunk in chunks:
+                handle.write(json.dumps(asdict(chunk), ensure_ascii=False) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, config.CHUNKS_PATH)
+        directory = os.open(config.PROCESSED_DIR, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 def build_facts() -> None:

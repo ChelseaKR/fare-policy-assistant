@@ -26,6 +26,17 @@ import httpx
 from assistant import config
 from assistant.telemetry import genai_call
 
+_HOSTED_TIMEOUT = httpx.Timeout(timeout=10 * 60, connect=5.0)
+
+
+def _isolated_hosted_http_client() -> httpx.Client:
+    """Match the SDK timeout while ignoring ambient proxy and CA overrides."""
+    return httpx.Client(
+        timeout=_HOSTED_TIMEOUT,
+        follow_redirects=True,
+        trust_env=False,
+    )
+
 
 @dataclass
 class Completion:
@@ -77,7 +88,12 @@ class AnthropicModel:
         import anthropic
 
         self.model = model
-        self._client = anthropic.Anthropic()
+        transport = config.resolve_provider_transport("anthropic")
+        assert transport.base_url is not None
+        self._client = anthropic.Anthropic(
+            base_url=transport.base_url,
+            http_client=_isolated_hosted_http_client(),
+        )
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
         with genai_call("anthropic", self.model) as call:
@@ -126,14 +142,16 @@ class BedrockModel:
     """
 
     def __init__(self, model: str):
-        import os
-
         import anthropic
 
         self.model = model
-        # Default region matches the CI configuration; AWS_REGION overrides.
+        transport = config.resolve_provider_transport("bedrock")
+        assert transport.aws_region is not None
+        assert transport.base_url is not None
         self._client = anthropic.AnthropicBedrock(
-            aws_region=os.environ.get("AWS_REGION", "us-west-2")
+            aws_region=transport.aws_region,
+            base_url=transport.base_url,
+            http_client=_isolated_hosted_http_client(),
         )
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
@@ -190,15 +208,18 @@ class LocalModel:
     """
 
     def __init__(self, model: str):
-        import os
-
         self.model = model
-        host = os.environ.get("FPA_OLLAMA_HOST", "http://localhost:11434")
+        transport = config.resolve_provider_transport("local")
+        assert transport.base_url is not None
         # Local generation on modest kiosk hardware can be slow; a long
         # timeout avoids flagging a slow-but-working answer as a backend
         # failure. No retries — a kiosk should fail fast and fall back to
         # EXP-07's no-model guide rather than hang.
-        self._client = httpx.Client(base_url=host, timeout=120.0)
+        self._client = httpx.Client(
+            base_url=transport.base_url,
+            timeout=120.0,
+            trust_env=False,
+        )
 
     def complete(self, system: str, user: str, max_tokens: int, temperature: float) -> Completion:
         with genai_call("ollama", self.model) as call:

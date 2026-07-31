@@ -161,6 +161,10 @@ jobs:
       - name: Full eval run
         run: uv run python -m evals.runner --full
       - name: Upload report
+        # Failure evidence is most valuable when the release gate is red.
+        # Preserve the partial report, traces, and provenance even when the
+        # preceding evaluator exits non-zero.
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: eval-report

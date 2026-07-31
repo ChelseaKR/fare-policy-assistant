@@ -196,7 +196,8 @@ def _have_credentials(provider: str) -> bool:
         # normal --offline fallback below applies instead of hanging.
         import httpx
 
-        host = os.environ.get("FPA_OLLAMA_HOST", "http://localhost:11434")
+        host = config.resolve_provider_transport("local").base_url
+        assert host is not None
         try:
             return httpx.get(f"{host}/api/version", timeout=2.0).status_code == 200
         except httpx.HTTPError:

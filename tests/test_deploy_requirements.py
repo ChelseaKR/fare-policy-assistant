@@ -23,6 +23,7 @@ from typing import Any
 from assistant import config
 
 DEPLOY_SH = config.REPO_ROOT / "infra" / "deploy.sh"
+ZIP_BUILDER = config.REPO_ROOT / "scripts" / "build_lambda_zip.py"
 REQUIREMENTS = config.REPO_ROOT / "infra" / "requirements-deploy.txt"
 UV_LOCK = config.REPO_ROOT / "uv.lock"
 
@@ -161,3 +162,82 @@ class TestDeployScriptUsesThePinFile:
             "deploy.sh must not install from inline version ranges; "
             "pin in infra/requirements-deploy.txt instead (M-7/P1-6)"
         )
+
+    def test_uses_the_reproducible_zip_builder(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert ZIP_BUILDER.is_file()
+        assert "uv run python scripts/build_lambda_zip.py" in text
+        assert "zip -q" not in text
+
+    def test_deployment_pins_corpus_and_contains_expired_yolobus_source(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+        assert "FPA_PINNED_CORPUS_VERSION" in text
+        assert "corpus_version; print(corpus_version())" in text
+        assert 'DISABLED_DOC_IDS="yolobus-fares"' in text
+        assert '"FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"]' in text
+        assert 'HISTORY_HMAC_KEY="$(openssl rand -hex 32)"' in text
+        assert '"FPA_HISTORY_HMAC_KEY": history_key' in text
+        assert '"FPA_HISTORY_HMAC_KEY_ID": history_key_id' in text
+        assert '--output "$BUNDLE/release/release.json"' in text
+
+    def test_deployment_preserves_existing_lambda_environment_and_history_key(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert "get-function-configuration" in text
+        assert "EXISTING_LAMBDA_ENV" in text
+        assert "ResourceNotFoundException" in text
+        assert "refusing to deploy" in text
+        assert "2>/dev/null || printf '{}'" not in text
+        assert "EXISTING_HISTORY_HMAC_KEY" in text
+        assert 'elif [[ -n "$EXISTING_HISTORY_HMAC_KEY" ]]' in text
+        assert "values.update(" in text
+
+    def test_disabled_document_list_can_be_explicitly_empty_and_ids_are_validated(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert "[[ ${FPA_DISABLED_DOC_IDS+x} ]]" in text
+        assert 'if [[ -n "$DISABLED_DOC_IDS"' in text
+        assert "unknown disabled document id(s)" in text
+
+    def test_existing_deploy_captures_rollback_and_applies_config_before_code(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+        lambda_block = text.split("# ── Lambda", 1)[1].split(
+            "# Hard ceiling on parallel Bedrock spend", 1
+        )[0]
+
+        assert "fare-assistant-rollback.XXXXXX" in lambda_block
+        assert 'configuration.json"' in lambda_block
+        assert 'function.zip"' in lambda_block
+        assert (
+            'assert_managed_release_config "$PUBLISHED_CONFIG" "published version"' in lambda_block
+        )
+        assert lambda_block.index("update-function-configuration") < lambda_block.index(
+            "update-function-code"
+        )
+
+    def test_model_metrics_count_completed_calls_and_estimated_cost(self):
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        # Keep the legacy proxy for one rollback-compatible release while the
+        # structured metrics become the primary cost and completion signals.
+        assert "_metric_filter bedrock-calls '{ $.model_called IS TRUE }'" in text
+        assert 'GENAI_CALL_FILTER=\'{ $.event = "genai_call"' in text
+        assert "completion_recorded IS TRUE" in text
+        assert 'MODEL_COST_FILTER=\'{ $.event = "genai_call"' in text
+        assert "cost_estimate_available IS TRUE" in text
+        assert "metricName=EstimatedModelCostUsd" in text
+        assert r"metricValue=\$.estimated_cost_usd" in text
+        model_duration = next(
+            line for line in text.splitlines() if "metricName=ModelDurationMs" in line
+        )
+        answer_duration = next(
+            line for line in text.splitlines() if "metricName=AnswerDurationMs" in line
+        )
+        assert r"metricValue=\$.model_duration_ms" in model_duration
+        assert r"metricValue=\$.duration_ms" in answer_duration
+        assert "defaultValue" not in model_duration
+        assert "defaultValue" not in answer_duration
+        assert 'FEEDBACK_DOWN_V2_FILTER=\'{ $.event = "feedback"' in text
+        assert '.verdict = "down"' in text
+        assert "--filter-pattern '{ $.cache = \"miss\" }'" not in text

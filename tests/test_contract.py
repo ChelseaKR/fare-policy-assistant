@@ -12,6 +12,13 @@ _CITATION = Citation(
     url="https://mst.org/fares/",
     fetch_date="2026-06-12",
 )
+_BENEFITS_CITATION = Citation(
+    doc_id="mst-fares-benefits",
+    agency="MST",
+    title="MST Benefits",
+    url="https://mst.org/benefits/",
+    fetch_date="2026-06-12",
+)
 
 
 def _answered(text: str, citations=None) -> AnswerResult:
@@ -83,6 +90,19 @@ class TestBuildStructuredAnswer:
         result = _answered("The fare is $2.00 [doc:mst-fares].")
         structured = build_structured_answer(result)
         assert "[doc:" not in structured.criterion
+
+    def test_combined_citation_is_stripped_and_all_proof_docs_are_extracted(self):
+        result = _answered(
+            "Bring an ID card [doc:mst-fares, doc:mst-fares-benefits] to apply.",
+            citations=[_CITATION, _BENEFITS_CITATION],
+        )
+        structured = build_structured_answer(result)
+
+        assert "[doc:" not in structured.criterion
+        assert {proof.doc_id for proof in structured.proof_docs} == {
+            "mst-fares",
+            "mst-fares-benefits",
+        }
 
     def test_refusal_kind_populates_criterion_from_decline_message(self):
         result = AnswerResult(

@@ -33,6 +33,12 @@
     margin: 1rem 0;
     font-size: 0.95rem;
   }
+  .banner p { margin: 0; }
+  .banner .snapshot-note {
+    border-top: 1px solid var(--notice-line);
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+  }
   h1 { font-size: 1.5rem; margin: 1.2rem 0 0.3rem; }
   .sub { color: var(--muted); margin: 0 0 1rem; }
   .card {
@@ -52,6 +58,11 @@
     padding: 0.5rem 0.75rem;
     margin: 0.5rem 0;
   }
+  .eval-figure p { margin: 0.25rem 0; }
+  .eval-alert {
+    border-left: 4px solid #991b1b;
+    padding-left: 0.65rem;
+  }
   ul { margin: 0.3rem 0 0.3rem 1.2rem; padding: 0; }
   label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
   textarea {
@@ -65,9 +76,11 @@
     color: #1a1f24;
   }
   .field-help { color: var(--muted); margin: 0.35rem 0 0; font-size: 0.9rem; }
-  textarea:focus-visible, button:focus-visible, a:focus-visible {
-    outline: 3px solid #1d4ed8;
-    outline-offset: 2px;
+  textarea:focus-visible, button:focus-visible, a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 4px solid #1d4ed8;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff;
   }
   .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-top: 0.7rem; }
   button {
@@ -93,6 +106,15 @@
   #reset { font-size: 0.85rem; padding: 0.3rem 0.7rem; min-height: 1.75rem; }
   .turn { border-top: 1px solid var(--line); padding-top: 0.8rem; margin-top: 0.8rem; }
   .turn:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  /* A newly appended turn receives programmatic focus so keyboard and screen
+     reader users land on the answer. Keep that focus visible even when a
+     browser does not apply :focus-visible to script-initiated focus. */
+  .turn:focus {
+    outline: 4px solid #1d4ed8;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff;
+    border-radius: 4px;
+  }
   .turn .q { font-weight: 600; margin: 0 0 0.4rem; }
   .turn .q::before { content: "You: "; color: var(--muted); font-weight: 400; }
   .sources { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.6rem; font-size: 0.95rem; }
@@ -153,17 +175,21 @@
 <body>
 <main>
   <div class="banner" role="note">
-    <strong>Reference implementation.</strong> This is a portfolio demonstration of how to test
-    an AI assistant, not an official service of any transit agency. Verify anything important
-    with the agency directly.
+    <p><strong>Reference implementation.</strong> This is a portfolio demonstration of how to
+      test an AI assistant, not an official service of any transit agency. Verify anything
+      important with the agency directly.</p>
+    <p class="snapshot-note" id="snapshot-note"><strong>Snapshot-backed, not live.</strong>
+      Answers use dated copies of published agency policy pages, not the agencies' live
+      websites. Every answer shows its source dates; confirm current fares and deadlines
+      with the agency.</p>
   </div>
 
   <h1>Transit Fare Policy Assistant</h1>
   <p class="sub">
     Answers questions about published fare and reduced-fare policies for five California
     transit agencies: Monterey-Salinas Transit (MST), Santa Barbara MTD, Yolobus, SacRT,
-    and Humboldt Transit.
-    Based on policies published as of June 12, 2026. You can ask in English or Spanish.
+    and Humboldt Transit. Every answer cites the dated policy snapshots it used.
+    You can ask in English or Spanish.
   </p>
 
   <div class="display-settings" role="region" aria-label="Display settings">
@@ -191,15 +217,22 @@
        The linked report is always the source of truth. -->
   <section class="card" aria-labelledby="tested">
     <h2 id="tested">How this assistant is tested</h2>
-    <p>The evaluation harness is the point of this project. Every release runs
-      <strong>201 test cases across nine suites</strong> — groundedness,
-      refusal, eligibility edge cases, Spanish parity, and freshness — scored by
-      deterministic checks and an independent LLM judge, one that differs from
-      the model writing the answers.</p>
-    <p class="eval-figure"><strong>Latest run: 192 of 201 passed (95.5%).</strong>
-      The harness is reproducible, and the failures are published in full rather
-      than hidden.</p>
-    <p><a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/EVALS.md">Read the full evaluation report</a></p>
+    <p>The evaluation harness is the point of this project. A full research run
+      has <strong>186 production-core cases plus 15 experimental Tagalog stretch
+      cases</strong> across nine suites — groundedness, refusal, eligibility edge
+      cases, Spanish parity, and freshness — scored by deterministic checks and
+      an independent LLM judge, one that differs from the model writing the
+      answers.</p>
+    <div class="eval-figure" role="note" aria-label="Evaluation status">
+      <p><strong>Committed promoted baseline: 192 of 201 passed (95.5%).</strong>
+        This is the reproducible comparison point in the repository, not the
+        latest observed run.</p>
+      <p class="eval-alert"><strong>Latest observed run: 190 of 201 overall;
+        175 of 186 production-core cases.</strong> Its cross-agency suite is
+        below the promotion gate, so the current evaluation status is red and
+        this run has not replaced the baseline.</p>
+    </div>
+    <p><a href="https://evals.chelseakr.com/">Explore the public evaluation evidence hub</a></p>
   </section>
 
   <section class="card" aria-labelledby="ask">
@@ -218,7 +251,7 @@
       <button type="button" data-q="¿Cuánto cuesta el pasaje reducido en Yolobus?">Pasaje reducido, Yolobus</button>
       <button type="button" data-q="Does MST cap how much I pay per day?">Daily fare cap, MST</button>
     </div>
-    <p id="status" role="status" aria-live="polite"></p>
+    <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
   </section>
 
   <section class="card" id="result" hidden aria-labelledby="result-h">
@@ -226,18 +259,23 @@
       <h2 id="result-h">Conversation</h2>
       <button type="button" id="reset" hidden>Start over</button>
     </div>
-    <div id="transcript"></div>
+    <div id="transcript" role="log" aria-live="polite" aria-relevant="additions"
+      aria-label="Assistant conversation" aria-busy="false"></div>
   </section>
 
   <footer>
-    <p>Nothing you type is stored. Questions are answered and then discarded.</p>
+    <p>Questions and conversation history are processed transiently. Their raw
+      text is not logged or used as a cache key. Successful answer payloads may
+      remain in a small in-memory cache until the serverless container is
+      recycled; refused, guarded, or personal-information-like inputs are not
+      cached.</p>
     <p>No signal at the stop? Save the
       <a href="/offline">offline fare reference</a> ahead of your trip.</p>
     <p>Prefer to browse instead of chat? Try the
       <a href="/guide">guided fare finder</a> — no typing required.</p>
     <p>
       <a href="https://github.com/ChelseaKR/fare-policy-assistant">Source code</a> ·
-      <a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/EVALS.md">How it is tested</a> ·
+      <a href="https://evals.chelseakr.com/">Evaluation evidence hub</a> ·
       <a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/model-card.md">Model card</a>
     </p>
   </footer>
@@ -329,9 +367,10 @@
     return " Fetched about " + Math.round(days / 30) + " months ago — confirm current fares with the agency.";
   }
 
-  // Answers are plain text with [doc:id] markers, **bold**, and "- " bullets.
+  // Answers are plain text with single or combined [doc:id] markers, **bold**,
+  // and "- " bullets.
   function render(text) {
-    var cleaned = text.replace(/\s*\[doc:[a-z0-9-]+\]/g, "");
+    var cleaned = text.replace(/\s*\[doc:[a-z0-9-]+(?:,\s*doc:[a-z0-9-]+)*\]/g, "");
     var lines = cleaned.split(/\n/);
     var html = "";
     var inList = false;
@@ -346,71 +385,6 @@
     });
     if (inList) { html += "</ul>"; }
     return html;
-  }
-
-  // EXP-04 (structured answer contract): when the server could parse the
-  // answer into the typed shape (docs/answer-contract.schema.json), render it
-  // as labeled regions instead of one prose block — semantic headings a
-  // screen reader can jump between (persona F-9), not just a text wall. Only
-  // used for kind "answered"; refusals stay a single prose paragraph, since
-  // there is nothing to section. `data.structured` is null whenever the
-  // deterministic parse failed validation server-side, so this always has a
-  // real prose fallback below it, never a silent gap.
-  function renderStructured(structured) {
-    var frag = document.createDocumentFragment();
-
-    if (structured.criterion) {
-      var critH = document.createElement("h3");
-      critH.textContent = "Published criteria";
-      frag.appendChild(critH);
-      var crit = document.createElement("p");
-      crit.textContent = structured.criterion;
-      frag.appendChild(crit);
-    }
-
-    if (structured.prices.length) {
-      var priceH = document.createElement("h3");
-      priceH.textContent = "Prices";
-      frag.appendChild(priceH);
-      var priceUl = document.createElement("ul");
-      structured.prices.forEach(function (p) {
-        var li = document.createElement("li");
-        li.textContent = "$" + p.amount + " — " + p.context;
-        priceUl.appendChild(li);
-      });
-      frag.appendChild(priceUl);
-    }
-
-    if (structured.proof_docs.length) {
-      var proofH = document.createElement("h3");
-      proofH.textContent = "Proof you may need";
-      frag.appendChild(proofH);
-      var proofUl = document.createElement("ul");
-      structured.proof_docs.forEach(function (pd) {
-        var li = document.createElement("li");
-        li.textContent = pd.context;
-        proofUl.appendChild(li);
-      });
-      frag.appendChild(proofUl);
-    }
-
-    if (structured.next_step) {
-      var stepH = document.createElement("h3");
-      stepH.textContent = "Next step";
-      frag.appendChild(stepH);
-      var step = document.createElement("p");
-      step.textContent = structured.next_step;
-      frag.appendChild(step);
-    }
-
-    if (structured.decision_owner) {
-      var owner = document.createElement("p");
-      owner.className = "asof";
-      owner.textContent = "Who decides: " + structured.decision_owner + ", not this assistant.";
-      frag.appendChild(owner);
-    }
-
-    return frag;
   }
 
   // Privacy-safe feedback: sends only the verdict, the response kind, and the
@@ -442,6 +416,8 @@
   function appendTurn(question, data) {
     var turn = document.createElement("div");
     turn.className = "turn";
+    turn.setAttribute("role", "article");
+    turn.setAttribute("aria-label", "Conversation turn " + (conversation.length + 1));
 
     var q = document.createElement("p");
     q.className = "q";
@@ -449,11 +425,11 @@
     turn.appendChild(q);
 
     var ans = document.createElement("div");
-    if (data.kind === "answered" && data.structured) {
-      ans.appendChild(renderStructured(data.structured));
-    } else {
-      ans.innerHTML = render(data.answer);
-    }
+    // The API may expose an additive `structured` field for integration
+    // experiments. The public beta intentionally renders only the reviewed
+    // prose answer until that presentation contract has its own eval gate.
+    ans.innerHTML = render(data.answer);
+    ans.setAttribute("aria-label", "Assistant answer");
     ans.setAttribute("lang", data.language || "en");
     turn.appendChild(ans);
 
@@ -490,6 +466,7 @@
     transcript.appendChild(turn);
     result.hidden = false;
     reset.hidden = false;
+    transcript.setAttribute("aria-busy", "false");
     turn.setAttribute("tabindex", "-1");
     turn.focus();
   }
@@ -498,7 +475,12 @@
     ev.preventDefault();
     var question = input.value.trim();
     if (!question) { return; }
+    // Remove rider text from the editable DOM as soon as the transient request
+    // value has been captured. A refused personal-information input is never
+    // reinserted into the transcript below.
+    input.value = "";
     submit.disabled = true;
+    transcript.setAttribute("aria-busy", "true");
     status.textContent = conversation.length
       ? "Following up…" : "Looking through the published policies…";
     status.className = "";
@@ -512,20 +494,26 @@
     }).then(function (r) {
       submit.disabled = false;
       if (!r.ok) {
+        transcript.setAttribute("aria-busy", "false");
         status.textContent = r.data.error || "Something went wrong. Please try again.";
         status.className = "error";
         return;
       }
       status.textContent = "";
-      appendTurn(question, r.data);
+      appendTurn(
+        r.data.kind === "refused_input" ? "Question withheld for privacy." : question,
+        r.data
+      );
       // Store the whole turn, including the server's optional HMAC `sig` when
       // present, so it is echoed back verbatim with the next follow-up. When the
       // server issues no sig (default demo) the field is simply undefined and
       // JSON.stringify drops it.
-      conversation.push({ q: question, a: r.data.answer, sig: r.data.sig });
-      input.value = "";
+      if (r.data.kind === "answered") {
+        conversation.push({ q: question, a: r.data.answer, sig: r.data.sig });
+      }
     }).catch(function () {
       submit.disabled = false;
+      transcript.setAttribute("aria-busy", "false");
       status.textContent = "Could not reach the service. Please try again.";
       status.className = "error";
     });

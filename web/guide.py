@@ -38,7 +38,13 @@ import sys
 from pathlib import Path
 
 from assistant.ingest import Chunk, load_chunks
-from web.offline import _esc, _group_by_agency, _group_by_doc
+from web.offline import (
+    _esc,
+    _group_by_agency,
+    _group_by_doc,
+    _snapshot_window,
+    _snapshot_window_text,
+)
 
 _STYLE = """
   * { box-sizing: border-box; }
@@ -64,7 +70,8 @@ _STYLE = """
   details.category { border-left: 3px solid #14532d; border-radius: 4px;
     margin: 0.6rem 0 0.6rem 0.2rem; padding: 0.4rem 0 0.4rem 0.7rem; background: #fafaf7; }
   details.category > summary { cursor: pointer; padding: 0.3rem 0.1rem; list-style: revert; }
-  summary:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+  summary:focus-visible { outline: 4px solid #1d4ed8; outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff; }
   .passage { white-space: pre-wrap; background: #fff; border: 1px solid #d6d3cb;
     border-radius: 6px; padding: 0.6rem 0.8rem; margin: 0.4rem 0 0.5rem; }
   .src { font-size: 0.88rem; color: #4d5860; }
@@ -76,8 +83,8 @@ _STYLE = """
     color: #fff; border-radius: 6px; padding: 0.55rem 1.1rem;
     /* WCAG 2.2 AA 2.5.8 Target Size (Minimum): at least 24px. */
     min-height: 2.5rem; cursor: pointer; }
-  button:focus-visible, a:focus-visible { outline: 3px solid #1d4ed8;
-    outline-offset: 2px; }
+  button:focus-visible, a:focus-visible { outline: 4px solid #1d4ed8;
+    outline-offset: 3px; box-shadow: 0 0 0 2px #ffffff; }
   footer { border-top: 1px solid #d6d3cb; margin-top: 2rem; padding-top: 1rem;
     font-size: 0.9rem; color: #4d5860; }
   @media print {
@@ -95,12 +102,17 @@ def _anchor(agency: str) -> str:
     return "agency-" + _ANCHOR_UNSAFE.sub("-", agency.lower()).strip("-")
 
 
-def render_guide(chunks: list[Chunk], as_of: str | None = None) -> str:
+def render_guide(
+    chunks: list[Chunk],
+    as_of: str | None = None,
+    *,
+    full_corpus_version: str | None = None,
+) -> str:
     from assistant.corpus import corpus_version
 
-    if as_of is None:
-        as_of = max((c.fetch_date for c in chunks), default="")
-    version = corpus_version(chunks)
+    snapshot_start, snapshot_end = _snapshot_window(chunks, as_of)
+    active_view_version = corpus_version(chunks)
+    full_version = full_corpus_version or corpus_version()
     by_agency = _group_by_agency(chunks)
 
     jump_items: list[str] = []
@@ -152,9 +164,10 @@ def render_guide(chunks: list[Chunk], as_of: str | None = None) -> str:
 <body>
 <main>
   <div class="banner" role="note">
-    <strong>Reference implementation.</strong> This is a portfolio demonstration,
-    not an official service of any transit agency. Confirm anything important with
-    the agency directly. Based on policies published as of {_esc(as_of)}.
+    <strong>Reference implementation: dated snapshots, not live agency pages.</strong>
+    {_snapshot_window_text(snapshot_start, snapshot_end)} This is a portfolio
+    reference implementation, not an official service. Fare policy can change;
+    confirm current fares and deadlines with the agency.
   </div>
   <h1>Which fare applies to me?</h1>
   <p>A guided walkthrough of published fare and reduced-fare categories, built
@@ -172,9 +185,11 @@ def render_guide(chunks: list[Chunk], as_of: str | None = None) -> str:
   {jump}
   {body}
   <footer>
-    <p>Based on policies published as of {_esc(as_of)}. Fare policy changes;
-      confirm time-sensitive details with the agency.</p>
-    <p>Corpus version {_esc(version)}.</p>
+    <p>This guide is based on policies published as of the snapshot dates shown.
+      {_snapshot_window_text(snapshot_start, snapshot_end)} These are saved
+      copies, not live agency pages.</p>
+    <p>Corpus version (full) {_esc(full_version)}; active page-view version
+      {_esc(active_view_version)} after operator source containment.</p>
     <p><a href="/">Back to the assistant</a> &middot;
       <a href="/offline">Full printable reference</a></p>
   </footer>

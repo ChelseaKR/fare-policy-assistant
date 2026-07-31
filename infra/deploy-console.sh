@@ -16,8 +16,8 @@
 # ── SECURITY: read this before handing the URL to an agency operator ────────
 # The bearer-token check in web/console.py is adequate for
 # a single-operator pilot but is not identity: anyone holding the token has
-# full console access (pin any known corpus version, rewrite the embed
-# allowlist). Before treating a deployment as production for a non-technical
+# read-only console access to release configuration and evaluation evidence.
+# Before treating a deployment as production for a non-technical
 # agency operator, put a real authorizer in front of this console's API
 # Gateway route:
 #
@@ -58,8 +58,8 @@ ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 rm -rf "$BUNDLE" "$BUILD/bundle.zip"
 mkdir -p "$BUNDLE/src" "$BUNDLE/corpus/processed" "$BUNDLE/web" "$BUNDLE/evals"
 
-# No model provider, no Bedrock: only the AWS SDK to read/write the rider
-# Lambda's configuration, plus the corpus/eval-report readers it shares with
+# No model provider, no Bedrock: only the AWS SDK to read the rider Lambda's
+# immutable live alias/configuration, plus the corpus/eval-report readers it shares with
 # the rest of assistant/.
 uv pip install --quiet --target "$BUNDLE" \
   --python-platform aarch64-manylinux2014 --python-version 3.12 --only-binary :all: \
@@ -79,9 +79,7 @@ fi
 
 (cd "$BUNDLE" && zip -qr "$BUILD/bundle.zip" . -x '*__pycache__*' -x '*.dist-info/RECORD')
 
-# ── IAM role: logs, plus the two rider-Lambda config calls the console makes,
-# scoped to exactly that one function's ARN — never lambda:* and never a
-# wildcard resource. ──────────────────────────────────────────────────────
+# ── IAM role: logs plus read-only access to the rider's live alias. ──────────
 TRUST='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
 POLICY=$(cat <<EOF
 {
@@ -94,8 +92,13 @@ POLICY=$(cat <<EOF
     },
     {
       "Effect": "Allow",
-      "Action": ["lambda:GetFunctionConfiguration", "lambda:UpdateFunctionConfiguration"],
+      "Action": "lambda:GetAlias",
       "Resource": "arn:aws:lambda:$REGION:$ACCOUNT:function:$RIDER_FN"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "lambda:GetFunctionConfiguration",
+      "Resource": "arn:aws:lambda:$REGION:$ACCOUNT:function:$RIDER_FN:live"
     },
     {
       "Effect": "Allow",
@@ -118,7 +121,7 @@ aws iam put-role-policy --role-name "$ROLE_NAME" \
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 
 # ── Lambda ───────────────────────────────────────────────────────────────────
-ENV_VARS="Variables={FPA_CONSOLE_TOKEN_PARAMETER_NAME=$CONSOLE_TOKEN_PARAMETER,FPA_RIDER_FUNCTION_NAME=$RIDER_FN}"
+ENV_VARS="Variables={FPA_CONSOLE_TOKEN_PARAMETER_NAME=$CONSOLE_TOKEN_PARAMETER,FPA_RIDER_FUNCTION_NAME=$RIDER_FN,FPA_RIDER_ALIAS=live}"
 if aws lambda get-function --function-name "$CONSOLE_FN" --region "$REGION" >/dev/null 2>&1; then
   aws lambda update-function-code --function-name "$CONSOLE_FN" --region "$REGION" \
     --architectures arm64 --zip-file "fileb://$BUILD/bundle.zip" >/dev/null
@@ -153,7 +156,7 @@ aws lambda add-permission --function-name "$CONSOLE_FN" --region "$REGION" \
   --source-arn "arn:aws:execute-api:$REGION:$ACCOUNT:$API_ID/*" \
   >/dev/null 2>&1 || true
 aws apigatewayv2 update-stage --region "$REGION" --api-id "$API_ID" \
-  --stage-name '$default' \
+  --stage-name "\$default" \
   --default-route-settings '{"ThrottlingRateLimit": 2, "ThrottlingBurstLimit": 5}' \
   >/dev/null
 

@@ -1,3 +1,5 @@
+import pytest
+
 from assistant import guards
 
 
@@ -11,12 +13,33 @@ class TestInputGuards:
         assert any(f.startswith("pii:") for f in check.flags)
         assert "123-45-6789" not in (check.message or "")
 
+    @pytest.mark.parametrize("ssn", ["123456789", "123 45 6789", "123-45-6789"])
+    def test_common_ssn_formats_are_refused(self, ssn):
+        check = guards.check_input(f"My SSN is {ssn}; what is the MST fare?")
+        assert not check.ok
+        assert "pii:ssn" in check.flags
+
     def test_dob_refused(self):
         check = guards.check_input("I was born on 3/2/1959, am I eligible?")
         assert not check.ok
 
     def test_email_refused(self):
         assert not guards.check_input("Email me at rider@example.com about fares").ok
+
+    @pytest.mark.parametrize("phone", ["4155551212", "(415) 555-1212", "+1 415 555 1212"])
+    def test_common_phone_formats_are_refused(self, phone):
+        check = guards.check_input(f"My phone is {phone}; what is the fare?")
+        assert not check.ok
+        assert "pii:phone" in check.flags
+
+    @pytest.mark.parametrize("medicare_id", ["1EG4TE5MK72", "1EG4 TE5 MK72", "1EG4-TE5-MK72"])
+    def test_common_medicare_id_formats_are_refused(self, medicare_id):
+        check = guards.check_input(f"My Medicare number is {medicare_id}; what is the fare?")
+        assert not check.ok
+        assert "pii:medicare_id" in check.flags
+
+    def test_ordinary_route_fare_and_date_numbers_are_not_pii(self):
+        assert guards.check_input("Does Route 1234 still cost $2.00 on 2026-07-29?").ok
 
     def test_immigration_out_of_scope(self):
         check = guards.check_input("Will you report my immigration status?")
@@ -146,6 +169,49 @@ class TestOutputCheck:
     def test_cited_grounded_answer_ok(self):
         check = guards.check_output("The regular fare is $2.00 [doc:mst-fares], as of 2026-06-12.")
         assert check.ok
+
+    def test_unbracketed_citation_is_malformed(self):
+        check = guards.check_output("The fare is $2.00 from doc:mst-fares.")
+        assert not check.ok
+        assert "malformed_citation" in check.flags
+
+    def test_broken_bracketed_citation_is_malformed(self):
+        check = guards.check_output("The fare is $2.00 [doc:mst-fares.")
+        assert not check.ok
+        assert "malformed_citation" in check.flags
+
+    def test_valid_and_malformed_citations_fail_closed(self):
+        check = guards.check_output(
+            "The fare is $2.00 [doc:mst-fares], with more in doc:mst-fares-benefits."
+        )
+        assert not check.ok
+        assert "malformed_citation" in check.flags
+
+    def test_uppercase_citation_marker_is_malformed(self):
+        check = guards.check_output(
+            "The fare is $2.00 [doc:mst-fares] but [DOC:made-up] says otherwise."
+        )
+        assert not check.ok
+        assert "malformed_citation" in check.flags
+
+    def test_empty_citation_marker_is_malformed(self):
+        check = guards.check_output("The fare is $2.00 [doc:mst-fares] [doc:].")
+        assert not check.ok
+        assert "malformed_citation" in check.flags
+
+    def test_whitespace_before_citation_colon_is_malformed(self):
+        check = guards.check_output(
+            "The fare is $2.00 [doc:mst-fares], but [doc :made-up] says otherwise."
+        )
+        assert not check.ok
+        assert "malformed_citation" in check.flags
+
+    def test_mixed_case_whitespace_citation_marker_is_malformed(self):
+        check = guards.check_output(
+            "The fare is $2.00 [doc:mst-fares], but Doc :made-up says otherwise."
+        )
+        assert not check.ok
+        assert "malformed_citation" in check.flags
 
     def test_spanish_as_of_disclosure_recognized(self):
         assert guards.AS_OF_RE.search(
