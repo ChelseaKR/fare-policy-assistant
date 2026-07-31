@@ -35,7 +35,7 @@ import yaml
 from assistant import config, domain
 from assistant.corpus import corpus_version
 from assistant.identity import SnapshotIdentity, content_version
-from assistant.ingest import load_chunks
+from assistant.ingest import Chunk, load_chunks
 from assistant.snapshots import (
     SnapshotArchiveError,
     collect_snapshot_material,
@@ -251,7 +251,7 @@ def _document_id(value: object, context: str) -> str:
     return document
 
 
-def _file_receipt(path: Path, context: str, *, require_utf8: bool = True) -> dict[str, object]:
+def _file_bytes(path: Path, context: str, *, require_utf8: bool = True) -> bytes:
     if path.is_symlink() or not path.is_file():
         raise ReleaseIdentityError(f"{context} is missing or is not a regular file: {path}")
     try:
@@ -265,7 +265,33 @@ def _file_receipt(path: Path, context: str, *, require_utf8: bool = True) -> dic
             raw.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ReleaseIdentityError(f"{context} must be valid UTF-8: {path}") from exc
+    return raw
+
+
+def _bytes_receipt(
+    raw: bytes,
+    context: str,
+    *,
+    require_utf8: bool = True,
+) -> dict[str, object]:
+    if not isinstance(raw, bytes):
+        raise ReleaseIdentityError(f"{context} captured content must be bytes")
+    if not raw:
+        raise ReleaseIdentityError(f"{context} must not be empty")
+    if require_utf8:
+        try:
+            raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ReleaseIdentityError(f"{context} must be valid UTF-8") from exc
     return {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+
+
+def _file_receipt(path: Path, context: str, *, require_utf8: bool = True) -> dict[str, object]:
+    return _bytes_receipt(
+        _file_bytes(path, context, require_utf8=require_utf8),
+        context,
+        require_utf8=False,
+    )
 
 
 def history_key_id(secret: str) -> str:
@@ -383,7 +409,21 @@ def _domain_payload(environment: Mapping[str, str]) -> dict[str, object]:
     }
 
 
-def _prompt_payload(prompts_dir: Path) -> dict[str, object]:
+def _prompt_payload(
+    prompts_dir: Path,
+    captured_prompt_bytes: Mapping[str, bytes] | None = None,
+) -> dict[str, object]:
+    if captured_prompt_bytes is not None:
+        if not isinstance(captured_prompt_bytes, Mapping):
+            raise ReleaseIdentityError("captured_prompt_bytes must be a mapping")
+        if set(captured_prompt_bytes) != set(PROMPT_NAMES):
+            raise ReleaseIdentityError(
+                "captured_prompt_bytes must contain exactly " + ", ".join(PROMPT_NAMES)
+            )
+        return {
+            name: _bytes_receipt(captured_prompt_bytes[name], f"{name} prompt")
+            for name in PROMPT_NAMES
+        }
     return {
         name: _file_receipt(prompts_dir / f"{name}.txt", f"{name} prompt") for name in PROMPT_NAMES
     }
@@ -428,13 +468,20 @@ def _resolved_config_payload(
     *,
     prompts_dir: Path,
     answer_schema_path: Path,
+    captured_prompt_bytes: Mapping[str, bytes] | None = None,
+    captured_answer_schema_bytes: bytes | None = None,
 ) -> dict[str, object]:
     models = resolved.models
     retrieval = resolved.retrieval
-    contract = _file_receipt(answer_schema_path, "answer contract")
+    answer_contract_raw = (
+        _file_bytes(answer_schema_path, "answer contract")
+        if captured_answer_schema_bytes is None
+        else captured_answer_schema_bytes
+    )
+    contract = _bytes_receipt(answer_contract_raw, "answer contract")
     try:
-        json.loads(answer_schema_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        json.loads(answer_contract_raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
         raise ReleaseIdentityError("answer contract must contain valid JSON") from exc
     return {
         "models": {
@@ -457,7 +504,7 @@ def _resolved_config_payload(
             "dense_model": retrieval.dense_model,
             "dense_weight": retrieval.dense_weight,
         },
-        "prompts": _prompt_payload(prompts_dir),
+        "prompts": _prompt_payload(prompts_dir, captured_prompt_bytes),
         "domain": _domain_payload(environment),
         "source_policy": {
             "disabled_document_ids": _disabled_documents(environment),
@@ -849,6 +896,9 @@ def build_config_identity(
     resolved_config: config.Config | None = None,
     prompts_dir: Path | None = None,
     answer_schema_path: Path | None = None,
+    *,
+    captured_prompt_bytes: Mapping[str, bytes] | None = None,
+    captured_answer_schema_bytes: bytes | None = None,
 ) -> ConfigIdentity:
     """Resolve and hash the complete public application configuration."""
     values = os.environ if environment is None else environment
@@ -867,6 +917,8 @@ def build_config_identity(
         values,
         prompts_dir=prompts_dir or config.PROMPTS_DIR,
         answer_schema_path=answer_schema_path or config.ANSWER_SCHEMA_PATH,
+        captured_prompt_bytes=captured_prompt_bytes,
+        captured_answer_schema_bytes=captured_answer_schema_bytes,
     )
     version = _canonical_digest(CONFIG_SCHEMA, payload)
     return ConfigIdentity(version, payload)
@@ -1066,19 +1118,23 @@ def resolve_current_snapshot(
     manifest_path: Path | None = None,
     raw_dir: Path | None = None,
     snapshots_dir: Path | None = None,
+    chunks: Sequence[Chunk] | None = None,
+    manifest: Mapping[str, object] | None = None,
 ) -> SnapshotIdentity:
     """Resolve only the exact schema-2 archive for the current bundled inputs."""
     selected_chunks = chunks_path or config.CHUNKS_PATH
     selected_manifest = manifest_path or config.MANIFEST_PATH
     selected_raw = raw_dir or config.RAW_DIR
     selected_snapshots = snapshots_dir or config.SNAPSHOTS_DIR
-    if selected_manifest.is_symlink() or not selected_manifest.is_file():
+    if manifest is None and (selected_manifest.is_symlink() or not selected_manifest.is_file()):
         raise ReleaseIdentityError(
             f"manifest is missing or is not a regular file: {selected_manifest}"
         )
     try:
-        chunks = load_chunks(selected_chunks)
-        manifest = yaml.safe_load(selected_manifest.read_bytes())
+        selected_chunk_rows = load_chunks(selected_chunks) if chunks is None else list(chunks)
+        selected_manifest_data = (
+            yaml.safe_load(selected_manifest.read_bytes()) if manifest is None else manifest
+        )
     except (
         OSError,
         UnicodeError,
@@ -1088,10 +1144,14 @@ def resolve_current_snapshot(
         yaml.YAMLError,
     ) as exc:
         raise ReleaseIdentityError("current chunks or manifest are malformed") from exc
-    if not isinstance(manifest, Mapping):
+    if not isinstance(selected_manifest_data, Mapping):
         raise ReleaseIdentityError("current manifest must be an object")
     try:
-        material = collect_snapshot_material(chunks, manifest, selected_raw)
+        material = collect_snapshot_material(
+            selected_chunk_rows,
+            selected_manifest_data,
+            selected_raw,
+        )
         archive = selected_snapshots / material.identity.snapshot_version
         archived_identity = validate_snapshot_archive(archive)
         archived_chunks = load_snapshot_chunks(
@@ -1106,7 +1166,7 @@ def resolve_current_snapshot(
         raise ReleaseIdentityError(
             "archived snapshot identity does not match current source material"
         )
-    if archived_chunks != chunks:
+    if archived_chunks != selected_chunk_rows:
         raise ReleaseIdentityError("archived snapshot chunks do not equal current bundled chunks")
     return material.identity
 
@@ -1120,6 +1180,8 @@ def verify_release_descriptor(
     answer_schema_path: Path | None = None,
     chunks_path: Path | None = None,
     require_environment: bool = False,
+    config_identity: ConfigIdentity | None = None,
+    chunks: Sequence[Chunk] | None = None,
 ) -> ReleaseDescriptor:
     """Recompute all runtime-verifiable inputs and compare the release tuple.
 
@@ -1130,7 +1192,9 @@ def verify_release_descriptor(
     if not isinstance(descriptor, ReleaseDescriptor):
         raise ReleaseIdentityError("descriptor must be a ReleaseDescriptor")
     values = os.environ if environment is None else environment
-    recomputed_config = build_config_identity(
+    if config_identity is not None and not isinstance(config_identity, ConfigIdentity):
+        raise ReleaseIdentityError("config_identity must be a ConfigIdentity")
+    recomputed_config = config_identity or build_config_identity(
         values,
         resolved_config,
         prompts_dir,
@@ -1140,12 +1204,12 @@ def verify_release_descriptor(
         raise ReleaseIdentityError("bundled/runtime configuration does not match descriptor")
     selected_chunks = chunks_path or config.CHUNKS_PATH
     try:
-        chunks = load_chunks(selected_chunks)
+        selected_chunk_rows = load_chunks(selected_chunks) if chunks is None else list(chunks)
     except (OSError, UnicodeError, json.JSONDecodeError, TypeError, KeyError) as exc:
         raise ReleaseIdentityError("bundled chunks are malformed or unreadable") from exc
-    if content_version(chunks) != descriptor.content_version:
+    if content_version(selected_chunk_rows) != descriptor.content_version:
         raise ReleaseIdentityError("bundled content identity does not match descriptor")
-    if corpus_version(chunks) != descriptor.corpus_version:
+    if corpus_version(selected_chunk_rows) != descriptor.corpus_version:
         raise ReleaseIdentityError(
             "bundled compatibility corpus identity does not match descriptor"
         )

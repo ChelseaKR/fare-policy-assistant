@@ -65,6 +65,26 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: evals/attestation.py
+    marker: "fare-assistant.eval-attestation.v1"
+    note: >
+      Evaluation attestation and content-addressed input identities are generic.
+      Choose project-owned schema namespaces, restate the auxiliary evidence
+      inputs (including any domain-specific feed files), and update the
+      evaluator source-tree roots for the new package before publishing
+      attestations.
+  - path: src/assistant/promotion_evidence.py
+    marker: "fare-assistant.eval-attestation.v1"
+    note: >
+      Exact promotion-evidence verification is generic. Replace the
+      fare-assistant evaluation schema namespaces with the new project's
+      namespaces before accepting or publishing evidence.
+  - path: src/assistant/release_attestation.py
+    marker: "fare-assistant.promotion-attestation.v1"
+    note: >
+      The immutable runtime-to-evaluation attestation contract is generic.
+      Choose a stable, project-owned promotion-attestation schema namespace
+      before publishing release evidence.
   - path: src/assistant/release_identity.py
     marker: "fare-assistant.release.v1"
     note: >

@@ -25,6 +25,9 @@ class JudgeVerdict:
     passed: bool | None  # None → judge errored or was skipped
     detail: str
     raw: str = ""
+    # Provider-reported served model identity. This can differ from the
+    # requested alias/profile, so eval evidence must retain both.
+    model: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
     cache_creation_input_tokens: int = 0
@@ -63,6 +66,8 @@ def judge_groundedness(
     result: AnswerResult,
     cfg: config.Config,
     history: list[tuple[str, str]] | None = None,
+    *,
+    system_prompt: str | None = None,
 ) -> JudgeVerdict:
     user = (
         f"{_history_block(history)}"
@@ -71,7 +76,9 @@ def judge_groundedness(
         f"Assistant answer:\n{result.answer}"
     )
     completion = model.complete(
-        system=config.load_prompt("judge_groundedness"),
+        system=(
+            system_prompt if system_prompt is not None else config.load_prompt("judge_groundedness")
+        ),
         user=user,
         max_tokens=config.JUDGE_MAX_TOKENS,
         temperature=config.JUDGE_TEMPERATURE,
@@ -83,14 +90,26 @@ def judge_groundedness(
         "cache_read_input_tokens": completion.cache_read_input_tokens,
     }
     data = _parse_json(completion.text)
-    if data is None or "grounded" not in data:
+    if data is None or "grounded" not in data or type(data["grounded"]) is not bool:
         return JudgeVerdict(
-            "groundedness", None, "judge returned unparseable output", raw=completion.text, **tok
+            "groundedness",
+            None,
+            "judge returned unparseable or malformed output",
+            raw=completion.text,
+            model=completion.model,
+            **tok,
         )
     detail = data.get("reasoning", "")
     if data.get("unsupported_claims"):
         detail += " | unsupported: " + "; ".join(data["unsupported_claims"])
-    return JudgeVerdict("groundedness", bool(data["grounded"]), detail, raw=completion.text, **tok)
+    return JudgeVerdict(
+        "groundedness",
+        data["grounded"],
+        detail,
+        raw=completion.text,
+        model=completion.model,
+        **tok,
+    )
 
 
 def judge_helpfulness(
@@ -100,6 +119,8 @@ def judge_helpfulness(
     cfg: config.Config,
     history: list[tuple[str, str]] | None = None,
     rationale: str = "",
+    *,
+    system_prompt: str | None = None,
 ) -> JudgeVerdict:
     rationale_line = f"Case rationale: {rationale}\n\n" if rationale else ""
     user = (
@@ -110,7 +131,9 @@ def judge_helpfulness(
         f"Assistant answer:\n{result.answer}"
     )
     completion = model.complete(
-        system=config.load_prompt("judge_helpfulness"),
+        system=(
+            system_prompt if system_prompt is not None else config.load_prompt("judge_helpfulness")
+        ),
         user=user,
         max_tokens=config.JUDGE_MAX_TOKENS,
         temperature=config.JUDGE_TEMPERATURE,
@@ -122,9 +145,21 @@ def judge_helpfulness(
         "cache_read_input_tokens": completion.cache_read_input_tokens,
     }
     data = _parse_json(completion.text)
-    if data is None or "helpful" not in data:
+    if data is None or "helpful" not in data or type(data["helpful"]) is not bool:
         return JudgeVerdict(
-            "helpfulness", None, "judge returned unparseable output", raw=completion.text, **tok
+            "helpfulness",
+            None,
+            "judge returned unparseable or malformed output",
+            raw=completion.text,
+            model=completion.model,
+            **tok,
         )
     detail = f"score={data.get('score')} — {data.get('reasoning', '')}"
-    return JudgeVerdict("helpfulness", bool(data["helpful"]), detail, raw=completion.text, **tok)
+    return JudgeVerdict(
+        "helpfulness",
+        data["helpful"],
+        detail,
+        raw=completion.text,
+        model=completion.model,
+        **tok,
+    )

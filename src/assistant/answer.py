@@ -146,6 +146,8 @@ def answer_question(
     model: Model | None = None,
     retriever: Retriever | None = None,
     cfg: config.Config | None = None,
+    system_prompt: str | None = None,
+    answer_user_prompt: str | None = None,
 ) -> AnswerResult:
     cfg = cfg or config.Config()
     retriever = retriever or default_retriever()
@@ -204,8 +206,11 @@ def answer_question(
         )
 
     model = model or get_model(cfg.models.provider, cfg.models.answer_model)
-    system = config.load_prompt("system")
-    user = _history_block(history) + config.load_prompt("answer_user").format(
+    system = system_prompt if system_prompt is not None else config.load_prompt("system")
+    prompt = (
+        answer_user_prompt if answer_user_prompt is not None else config.load_prompt("answer_user")
+    )
+    user = _history_block(history) + prompt.format(
         passages=_format_passages(results),
         as_of_date=as_of,
         question=question,

@@ -111,5 +111,9 @@ class TestBundleRuntimeDependencies:
 
     def test_console_bundle_includes_ingest_import_dependencies(self):
         text = DEPLOY_CONSOLE_SH.read_text(encoding="utf-8")
-        assert '"httpx>=0.27"' in text
-        assert '"beautifulsoup4>=4.12"' in text
+        assert '--require-hashes -r "$ROOT/infra/requirements-deploy.txt"' in text
+        requirements = (config.REPO_ROOT / "infra" / "requirements-deploy.txt").read_text(
+            encoding="utf-8"
+        )
+        assert "httpx==" in requirements
+        assert "beautifulsoup4==" in requirements

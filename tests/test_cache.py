@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from assistant.models import Completion
 from evals.cache import CachingModel, EvalCache, case_content_key, completion_key
 
@@ -56,21 +58,28 @@ def test_completion_key_cannot_collide_across_nul_containing_prompt_boundaries()
 
 def test_case_content_key_changes_when_any_input_changes():
     base = dict(
-        case_id="c1",
-        question_or_turns="q?",
-        expected_behavior="answer",
-        provider="mock",
-        answer_model="a",
-        judge_model="j",
-        corpus_version="v1",
-        prompt_versions={"system": "v1"},
+        case_semantics_version="a" * 64,
+        run_context_version="b" * 64,
         run_judges=True,
+        replicates=1,
     )
     key = case_content_key(**base)
     assert key == case_content_key(**base)
-    assert case_content_key(**{**base, "corpus_version": "v2"}) != key
-    assert case_content_key(**{**base, "question_or_turns": "different?"}) != key
+    assert case_content_key(**{**base, "case_semantics_version": "c" * 64}) != key
+    assert case_content_key(**{**base, "run_context_version": "d" * 64}) != key
     assert case_content_key(**{**base, "run_judges": False}) != key
+    assert case_content_key(**{**base, "replicates": 2}) != key
+
+
+@pytest.mark.parametrize("replicates", [0, -1, True, 1.5])
+def test_case_content_key_rejects_invalid_replicates(replicates):
+    with pytest.raises(ValueError, match="positive integer"):
+        case_content_key(
+            case_semantics_version="a" * 64,
+            run_context_version="b" * 64,
+            run_judges=True,
+            replicates=replicates,
+        )
 
 
 # ── EvalCache ─────────────────────────────────────────────────────────────────

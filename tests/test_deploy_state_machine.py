@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -681,6 +682,15 @@ if args[:2] == ["lambda", "put-function-concurrency"]:
         "lambda.put-function-concurrency",
         value=value("--reserved-concurrent-executions"),
     )
+    if os.environ.get("FAKE_PROMOTION_BUNDLE_TAMPER"):
+        pointer_path = pathlib.Path(
+            os.environ["FPA_BUILD_DIR"]
+        ) / "promotion-evidence-pointer.json"
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+        summary_path = pathlib.Path(pointer["bundle_path"]) / "summary.json"
+        summary_path.chmod(0o644)
+        summary_path.write_text('{"tampered":true}\n', encoding="utf-8")
+        record("promotion.bundle-tamper")
     finish({})
 
 if args[:2] == ["lambda", "delete-function-url-config"]:
@@ -1029,20 +1039,176 @@ print("200", end="")
 
 FAKE_UV = r"""
 #!/usr/bin/env python3
+import hashlib
+import json
 import os
 import pathlib
 import sys
 
 args = sys.argv[1:]
+
+
+def record(operation):
+    state_path = pathlib.Path(os.environ["FAKE_AWS_STATE"])
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["events"].append({"op": operation})
+    state_path.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
+
+
+def event_count(operation):
+    state_path = pathlib.Path(os.environ["FAKE_AWS_STATE"])
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    return sum(event.get("op") == operation for event in state["events"])
+
+
 if args[:2] == ["pip", "install"]:
     target = pathlib.Path(args[args.index("--target") + 1])
     target.mkdir(parents=True, exist_ok=True)
+    raise SystemExit(0)
+if args[:4] == ["run", "python", "-m", "evals.runner"] and "--promotion" in args:
+    record("promotion.eval")
+    if os.environ.get("FAKE_PROMOTION_EVAL_FAIL"):
+        print("fake promotion evaluation failed", file=sys.stderr)
+        raise SystemExit(1)
+    runs_root = pathlib.Path(os.environ["FPA_PROMOTION_RUNS_ROOT"])
+    runs_root.mkdir(parents=True, exist_ok=True)
+    existing = sorted(runs_root.iterdir())
+    suffix = "" if not existing else f"-{len(existing):02d}"
+    run_dir = runs_root / f"20260730T120000Z{suffix}"
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text("{}\n", encoding="utf-8")
+    (run_dir / "results.jsonl").write_text("{}\n", encoding="utf-8")
+    summary_sha256 = hashlib.sha256((run_dir / "summary.json").read_bytes()).hexdigest()
+    results_sha256 = hashlib.sha256((run_dir / "results.jsonl").read_bytes()).hexdigest()
+    manifest = {
+        "results_sha256": results_sha256,
+        "schema": "fare-assistant.eval-run-bundle.v1",
+        "summary_sha256": summary_sha256,
+    }
+    manifest_bytes = (
+        json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode()
+    content_address = hashlib.sha256(manifest_bytes).hexdigest()
+    bundle = run_dir / "bundles" / content_address
+    bundle.mkdir(parents=True)
+    (bundle / "summary.json").write_bytes((run_dir / "summary.json").read_bytes())
+    (bundle / "results.jsonl").write_bytes((run_dir / "results.jsonl").read_bytes())
+    (bundle / "bundle.json").write_bytes(manifest_bytes)
+    pointer = pathlib.Path(args[args.index("--run-path-output") + 1])
+    pointer.parent.mkdir(parents=True, exist_ok=True)
+    pointer_payload = {
+        "bundle_path": str(bundle),
+        "content_address": content_address,
+        "results_sha256": results_sha256,
+        "run_dir": str(run_dir),
+        "schema": "fare-assistant.eval-run-bundle-pointer.v1",
+        "summary_sha256": summary_sha256,
+    }
+    pointer.write_text(
+        json.dumps(pointer_payload, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    raise SystemExit(0)
+if (
+    args[:2] == ["run", "python"]
+    and len(args) > 2
+    and args[2].endswith("scripts/build_promotion_attestation.py")
+):
+    record("promotion.attestation")
+    if os.environ.get("FAKE_PROMOTION_ATTESTATION_FAIL"):
+        print("fake promotion attestation failed", file=sys.stderr)
+        raise SystemExit(1)
+    output = pathlib.Path(args[args.index("--output") + 1])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("{}\n", encoding="utf-8")
+    attestation_sha256 = hashlib.sha256(output.read_bytes()).hexdigest()
+    print(
+        json.dumps(
+            {
+                "attestation_sha256": attestation_sha256,
+                "output_path": str(output),
+            }
+        )
+    )
+    raise SystemExit(0)
+if (
+    args[:3] == ["run", "python", "-c"]
+    and "verify_promotion_evidence" in args[3]
+):
+    prior_verifications = event_count("promotion.verify")
+    record("promotion.verify")
+    if os.environ.get("FAKE_PROMOTION_VERIFY_FAIL"):
+        print("fake promotion evidence verification failed", file=sys.stderr)
+        raise SystemExit(1)
+    if (
+        os.environ.get("FAKE_PROMOTION_FINAL_VERIFY_FAIL")
+        and prior_verifications >= 1
+    ):
+        print("fake final promotion evidence verification failed", file=sys.stderr)
+        raise SystemExit(1)
+    evidence = pathlib.Path(os.environ["FPA_DEPLOY_PROMOTION_DIR"])
+    digest = lambda name: hashlib.sha256((evidence / name).read_bytes()).hexdigest()
+    print(
+        json.dumps(
+            {
+                "status": "verified",
+                "summary_sha256": digest("summary.json"),
+                "results_sha256": digest("results.jsonl"),
+                "promotion_sha256": digest("promotion.json"),
+                "runtime_release": {
+                    "source_revision": os.environ["FPA_DEPLOY_EXPECTED_SOURCE"],
+                    "config_version": os.environ["FPA_DEPLOY_EXPECTED_CONFIG"],
+                    "content_version": os.environ["FPA_DEPLOY_EXPECTED_CONTENT"],
+                    "snapshot_version": os.environ["FPA_DEPLOY_EXPECTED_SNAPSHOT"],
+                    "release_version": os.environ["FPA_DEPLOY_EXPECTED_RELEASE"],
+                    "corpus_version": os.environ["FPA_DEPLOY_EXPECTED_CORPUS"],
+                    "artifact_code_sha256": os.environ[
+                        "FPA_DEPLOY_EXPECTED_ARTIFACT"
+                    ],
+                    "function_version": os.environ[
+                        "FPA_DEPLOY_EXPECTED_FUNCTION_VERSION"
+                    ],
+                },
+            }
+        )
+    )
     raise SystemExit(0)
 if args[:2] == ["run", "python"]:
     python = os.environ["FAKE_REAL_PYTHON"]
     os.execv(python, [python, *args[2:]])
 print("unsupported fake uv call: " + " ".join(args), file=sys.stderr)
 raise SystemExit(2)
+""".lstrip()
+
+
+FAKE_INSTALL = r"""
+#!/usr/bin/env python3
+import json
+import os
+import pathlib
+import shutil
+import sys
+
+args = sys.argv[1:]
+mode = int(args[args.index("-m") + 1], 8)
+source = pathlib.Path(args[-2])
+destination = pathlib.Path(args[-1])
+destination.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(source, destination)
+destination.chmod(mode)
+
+if (
+    os.environ.get("FAKE_EVAL_BUNDLE_SWAP_BETWEEN_COPIES")
+    and source.name == "summary.json"
+    and source.parent.parent.name == "bundles"
+):
+    results = source.parent / "results.jsonl"
+    results.chmod(0o644)
+    results.write_text('{"tampered":true}\n', encoding="utf-8")
+    state_path = pathlib.Path(os.environ["FAKE_AWS_STATE"])
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["events"].append({"op": "promotion.eval-bundle-swap"})
+    state_path.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
 """.lstrip()
 
 
@@ -1318,12 +1484,19 @@ def _run_deploy(
     identity_route_repair: str = "",
     deploy_runs: int = 1,
     git_status: str = "",
+    promotion_eval_fail: bool = False,
+    promotion_attestation_fail: bool = False,
+    promotion_verify_fail: bool = False,
+    promotion_final_verify_fail: bool = False,
+    promotion_bundle_tamper: bool = False,
+    eval_bundle_swap_between_copies: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     _write_executable(bin_dir / "aws", FAKE_AWS)
     _write_executable(bin_dir / "curl", FAKE_CURL)
     _write_executable(bin_dir / "git", FAKE_GIT)
+    _write_executable(bin_dir / "install", FAKE_INSTALL)
     _write_executable(bin_dir / "uv", FAKE_UV)
     _write_executable(bin_dir / "sleep", "#!/bin/sh\nexit 0\n")
 
@@ -1358,13 +1531,21 @@ def _run_deploy(
         "FAKE_REAL_PYTHON": sys.executable,
         "FAKE_GIT_SOURCE_REVISION": SOURCE_REVISION,
         "FAKE_GIT_STATUS": git_status,
+        "FAKE_PROMOTION_EVAL_FAIL": "1" if promotion_eval_fail else "",
+        "FAKE_PROMOTION_ATTESTATION_FAIL": ("1" if promotion_attestation_fail else ""),
+        "FAKE_PROMOTION_VERIFY_FAIL": "1" if promotion_verify_fail else "",
+        "FAKE_PROMOTION_FINAL_VERIFY_FAIL": ("1" if promotion_final_verify_fail else ""),
+        "FAKE_PROMOTION_BUNDLE_TAMPER": "1" if promotion_bundle_tamper else "",
+        "FAKE_EVAL_BUNDLE_SWAP_BETWEEN_COPIES": ("1" if eval_bundle_swap_between_copies else ""),
         "FPA_API_ID": API_ID,
+        "FPA_BUILD_DIR": str(tmp_path / "rider-build"),
         "FPA_PINNED_CORPUS_VERSION": CORPUS_VERSION,
         "FPA_DISABLED_DOC_IDS": disabled_docs,
         "FPA_HISTORY_HMAC_KEY": HISTORY_KEY,
         "FPA_LEGACY_IDENTITY_ROLLBACK_VERSION": "5",
         "FPA_SMOKE_CONNECT_TIMEOUT": "1",
         "FPA_SMOKE_MAX_TIME": "1",
+        "FPA_PROMOTION_RUNS_ROOT": str(tmp_path / "promotion-runs"),
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "TMPDIR": str(task_tmpdir),
         "UV_CACHE_DIR": str(tmp_path / "uv-cache"),
@@ -1457,6 +1638,12 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
     update_config = _event_index(events, "lambda.update-function-configuration")
     update_code = _event_index(events, "lambda.update-function-code")
     publish = _event_index(events, "lambda.publish-version", version="6")
+    promotion_eval = _event_index(events, "promotion.eval")
+    promotion_attestation = _event_index(events, "promotion.attestation")
+    promotion_verifications = [
+        index for index, event in enumerate(events) if event.get("op") == "promotion.verify"
+    ]
+    concurrency = _event_index(events, "lambda.put-function-concurrency")
     direct_candidate = [
         index
         for index, event in enumerate(events)
@@ -1536,6 +1723,7 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
         }
     ]
     assert structured_filter_checks
+    assert len(promotion_verifications) == 2
     assert [event["match_count"] for event in structured_filter_checks] == [
         1,
         1,
@@ -1567,11 +1755,166 @@ def test_successful_deploy_promotes_only_after_candidate_health_and_retains_prio
         < publish
         < min(direct_candidate)
         <= max(direct_candidate)
+        < promotion_eval
+        < promotion_attestation
+        < promotion_verifications[0]
+        < concurrency
+        < promotion_verifications[1]
         < rollback_pointer
         < live_promotion
         < candidate_public_smoke
         < subscription_check
         < dashboard
+    )
+    runtime_evidence = json.loads(
+        (tmp_path / "rider-build" / "promotion-runtime.json").read_text(encoding="utf-8")
+    )
+    assert set(runtime_evidence) == {
+        "source_revision",
+        "config_version",
+        "content_version",
+        "snapshot_version",
+        "release_version",
+        "corpus_version",
+        "artifact_code_sha256",
+        "function_version",
+    }
+    assert HISTORY_KEY not in json.dumps(runtime_evidence)
+
+    pointer_path = tmp_path / "rider-build" / "promotion-evidence-pointer.json"
+    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    assert pointer["schema"] == "fare-assistant.eval-bundle-pointer.v1"
+    assert pointer["function_version"] == "6"
+    assert pointer["content_address"] == pointer["promotion_sha256"]
+    bundle = Path(pointer["bundle_path"])
+    assert bundle == (tmp_path / "rider-build" / "promotions" / "6" / pointer["content_address"])
+    assert set(path.name for path in bundle.iterdir()) == {
+        "summary.json",
+        "results.jsonl",
+        "promotion.json",
+    }
+    for filename, digest_field in (
+        ("summary.json", "summary_sha256"),
+        ("results.jsonl", "results_sha256"),
+        ("promotion.json", "promotion_sha256"),
+    ):
+        assert hashlib.sha256((bundle / filename).read_bytes()).hexdigest() == pointer[digest_field]
+
+
+def test_promotion_eval_failure_leaves_both_aliases_untouched(tmp_path: Path) -> None:
+    result, state = _run_deploy(tmp_path, promotion_eval_fail=True)
+
+    assert result.returncode != 0
+    assert "fake promotion evaluation failed" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert any(event["op"] == "promotion.eval" for event in state["events"])
+    assert not any(
+        event["op"] in {"promotion.attestation", "lambda.put-function-concurrency"}
+        for event in state["events"]
+    )
+    assert not any(
+        event["op"] in {"lambda.update-alias", "lambda.create-alias"} for event in state["events"]
+    )
+
+
+def test_promotion_attestation_failure_leaves_both_aliases_untouched(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, promotion_attestation_fail=True)
+
+    assert result.returncode != 0
+    assert "fake promotion attestation failed" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert any(event["op"] == "promotion.eval" for event in state["events"])
+    assert any(event["op"] == "promotion.attestation" for event in state["events"])
+    assert not any(
+        event["op"]
+        in {
+            "lambda.put-function-concurrency",
+            "lambda.update-alias",
+            "lambda.create-alias",
+        }
+        for event in state["events"]
+    )
+
+
+def test_full_staging_verifier_failure_leaves_both_aliases_untouched(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, promotion_verify_fail=True)
+
+    assert result.returncode != 0
+    assert "fake promotion evidence verification failed" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert [event["op"] for event in state["events"]].count("promotion.verify") == 1
+    assert not any(
+        event["op"]
+        in {
+            "lambda.put-function-concurrency",
+            "lambda.update-alias",
+            "lambda.create-alias",
+        }
+        for event in state["events"]
+    )
+
+
+def test_final_pointer_reverification_failure_leaves_aliases_untouched(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, promotion_final_verify_fail=True)
+
+    assert result.returncode != 0
+    assert "fake final promotion evidence verification failed" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert [event["op"] for event in state["events"]].count("promotion.verify") == 2
+    assert any(event["op"] == "lambda.put-function-concurrency" for event in state["events"])
+    assert not any(
+        event["op"] in {"lambda.update-alias", "lambda.create-alias"} for event in state["events"]
+    )
+
+
+def test_content_addressed_bundle_tamper_is_caught_before_aliases(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, promotion_bundle_tamper=True)
+
+    assert result.returncode != 0
+    assert "promotion evidence bundle digest does not match its pointer" in result.stderr
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert any(event["op"] == "promotion.bundle-tamper" for event in state["events"])
+    assert [event["op"] for event in state["events"]].count("promotion.verify") == 1
+    assert not any(
+        event["op"] in {"lambda.update-alias", "lambda.create-alias"} for event in state["events"]
+    )
+
+
+def test_eval_bundle_swap_between_staging_copies_fails_closed(
+    tmp_path: Path,
+) -> None:
+    result, state = _run_deploy(tmp_path, eval_bundle_swap_between_copies=True)
+
+    assert result.returncode != 0
+    assert "staged promotion evidence differs from the atomic eval-bundle pointer" in (
+        result.stderr
+    )
+    assert state["aliases"]["live"]["FunctionVersion"] == "5"
+    assert state["aliases"]["rollback"]["FunctionVersion"] == "4"
+    assert any(event["op"] == "promotion.eval-bundle-swap" for event in state["events"])
+    assert not any(
+        event["op"]
+        in {
+            "promotion.attestation",
+            "promotion.verify",
+            "lambda.put-function-concurrency",
+            "lambda.update-alias",
+            "lambda.create-alias",
+        }
+        for event in state["events"]
     )
 
 

@@ -9,6 +9,8 @@ inflate the scoreboard, so this is a safety-of-measurement guard.
 
 from __future__ import annotations
 
+import pytest
+
 from assistant import config
 from assistant.answer import AnswerResult
 from assistant.ingest import Chunk
@@ -22,9 +24,11 @@ class ScriptedJudge:
         self.text = text
         self._in = input_tokens
         self._out = output_tokens
+        self.last_system = None
         self.last_user = None
 
     def complete(self, system, user, max_tokens, temperature):
+        self.last_system = system
         self.last_user = user
         return Completion(
             text=self.text, model="judge-mock", input_tokens=self._in, output_tokens=self._out
@@ -79,6 +83,7 @@ class TestGroundedness:
         judge = ScriptedJudge('{"grounded": true, "reasoning": "all claims cited"}')
         v = judges.judge_groundedness(judge, _result(), _cfg())
         assert v.passed is True
+        assert v.model == "judge-mock"
         assert v.input_tokens == 11 and v.output_tokens == 7
         assert "all claims cited" in v.detail
 
@@ -102,6 +107,13 @@ class TestGroundedness:
         v = judges.judge_groundedness(judge, _result(), _cfg())
         assert v.passed is None
 
+    @pytest.mark.parametrize("value", ['"false"', "0", "1", "null", "[]", "{}"])
+    def test_non_boolean_grounded_value_is_errored(self, value):
+        judge = ScriptedJudge(f'{{"grounded": {value}, "reasoning": "bad type"}}')
+        v = judges.judge_groundedness(judge, _result(), _cfg())
+        assert v.passed is None
+        assert "malformed" in v.detail
+
     def test_prompt_carries_the_passages_and_answer_to_judge(self):
         # A groundedness verdict is only meaningful if the judge actually sees the
         # retrieved passages and the answer. If the prompt dropped either, the
@@ -111,18 +123,57 @@ class TestGroundedness:
         assert "Seniors 65+ pay $1.00." in judge.last_user
         assert "The senior fare is $1.00 [doc:mst-fares]." in judge.last_user
 
+    def test_uses_an_explicitly_captured_prompt_without_reloading(self, monkeypatch):
+        monkeypatch.setattr(
+            config,
+            "load_prompt",
+            lambda _name: pytest.fail("captured prompt must not be reloaded"),
+        )
+        judge = ScriptedJudge('{"grounded": true, "reasoning": "ok"}')
+        judges.judge_groundedness(
+            judge,
+            _result(),
+            _cfg(),
+            system_prompt="captured groundedness prompt",
+        )
+        assert judge.last_system == "captured groundedness prompt"
+
 
 class TestHelpfulness:
     def test_helpful_verdict_passes_with_score(self):
         judge = ScriptedJudge('{"helpful": true, "score": 4, "reasoning": "answers it"}')
         v = judges.judge_helpfulness(judge, _result(), "answer", _cfg())
         assert v.passed is True
+        assert v.model == "judge-mock"
         assert "score=4" in v.detail
 
     def test_unparseable_helpfulness_is_errored(self):
         judge = ScriptedJudge("looks good")
         v = judges.judge_helpfulness(judge, _result(), "answer", _cfg())
         assert v.passed is None
+
+    @pytest.mark.parametrize("value", ['"false"', "0", "1", "null", "[]", "{}"])
+    def test_non_boolean_helpful_value_is_errored(self, value):
+        judge = ScriptedJudge(f'{{"helpful": {value}, "score": 4, "reasoning": "bad type"}}')
+        v = judges.judge_helpfulness(judge, _result(), "answer", _cfg())
+        assert v.passed is None
+        assert "malformed" in v.detail
+
+    def test_uses_an_explicitly_captured_prompt_without_reloading(self, monkeypatch):
+        monkeypatch.setattr(
+            config,
+            "load_prompt",
+            lambda _name: pytest.fail("captured prompt must not be reloaded"),
+        )
+        judge = ScriptedJudge('{"helpful": true, "score": 4}')
+        judges.judge_helpfulness(
+            judge,
+            _result(),
+            "answer",
+            _cfg(),
+            system_prompt="captured helpfulness prompt",
+        )
+        assert judge.last_system == "captured helpfulness prompt"
 
     def test_expected_behavior_is_passed_into_the_prompt(self):
         judge = ScriptedJudge('{"helpful": true, "score": 3}')
