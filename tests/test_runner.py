@@ -370,6 +370,40 @@ def test_no_cache_flag_disables_caching(tmp_runs):
     assert not (config.EVAL_CACHE_DIR).exists()
 
 
+def test_refresh_cache_flag_re_runs_a_warm_suite_and_keeps_the_cache(tmp_runs):
+    """ADR 0022: the weekly cold CI run. Every case is re-executed against the
+    provider even though the cache could have served it, and the store is left
+    populated so the next cached night reports what this run measured."""
+    runner.run(offline=True, suite="refusal")
+    run_dir = runner.run(offline=True, suite="refusal", refresh_cache=True)
+
+    stats = _summary(run_dir)["execution"]["cache"]
+    assert stats["enabled"] is True
+    assert stats["refresh"] is True
+    assert stats["answer_hits"] == 0 and stats["answer_calls"] > 0
+    assert (config.EVAL_CACHE_DIR / "answers.json").exists()
+
+    # ...and the cache is warm again straight afterwards.
+    after = _summary(runner.run(offline=True, suite="refusal"))["execution"]["cache"]
+    assert after["answer_hits"] == after["answer_calls"] > 0
+
+
+def test_refresh_cache_rejects_flags_that_would_stop_it_re_measuring(tmp_runs):
+    with pytest.raises(SystemExit, match="nowhere to put"):
+        runner.run(offline=True, suite="refusal", use_cache=False, refresh_cache=True)
+    with pytest.raises(SystemExit, match="reused cases call it for none"):
+        runner.run(offline=True, suite="refusal", refresh_cache=True, only_failed=True)
+
+
+def test_replicates_never_overwrite_the_stored_answers(tmp_runs):
+    """A variance run measures spread, not a canonical answer, so it must not
+    leave one of its samples behind as the cached result."""
+    run_dir = runner.run(offline=True, suite="cross_agency", refresh_cache=True, replicates=2)
+    stats = _summary(run_dir)["execution"]["cache"]
+    assert stats["enabled"] is False
+    assert stats["refresh"] is False
+
+
 def test_serial_and_concurrent_execution_agree(tmp_runs):
     serial = runner.run(offline=True, suite="refusal", jobs=1, use_cache=False)
     concurrent = runner.run(offline=True, suite="refusal", jobs=8, use_cache=False)

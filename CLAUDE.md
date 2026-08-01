@@ -114,8 +114,11 @@ Suite design notes:
   from the real documents during ingest — every edge case cites its source passage.
 - *Multilingual*: full Spanish parity is required (CA reality and the builder's site is already
   bilingual). Each Spanish case mirrors an English case so parity gaps are measurable.
-- CI runs a 25-case smoke suite on every PR; full suite runs nightly and on release tags.
-  Regressions >2 points on any suite fail the build.
+- CI runs a 26-case smoke suite on every PR; full suite runs nightly and on release tags.
+  Regressions >2 points on any suite fail the build. Both are served from the persisted
+  content-keyed answer/judge cache, with one cold nightly a week to re-measure the
+  provider (ADR 0022) — model calls are the project's largest AWS line, so an eval that
+  cannot produce a different answer must not be paid for again.
 
 The generated report leads with a scoreboard, then **representative failures with full traces**
 (question → retrieved passages → answer → judge reasoning). Showing failures candidly is the
