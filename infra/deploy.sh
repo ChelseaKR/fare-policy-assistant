@@ -45,6 +45,27 @@ if [[ -n "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
 fi
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 
+# ── cost allocation ──────────────────────────────────────────────────────────
+# `project` is the cost-allocation tag key activated in Cost Explorer. Anything
+# created without it lands in the account's untagged bucket, where the
+# `fare-demo` budget and any per-project report cannot see this deployment's
+# spend at all. There is no CDK/Terraform layer here (ADR 0004) -- this script is
+# the whole deployment -- so tagging is applied by the script itself: on create
+# where the API supports it, and re-applied idempotently at the end of every
+# deploy so resources created before this existed get labelled on the next run
+# rather than staying invisible forever.
+#
+# The value is the portfolio project name, which is deliberately NOT the repo
+# name (`fare-policy-assistant`) or the function name: it is the key the budget
+# and the cross-repo cost report group on, so it must stay stable even if the
+# function is renamed. `tests/test_deploy_tagging.py` guards that.
+PROJECT_TAG=fare-assistant
+# Same pair in the two shorthand forms the AWS CLI uses: Lambda, Logs and API
+# Gateway take a `key=value` map; IAM, SNS and CloudWatch take a list of
+# Key=/Value= structs. Keeping both here means the value is written once.
+PROJECT_TAG_MAP="project=$PROJECT_TAG"
+PROJECT_TAG_LIST="Key=project,Value=$PROJECT_TAG"
+
 # Hard ceiling on parallel Bedrock spend: at most this many containers run at
 # once, no matter how many requests arrive. Every other rate figure below is
 # derived from it so the two never drift out of sync (see ADR 0004 amendment,
@@ -1182,6 +1203,7 @@ ensure_api_targets_live() {
         --name "$FN" \
         --protocol-type HTTP \
         --target "$ALIAS_ARN" \
+        --tags "$PROJECT_TAG_MAP" \
         --query ApiId --output text
     )"
     API_EXISTS=true
@@ -1582,7 +1604,8 @@ EOF
 ROLE_CREATED=false
 if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
   aws iam create-role --role-name "$ROLE_NAME" \
-    --assume-role-policy-document "$TRUST" >/dev/null
+    --assume-role-policy-document "$TRUST" \
+    --tags "$PROJECT_TAG_LIST" >/dev/null
   ROLE_CREATED=true
   echo "created role $ROLE_NAME; waiting for IAM propagation"
   sleep 10
@@ -1644,7 +1667,7 @@ ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 # verification. The paid numeric-version check must produce a real structured
 # event against the same filter contract that will observe public traffic.
 aws logs create-log-group --log-group-name "$LOG_GROUP" --region "$REGION" \
-  2>/dev/null || true
+  --tags "$PROJECT_TAG_MAP" 2>/dev/null || true
 aws logs put-retention-policy --log-group-name "$LOG_GROUP" \
   --retention-in-days 14 --region "$REGION"
 
@@ -1850,6 +1873,7 @@ else
       --timeout 25 --memory-size 512 --role "$ROLE_ARN" \
       --environment "$LAMBDA_ENV" \
       --logging-config "$LOGGING_CONFIG" \
+      --tags "$PROJECT_TAG_MAP" \
       --zip-file "fileb://$BUILD/bundle.zip" \
       --output json
   )"
@@ -2304,6 +2328,61 @@ EOF
 )
 aws cloudwatch put-dashboard --region "$REGION" --dashboard-name "$FN" \
   --dashboard-body "$DASHBOARD_BODY" >/dev/null
+
+# ── cost allocation: label everything this deploy owns ────────────────────────
+# The `--tags` arguments further up only fire the first time a resource is
+# created. This sweep re-applies `project` on EVERY deploy, so resources that
+# predate the tagging (or that a half-finished run created before reaching this
+# point) get labelled on the next run instead of sitting in the account's
+# untagged bucket indefinitely. Tagging an already-correctly-tagged resource is
+# a no-op, so re-running costs nothing.
+#
+# Deliberately not tagged, because AWS accepts no tags on them: CloudWatch
+# metric filters, the CloudWatch dashboard, Lambda aliases and published
+# versions (tags live on the function and cover every version), the API's
+# `$default` stage and route, and the inline IAM role policy. None of them bill
+# separately from a parent that is tagged here.
+#
+# A failure here does not fail the deploy: the service is live and verified by
+# this point, and a billing label is not worth tearing that down. It is reported
+# loudly instead, because untagged spend is invisible spend. The usual cause is
+# deploy credentials without tag permissions -- `lambda:TagResource`,
+# `iam:TagRole`, `logs:TagResource`, `apigateway:POST` on `/tags/*`,
+# `sns:TagResource`, `cloudwatch:TagResource`.
+UNTAGGED=""
+_tag() {  # human-readable resource label, then the command that tags it
+  local label="$1"
+  shift
+  "$@" >/dev/null 2>&1 || UNTAGGED="$UNTAGGED${UNTAGGED:+, }$label"
+}
+_tag "lambda function $FN" \
+  aws lambda tag-resource --region "$REGION" \
+  --resource "$UNQUALIFIED_ARN" --tags "$PROJECT_TAG_MAP"
+_tag "iam role $ROLE_NAME" \
+  aws iam tag-role --role-name "$ROLE_NAME" --tags "$PROJECT_TAG_LIST"
+_tag "log group $LOG_GROUP" \
+  aws logs tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:logs:$REGION:$ACCOUNT:log-group:$LOG_GROUP" \
+  --tags "$PROJECT_TAG_MAP"
+_tag "http api $API_ID" \
+  aws apigatewayv2 tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:apigateway:$REGION::/apis/$API_ID" \
+  --tags "$PROJECT_TAG_MAP"
+_tag "sns topic $FN-alerts" \
+  aws sns tag-resource --region "$REGION" \
+  --resource-arn "$TOPIC_ARN" --tags "$PROJECT_TAG_LIST"
+for alarm_suffix in handler-errors lambda-errors lambda-throttles \
+  unpriced-model-calls latency-p99 bedrock-surge; do
+  _tag "alarm $FN-$alarm_suffix" \
+    aws cloudwatch tag-resource --region "$REGION" \
+    --resource-arn "$(_alarm_arn "$alarm_suffix")" --tags "$PROJECT_TAG_LIST"
+done
+if [[ -n "$UNTAGGED" ]]; then
+  echo "WARNING: could not apply project=$PROJECT_TAG to: $UNTAGGED" >&2
+  echo "their spend stays in the untagged bucket, invisible to the fare-demo budget" >&2
+else
+  echo "cost allocation: project=$PROJECT_TAG applied to this deployment's resources"
+fi
 
 # An account-level AWS Budget is the spend backstop beneath these; it needs
 # billing permissions this role may lack, so it stays a one-time manual step:

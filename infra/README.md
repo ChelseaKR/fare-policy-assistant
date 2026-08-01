@@ -203,9 +203,54 @@ aws budgets create-budget --account-id <id> \
   ]'
 ```
 
+That budget as written is **account-wide**: it has no `CostFilters`, so it
+watches every dollar in the account, not this project's. Now that the deploy
+scripts tag their resources (below), scope it to this project by adding a tag
+filter, or it will keep alarming on spend that has nothing to do with the demo:
+
+```json
+"CostFilters": {"TagKeyValue": ["user:project$fare-assistant"]}
+```
+
 Constraints inherited from the rest of the repo: no user query persistence
 (the handler logs counts and timings, never content; 14-day retention),
 pinned model versions, and the deployed corpus is the committed snapshot set.
+
+## Cost allocation
+
+Every AWS resource the deploy scripts create carries `project=fare-assistant`.
+`project` is the cost-allocation tag key activated in Cost Explorer; a resource
+created without it lands in the account's untagged bucket, where no per-project
+budget or report can see it.
+
+The value is the **portfolio project name**, deliberately neither the repo name
+(`fare-policy-assistant`) nor the function name (`fare-policy-assistant-demo`):
+it is the key the budget and the cross-repo cost report group on, so it has to
+survive a rename of either. `tests/test_deploy_tagging.py` guards that, and
+guards that no resource silently drops back out of the tagged set.
+
+Both scripts tag on create *and* re-apply the tag on every deploy. The
+re-apply is the part that matters in an account that has already been deployed
+to: create-time tags never reach a resource that already exists.
+
+**Tagged:** the rider and console Lambda functions (tags cover every published
+version), their IAM roles, their CloudWatch log groups, both HTTP APIs, the
+`-alerts` SNS topic, and all six CloudWatch alarms.
+
+**Untaggable — AWS accepts no tags on these**, and none of them bills
+separately from a tagged parent: CloudWatch metric filters, the CloudWatch
+dashboard, Lambda aliases and published versions, the API `$default` stage and
+route, and inline IAM role policies.
+
+**Outside the scripts, so not tagged by them:** the `fare-demo` budget and the
+console's SSM token parameter, both of which are documented one-time manual
+steps above. Tag those by hand if you want them attributed.
+
+The deploy credentials need tag permissions for this to take effect —
+`lambda:TagResource`, `iam:TagRole`, `logs:TagResource`, `sns:TagResource`,
+`cloudwatch:TagResource`, and `apigateway:POST` on `/tags/*`. If any are
+missing the deploy still succeeds (the service is live and verified before the
+tagging runs) but prints a `WARNING` naming each resource left untagged.
 
 ## Agency operator console (EXP-09)
 
