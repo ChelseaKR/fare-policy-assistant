@@ -21,7 +21,7 @@ index: ingest
 ingest:       ## Clean, chunk, and index the fetched snapshots
 	uv run python -m assistant.ingest process
 
-gtfs-fetch:   ## Snapshot GTFS(-Fares) feed data listed in corpus/manifest.yaml (EXP-06)
+gtfs-fetch:   ## Transactionally capture exact GTFS(-Fares) feeds (ADRs 0011, 0023)
 	uv run python -m assistant.gtfs fetch
 
 gtfs-check:   ## Cross-check snapshotted GTFS fares against the prose corpus (EXP-06)

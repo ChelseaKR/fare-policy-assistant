@@ -3,6 +3,11 @@
 Date: 2026-07-08. Status: accepted. Implements EXP-06 in
 `docs/ideation/03-expansions.md`.
 
+Storage note (2026-07-30): ADR 0023 replaces the mutable
+`corpus/raw/gtfs/<agency>/` publication path below with exact, immutable ZIP
+captures selected by one transactional `current.json`. The cross-checking
+semantics in this ADR are unchanged.
+
 ## Decision
 
 `src/assistant/gtfs.py` ingests each agency's machine-readable GTFS static
@@ -115,11 +120,9 @@ prose).
 
 - `corpus/manifest.yaml` gains a `gtfs_feeds:` list, additive and optional;
   an agency absent from it is unaffected by this feature.
-- `corpus/raw/gtfs/<agency>/` snapshots only fare-relevant GTFS members
-  (`fare_attributes.txt`, `fare_products.txt`, etc., plus `agency.txt`), not
-  the full feed — a GTFS zip also carries multi-megabyte `stop_times.txt` /
-  `shapes.txt` this project has no use for, and committing only the fare
-  slice keeps snapshots small and diffable, matching `corpus/raw`'s existing
-  "committed snapshot" convention.
+- The original implementation wrote only fare-relevant members into mutable
+  `corpus/raw/gtfs/<agency>/` directories. ADR 0023 now retains the exact ZIP
+  plus only application-consumed extracted inputs in immutable per-feed
+  snapshots, and selects a coherent multi-agency set atomically.
 - Nothing in `answer.py`, `retrieve.py`, or the eval suites changes. This is
   an additive, offline check.

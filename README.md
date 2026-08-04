@@ -329,8 +329,9 @@ with an OCR fallback for scans; ADR 0008), so a fare program published as PDF
 is citable like an HTML page.
 
 A second, structured evidence source checks the prose corpus against reality:
-`make gtfs-fetch` / `make gtfs-check` cross-validate agency fares against
-their published GTFS(-Fares) feeds (MST and SBMTD, confirmed live; ADR 0011),
+`make gtfs-fetch` transactionally captures exact, SHA-256-receipted GTFS ZIPs;
+`make gtfs-check` cross-validates agency fares against the atomically selected
+set (MST and SBMTD, confirmed live; ADRs 0011 and 0023),
 flagging disagreement without ever overriding an answer.
 
 ## Layout
