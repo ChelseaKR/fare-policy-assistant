@@ -9,6 +9,9 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Security
+- Update the optional dense-retrieval toolchain to Torch 2.13.0 and setuptools
+  83.0.0, clearing the setuptools path-traversal advisory while preserving the
+  existing Python and sentence-transformers compatibility range.
 - Update the locked Pillow dependency from 12.2.0 to 12.3.0, clearing the
   image-decoder advisory cluster reported against PDF/OCR support.
 - Update the locked pypdf dependency from 6.13.3 to 6.14.2, clearing four
