@@ -47,6 +47,13 @@ BUILD="$ROOT/infra/build-console"
 BUNDLE="$BUILD/bundle"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 
+# Cost allocation. Same activated `project` tag key, and the same value, as the
+# rider deploy in deploy.sh: the operator console is part of the same project and
+# its spend should land in the same bucket. See the longer note in deploy.sh.
+PROJECT_TAG=fare-assistant
+PROJECT_TAG_MAP="project=$PROJECT_TAG"
+PROJECT_TAG_LIST="Key=project,Value=$PROJECT_TAG"
+
 # ── bundle ───────────────────────────────────────────────────────────────────
 # The console reads a static changelog rather than shelling out to git at
 # request time (the standard Lambda Python runtime ships no git binary) — see
@@ -112,7 +119,8 @@ EOF
 
 if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
   aws iam create-role --role-name "$ROLE_NAME" \
-    --assume-role-policy-document "$TRUST" >/dev/null
+    --assume-role-policy-document "$TRUST" \
+    --tags "$PROJECT_TAG_LIST" >/dev/null
   echo "created role $ROLE_NAME; waiting for IAM propagation"
   sleep 10
 fi
@@ -133,6 +141,7 @@ else
   aws lambda create-function --function-name "$CONSOLE_FN" --region "$REGION" \
     --runtime python3.12 --handler web.console.console_handler --architectures arm64 \
     --timeout 15 --memory-size 256 --role "$ROLE_ARN" --environment "$ENV_VARS" \
+    --tags "$PROJECT_TAG_MAP" \
     --zip-file "fileb://$BUILD/bundle.zip" >/dev/null
 fi
 aws lambda wait function-updated --function-name "$CONSOLE_FN" --region "$REGION"
@@ -148,6 +157,7 @@ if [ -z "$API_ID" ] || [ "$API_ID" = "None" ]; then
   API_ID="$(aws apigatewayv2 create-api --region "$REGION" --name "$CONSOLE_FN" \
     --protocol-type HTTP \
     --target "arn:aws:lambda:$REGION:$ACCOUNT:function:$CONSOLE_FN" \
+    --tags "$PROJECT_TAG_MAP" \
     --query ApiId --output text)"
 fi
 aws lambda add-permission --function-name "$CONSOLE_FN" --region "$REGION" \
@@ -161,9 +171,39 @@ aws apigatewayv2 update-stage --region "$REGION" --api-id "$API_ID" \
   >/dev/null
 
 aws logs create-log-group --log-group-name "/aws/lambda/$CONSOLE_FN" --region "$REGION" \
-  2>/dev/null || true
+  --tags "$PROJECT_TAG_MAP" 2>/dev/null || true
 aws logs put-retention-policy --log-group-name "/aws/lambda/$CONSOLE_FN" \
   --retention-in-days 14 --region "$REGION"
+
+# Re-apply `project` on every deploy so console resources created before this
+# tagging existed stop hiding in the account's untagged bucket. Idempotent, and
+# non-fatal for the same reason as in deploy.sh: the console is already live by
+# now and a billing label should not fail the deploy. The SSM parameter holding
+# the console token is created by hand (see this script's header), so it is not
+# tagged here.
+CONSOLE_UNTAGGED=""
+_tag_console() {  # human-readable resource label, then the command that tags it
+  local label="$1"
+  shift
+  "$@" >/dev/null 2>&1 || CONSOLE_UNTAGGED="$CONSOLE_UNTAGGED${CONSOLE_UNTAGGED:+, }$label"
+}
+_tag_console "lambda function $CONSOLE_FN" \
+  aws lambda tag-resource --region "$REGION" \
+  --resource "arn:aws:lambda:$REGION:$ACCOUNT:function:$CONSOLE_FN" \
+  --tags "$PROJECT_TAG_MAP"
+_tag_console "iam role $ROLE_NAME" \
+  aws iam tag-role --role-name "$ROLE_NAME" --tags "$PROJECT_TAG_LIST"
+_tag_console "log group /aws/lambda/$CONSOLE_FN" \
+  aws logs tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:logs:$REGION:$ACCOUNT:log-group:/aws/lambda/$CONSOLE_FN" \
+  --tags "$PROJECT_TAG_MAP"
+_tag_console "http api $API_ID" \
+  aws apigatewayv2 tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:apigateway:$REGION::/apis/$API_ID" \
+  --tags "$PROJECT_TAG_MAP"
+if [[ -n "$CONSOLE_UNTAGGED" ]]; then
+  echo "WARNING: could not apply project=$PROJECT_TAG to: $CONSOLE_UNTAGGED" >&2
+fi
 
 API_URL="$(aws apigatewayv2 get-api --api-id "$API_ID" --region "$REGION" \
   --query ApiEndpoint --output text)"
