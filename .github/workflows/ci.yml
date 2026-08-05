@@ -5,7 +5,17 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    - cron: "17 9 * * *"  # nightly full suite
+    # Nightly full suite, served from the persisted answer/judge cache: an
+    # unchanged corpus and prompt set cost nothing to re-score. Monday's run is
+    # deliberately cold (--refresh-cache), so provider drift is still measured
+    # once a week against real model calls. See ADR 0022.
+    #
+    # GitHub's schedule cron only accepts day-of-week 0-6 (Sunday=0); "7" is
+    # out of range and fails workflow schema validation before any job runs
+    # (silent startup_failure, all required checks stay unreported). "Every
+    # day except Monday" is Sunday plus Tuesday-Saturday: 0,2-6.
+    - cron: "17 9 * * 0,2-6"  # nightly full suite (cache-backed)
+    - cron: "17 9 * * 1"      # weekly cold full suite (cache refreshed)
 
 # Least privilege by default; jobs that need AWS add id-token themselves.
 permissions:
@@ -130,8 +140,37 @@ jobs:
         # pushes, and the schedule reach Bedrock.
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
         run: uv sync --frozen --all-groups
+      - name: Restore the answer/judge model cache
+        # The cache is content-keyed on the *rendered* system and user prompts
+        # (evals/cache.py), so a hit is only possible when the prompt bytes,
+        # the retrieved corpus passages, the model IDs, and the question are
+        # all identical to a previous run. Any change to any of them misses and
+        # re-pays. Without this step every CI run starts cold and buys the same
+        # 26 answers and ~48 judgements again, including the push-to-main run
+        # that re-scores the identical tree its own PR scored minutes earlier.
+        #
+        # A pull request restores from its own branch first and falls back to
+        # the default branch, so it inherits main's warm cache; it can only
+        # write to its own branch scope, so a branch cannot poison main's.
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          # The exact key is unique per run, so the restore always falls through
+          # to the prefix and picks up the most recent cache this ref can see.
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: eval-model-cache-
       - name: Run smoke suite
         run: uv run python -m evals.runner --smoke
+      - name: Save the answer/judge model cache
+        # Split restore/save rather than the combined action so the save still
+        # happens when the suite fails its gate: those calls were paid for, and
+        # discarding them would make the next run buy the same answers again.
+        # Skipped when the run was offline (no AWS role, no calls, no cache).
+        if: always() && hashFiles('evals/cache/**') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
@@ -158,8 +197,33 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+      - name: Restore the answer/judge model cache
+        # Same content-keyed store the smoke job uses, and the reason the two
+        # share one key prefix: the nightly full run is what warms all 201
+        # cases on main, so the next day's pull requests inherit a cache that
+        # already covers every smoke case they will ask for.
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: eval-model-cache-
       - name: Full eval run
-        run: uv run python -m evals.runner --full
+        # Monday's schedule re-measures the provider for real and rewrites the
+        # stored answers; the other six nights re-score from cache. A plain
+        # --no-cache Monday would re-measure but leave the cache holding last
+        # week's answers, so Tuesday would publish numbers Monday contradicted.
+        env:
+          CACHE_MODE: ${{ github.event.schedule == '17 9 * * 1' && '--refresh-cache' || '' }}
+        run: uv run python -m evals.runner --full $CACHE_MODE
+      - name: Save the answer/judge model cache
+        # A red regression gate still paid for every call in the run. Saving on
+        # failure is what stops a week of failing nightlies from re-buying the
+        # same 201 cases each morning.
+        if: always() && hashFiles('evals/cache/**') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload report
         # Failure evidence is most valuable when the release gate is red.
         # Preserve the partial report, traces, and provenance even when the

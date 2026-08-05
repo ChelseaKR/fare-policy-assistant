@@ -118,11 +118,31 @@ def _stretch_language_parity(records: list[dict]) -> str | None:
     return _parity_table(records, "stretch_tagalog", "Tagalog (stretch)")
 
 
+def _eval_cache_note(summary: dict) -> str:
+    """Suffix explaining a cost line that reads low because the answer/judge
+    cache served the run rather than because the run got cheaper.
+
+    Without it a fully-cached nightly publishes "$0.0000 for 0 tokens", which
+    reads as a broken meter instead of a reused result."""
+    stats = summary.get("execution", {}).get("cache") or {}
+    if not stats.get("enabled"):
+        return ""
+    served = stats.get("answer_hits", 0) + stats.get("judge_hits", 0)
+    calls = stats.get("answer_calls", 0) + stats.get("judge_calls", 0)
+    if not served:
+        return ""
+    return (
+        f" — {served:,} of {calls:,} model calls were served from the content-keyed "
+        "eval cache and cost nothing this run"
+    )
+
+
 def _cost_line(summary: dict) -> str:
     """One-line cost summary; token counts are exact, USD is an estimate."""
     cost = summary.get("cost")
     if not cost:
         return "- Cost: not recorded for this run"
+    served_note = _eval_cache_note(summary)
     total = cost.get("total_est_usd")
     answer = cost.get("answer_model", {}).get("est_usd")
     judge = cost.get("judge_model", {}).get("est_usd")
@@ -140,14 +160,14 @@ def _cost_line(summary: dict) -> str:
         return (
             f"- Cost (estimated): unavailable for {cost['total_tokens']:,} tokens — "
             f"unpriced: {unpriced} (exact tokens{cache_note}; "
-            "unpriced usage is never assigned a zero-dollar estimate)"
+            f"unpriced usage is never assigned a zero-dollar estimate){served_note}"
         )
     return (
         f"- Cost (estimated): ${total:.4f} for "
         f"{cost['total_tokens']:,} tokens — "
         f"answer ${answer:.4f}, "
         f"judge ${judge:.4f} "
-        f"(exact tokens{cache_note}, list-price estimate)"
+        f"(exact tokens{cache_note}, list-price estimate){served_note}"
     )
 
 

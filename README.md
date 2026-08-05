@@ -126,6 +126,13 @@ that fails to parse counts as an error rather than a pass.
 A 26-case smoke suite runs in CI on every pull request. The full suite runs
 nightly. A drop of more than 2 points on any suite fails the build.
 
+Both are served from a content-keyed cache of answer and judge calls, keyed on
+the rendered prompt text, so a change that cannot alter an answer is not paid
+for twice. Only the model call is cached: the deterministic checks, the
+regression gate, and the parity gate re-execute on every run. One nightly a
+week (Monday) bypasses the cache to re-measure the provider directly. See
+`docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
+
 ### Stretch language: Tagalog
 
 Only Spanish is at parity. `evals/suites/stretch_tagalog.yaml` adds 15 more

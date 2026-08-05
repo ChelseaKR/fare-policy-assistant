@@ -6,6 +6,7 @@
     python -m evals.runner --suite refusal      # one suite
     python -m evals.runner --jobs 8              # bounded-concurrency case execution
     python -m evals.runner --no-cache            # skip the answer/judge cache (FIX-04 runs)
+    python -m evals.runner --refresh-cache       # re-call the provider, then restore the cache
     python -m evals.runner --only-failed          # rerun only cases that failed last time
     python -m evals.runner --since 20260701T000000Z  # reuse unchanged cases from that run
     python -m evals.runner --replicates 3         # score every case 3x, Wilson intervals
@@ -22,7 +23,10 @@ still runs sequentially within its own worker, so turns are never interleaved.
 Answer and judge model calls are served from a content-keyed on-disk cache
 (evals/cache.py) by default, so an incremental re-run after a one-prompt or
 one-corpus change only pays for the cases that actually changed; `--no-cache`
-disables this for runs that need to measure real model variance (FIX-04).
+disables this for runs that need to measure real model variance (FIX-04). CI
+persists that cache across runs, so the cost of an unchanged suite is paid once
+rather than once per pull request; `--refresh-cache` is the weekly cold run
+that re-measures the provider and rewrites the stored answers (ADR 0022).
 
 Variance runs (`--replicates N`, N > 1) score every case N times — a case's
 replicate passes run sequentially inside its worker — and report a per-suite
@@ -395,12 +399,25 @@ def run(
     suite: str | None = None,
     jobs: int = 4,
     use_cache: bool = True,
+    refresh_cache: bool = False,
     only_failed: bool = False,
     since: str | None = None,
     replicates: int = 1,
 ) -> Path:
     if replicates < 1:
         raise SystemExit("--replicates must be >= 1")
+    if refresh_cache and not use_cache:
+        raise SystemExit(
+            "--refresh-cache cannot combine with --no-cache: refreshing means "
+            "re-measuring the provider and then storing the result, which a "
+            "disabled cache has nowhere to put"
+        )
+    if refresh_cache and (only_failed or since):
+        raise SystemExit(
+            "--refresh-cache cannot combine with --since/--only-failed: a "
+            "cold re-measurement must call the provider for every case, and "
+            "reused cases call it for none"
+        )
     if replicates > 1:
         if only_failed or since:
             raise SystemExit(
@@ -409,8 +426,11 @@ def run(
             )
         # A cache-served replicate returns byte-identical answers and verdicts
         # and would measure zero variance, so replicate runs always bypass the
-        # answer/judge cache (equivalent to --no-cache).
+        # answer/judge cache (equivalent to --no-cache). A replicate run also
+        # measures variance rather than a canonical answer, so it must not
+        # overwrite the stored entries either.
         use_cache = False
+        refresh_cache = False
     cfg = config.Config()
     if offline:
         cfg = config.Config(
@@ -434,6 +454,7 @@ def run(
             suite=suite,
             jobs=jobs,
             use_cache=use_cache,
+            refresh_cache=refresh_cache,
             only_failed=only_failed,
             since=since,
             replicates=replicates,
@@ -453,7 +474,7 @@ def run(
     retriever = Retriever(chunks, cfg.retrieval)
     run_judges = have_key and cfg.models.provider != "mock"
 
-    cache = EvalCache(config.EVAL_CACHE_DIR, enabled=use_cache)
+    cache = EvalCache(config.EVAL_CACHE_DIR, enabled=use_cache, refresh=refresh_cache)
     answer_model: Model = get_model(cfg.models.provider, cfg.models.answer_model)
     judge_model: Model = get_model(cfg.models.provider, cfg.models.judge_model)
     if use_cache:
@@ -937,6 +958,12 @@ def main() -> None:
         help="disable the answer/judge cache — use for FIX-04 variance-measurement runs",
     )
     parser.add_argument(
+        "--refresh-cache",
+        action="store_true",
+        help="call the provider for every case (no cache reads) but store the results, so a "
+        "cold re-measurement leaves the cache agreeing with the scoreboard it published",
+    )
+    parser.add_argument(
         "--only-failed",
         action="store_true",
         help="only run cases that failed in the reference run (--since, or the latest run)",
@@ -963,6 +990,7 @@ def main() -> None:
         suite=args.suite,
         jobs=args.jobs,
         use_cache=not args.no_cache,
+        refresh_cache=args.refresh_cache,
         only_failed=args.only_failed,
         since=args.since,
         replicates=args.replicates,
