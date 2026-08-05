@@ -9,8 +9,13 @@ on:
     # unchanged corpus and prompt set cost nothing to re-score. Monday's run is
     # deliberately cold (--refresh-cache), so provider drift is still measured
     # once a week against real model calls. See ADR 0022.
-    - cron: "17 9 * * 2-7"  # nightly full suite (cache-backed)
-    - cron: "17 9 * * 1"    # weekly cold full suite (cache refreshed)
+    #
+    # GitHub's schedule cron only accepts day-of-week 0-6 (Sunday=0); "7" is
+    # out of range and fails workflow schema validation before any job runs
+    # (silent startup_failure, all required checks stay unreported). "Every
+    # day except Monday" is Sunday plus Tuesday-Saturday: 0,2-6.
+    - cron: "17 9 * * 0,2-6"  # nightly full suite (cache-backed)
+    - cron: "17 9 * * 1"      # weekly cold full suite (cache refreshed)
 
 # Least privilege by default; jobs that need AWS add id-token themselves.
 permissions:
