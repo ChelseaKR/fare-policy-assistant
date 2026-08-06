@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 
 from assistant import config
-from evals import provenance
+from evals import provenance, runner
 from evals.check_report_regression import _parity_from_table, check_parity_committed
 from evals.report import generate_markdown
 from evals.runner import (
@@ -438,3 +438,48 @@ def test_check_mirrors_refuses_to_run_an_eval_over_broken_pairs(monkeypatch, cap
     with pytest.raises(SystemExit):
         check_mirrors()
     assert "MIRROR GATE" in capsys.readouterr().err
+
+
+# ── the escape hatch expires on its own ──────────────────────────────────────
+
+
+def test_an_annotation_for_a_recovered_suite_is_flagged():
+    """`expected_below_macro.json` says "delete the entry the moment the suite
+    recovers", and nothing enforced it. A waiver left over a healthy suite is a
+    live exemption sitting where the next real regression would land."""
+    suites = {
+        "conversation": {"pass_rate": 100.0, "passed": 10, "total": 10},
+        "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34},
+    }
+    (problem,) = runner.stale_annotations(suites, {"conversation": "an old rationale"})
+    assert "no longer describes anything" in problem
+
+
+def test_an_annotation_for_a_still_below_macro_suite_is_not_flagged():
+    suites = {
+        "conversation": {"pass_rate": 80.0, "passed": 8, "total": 10},
+        "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34},
+        "edge_cases": {"pass_rate": 95.8, "passed": 46, "total": 48},
+    }
+    assert runner.stale_annotations(suites, {"conversation": "still true"}) == []
+
+
+def test_an_annotation_for_a_suite_that_did_not_run_is_out_of_view_not_stale():
+    """A `--suite` subset legitimately omits most suites; an annotation for one
+    that did not run says nothing either way."""
+    suites = {"refusal": {"pass_rate": 100.0, "passed": 34, "total": 34}}
+    assert runner.stale_annotations(suites, {"conversation": "unrelated"}) == []
+
+
+def test_the_committed_annotation_still_describes_the_committed_report():
+    """The real repo state: `conversation` is annotated and is still below the
+    macro floor, so the waiver is doing work rather than sitting idle."""
+    import json
+
+    payload = provenance.read_evals_md((config.REPO_ROOT / "EVALS.md").read_text(encoding="utf-8"))
+    assert payload is not None
+    notes = json.loads(
+        (config.REPO_ROOT / "evals" / "expected_below_macro.json").read_text(encoding="utf-8")
+    )
+    notes = {k: v for k, v in notes.items() if not k.startswith("_")}
+    assert runner.stale_annotations(payload["suites"], notes) == []

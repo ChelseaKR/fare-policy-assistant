@@ -46,6 +46,7 @@ from evals import provenance
 from evals.runner import (
     expected_below_macro,
     parity_regressed,
+    stale_annotations,
     suite_regressed,
     suites_below_macro,
 )
@@ -167,7 +168,8 @@ def check_parity_committed(
             f"{parity['mirror_passed']}/{parity['pairs']} in the committed EVALS.md — "
             f"gap {parity['delta_pp']} pp exceeds the 5-point gate on 2+ cases"
         )
-    for name, o in sorted(suites_below_macro(payload.get("suites", {})).items()):
+    suites = payload.get("suites", {})
+    for name, o in sorted(suites_below_macro(suites).items()):
         if name in notes:
             continue
         problems.append(
@@ -175,6 +177,7 @@ def check_parity_committed(
             f"{o['floor']}% (macro {o['macro']}%) with no written annotation in "
             "evals/expected_below_macro.json"
         )
+    problems += stale_annotations(suites, notes)
     return problems
 
 

@@ -2444,7 +2444,8 @@ def parity_problems(
             f"{parity['mirror_passed']}/{parity['pairs']} — gap {parity['delta_pp']} pp "
             f"exceeds {PARITY_THRESHOLD_PP:g} pp on {PARITY_CASE_FLOOR}+ cases"
         )
-    for name, o in sorted(suites_below_macro(suites).items()):
+    offenders = suites_below_macro(suites)
+    for name, o in sorted(offenders.items()):
         if name in notes:
             continue
         problems.append(
@@ -2452,7 +2453,33 @@ def parity_problems(
             f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) with no written "
             "annotation in evals/expected_below_macro.json"
         )
+    problems += stale_annotations(suites, notes)
     return problems
+
+
+def stale_annotations(suites: dict, notes: dict[str, str]) -> list[str]:
+    """Annotations that no longer describe anything; empty is clean.
+
+    `expected_below_macro.json` says "delete the entry the moment the suite
+    recovers", and nothing enforced that. An annotation for a suite that has
+    since climbed back above the floor is a live waiver sitting over a suite
+    with no known problem — it would silently absorb the next real regression,
+    which is the thing the gate exists to catch. So a recovered suite's
+    annotation is itself a finding: the escape hatch expires on its own.
+
+    Only suites present in the run are considered. A `--suite` subset legitimately
+    omits most of them, and an annotation for a suite that simply did not run is
+    out of view rather than stale.
+    """
+    offenders = suites_below_macro(suites)
+    return [
+        f"{name}: annotated in evals/expected_below_macro.json but is at "
+        f"{suites[name]['pass_rate']}%, at or above the macro floor — the annotation no "
+        "longer describes anything and must be deleted, or it will silently waive the "
+        "next real regression"
+        for name in sorted(notes)
+        if name in suites and name not in offenders
+    ]
 
 
 def check_parity(run_dir: Path, *, require_complete: bool = False) -> None:

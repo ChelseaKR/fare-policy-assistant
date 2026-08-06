@@ -31,8 +31,10 @@ classifier can decide:
   one agency-authored Spanish document in the corpus and is the reference.
 
 A model cannot rate these without being the thing under test, and the language
-classifier answers a different question entirely (is this Spanish at all —
-which, on the promoted run, all 103 scorable Spanish segments are).
+classifier answers a different question entirely: whether the text is Spanish at
+all, not whether it is Spanish worth reading. `language_match` already passes on
+every Spanish case in the promoted run, which is the point — that check is
+satisfied and these three questions are still open.
 
 ## The sheet
 

@@ -195,6 +195,15 @@ rather than tied to a published tag.
   step, a response whose kind falls outside the typed contract), and a new test
   reads the check names out of `evals/checks.py` so a future check without a
   scenario fails CI instead of quietly widening the gap again.
+- The below-macro escape hatch expires on its own. `expected_below_macro.json`
+  has always instructed "delete the entry the moment the suite recovers", with
+  nothing behind the instruction: an annotation left over a suite that climbed
+  back above the floor stayed a live waiver, sitting exactly where the next real
+  regression would land and absorbing it silently. `runner.stale_annotations`
+  now fails the gate on an annotation whose suite ran and is at or above the
+  floor. Suites that did not run (a `--suite` subset) are out of view rather than
+  stale. The one committed annotation, `conversation`, is still doing work: 80.0%
+  against a floor of 89.0%.
 - The committed-report regression gate catches two more ways a report can
   describe a worse system than the baseline. A baseline suite **absent** from
   `EVALS.md` used to be skipped as "a missing-provenance problem for
