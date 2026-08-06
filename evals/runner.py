@@ -1673,6 +1673,7 @@ def _run_resolved(
     if not suites:
         raise SystemExit("no suites found")
     validate_cases(suites)
+    check_mirrors()
 
     started_at = datetime.now(UTC)
     started = time.monotonic()
@@ -2114,6 +2115,87 @@ def flip_case_floor(flip_rate: float, n_cases: int, safety: float = 1.0) -> int:
     """
     expected = math.ceil(flip_rate * n_cases * safety)
     return max(2, expected)
+
+
+# ── mirror integrity: the parity gate's own denominator ──────────────────────
+
+
+def mirror_problems(cases: dict[str, dict]) -> list[str]:
+    """Every `mirror_of` declaration must name a real mirror; empty is clean.
+
+    The parity gate below compares a Spanish case's pass/fail against its
+    English mirror's and publishes the delta in points. That delta only means
+    "the same question, answered in two languages" if the pair really is the
+    same question: same agency, same expected behavior, and the same evidence
+    demanded of both answers. Nothing checked that until 2026-08-05, and three
+    of the 22 pairs in the promoted baseline were not mirrors:
+
+    * `ml-008` pointed at `edge-008` — already `ml-004`'s mirror — asked a
+      different question (how to get a Courtesy Card, not what proof MST
+      accepts for the veteran discount), and declared no `required_facts` at
+      all, so it could pass on citation, language, and guard checks while its
+      mirror additionally had to produce "DD Form 214";
+    * `ml-011` dropped its mirror's `65` fact, so the Spanish answer never had
+      to state the age criterion the English answer was required to state;
+    * `ml-022` is scoped to MST but pointed at a Yolobus case, so the pair
+      measured two corpora rather than two languages.
+
+    The gate reported a 0.0-point gap over all three. A parity number computed
+    across pairs that are not pairs is not a slightly wrong number; it is an
+    unmeasured property rendered as a pass.
+
+    Counting `required_facts` rather than comparing them is deliberate: the
+    strings are language-specific by design ("free of charge" cannot be
+    required of a Spanish answer), so equality is the wrong test, but a mirror
+    asked to prove strictly fewer things than its target is always a weaker
+    case wearing a pair's name.
+    """
+    problems = []
+    for case_id, case in sorted(cases.items()):
+        target_id = case.get("mirror_of")
+        if not target_id:
+            continue
+        target = cases.get(target_id)
+        if target is None:
+            problems.append(f"{case_id}: mirror_of names {target_id!r}, which is not a case")
+            continue
+        if case.get("language", "en") == target.get("language", "en"):
+            problems.append(
+                f"{case_id}: mirrors {target_id}, but both are "
+                f"{case.get('language', 'en')!r} — a same-language pair measures no gap"
+            )
+        if (case.get("agency_scope") or None) != (target.get("agency_scope") or None):
+            problems.append(
+                f"{case_id}: scoped to {case.get('agency_scope')!r} but mirrors "
+                f"{target_id}, scoped to {target.get('agency_scope')!r} — the pair would "
+                "measure two corpora, not two languages"
+            )
+        if case.get("expected_behavior") != target.get("expected_behavior"):
+            problems.append(
+                f"{case_id}: expects {case.get('expected_behavior')!r} but mirrors "
+                f"{target_id}, which expects {target.get('expected_behavior')!r}"
+            )
+        own, theirs = len(case.get("required_facts") or []), len(target.get("required_facts") or [])
+        if own < theirs:
+            problems.append(
+                f"{case_id}: declares {own} required_facts but mirrors {target_id}, which "
+                f"declares {theirs} — a mirror asked to prove less passes more easily, and "
+                "the parity gate would read that as equity"
+            )
+    return problems
+
+
+def check_mirrors() -> None:
+    """Fail (exit 1) if any `mirror_of` declaration is not a true mirror.
+
+    Always reads every suite, never the `--suite` subset: a mirror's target
+    almost always lives in a different file, so a filtered load would report a
+    missing mirror that is merely out of view.
+    """
+    problems = mirror_problems({c["id"]: c for s in load_suites() for c in s["cases"]})
+    if problems:
+        print("MIRROR GATE:\n  " + "\n  ".join(problems), file=sys.stderr)
+        raise SystemExit(1)
 
 
 # ── bilingual parity gate (M-1; audit P1-1; AIEV-10/11, I18N-22) ─────────────

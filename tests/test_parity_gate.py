@@ -10,12 +10,17 @@ Three layers under test:
 
 from __future__ import annotations
 
+import pytest
+
 from assistant import config
 from evals import provenance
 from evals.check_report_regression import _parity_from_table, check_parity_committed
 from evals.report import generate_markdown
 from evals.runner import (
+    check_mirrors,
     expected_below_macro,
+    load_suites,
+    mirror_problems,
     parity_delta,
     parity_problems,
     parity_regressed,
@@ -315,3 +320,121 @@ def test_report_prints_the_below_macro_annotation():
     # conversation is annotated in the committed evals/expected_below_macro.json,
     # so the rendered line carries the rationale, not the UNANNOTATED flag.
     assert "annotated expected-below-macro" in md
+
+
+# ── mirror integrity (the gate's own denominator) ─────────────────────────────
+#
+# The parity delta above is only an equity measurement if each pair really is
+# one question asked in two languages. Until 2026-08-05 nothing checked that,
+# and three of the 22 pairs in the promoted baseline were not pairs: one had no
+# required facts at all while its mirror had to produce "DD Form 214", one had
+# dropped its mirror's `65` fact, and one was scoped to MST while pointing at a
+# Yolobus case. All three reported a 0.0-point gap. These tests exist so that
+# class of defect fails a run instead of publishing as parity.
+
+
+def _case(cid: str, **kw: object) -> dict:
+    base = {
+        "id": cid,
+        "language": "en",
+        "agency_scope": "MST",
+        "expected_behavior": "answer",
+        "required_facts": ["65"],
+    }
+    base.update(kw)
+    return base
+
+
+def _pair(es: dict, en: dict) -> dict[str, dict]:
+    return {es["id"]: es, en["id"]: en}
+
+
+def test_a_well_formed_mirror_pair_is_clean():
+    cases = _pair(_case("ml-1", language="es", mirror_of="en-1"), _case("en-1"))
+    assert mirror_problems(cases) == []
+
+
+def test_mirror_pointing_at_a_case_that_does_not_exist_is_caught():
+    cases = {"ml-1": _case("ml-1", language="es", mirror_of="ground-nope")}
+    (problem,) = mirror_problems(cases)
+    assert "is not a case" in problem
+
+
+def test_same_language_pair_is_caught():
+    # A pair that shares a language measures the model against itself; the
+    # delta is structurally zero and tells a reader nothing about equity.
+    cases = _pair(_case("ml-1", mirror_of="en-1"), _case("en-1"))
+    assert any("measures no gap" in p for p in mirror_problems(cases))
+
+
+def test_scope_mismatch_is_caught():
+    # ml-022's defect: an MST question mirrored to a Yolobus case, so the pair
+    # measured which corpus answered better, not which language did.
+    cases = _pair(
+        _case("ml-1", language="es", mirror_of="en-1"),
+        _case("en-1", agency_scope="Yolobus"),
+    )
+    assert any("two corpora, not two languages" in p for p in mirror_problems(cases))
+
+
+def test_expected_behavior_mismatch_is_caught():
+    cases = _pair(
+        _case("ml-1", language="es", mirror_of="en-1"),
+        _case("en-1", expected_behavior="refuse_redirect"),
+    )
+    assert any("expects 'refuse_redirect'" in p for p in mirror_problems(cases))
+
+
+def test_a_mirror_asked_to_prove_less_is_caught():
+    # ml-008 and ml-011's defect. The Spanish case passes on citation,
+    # language, and guard checks alone while its mirror must also produce a
+    # fact — an easier case whose easier pass the parity gate reads as equity.
+    cases = _pair(
+        _case("ml-1", language="es", mirror_of="en-1", required_facts=[]),
+        _case("en-1", required_facts=["DD Form 214"]),
+    )
+    assert any("asked to prove less" in p for p in mirror_problems(cases))
+
+
+def test_a_mirror_asked_to_prove_more_is_allowed():
+    # Only the weaker direction is a defect. Fact strings are language-specific
+    # by design, so the counts are compared, never the strings themselves.
+    cases = _pair(
+        _case("ml-1", language="es", mirror_of="en-1", required_facts=["65", "$1.25"]),
+        _case("en-1", required_facts=["65"]),
+    )
+    assert mirror_problems(cases) == []
+
+
+def test_cases_without_a_mirror_are_not_examined():
+    assert mirror_problems({"en-1": _case("en-1")}) == []
+
+
+def test_every_committed_mirror_declaration_is_a_real_mirror():
+    """The gate applied to the real suites. This is the merge-blocking half:
+    `evals/runner.py::check_mirrors` runs the same check at the top of every
+    eval run, so a pair that drifts cannot reach a published scoreboard."""
+    cases = {c["id"]: c for s in load_suites() for c in s["cases"]}
+    assert mirror_problems(cases) == []
+
+
+def test_check_mirrors_passes_on_the_committed_suites():
+    check_mirrors()  # no raise
+
+
+def test_check_mirrors_refuses_to_run_an_eval_over_broken_pairs(monkeypatch, capsys):
+    """The gate is wired into `_run_resolved`, before any model call. A broken
+    mirror map must stop the run rather than produce a scoreboard whose parity
+    row is meaningless."""
+    broken = [
+        {
+            "cases": [
+                _case("ml-1", language="es", mirror_of="en-1", required_facts=[]),
+                _case("en-1", required_facts=["DD Form 214"]),
+            ]
+        }
+    ]
+    monkeypatch.setattr("evals.runner.load_suites", lambda *a, **k: broken)
+    with pytest.raises(SystemExit):
+        check_mirrors()
+    assert "MIRROR GATE" in capsys.readouterr().err

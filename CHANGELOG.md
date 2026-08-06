@@ -30,6 +30,39 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- Every `mirror_of` declaration is now gate-checked before a run makes its
+  first model call: a mirror must name a real case, in a different language,
+  scoped to the same agency, expecting the same behavior, and carrying at least
+  as many `required_facts` as the case it mirrors. The bilingual parity gate
+  publishes a points delta between mirrored cases, and that delta is only an
+  equity measurement if the pairs are pairs. Three of the 22 pairs in the
+  promoted baseline were not: `ml-008` pointed at a case that was already
+  `ml-004`'s mirror, asked a different question, and declared no required facts
+  at all while its mirror had to produce "DD Form 214"; `ml-011` had dropped
+  its mirror's `65` fact, so the Spanish answer never had to state the age
+  criterion the English answer did; `ml-022` is scoped to MST but pointed at a
+  Yolobus case, so the pair measured two corpora rather than two languages. The
+  gate reported a 0.0-point gap across all three.
+- Corrected the three pairs (`ml-008` now mirrors `edge-048`, `ml-022` mirrors
+  `edge-045`, `ml-011` regained the `65` fact) and gave
+  `parity-scope-medical-es` the `agency_scope` its declared mirror carries.
+  Replaying the promoted run's recorded answers through the repaired map leaves
+  every verdict unchanged and the parity delta at 0.0 points over 22 pairs.
+  **The published number did not improve; what it certifies did.** Before the
+  repair, 0.0 points was computed over 19 real pairs and 3 mismatched ones, and
+  a weaker Spanish case passing more easily read on the scoreboard as equity.
+- Corrected the README's Status section, which had said since 2026-07-05 that
+  the EN/ES answer-quality gap exceeded the project's own ≤5-point target. The
+  mirrored-case gap has been 0.0 points since the 2026-07-12 run. What is
+  actually outstanding is the `docs/I18N.md` §7 native-Spanish benchmark, which
+  has never been measured — an unmeasured property, not a failing one, and not
+  a passing one either.
+- Known-stale artifact, stated rather than fixed: `evals/govchat/golden.jsonl`
+  still carries the pre-repair `pair_id` values for `ml-008`, `ml-011`, and
+  `ml-022`, so the independent audit's 0.581 multilingual anchor-fidelity score
+  was computed over those three mispairings too. Regenerating it requires a
+  credentialed `make audit` recording run; the provenance gate does not flag it
+  because the export's prompt and corpus versions are unchanged.
 - CI persists the content-keyed answer/judge cache between runs, so a pull
   request that cannot change an answer no longer re-buys the smoke suite's
   model calls, and a merge to `main` no longer re-scores the tree its own pull
