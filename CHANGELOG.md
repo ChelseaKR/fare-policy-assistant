@@ -135,6 +135,27 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- `python -m evals.calibration --review <worksheet>` (also `make relabel`): a
+  labeling surface for the judge-calibration worksheet. Labeling a row means
+  reading an answer, its retrieved passages, and the case's expected behavior,
+  and none of that was on screen — it had to be dug out of `results.jsonl` by
+  hand, 37 times, which is a fair share of why the sample has sat at 4 labels
+  against a floor of 37. The command walks the unlabeled rows offline from the
+  committed run, prints the judge's committed criterion, the question, the
+  prior turns, the passages, and the answer, then records the reviewer's
+  verdict and required one-line reason. It **never proposes a verdict**: there
+  is no default, and pressing Enter re-asks rather than resolving — the same
+  circularity closed on `--emit`, which used to pre-fill `human_passed` with
+  the judge's own call. It **withholds `judge_said` until after the reviewer
+  answers**, because a reviewer shown the verdict first confirms it, and this
+  worksheet exists precisely because the previous sample could only confirm.
+  It **refuses to record a verdict when the recorded answer no longer matches
+  the row's `answer_sha256`**, reporting the row instead: a label pinned to an
+  answer the reviewer did not read is worse than a blank. Each completed row is
+  written back through an atomic replace, so an interrupted session keeps every
+  verdict already given and a partly-labeled worksheet reopens where it
+  stopped. The committed worksheet is still 37 blank rows, and the test that
+  keeps it blank is unchanged; this removes the friction, not the human.
 - Layered corpus identity and source-complete archives: a full
   `content_version` now covers every behavior-relevant stored chunk field and
   order while excluding observation date; `snapshot_version` adds verified
