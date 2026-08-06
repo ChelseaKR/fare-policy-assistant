@@ -30,6 +30,44 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Corrected a published number: judge-vs-human Cohen's κ was 1.000 in
+  `EVALS.md` and is now reported as undefined.** Cohen's κ is 0/0 when both
+  raters give the same verdict every time; returning 1.0 there is a convention
+  that reads as perfect agreement measured. It was not measured. Both labels in
+  the sample that recorded a human/judge *disagreement* (`ml-004`,
+  `ground-024`) had gone stale when a prompt bump changed their answers, so the
+  four labels left were the agreeing half of the set and could not have
+  produced any other number. `EVALS.md` was regenerated from the same promoted
+  run — no re-scoring, only corrected presentation — and now says so.
+- The calibration section publishes the shortfall as a number rather than as
+  the adjective "small": 4 scored labels against a floor of 37, which is
+  `CLAUDE.md`'s 10% sample over the 367 (case, judge) pairs the promoted run
+  judged. It also states plainly when a sample contains no disagreement at all,
+  because a reader cannot tell that apart from a clean 100%.
+- `EVALS.md`'s header distinguishes a live run that called the provider from
+  one served entirely from cache. The promoted 2026-07-12 baseline was
+  published as `(full, live)` while all 553 of its answer and judge calls were
+  cache hits: the answers are real completions recorded under byte-identical
+  prompts, which is what makes the run valid regression evidence (ADR 0022),
+  but no call was made and the $3.16 on the cost line is a list-price estimate
+  over reused tokens, not money spent that day.
+- Closed a circularity hole in the calibration tooling. `--emit` pre-filled
+  each template's `human_passed` with the judge's own verdict "as a
+  placeholder", so a relabeling pass that accepted the defaults would have
+  graded the judge against itself and reported perfect agreement while
+  measuring nothing — and nothing detected it. Templates now emit a null
+  verdict, and `load_labels` refuses any row still carrying the TEMPLATE marker
+  or a non-boolean verdict.
+- Added `python -m evals.calibration --worksheet <run_dir>`: a floor-sized,
+  deterministic relabeling worksheet that takes every pair the judge failed
+  first, then fills round-robin across suites. The committed sample had 14 of
+  its 16 labels on pairs the judge had passed, which is how it ended up unable
+  to disagree. The generated worksheet is committed at
+  `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` — 37 rows, 9 of
+  them judge-failures, all nine suites represented, **every verdict blank
+  because only a person can fill them in.** This is queued work, not evidence.
+  It also replaces a README pointer to
+  `judge_relabel_worksheet_2026-07-11.jsonl`, a file that never existed.
 - Every `mirror_of` declaration is now gate-checked before a run makes its
   first model call: a mirror must name a real case, in a different language,
   scoped to the same agency, expecting the same behavior, and carrying at least

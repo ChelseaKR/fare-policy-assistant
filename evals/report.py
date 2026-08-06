@@ -184,13 +184,40 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
         return None
     if not c["n_matched"]:
         return None
-    kappa = "n/a" if c["cohen_kappa"] is None else f"{c['cohen_kappa']:.3f}"
+    # κ is undefined when both raters gave the same verdict every time. Printing
+    # the conventional 1.000 there reads as perfect agreement measured; it is
+    # arithmetic on a sample that could not have produced anything else.
+    kappa = (
+        "undefined — every scored label agreed, so there is no disagreement to "
+        "chance-correct against"
+        if c["cohen_kappa"] is None
+        else f"**{c['cohen_kappa']:.3f}**"
+    )
     lines = [
         f"Human labels checked against this run's judge verdicts on "
         f"{c['n_matched']} of {c['n_labels']} sampled (case, judge) pairs.",
         "",
         f"- Raw agreement: **{c['agreement']:.1%}**",
-        f"- Cohen's κ: **{kappa}**",
+        f"- Cohen's κ: {kappa}",
+    ]
+    if not c.get("meets_floor", True):
+        # The standard's floor stated as a number rather than as "the sample is
+        # small". A coverage gap on the page beats a caveat under a percentage.
+        lines.append(
+            f"- **Below the sample floor:** {c['n_matched']} scored labels against a floor of "
+            f"{c['floor']} (10% of the {c['n_judged']} (case, judge) pairs this run judged). "
+            "Read the agreement and κ above as provisional; the sample is "
+            f"{c['floor'] - c['n_matched']} labels short of the size that would make them "
+            "evidence."
+        )
+    if c["n_matched"] and not c.get("n_disagreements"):
+        lines.append(
+            "- **No disagreement in the scored sample.** Every label that survived staleness "
+            "agreed with the judge, so this sample can only report 100%. Read the stale list "
+            "below before reading the agreement as a result: a sample that lost its "
+            "disagreements to a prompt bump is the agreeing half of the set, not a clean one."
+        )
+    lines += [
         f"- Stale labels skipped (answer changed since labeling): **{c['n_stale']}**",
         f"- Note: {c['note']}.",
     ]
@@ -208,15 +235,34 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
     return "\n".join(lines)
 
 
+def _run_mode_label(summary: dict) -> str:
+    """The run's mode, and — for a live run — whether it actually called the
+    provider.
+
+    "live" only ever meant "not the mock provider". The promoted 2026-07-12
+    baseline was labeled `(full, live)` while every one of its 553 answer and
+    judge calls was served from the on-disk cache: the answers are real
+    Bedrock completions recorded under byte-identical prompts, which is why
+    they are legitimate regression evidence (ADR 0022), but no call was made
+    and no money was spent that day. A reader should not have to reach the
+    cost line to learn that.
+    """
+    if summary["offline"]:
+        return f"{summary['mode']}, offline — deterministic checks only"
+    stats = summary.get("execution", {}).get("cache") or {}
+    calls = stats.get("answer_calls", 0) + stats.get("judge_calls", 0)
+    hits = stats.get("answer_hits", 0) + stats.get("judge_hits", 0)
+    if stats.get("enabled") and calls and hits == calls:
+        return f"{summary['mode']}, live provider — every model call served from cache"
+    return f"{summary['mode']}, live"
+
+
 def generate_markdown(summary: dict, records: list[dict]) -> str:
     total = summary["total"]
     lines = [
         "# Evaluation Report",
         "",
-        f"Generated from the run at `{summary['run_at']}` "
-        + f"({summary['mode']}, "
-        + ("offline — deterministic checks only" if summary["offline"] else "live")
-        + ").",
+        f"Generated from the run at `{summary['run_at']}` ({_run_mode_label(summary)}).",
         "",
         f"- Answer model: `{summary['answer_model']}` · Judge model: `{summary['judge_model']}`",
         "- Judges ran: "

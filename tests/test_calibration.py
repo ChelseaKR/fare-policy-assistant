@@ -1,12 +1,14 @@
 import json
 
 from evals.calibration import (
+    LABELS_PATH,
     Label,
     _cohen_kappa,
     answer_hash,
     calibrate,
     emit_label_templates,
     load_labels,
+    stratified_worksheet,
 )
 
 
@@ -178,3 +180,195 @@ def test_validate_accepts_multiturn_and_rejects_too_short():
     missing = [{"cases": [{"id": "c3", "expected_behavior": "answer", "rationale": "x"}]}]
     with pytest.raises(SystemExit):
         validate_cases(missing)
+
+
+# ── the sample must be able to say something ─────────────────────────────────
+#
+# On 2026-07-12 EVALS.md published "Cohen's κ: 1.000" from four labels that all
+# agreed. Both labels in the set that had recorded a human/judge *disagreement*
+# (ml-004, ground-024) had gone stale when a prompt bump changed their answers,
+# so the surviving sample was the agreeing half and κ was 1.0 by the pe==1
+# special case — a definition, not a measurement. These tests keep that number
+# from being publishable again without the reader being told.
+
+
+def test_kappa_is_undefined_when_no_scored_label_disagrees():
+    assert _cohen_kappa([(True, True)] * 4) is None
+    assert _cohen_kappa([(False, False)] * 4) is None
+
+
+def test_kappa_is_still_a_number_when_the_sample_can_disagree():
+    # Guard against over-correcting: a sample with both verdicts present and
+    # full agreement is a real κ of 1.0, not a degenerate one.
+    assert _cohen_kappa([(True, True), (False, False)]) == 1.0
+
+
+def test_calibrate_reports_the_floor_and_the_shortfall(tmp_path):
+    records = [
+        {
+            "case_id": f"c-{i}",
+            "answer": f"a-{i}",
+            "judges": [{"name": "groundedness", "passed": True}],
+        }
+        for i in range(200)
+    ]
+    labels = [Label("c-0", "groundedness", True, answer_hash("a-0"))]
+    out = calibrate(records, labels)
+    assert out["n_judged"] == 200
+    assert out["floor"] == 20  # CLAUDE.md's 10% sample, over the judged pairs
+    assert out["meets_floor"] is False
+    assert out["n_disagreements"] == 0
+
+
+def test_calibrate_counts_the_disagreements_the_sample_actually_contains():
+    records = [
+        {"case_id": "c-0", "answer": "a", "judges": [{"name": "groundedness", "passed": True}]},
+        {"case_id": "c-1", "answer": "b", "judges": [{"name": "groundedness", "passed": True}]},
+    ]
+    labels = [
+        Label("c-0", "groundedness", True, answer_hash("a")),
+        Label("c-1", "groundedness", False, answer_hash("b")),
+    ]
+    out = calibrate(records, labels)
+    assert out["n_disagreements"] == 1
+    assert out["kappa_defined"] is True
+
+
+# ── a template is not a human verdict ────────────────────────────────────────
+
+
+def test_emitted_templates_carry_no_verdict(tmp_path):
+    """`--emit` used to pre-fill `human_passed` with the judge's own call. A
+    relabeling pass that accepted the defaults would then grade the judge
+    against itself and report perfect agreement while measuring nothing."""
+    (tmp_path / "results.jsonl").write_text(
+        json.dumps(
+            {
+                "case_id": "c-1",
+                "answer": "answer text",
+                "judges": [{"name": "groundedness", "passed": True}],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (row,) = emit_label_templates(tmp_path)
+    assert row["human_passed"] is None
+    assert row["note"].startswith("TEMPLATE")
+
+
+def test_an_unedited_template_row_cannot_be_loaded_as_a_label(tmp_path):
+    path = tmp_path / "labels.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "case_id": "c-1",
+                "judge": "groundedness",
+                "human_passed": None,
+                "answer_sha256": "x",
+                "note": "TEMPLATE — read the answer and its passages",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    try:
+        load_labels(path)
+    except ValueError as exc:
+        assert "TEMPLATE" in str(exc)
+    else:  # pragma: no cover - the assertion below is the failure message
+        raise AssertionError("an unfilled template must not load as a human label")
+
+
+def test_a_row_with_a_non_boolean_verdict_is_refused(tmp_path):
+    path = tmp_path / "labels.jsonl"
+    path.write_text(
+        json.dumps(
+            {"case_id": "c-1", "judge": "groundedness", "human_passed": None, "note": "reviewed"}
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    try:
+        load_labels(path)
+    except ValueError as exc:
+        assert "not a verdict" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("an unreviewed pair must not load as a human label")
+
+
+# ── the worksheet must be able to disagree ───────────────────────────────────
+
+
+def _run_with(tmp_path, rows):
+    (tmp_path / "results.jsonl").write_text(
+        "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_worksheet_takes_every_judge_failure_first(tmp_path):
+    """The region where the judge objected is where a human is most likely to
+    differ. The committed sample missed it: 14 of 16 labels sat on pairs the
+    judge had passed, and the four that survived staleness were all
+    agreements."""
+    rows = [
+        {
+            "case_id": f"c-{i}",
+            "suite": "groundedness",
+            "answer": f"a-{i}",
+            "judges": [{"name": "groundedness", "passed": i != 7}],
+        }
+        for i in range(20)
+    ]
+    sheet = stratified_worksheet(_run_with(tmp_path, rows), size=3)
+    assert sheet[0]["case_id"] == "c-7" and sheet[0]["judge_said"] is False
+
+
+def test_worksheet_spreads_across_suites_rather_than_draining_the_largest(tmp_path):
+    rows = [
+        {
+            "case_id": f"big-{i}",
+            "suite": "edge_cases",
+            "answer": f"a{i}",
+            "judges": [{"name": "groundedness", "passed": True}],
+        }
+        for i in range(20)
+    ] + [
+        {
+            "case_id": "small-0",
+            "suite": "refusal",
+            "answer": "b",
+            "judges": [{"name": "helpfulness", "passed": True}],
+        }
+    ]
+    sheet = stratified_worksheet(_run_with(tmp_path, rows), size=2)
+    assert {r["suite"] for r in sheet} == {"edge_cases", "refusal"}
+
+
+def test_worksheet_rows_carry_no_verdict_and_are_bound_to_the_answer(tmp_path):
+    rows = [
+        {
+            "case_id": "c-0",
+            "suite": "groundedness",
+            "answer": "the answer",
+            "judges": [{"name": "groundedness", "passed": True}],
+        }
+    ]
+    (row,) = stratified_worksheet(_run_with(tmp_path, rows), size=1)
+    assert row["human_passed"] is None
+    assert row["answer_sha256"] == answer_hash("the answer")
+
+
+def test_committed_worksheet_is_floor_sized_and_entirely_unlabeled():
+    """The worksheet is queued human work, not evidence. If a row in it ever
+    reads as labeled, something has filled in verdicts nobody made."""
+    path = LABELS_PATH.parent / "judge_relabel_worksheet_2026-08-05.jsonl"
+    rows = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    assert len(rows) == 37
+    assert all(r["human_passed"] is None for r in rows)
+    assert sum(1 for r in rows if r["judge_said"] is False) == 9
