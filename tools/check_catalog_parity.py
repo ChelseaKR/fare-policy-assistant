@@ -60,6 +60,20 @@ def main() -> int:
     pot_ids = _ids(pot)
     ids_by_name = {name: _ids(catalog) for name, catalog in catalogs.items()}
 
+    # The gate's own denominator. Every check below iterates over `pot_ids`, so
+    # an empty template makes all of them vacuous and this prints "catalog
+    # parity OK: 0 msgids" while nothing rider-facing is translated at all.
+    # G2-lite catches a template that *drifts* from the sources, but a commit
+    # that empties the sources and the template together drifts from nothing.
+    # A floor is the cheap fix: the six strings docs/I18N.md enumerates are the
+    # whole translated surface, so the template can never legitimately be empty.
+    if not pot_ids:
+        errors.append(
+            "denominator: messages.pot declares no msgids, which makes every check below "
+            "vacuous. Re-extract with `make i18n`; if the rider-facing strings really were "
+            "removed, this gate has nothing left to protect and should be removed with them"
+        )
+
     # G6: every supported catalog has exactly the template's key set.
     for name, ids in ids_by_name.items():
         extra = ids - pot_ids

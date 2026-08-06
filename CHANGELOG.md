@@ -195,6 +195,13 @@ rather than tied to a published tag.
   step, a response whose kind falls outside the typed contract), and a new test
   reads the check names out of `evals/checks.py` so a future check without a
   scenario fails CI instead of quietly widening the gap again.
+- The i18n catalog-parity gate (G5/G6) checks its own denominator. Every check
+  in it iterates over the template's msgid set, so an empty `messages.pot` made
+  all of them vacuous: the gate printed "catalog parity OK: 0 msgids" and exited
+  0 while nothing rider-facing was translated. G2-lite catches a template that
+  *drifts* from the sources, but a commit emptying the sources and the template
+  together drifts from nothing. An empty template now fails. The committed one
+  carries 7 msgids.
 - The below-macro escape hatch expires on its own. `expected_below_macro.json`
   has always instructed "delete the entry the moment the suite recovers", with
   nothing behind the instruction: an annotation left over a suite that climbed
