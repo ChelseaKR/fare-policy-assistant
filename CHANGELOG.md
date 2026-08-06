@@ -154,6 +154,31 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- The harness self-test (`make eval-selftest`) plants a defect against every
+  check the grader emits, not 8 of 13. The five with no planted defect were
+  `language_match`, `refused`, `redirect_present`, `verification_handoff_present`
+  and `structured_contract_schema_valid` — among them the only thing that makes
+  the multilingual suite a language test rather than a second English suite, and
+  the entirety of the refusal suite's deterministic scoring. Those two suites
+  score 22/22 and 34/34; a check that has never failed and was never shown *able*
+  to fail is indistinguishable from one that cannot. All five now flip from pass
+  to fail on a planted defect (a Spanish case answered in English, a refusal case
+  that answers, a decline that points nowhere, a criterion stated with no next
+  step, a response whose kind falls outside the typed contract), and a new test
+  reads the check names out of `evals/checks.py` so a future check without a
+  scenario fails CI instead of quietly widening the gap again.
+- The committed-report regression gate catches two more ways a report can
+  describe a worse system than the baseline. A baseline suite **absent** from
+  `EVALS.md` used to be skipped as "a missing-provenance problem for
+  `evals/provenance.py`" — but provenance compares prompt and corpus versions and
+  has never looked at suite composition, so the responsibility sat with a module
+  that does not implement it and a report regenerated from a `--suite` subset
+  passed everything. And a suite that **shrank** was invisible: `suite_regressed`
+  requires both a pass-rate drop and a pass-count drop, so deleting the two cases
+  a suite fails takes it from 46/48 to 46/46 and trips neither condition.
+  Deleting the failing test is the oldest way to turn a board green. Both now
+  fail the gate; both share the existing escape (`--update-baseline` with a
+  written rationale), so a deliberate retirement is a line in the diff.
 - Every minimal pair's variants are now gate-checked before a run makes its
   first model call (`evals/runner.py::pair_problems` / `check_pairs`), the same
   shape as the mirror gate: two variants of a counterfactual pair may not demand

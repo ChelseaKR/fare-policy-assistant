@@ -57,9 +57,39 @@ def test_missing_provenance_block_is_flagged_not_crashed():
     assert "no embedded suites provenance" in regressions[0]
 
 
-def test_suite_absent_from_committed_report_is_not_a_crash():
-    # A suite renamed or dropped is out of scope for this check (it is a
-    # provenance/structure question, not a regression this function judges).
+def test_suite_absent_from_committed_report_is_flagged():
+    """This used to return [] on the reasoning that a vanished suite was
+    `evals/provenance.py`'s problem. It never was: provenance compares prompt
+    and corpus versions and has never looked at suite composition, so a report
+    regenerated from a `--suite` subset passed every gate."""
     baseline = {"suites": {"conversation": {"passed": 6, "total": 6, "pass_rate": 100.0}}}
     evals_md = _evals_md({"refusal": {"passed": 10, "total": 10, "pass_rate": 100.0}})
+    (finding,) = check(evals_md, baseline)
+    assert "absent from the committed EVALS.md" in finding
+
+
+def test_deleting_the_failing_cases_is_flagged_even_though_the_rate_rises():
+    """The oldest way to turn a board green. `suite_regressed` needs both a
+    pass-rate drop and a pass-count drop, so removing a suite's two failures
+    takes it from 46/48 to 46/46 and trips neither."""
+    baseline = {"suites": {"edge_cases": {"passed": 46, "total": 48, "pass_rate": 95.8}}}
+    evals_md = _evals_md({"edge_cases": {"passed": 46, "total": 46, "pass_rate": 100.0}})
+    (finding,) = check(evals_md, baseline)
+    assert "2 case(s) removed" in finding
+
+
+def test_a_suite_that_grows_is_not_flagged():
+    baseline = {"suites": {"edge_cases": {"passed": 46, "total": 48, "pass_rate": 95.8}}}
+    evals_md = _evals_md({"edge_cases": {"passed": 49, "total": 52, "pass_rate": 94.2}})
     assert check(evals_md, baseline) == []
+
+
+def test_the_committed_report_holds_the_shrinkage_and_presence_checks():
+    """The real repo state, not a fixture: every baseline suite is present in
+    EVALS.md at no fewer cases than the baseline records."""
+    import json
+
+    from evals.check_report_regression import BASELINE_PATH, EVALS_MD_PATH
+
+    baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    assert check(EVALS_MD_PATH.read_text(encoding="utf-8"), baseline) == []
