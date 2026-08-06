@@ -154,6 +154,34 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- `evals/spanish_quality.py` and a committed, entirely blank rating census at
+  `evals/spanish/native_es_rubric_2026-08-05.jsonl`: the half of `docs/I18N.md`
+  §7 the bilingual parity gate cannot reach. That gate compares a Spanish
+  answer's pass/fail against its English mirror's, and every check behind those
+  two verdicts asks whether a citation resolves, a required fact appears, the
+  classifier says `es`, and no determination phrase is present. Spanish that is
+  stilted, wrongly registered, or full of anglicisms satisfies all of them. **The
+  0.0-point parity delta would not move if every Spanish answer read like a
+  machine translation, because nothing in it is looking.**
+  The module publishes the rubric (fluent / register / terminology, each stated
+  as the question a rater answers) and emits a **census** rather than a sample:
+  all 28 Spanish answers from the promoted run, 7 marked `fixed_string` because
+  they render the committed gettext refusals that `docs/I18N.md` records as
+  pre-existing human translation, so the catalog is never counted as model
+  output. `make spanish-quality` walks the sheet offline, one answer at a time,
+  showing the Spanish on its own — no English mirror, since parity already
+  compares those, and no default rating. `EVALS.md` now carries a
+  **Native-Spanish answer quality** section reporting **not measured**, with the
+  shortfall as a number; `summarize` returns `None` per dimension below the
+  census floor rather than a percentage over answers nobody read, and a test
+  asserts no zero is rendered.
+  Two things are deliberately absent. No rating was authored: a model rating its
+  own Spanish is the same circularity closed on the calibration templates. And
+  no question set was authored: §7 asks for **externally sourced** native-Spanish
+  questions, and machine-written Spanish questions are exactly what that
+  excludes. Every census row therefore reads `question_source: repo_mirror`, so
+  even a fully rated sheet describes the Spanish this repo writes rather than
+  Spanish as riders write it — a field in the data instead of a caveat in prose.
 - The harness self-test (`make eval-selftest`) plants a defect against every
   check the grader emits, not 8 of 13. The five with no planted defect were
   `language_match`, `refused`, `redirect_present`, `verification_handoff_present`

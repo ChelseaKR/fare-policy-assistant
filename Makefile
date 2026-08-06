@@ -3,10 +3,13 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel
+.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
 
 # The committed relabeling worksheet `make relabel` opens by default.
 WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
+
+# The committed native-Spanish rating census `make spanish-quality` opens.
+ES_SHEET ?= evals/spanish/native_es_rubric_2026-08-05.jsonl
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -141,6 +144,9 @@ eval-selftest:  ## Plant known defects into clean answers and prove the determin
 
 relabel:      ## Label the judge-calibration worksheet one row at a time (offline; shows each row's evidence, never proposes a verdict): make relabel [WORKSHEET=<path>]
 	uv run python -m evals.calibration --review "$(WORKSHEET)"
+
+spanish-quality: ## Rate the native-Spanish answer-quality census (offline; the half of I18N §7 the parity gate cannot see): make spanish-quality [ES_SHEET=<path>]
+	uv run python -m evals.spanish_quality --review "$(ES_SHEET)"
 
 coverage:     ## Agency x program coverage matrix + corpus blind spots; --write regenerates docs/eval-coverage.md
 	uv run python -m evals.coverage --write

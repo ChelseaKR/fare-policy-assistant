@@ -1,0 +1,65 @@
+# Native-Spanish answer-quality rating sheet, generated 2026-08-05 from the
+# promoted run evals/runs/20260712T050117Z by:
+#
+#     uv run python -m evals.spanish_quality --worksheet evals/runs/20260712T050117Z
+#
+# This is the half of docs/I18N.md §7 that the bilingual parity gate cannot
+# reach. That gate compares Spanish and mirrored-English PASS/FAIL and currently
+# reports a 0.0-point delta over 22 verified pairs. It would still report 0.0 if
+# every Spanish answer read like a machine translation, because both verdicts
+# come from checks that ask whether a citation resolves, a required fact appears,
+# and the classifier says "es" -- none of which is a question about quality.
+#
+# A CENSUS, not a sample: all 28 Spanish answers the promoted run produced. Seven
+# are `fixed_string: true`, the committed gettext refusal strings (real
+# pre-existing human translation per docs/I18N.md); rating those describes the
+# catalog, not the model, and the summary keeps them separate from the 21
+# model-written answers.
+#
+# To rate it:
+#
+#     make spanish-quality
+#     # or: uv run python -m evals.spanish_quality --review <this file>
+#
+# Offline, resumable, and it shows the Spanish answer on its own -- no English
+# mirror, no check results. Parity already compares the pair; this asks whether
+# the Spanish is good Spanish. Nothing is pre-filled and there is no default.
+#
+# Every rating below is null and every note carries the TEMPLATE marker.
+# evals/spanish_quality.py::load_ratings refuses both, and `--status` reports an
+# unrated sheet as NOT MEASURED -- never as zero, never as a pass. This is
+# queued work, not evidence.
+#
+# Still outstanding after this sheet is filled: §7 also asks for an EXTERNALLY
+# SOURCED native-Spanish question set. Every row below reads
+# `question_source: repo_mirror`, because this repo wrote its Spanish questions
+# alongside the English ones. That shortfall is a field in the data rather than
+# a sentence in a doc, and sourcing the set needs a person.
+{"case_id": "conv-005", "suite": "conversation", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "f77676989f44a9b43fb168165b86dea516efe909a47c6207003febdf19bc4c1a", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-001", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "9c1457e0699fbfa6fcf9d5a9a640b6531a8904ec7f3d1b3737f5ac14999acbff", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-002", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "7c2c2db00bcb696d300b84a87fada831c914f7a279454efa3f1c729234f230bb", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-003", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "7d3a659afd92e68203341a667977d9567730126d67fce56b22860785c0aed1c8", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-004", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "a2174b1e3d7317b2cb41237b8e65879bbc7a4633d091456493c24bebe54d607f", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-005", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "19f96b15bd5171ad6139d78ba605c7248dd6a60465e50a3951f6c32a82079d3e", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-006", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "767a05bb4a203dcdf229eb6ddab175fb9c2fe13268769ca2901ef94b82f29c5e", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-007", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "0b401c0e2da8175457968591b96c82f6fcac94d514ec327d77cc2a9cc0370ca6", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-008", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "dac0bf65594b190cc905502aab77aa41fe143e98a37d3a74f8daad9573522dd2", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-009", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "5a09c9ae19c3e65caacf884693f0025b757d8fcf7a3be0931bb651e041e8f08c", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-010", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "802ea3038bbc65c898f2cc2d26b13c661446bee5670056c24afaceb62cd6b527", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-011", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "cbdcbb997ba57f0c3908f42339b570773de9ca953f02a4a9b199315821e3263b", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-012", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "a614a806a8c7e754607787c633995cfae647b8c017a8d4ccef6ee99432faf6d7", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-013", "suite": "multilingual", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "82b623c55cd0ba5d4488cda3aff5f84fb3763be803bada43d39a03adb5ff23b6", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-014", "suite": "multilingual", "kind": "answered_guarded", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "6ee30d21e74a91728c2c170157d14c82db9216a6bbca34e9395fc79ac9375c63", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-015", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "94d81edabeef7a76c770d22074fd04e5fbcc6b76cb589d9c9fbbcd77a0957de1", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-016", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "4356e1d6b4c98ee9da6d9f12e66b194ddadf9d0e9b13579cacaace32bc5b1552", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-017", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "6f64868eef9f95a52aaf0c4dbceebd8cd509ec56f7f8c0253d4c90d363111817", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-018", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "066829d741302e707920a7b47bf6c1a2973b29e7564d904518b30d55e90e512b", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-019", "suite": "multilingual", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "d07f7ea78ce11c51bcb9b8eca4b1fc36c33c982a51e1a9a17f4a1a26bbede706", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-020", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "813dd00645baa05037e93a9f116c527b4c1ece6cc8ec692ad3da6ea53976b2cf", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-021", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "e8971942b339efbac27c04494557d4d4d359b353c2204dce7111b4b78b92d1c3", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "ml-022", "suite": "multilingual", "kind": "answered", "fixed_string": false, "question_source": "repo_mirror", "answer_sha256": "e66508d4d2fceb26ad356e2f08388c34baf150481e60531d1c5eb0936c7fe29d", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "parity-pii-dob-es", "suite": "refusal", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "d07f7ea78ce11c51bcb9b8eca4b1fc36c33c982a51e1a9a17f4a1a26bbede706", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "parity-scope-legal-es", "suite": "refusal", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "8cb422057173fddc1695abae7d7ea2f240fa32494f2f4b06b6a4cca8d6fbc36b", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "parity-scope-medical-es", "suite": "refusal", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "8cb422057173fddc1695abae7d7ea2f240fa32494f2f4b06b6a4cca8d6fbc36b", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "parity-scope-immigration-es", "suite": "refusal", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "8cb422057173fddc1695abae7d7ea2f240fa32494f2f4b06b6a4cca8d6fbc36b", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}
+{"case_id": "parity-injection-es", "suite": "refusal", "kind": "refused_input", "fixed_string": true, "question_source": "repo_mirror", "answer_sha256": "82b623c55cd0ba5d4488cda3aff5f84fb3763be803bada43d39a03adb5ff23b6", "fluent": null, "register": null, "terminology": null, "note": "TEMPLATE — read the Spanish answer, rate each dimension, and replace this note"}

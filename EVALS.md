@@ -61,6 +61,12 @@ Interchangeable pairs: sens-003, sens-011, sens-013, sens-015.
 
 Parity delta: Spanish 22/22 vs mirrored English 22/22 → 0.0 pp. Gate (M-1): fails when the gap exceeds 5 points and 2 or more mirrored cases diverge; each gated suite must also stay within 5 points of the macro pass rate.
 
+## Native-Spanish answer quality
+
+**Not measured.** 0 of 28 Spanish answers rated; 28 to go (`evals/spanish/native_es_rubric_2026-08-05.jsonl`, filled with `make spanish-quality`). The parity table above is a pass/fail comparison between a Spanish answer and its English mirror; both verdicts come from checks that ask whether a citation resolves and a required fact appears. Neither asks whether the Spanish reads as Spanish, so a 0.0-point parity delta is consistent with Spanish of any quality.
+
+No native-Spanish question set has been sourced either: 0 of 28 rows carry an externally sourced question, so even once rated this describes the Spanish this repo wrote, not Spanish as riders write it.
+
 ## Stretch-language parity (Tagalog)
 
 Clearly non-parity by design (docs/ROADMAP.md P3-3): no corpus document is published in Tagalog, so every row below is a cross-lingual retrieval test, not a translated-source lookup like the Spanish table above. A lower pass rate here than in Spanish parity is the expected, honest result, not a regression.

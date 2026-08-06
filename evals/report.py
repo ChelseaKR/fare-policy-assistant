@@ -13,7 +13,8 @@ import sys
 from pathlib import Path
 
 from assistant import config, corpus
-from evals import provenance
+from evals import provenance, spanish_quality
+from evals.calibration import load_worksheet
 from evals.runner import (
     MACRO_THRESHOLD_PP,
     PARITY_CASE_FLOOR,
@@ -33,6 +34,30 @@ def _rate_cell(suite: dict) -> str:
     if "ci_low" in suite and "ci_high" in suite:
         return f"{suite['pass_rate']}% ({suite['ci_low']}–{suite['ci_high']})"
     return f"{suite['pass_rate']}%"
+
+
+def _spanish_quality_section() -> str | None:
+    """The native-Spanish half of the bilingual equity standard, reported as
+    what it is.
+
+    The Spanish parity table above is a pass/fail comparison against mirrored
+    English cases, and the two verdicts come from checks that ask whether a
+    citation resolves and a required fact appears. None of that is a question
+    about whether the Spanish reads as Spanish. This section prints the state of
+    the rating census (`evals/spanish/native_es_rubric_2026-08-05.jsonl`) —
+    which, unrated, says "not measured" rather than showing a zero or being
+    left off the page.
+    """
+    if not spanish_quality.SHEET_PATH.exists():
+        return None
+    entries = [e.row for e in load_worksheet(spanish_quality.SHEET_PATH) if e.row is not None]
+    try:
+        rated = spanish_quality.load_ratings(spanish_quality.SHEET_PATH)
+    except ValueError:
+        rated = []  # a template or half-filled sheet establishes nothing
+    summary = spanish_quality.summarize(rated, floor=len(entries))
+    body = "\n\n".join(spanish_quality.status_lines(summary))
+    return f"## Native-Spanish answer quality\n\n{body}"
 
 
 def _discrimination_note(records: list[dict]) -> list[str]:
@@ -366,6 +391,9 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 f"mirrored cases diverge; each gated suite must also stay within "
                 f"{MACRO_THRESHOLD_PP:g} points of the macro pass rate.",
             ]
+        quality = _spanish_quality_section()
+        if quality:
+            lines += ["", quality]
 
     stretch_parity = _stretch_language_parity(records)
     if stretch_parity:
