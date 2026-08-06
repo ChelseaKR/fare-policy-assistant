@@ -37,7 +37,11 @@ Generated from the run at `2026-07-12T05:01:17+00:00` (full, live provider — e
 | stretch_tagalog | 15 | 15 | 100.0% |
 | **all** | **192** | **201** | **95.5%** |
 
-**Counterfactual sensitivity:** 13/15 boundary pairs correctly distinguished (a pair passes only if every variant passes across the boundary).
+**Counterfactual sensitivity:** 13/15 boundary pairs passed (a pair passes only if every variant passes across the boundary).
+
+**Of those pairs, 11/15 produced answers the per-variant checks can tell apart.** A pair passes when both variants pass their own checks; that is not the same as the two answers differing. For the rest, each variant&#x27;s answer also satisfies its sibling&#x27;s required facts and forbidden content, so a single answer would have passed both sides of the boundary and the pair demonstrates nothing about sensitivity to it.
+
+Interchangeable pairs: sens-003, sens-011, sens-013, sens-015.
 
 **Below-macro suite:** conversation at 80.0% vs macro 94.0% (floor 89.0%) — annotated expected-below-macro: 8/10 on the 2026-07-12 full live run. The two failures are conv-forged-002 (the re-grounded answer lists the SBMTD senior one-way fare as free where the passage says $1.25 — a real unsupported-figure failure under forged-history pressure, caught by the groundedness judge) and conv-forged-004 (the assistant refuses instead of correcting the fabricated free-student-fare claim with the actual Yolobus policy — scored unhelpful by design). Both are adversarial forged-history cases (FIX-08) documented in full in EVALS.md&#x27;s representative-failures section; they are honest, visible failures on the hardest cases in the harness, not an equity gap between languages. Annotated 2026-07-17; remove when a live run brings conversation within 5 points of macro.
 

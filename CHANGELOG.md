@@ -30,6 +30,25 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Corrected a published claim: the counterfactual sensitivity line said "13/15
+  boundary pairs correctly distinguished" and now says "13/15 boundary pairs
+  passed", with a second number beside it.** A pair passes when both of its
+  variants pass their own checks. Whether the two answers came out *different* —
+  which is what "distinguished" asserts and what the whole suite exists to show —
+  was never measured. `evals/runner.py::pair_discrimination` measures it by
+  replaying each variant's recorded answer through its sibling's required facts
+  and forbidden content: a pair whose answers are mutually interchangeable
+  demonstrates nothing about its boundary, however green it scored. On the
+  promoted run **11 of 15 pairs produce answers the per-variant checks can tell
+  apart**; `sens-003`, `sens-011`, `sens-013`, and `sens-015` do not, and the
+  report now names them. Both numbers come from the same recorded answers: 13/15
+  did not change and nothing was re-scored, but it now reads as what it is.
+  Reported and not yet gated — gating it today would fail the committed report
+  with no credentialed run available to regenerate it, and a gap that is
+  published is not a gap that is hidden.
+- `EVALS.md` and `docs/eval-report.html` were regenerated from the same promoted
+  2026-07-12 run to carry that line. No re-scoring; the scoreboard, parity
+  table, calibration section, and failure traces are byte-identical.
 - The structural accessibility gate covers every public page instead of the
   chat page alone. `/embed` is what an agency puts on its own fare page, and
   `/offline` and `/guide` exist for riders with no signal at the stop or who
@@ -135,6 +154,25 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- Every minimal pair's variants are now gate-checked before a run makes its
+  first model call (`evals/runner.py::pair_problems` / `check_pairs`), the same
+  shape as the mirror gate: two variants of a counterfactual pair may not demand
+  identical `required_facts` and `forbidden_content`, and no variant may demand
+  neither. `pair_verdicts` scores a pair as distinguished only when every
+  variant passes, on the stated grounds that "the per-variant required_facts /
+  forbidden_content prove the answer actually changed across the boundary" —
+  which holds only if the two sides ask for different things. Two of the 15
+  pairs in the promoted baseline did not: `sens-011`'s variants both required
+  only "Stored Value", though its boundary is that a *monthly* pass is excluded
+  from the reduced fare; `sens-014`'s both required only the 3-17 youth range,
+  though its boundary is that an 18-year-old falls outside it. Both were
+  reported as boundaries correctly distinguished.
+- Both pairs were repaired against the corpus rather than around the gate:
+  `sens-011b` must now state the exclusion, not just name the eligible product,
+  and must not assert that a monthly pass is reduced-fare eligible; `sens-014b`
+  must place the 18-year-old outside the range, not merely recite it. Replaying
+  the promoted run's recorded answers through the repaired cases leaves every
+  verdict unchanged; the suite's pass rate does not move.
 - `python -m evals.calibration --review <worksheet>` (also `make relabel`): a
   labeling surface for the judge-calibration worksheet. Labeling a row means
   reading an answer, its retrieved passages, and the case's expected behavior,

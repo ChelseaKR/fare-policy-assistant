@@ -79,7 +79,7 @@ from assistant.release_identity import (
 )
 from assistant.retrieve import Retriever
 from evals import attestation as eval_attestation
-from evals import judges
+from evals import checks, judges
 from evals.cache import CachingModel, EvalCache, case_content_key
 from evals.checks import run_checks
 from evals.stats import wilson_interval
@@ -1674,6 +1674,7 @@ def _run_resolved(
         raise SystemExit("no suites found")
     validate_cases(suites)
     check_mirrors()
+    check_pairs()
 
     started_at = datetime.now(UTC)
     started = time.monotonic()
@@ -2196,6 +2197,136 @@ def check_mirrors() -> None:
     if problems:
         print("MIRROR GATE:\n  " + "\n  ".join(problems), file=sys.stderr)
         raise SystemExit(1)
+
+
+# ── minimal-pair integrity: the sensitivity suite's own denominator ──────────
+
+
+def _demand_signature(case: dict) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """What a case *demands of the answer*, over and above the checks every case
+    shares. Within a minimal pair the variants carry the same agency scope and
+    expected behavior by construction, so these two lists are the whole of the
+    difference between one side of the boundary and the other."""
+    return (
+        tuple(sorted(case.get("required_facts") or [])),
+        tuple(sorted(case.get("forbidden_content") or [])),
+    )
+
+
+def pair_problems(cases: dict[str, dict]) -> list[str]:
+    """Every minimal pair's variants must demand different things; empty is clean.
+
+    `pair_verdicts` scores a counterfactual pair as distinguished only when every
+    variant passes, and says why: "the per-variant required_facts /
+    forbidden_content prove the answer actually changed (or held) across the
+    boundary." That holds only if the variants ask for different evidence. Two
+    variants that demand exactly the same thing are one case written twice, and
+    a single boilerplate answer satisfies both — which the report then prints as
+    a boundary "correctly distinguished".
+
+    Nothing checked this until 2026-08-05, and two of the 15 pairs in the
+    promoted baseline failed it: `sens-011` (both variants required only "Stored
+    Value", though the boundary is that a *monthly* pass is excluded from the
+    reduced fare) and `sens-014` (both required only the 3-17 range, though the
+    boundary is that an 18-year-old falls outside it). Both were scored as
+    distinguished.
+
+    This is the same shape as `mirror_problems`: a comparison is only a
+    comparison if the two things compared are actually different, and the number
+    it publishes says nothing until something checks that.
+    """
+    grouped: dict[str, list[tuple[str, dict]]] = {}
+    for case_id, case in sorted(cases.items()):
+        pair_id = case.get("pair_id")
+        if pair_id:
+            grouped.setdefault(pair_id, []).append((case_id, case))
+
+    problems = []
+    for pair_id, members in sorted(grouped.items()):
+        for case_id, case in members:
+            if not (case.get("required_facts") or case.get("forbidden_content")):
+                problems.append(
+                    f"{case_id}: variant of pair {pair_id} declares neither required_facts "
+                    "nor forbidden_content, so no answer to it can fail on the boundary"
+                )
+        by_signature: dict[tuple[tuple[str, ...], tuple[str, ...]], list[str]] = {}
+        for case_id, case in members:
+            by_signature.setdefault(_demand_signature(case), []).append(case_id)
+        for shared in sorted(v for v in by_signature.values() if len(v) > 1):
+            problems.append(
+                f"pair {pair_id}: {', '.join(shared)} demand identical required_facts and "
+                "forbidden_content — one answer satisfies both sides, so the pair proves "
+                "no discrimination across its boundary"
+            )
+    return problems
+
+
+def check_pairs() -> None:
+    """Fail (exit 1) if any minimal pair's variants demand identical evidence.
+
+    Runs beside `check_mirrors`, before the first model call, for the same
+    reason: a run that cannot measure the thing it reports should not be paid
+    for.
+    """
+    problems = pair_problems({c["id"]: c for s in load_suites() for c in s["cases"]})
+    if problems:
+        print("MINIMAL-PAIR GATE:\n  " + "\n  ".join(problems), file=sys.stderr)
+        raise SystemExit(1)
+
+
+def pair_discrimination(records: list[dict], cases: dict[str, dict] | None = None) -> dict:
+    """Did each pair's variants actually produce distinguishable answers?
+
+    `pair_problems` is static: it proves the two variants *ask* for different
+    things. This is the run-level question the scoreboard's "boundary pairs
+    correctly distinguished" line implies but has never answered — whether the
+    answers came out different. For every variant it replays its *sibling's*
+    recorded answer through its own `required_facts` / `forbidden_content`. If
+    each variant's demands are satisfied by the other's answer, then one answer
+    would have passed both sides and the pair distinguished nothing, however
+    green it scored.
+
+    Reported, not gated. Five of the 15 pairs in the promoted run come out
+    interchangeable, and gating that today would fail the committed report
+    without a credentialed run available to regenerate it. Publishing the number
+    beside the pair pass rate is the honest interim: the pass rate is real, and
+    it means less than it reads.
+
+    Returns {pair_id: {"discriminating": bool, "interchangeable": [...]}} over
+    the pairs whose every variant is present in `records`.
+    """
+    cases = cases or {c["id"]: c for s in load_suites() for c in s["cases"]}
+    answers = {r["case_id"]: r.get("answer", "") for r in records}
+    grouped: dict[str, list[str]] = {}
+    for case_id, case in sorted(cases.items()):
+        pair_id = case.get("pair_id")
+        if pair_id:
+            grouped.setdefault(pair_id, []).append(case_id)
+
+    out: dict[str, dict] = {}
+    for pair_id, members in sorted(grouped.items()):
+        if not all(m in answers for m in members):
+            continue  # a subset run; the pair is out of view, not undiscriminating
+        interchangeable = [
+            f"{other} satisfies {own}"
+            for own in members
+            for other in members
+            if own != other and _demands_met(cases[own], answers[other])
+        ]
+        out[pair_id] = {
+            "discriminating": len(interchangeable) < len(members) * (len(members) - 1),
+            "interchangeable": interchangeable,
+        }
+    return out
+
+
+def _demands_met(case: dict, answer: str) -> bool:
+    """Whether `answer` satisfies the case-specific demands (`required_facts`,
+    `forbidden_content`) — the two checks that differ between the variants of a
+    minimal pair. Uses the same matchers the grader uses, never a copy."""
+    if any(not checks.fact_matches(f, answer) for f in case.get("required_facts") or []):
+        return False
+    return not any(checks.phrase_asserted(p, answer) for p in case.get("forbidden_content") or [])
 
 
 # ── bilingual parity gate (M-1; audit P1-1; AIEV-10/11, I18N-22) ─────────────

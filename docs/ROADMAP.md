@@ -41,10 +41,12 @@ bug for this repo specifically.
 > **Status (2026-07-02):** EXP-02 (item 4) done. A 15-pair counterfactual
 > sensitivity suite (`evals/suites/sensitivity.yaml`) scores minimal pairs
 > jointly — a pair passes only if every variant passes — and the report renders
-> "N/15 boundary pairs correctly distinguished". This proves boundary
-> discrimination (62 vs 65, Medicare vs Medi-Cal, super-senior vs senior,
-> youth-free vs youth-discount, stored-value vs monthly), not just aggregate
-> pass rate.
+> "N/15 boundary pairs passed". **Amended 2026-08-05:** that line used to read
+> "correctly distinguished", which claimed more than the number measured. A pair
+> passes when both variants pass their own checks; nothing asked whether the two
+> answers differed. `runner.pair_problems` now blocks a run whose variants demand
+> identical evidence (two pairs did), and the report publishes how many pairs the
+> per-variant checks could actually tell apart — 11 of 15 on the promoted run.
 
 1. **Close the model-card claims.** `docs/model-card.md` states per-run cost is
    documented and that judge agreement is spot-checked on a 10% human-labeled
@@ -87,9 +89,11 @@ bug for this repo specifically.
    an ordinary case (carrying a `pair_id`) so existing deterministic checks and
    credential gating apply unchanged, then re-groups the results into a pair-level
    verdict — a pair passes only if every variant passes. `EVALS.md` renders
-   "N/15 boundary pairs correctly distinguished". Done = the suite proves the
-   assistant discriminates across the boundary (62 vs 65, Medicare vs Medi-Cal,
-   super-senior vs senior), not merely that it produces plausible prose.
+   "N/15 boundary pairs passed", beside a count of how many of those pairs
+   produced answers the per-variant checks can tell apart. Done = the suite
+   proves the assistant discriminates across the boundary (62 vs 65, Medicare vs
+   Medi-Cal, super-senior vs senior), not merely that it produces plausible
+   prose — and as of 2026-08-05 that second number says it does so on 11 of 15.
 
 ## P1 — Production hardening
 

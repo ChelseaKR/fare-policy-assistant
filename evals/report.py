@@ -19,6 +19,7 @@ from evals.runner import (
     PARITY_CASE_FLOOR,
     PARITY_THRESHOLD_PP,
     expected_below_macro,
+    pair_discrimination,
     parity_delta,
     suites_below_macro,
 )
@@ -32,6 +33,38 @@ def _rate_cell(suite: dict) -> str:
     if "ci_low" in suite and "ci_high" in suite:
         return f"{suite['pass_rate']}% ({suite['ci_low']}–{suite['ci_high']})"
     return f"{suite['pass_rate']}%"
+
+
+def _discrimination_note(records: list[dict]) -> list[str]:
+    """How many pairs the per-variant checks could actually tell apart.
+
+    The pair pass rate above reads as evidence that the assistant discriminates
+    across a boundary. It is not: a pair passes when both variants pass their
+    own checks, and until this line existed nothing asked whether the two
+    answers differed at all. This replays each variant's answer through its
+    sibling's `required_facts` / `forbidden_content`; a pair whose answers are
+    mutually interchangeable proved nothing about the boundary, however green it
+    scored. Reported, not gated — see `runner.pair_discrimination`.
+    """
+    result = pair_discrimination(records)
+    if not result:
+        return []
+    total = len(result)
+    weak = sorted(k for k, v in result.items() if not v["discriminating"])
+    strong = total - len(weak)
+    out = [
+        "",
+        f"**Of those pairs, {strong}/{total} produced answers the per-variant checks can "
+        "tell apart.** A pair passes when both variants pass their own checks; that is not "
+        "the same as the two answers differing. For the rest, each variant's answer also "
+        "satisfies its sibling's required facts and forbidden content, so a single answer "
+        "would have passed both sides of the boundary and the pair demonstrates nothing "
+        "about sensitivity to it.",
+    ]
+    if weak:
+        out.append("")
+        out.append(f"Interchangeable pairs: {', '.join(weak)}.")
+    return out
 
 
 def _variance_section() -> str:
@@ -295,9 +328,10 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         lines += [
             "",
             f"**Counterfactual sensitivity:** {sens['pairs_passed']}/{sens['pairs_total']} "
-            "boundary pairs correctly distinguished "
+            "boundary pairs passed "
             "(a pair passes only if every variant passes across the boundary).",
         ]
+        lines += _discrimination_note(records)
 
     # Per-suite macro floor (M-1, general form): a gated suite sitting more
     # than 5 points below the macro pass rate is named here — with its written
