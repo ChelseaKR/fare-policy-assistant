@@ -30,6 +30,26 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- The structural accessibility gate covers every public page instead of the
+  chat page alone. `/embed` is what an agency puts on its own fare page, and
+  `/offline` and `/guide` exist for riders with no signal at the stop or who
+  would rather browse than type — the audience least able to route around a
+  problem, and the pages nothing was watching. All three passed on the day the
+  gate was widened, so this fixes no present defect; it stops a future one from
+  shipping unnoticed. All three render from the committed corpus with no
+  network and no credentials, which is why they can be checked on every pull
+  request.
+- The "Sources" caption under an answer is a heading now (`<h3>` on the chat
+  page, `<h2>` on `/embed`, whose only other heading is its `<h1>`), styled to
+  keep the inline bold caption's appearance. It was a `<strong>`, which is not
+  a screen-reader heading-navigation target — and where an answer came from is
+  the thing a screen-reader user goes looking for. The recorded transcript the
+  independent audit grades already used `<h3>Sources</h3>`; the page riders
+  actually use was the less accessible of the two.
+- Re-verified every code claim in the `a11y-walkthrough.md` pre-audit against
+  HEAD and corrected one drift (the focus ring is 4px with a 3px offset, not
+  3px). **The manual screen-reader pass is still not done**, on any of the four
+  pages, and none of the above is a substitute for it.
 - **Corrected a published number: judge-vs-human Cohen's κ was 1.000 in
   `EVALS.md` and is now reported as undefined.** Cohen's κ is 0/0 when both
   raters give the same verdict every time; returning 1.0 there is a convention
