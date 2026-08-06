@@ -91,6 +91,40 @@ def test_unpriced_model_is_rendered_without_crashing_or_silent_zero():
     assert "$0" not in line
 
 
+def test_cheap_run_says_the_cache_served_it_rather_than_reading_as_a_broken_meter():
+    """A fully cached nightly publishes a near-zero cost line. Unexplained, that
+    reads as a measurement failure; the report must say the calls were reused."""
+    summary = json.loads(json.dumps(SUMMARY_WITH_COST))
+    summary["execution"] = {
+        "cache": {
+            "enabled": True,
+            "answer_hits": 201,
+            "answer_calls": 201,
+            "judge_hits": 360,
+            "judge_calls": 368,
+        }
+    }
+    line = report._cost_line(summary)
+    assert "561 of 569 model calls were served from the content-keyed eval cache" in line
+
+
+def test_a_genuinely_cold_run_gets_no_cache_caveat_on_its_cost():
+    summary = json.loads(json.dumps(SUMMARY_WITH_COST))
+    summary["execution"] = {
+        "cache": {
+            "enabled": True,
+            "refresh": True,
+            "answer_hits": 0,
+            "answer_calls": 201,
+            "judge_hits": 0,
+            "judge_calls": 368,
+        }
+    }
+    assert "served from the content-keyed eval cache" not in report._cost_line(summary)
+    summary.pop("execution")
+    assert "served from the content-keyed eval cache" not in report._cost_line(summary)
+
+
 def test_spanish_parity_table_pairs_mirror():
     records = [
         _rec(case_id="ml-001", suite="multilingual", mirror_of="ground-001", passed=True),

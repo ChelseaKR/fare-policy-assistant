@@ -1,8 +1,8 @@
-# 0023 — Transactional, exact GTFS feed capture
+# 0024 — Transactional, exact GTFS feed capture
 
 Date: 2026-07-30. Status: accepted. Extends ADR 0011's GTFS-Fares
 cross-validation channel and provides the provenance prerequisite identified in
-ADRs 0020–0022.
+ADRs 0020–0021 and 0023.
 
 ## Context
 

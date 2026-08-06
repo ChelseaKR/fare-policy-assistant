@@ -9,6 +9,9 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Security
+- Update the optional dense-retrieval toolchain to Torch 2.13.0 and setuptools
+  83.0.0, clearing the setuptools path-traversal advisory while preserving the
+  existing Python and sentence-transformers compatibility range.
 - Update the locked Pillow dependency from 12.2.0 to 12.3.0, clearing the
   image-decoder advisory cluster reported against PDF/OCR support.
 - Update the locked pypdf dependency from 6.13.3 to 6.14.2, clearing four
@@ -25,6 +28,20 @@ rather than tied to a published tag.
   grammar through enforcement, structured extraction, and public rendering.
   Production contains the expired `yolobus-fares` snapshot through an
   operator-visible source kill switch.
+
+### Changed
+- CI persists the content-keyed answer/judge cache between runs, so a pull
+  request that cannot change an answer no longer re-buys the smoke suite's
+  model calls, and a merge to `main` no longer re-scores the tree its own pull
+  request scored minutes earlier. Six of seven nightlies are served from that
+  cache; the seventh runs cold under the new `--refresh-cache` flag, which
+  re-measures the provider and rewrites the stored answers so the next cached
+  night cannot republish results the cold run contradicted. The generated
+  report names how many calls a run reused, so a near-zero cost line reads as a
+  reused result rather than a broken meter. Suite composition, the regression
+  gate, the parity gate, and the deterministic checks are unchanged; what is
+  traded is provider-drift detection on six nights out of seven. See
+  `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
 - Layered corpus identity and source-complete archives: a full

@@ -43,6 +43,21 @@ for required_command in aws curl find git jq openssl sort uv; do
   }
 done
 
+# Cost allocation. Same activated `project` tag key, and the same value, as the
+# rider deploy in deploy.sh: the operator console is part of the same project and
+# its spend should land in the same bucket. See the longer note in deploy.sh.
+PROJECT_TAG=fare-assistant
+PROJECT_TAG_MAP="project=$PROJECT_TAG"
+PROJECT_TAG_LIST="Key=project,Value=$PROJECT_TAG"
+
+# The console reads a static changelog rather than shelling out to git at
+# request time (the standard Lambda Python runtime ships no git binary) — see
+# web/console.py's module docstring. It is regenerated fresh from this
+# checkout's git history right before bundling (below, into
+# $BUILD/generated/version_history.json), not here: this early in the script,
+# input/evidence validation has not run yet, and a fixed deploy invariant is
+# that no external command runs before that validation.
+
 for lambda_name in "$RIDER_FN" "$CONSOLE_FN"; do
   [[ "$lambda_name" =~ ^[A-Za-z0-9_-]{1,64}$ ]] || {
     echo "Lambda function names must be unqualified names containing only letters, numbers, _ and -" >&2
@@ -774,6 +789,7 @@ ensure_api_targets_live() {
         --name "$CONSOLE_FN" \
         --protocol-type HTTP \
         --target "$ALIAS_ARN" \
+        --tags "$PROJECT_TAG_MAP" \
         --query ApiId --output text
     )"
     API_EXISTS=true
@@ -901,7 +917,8 @@ ROLE_CREATED=false
 if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
   aws iam create-role \
     --role-name "$ROLE_NAME" \
-    --assume-role-policy-document "$TRUST" >/dev/null
+    --assume-role-policy-document "$TRUST" \
+    --tags "$PROJECT_TAG_LIST" >/dev/null
   ROLE_CREATED=true
 fi
 aws iam put-role-policy \
@@ -910,11 +927,13 @@ aws iam put-role-policy \
   --policy-document "$POLICY"
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 if [[ "$ROLE_CREATED" == "true" ]]; then
+  echo "created role $ROLE_NAME; waiting for IAM propagation"
   sleep 10
 fi
 
 aws logs create-log-group \
-  --log-group-name "$LOG_GROUP" --region "$REGION" 2>/dev/null || true
+  --log-group-name "$LOG_GROUP" --region "$REGION" \
+  --tags "$PROJECT_TAG_MAP" 2>/dev/null || true
 aws logs put-retention-policy \
   --log-group-name "$LOG_GROUP" --retention-in-days 14 --region "$REGION"
 
@@ -1075,6 +1094,7 @@ else
     --role "$ROLE_ARN" \
     --environment "$CONSOLE_ENV" \
     --logging-config "$LOGGING_CONFIG" \
+    --tags "$PROJECT_TAG_MAP" \
     --zip-file "fileb://$BUILD/bundle.zip" >/dev/null
   FUNCTION_EXISTS=true
 fi
@@ -1319,6 +1339,36 @@ aws apigatewayv2 update-stage \
   >/dev/null
 aws logs put-retention-policy \
   --log-group-name "$LOG_GROUP" --retention-in-days 14 --region "$REGION"
+
+# Re-apply `project` on every deploy so console resources created before this
+# tagging existed stop hiding in the account's untagged bucket. Idempotent, and
+# non-fatal for the same reason as in deploy.sh: the console is already live by
+# now and a billing label should not fail the deploy. The SSM parameter holding
+# the console token is created by hand (see this script's header), so it is not
+# tagged here.
+CONSOLE_UNTAGGED=""
+_tag_console() {  # human-readable resource label, then the command that tags it
+  local label="$1"
+  shift
+  "$@" >/dev/null 2>&1 || CONSOLE_UNTAGGED="$CONSOLE_UNTAGGED${CONSOLE_UNTAGGED:+, }$label"
+}
+_tag_console "lambda function $CONSOLE_FN" \
+  aws lambda tag-resource --region "$REGION" \
+  --resource "arn:aws:lambda:$REGION:$ACCOUNT:function:$CONSOLE_FN" \
+  --tags "$PROJECT_TAG_MAP"
+_tag_console "iam role $ROLE_NAME" \
+  aws iam tag-role --role-name "$ROLE_NAME" --tags "$PROJECT_TAG_LIST"
+_tag_console "log group $LOG_GROUP" \
+  aws logs tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:logs:$REGION:$ACCOUNT:log-group:$LOG_GROUP" \
+  --tags "$PROJECT_TAG_MAP"
+_tag_console "http api $API_ID" \
+  aws apigatewayv2 tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:apigateway:$REGION::/apis/$API_ID" \
+  --tags "$PROJECT_TAG_MAP"
+if [[ -n "$CONSOLE_UNTAGGED" ]]; then
+  echo "WARNING: could not apply project=$PROJECT_TAG to: $CONSOLE_UNTAGGED" >&2
+fi
 
 FINAL_ROLLBACK_VERSION="$(
   aws lambda get-alias \

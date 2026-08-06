@@ -3,7 +3,7 @@
 Date: 2026-07-08. Status: accepted. Implements EXP-06 in
 `docs/ideation/03-expansions.md`.
 
-Storage note (2026-07-30): ADR 0023 replaces the mutable
+Storage note (2026-07-30): ADR 0024 replaces the mutable
 `corpus/raw/gtfs/<agency>/` publication path below with exact, immutable ZIP
 captures selected by one transactional `current.json`. The cross-checking
 semantics in this ADR are unchanged.
@@ -121,7 +121,7 @@ prose).
 - `corpus/manifest.yaml` gains a `gtfs_feeds:` list, additive and optional;
   an agency absent from it is unaffected by this feature.
 - The original implementation wrote only fare-relevant members into mutable
-  `corpus/raw/gtfs/<agency>/` directories. ADR 0023 now retains the exact ZIP
+  `corpus/raw/gtfs/<agency>/` directories. ADR 0024 now retains the exact ZIP
   plus only application-consumed extracted inputs in immutable per-feed
   snapshots, and selects a coherent multi-agency set atomically.
 - Nothing in `answer.py`, `retrieve.py`, or the eval suites changes. This is
