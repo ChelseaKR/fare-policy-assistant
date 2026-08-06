@@ -30,7 +30,7 @@ gtfs-check:   ## Cross-check snapshotted GTFS fares against the prose corpus (EX
 fares:        ## Print an agency's authoritative fares from its GTFS-Fares feed (ADR 0017): make fares AGENCY=SBMTD
 	uv run python -m assistant.fare_table $(AGENCY)
 
-smoke:        ## CI smoke suite (25 cases, deterministic checks only unless key present)
+smoke:        ## CI smoke suite (26 cases, deterministic checks only unless key present)
 	uv run python -m evals.runner --smoke
 
 eval:         ## Full eval run; writes evals/runs/<timestamp>/ and regenerates EVALS.md
@@ -40,7 +40,7 @@ report:       ## Regenerate EVALS.md + HTML from the latest run, and the eval-hi
 	uv run python -m evals.report
 	uv run python -m evals.history
 
-a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, static subset)
+a11y:         ## Structural accessibility gate on every public page (WCAG 2.2 AA, static subset)
 	uv run python -m web.a11y
 
 offline:      ## Render the offline fare reference (web/offline.html) from the corpus

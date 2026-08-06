@@ -1,6 +1,6 @@
 """Eval runner.
 
-    python -m evals.runner --smoke              # 25-case CI subset
+    python -m evals.runner --smoke              # 26-case CI subset
     python -m evals.runner --full               # everything, then regenerate reports
     python -m evals.runner --offline            # mock model, deterministic checks only
     python -m evals.runner --suite refusal      # one suite
