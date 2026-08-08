@@ -143,6 +143,7 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.authorize.outputs.release-tag }}
           TAG_OBJECT_SHA: ${{ needs.authorize.outputs.tag-object-sha }}
         run: |
@@ -150,4 +151,4 @@ jobs:
           LIVE_TAG_OBJECT="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha)"
           test "${LIVE_TAG_OBJECT}" = "${TAG_OBJECT_SHA}"
           gh release create "${TAG}" dist/* sbom/sbom.cdx.json \
-            --title "${TAG}" --notes-file release-notes.md --verify-tag
+            --title "${TAG}" --notes-file release-notes.md
