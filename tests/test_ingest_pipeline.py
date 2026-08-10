@@ -471,9 +471,7 @@ def test_main_process_dispatch(tmp_path, monkeypatch):
     assert (processed / "chunks.jsonl").exists()
 
 
-def test_dash_m_invocation_archives_with_the_canonical_chunk_class(
-    tmp_path, monkeypatch
-):
+def test_dash_m_invocation_archives_with_the_canonical_chunk_class(tmp_path, monkeypatch):
     # Regression: ``python -m assistant.ingest process`` runs this module as
     # ``__main__``, whose Chunk class is a distinct object from
     # ``assistant.ingest.Chunk``. Before the ``__main__`` delegation shim,
@@ -511,8 +509,7 @@ def test_dash_m_invocation_archives_with_the_canonical_chunk_class(
     assert (processed / "chunks.jsonl").exists()
     snapshots = tmp_path / "snapshots"
     assert snapshots.exists() and any(snapshots.iterdir()), (
-        "the -m entrypoint must reach the snapshot archive step with "
-        "canonically-typed chunks"
+        "the -m entrypoint must reach the snapshot archive step with canonically-typed chunks"
     )
 
 
