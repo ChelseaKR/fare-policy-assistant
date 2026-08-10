@@ -437,4 +437,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # ``python -m assistant.ingest`` executes this file as the ``__main__``
+    # module, so the ``Chunk`` class defined above is a different class object
+    # from ``assistant.ingest.Chunk``. Identity validation imports the
+    # canonical name and would reject every chunk this copy produced
+    # ("chunks[0] must be a Chunk"). Delegate to the canonical module so a
+    # single Chunk class exists no matter how the CLI is invoked.
+    from assistant.ingest import main as _canonical_main
+
+    _canonical_main()

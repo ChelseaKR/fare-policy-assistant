@@ -1,0 +1,115 @@
+{
+  "observations": [
+    {
+      "chunk_fetch_date": "2026-08-10",
+      "doc_id": "hta-fares",
+      "effective_format": "html",
+      "final_url": "https://hta.org/fares/",
+      "http_status": 200,
+      "raw_bytes": 120186,
+      "raw_sha256": "d444fd752c3b99b62e8e792cb02aa1ad486c5fa02daeb8a255fe9563b3e24ec3",
+      "requested_url": "https://hta.org/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "mst-fares",
+      "effective_format": "html",
+      "final_url": "https://mst.org/fares/",
+      "http_status": 200,
+      "raw_bytes": 139777,
+      "raw_sha256": "fe7fee05a4f5ad75a7775f594fa1dc29fe2a58c18ba5110c9d575baaee8f76fe",
+      "requested_url": "https://mst.org/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "mst-fares-benefits",
+      "effective_format": "html",
+      "final_url": "https://mst.org/fares/benefits/",
+      "http_status": 200,
+      "raw_bytes": 110406,
+      "raw_sha256": "6cc02fd72046ae314dfb5f19d96bc518758aee9b1cef3c48d3f0e26da0ee7e80",
+      "requested_url": "https://mst.org/fares/benefits/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "mst-fares-es",
+      "effective_format": "html",
+      "final_url": "https://mst.org/es/fares/",
+      "http_status": 200,
+      "raw_bytes": 139298,
+      "raw_sha256": "2ceba6538e54ea8f0b90dc1334edc698298f9c2c760456512f86b89b0a18345e",
+      "requested_url": "https://mst.org/es/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "mst-veterans-resource",
+      "effective_format": "html",
+      "final_url": "https://mst.org/mobility/veterans-resource/",
+      "http_status": 200,
+      "raw_bytes": 115584,
+      "raw_sha256": "69144906e9e5ce4cfb5761b37ec20cb0bbf3dab61f1ba09d6208dcbbf7a3857a",
+      "requested_url": "https://mst.org/mobility/veterans-resource/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "sacrt-fares",
+      "effective_format": "html",
+      "final_url": "https://www.sacrt.com/fares/",
+      "http_status": 200,
+      "raw_bytes": 285037,
+      "raw_sha256": "6f18d522baacec211bfabe6074d07d5149ea77274d65465fd61a5555eaaae404",
+      "requested_url": "https://www.sacrt.com/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "sbmtd-farechange",
+      "effective_format": "html",
+      "final_url": "https://sbmtd.gov/farechange/",
+      "http_status": 200,
+      "raw_bytes": 180496,
+      "raw_sha256": "681b314d1e576d4bea5ace1b90b5c3d389be76d092d6a1e1ec70e3a38c2bf5a4",
+      "requested_url": "https://sbmtd.gov/farechange/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "sbmtd-fares-passes",
+      "effective_format": "html",
+      "final_url": "https://sbmtd.gov/fares-passes/",
+      "http_status": 200,
+      "raw_bytes": 123067,
+      "raw_sha256": "741a774a781292930ee1ac0f69f945813088a3f86f6f2a49d439c73655f9c5b4",
+      "requested_url": "https://sbmtd.gov/fares-passes/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "yolobus-fares",
+      "effective_format": "html",
+      "final_url": "https://yolobus.com/fares/",
+      "http_status": 200,
+      "raw_bytes": 84761,
+      "raw_sha256": "af66a88a0c070ee652e3d5568ae5ae0dfd6662fc87cdf0b7a6b064d0dcb3398c",
+      "requested_url": "https://yolobus.com/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "yolobus-purchasing",
+      "effective_format": "html",
+      "final_url": "https://yolobus.com/purchasing-a-ticket-or-pass/",
+      "http_status": 200,
+      "raw_bytes": 74417,
+      "raw_sha256": "c09c127a1d4579b7ebca8f4a769354717e0f268669f566526e9799dc5cdd7e74",
+      "requested_url": "https://yolobus.com/purchasing-a-ticket-or-pass/"
+    },
+    {
+      "chunk_fetch_date": "2026-06-12",
+      "doc_id": "yolobus-reduced-fare-id",
+      "effective_format": "html",
+      "final_url": "https://yolobus.com/reducedfareid/",
+      "http_status": 200,
+      "raw_bytes": 69318,
+      "raw_sha256": "4ff755614b5b8d335ae19229d917b237ffe9575ff8832f872dd3319365395a4e",
+      "requested_url": "https://yolobus.com/reducedfareid/"
+    }
+  ],
+  "schema": "fare-assistant.source-evidence.v1"
+}
