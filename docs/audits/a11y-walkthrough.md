@@ -18,6 +18,16 @@ Recommended coverage: NVDA + Firefox (Windows) and VoiceOver + Safari (macOS or
 iOS). One desktop and one mobile pass is the minimum for a phone-first civic
 audience.
 
+**Four pages are public, not one.** The checklist below is written against the
+chat page, but `/embed`, `/offline`, and `/guide` are equally reachable, and the
+last two exist for riders with no signal at the stop or who would rather browse
+than type — the audience least able to route around a problem. At minimum, walk
+`/offline` and `/guide` for heading navigation and reading order (they are long
+documents, so heading structure is the whole navigation story) and `/embed` for
+keyboard operability inside an iframe, which is the one context the standalone
+page never exercises. As of 2026-08-05 all four are covered by the structural
+gate (`python -m web.a11y`); none of them has had a human pass.
+
 ## Checklist
 
 Each item is pass / fail / not-tested with a note. Items marked (auto) are also
@@ -28,7 +38,8 @@ automation did not miss the real behavior.
 
 - [ ] Every control (text box, Ask, examples, text-size A/A+/A++, high contrast,
       Yes/No feedback, Start over) is reachable and operable by Tab and Enter.
-- [ ] Focus order is logical and visible (the focus outline is the 3px ring).
+- [ ] Focus order is logical and visible (the focus outline is the 4px ring
+      with a 3px offset).
 - [ ] No keyboard trap anywhere in the form or transcript.
 - [ ] After submitting a question, focus moves to the new answer turn so a
       keyboard user lands on the response (the page sets `tabindex=-1` and calls
@@ -80,9 +91,15 @@ human" row to pass without an actual screen-reader session.
   `<a>` — focusable and Enter/Space-operable without extra ARIA. Focus order
   follows DOM order, which matches the visual order (banner → h1 → display
   settings → "will not do" → ask form → examples → status → transcript). The
-  focus ring is `outline: 3px solid #1d4ed8` via `:focus-visible`. No script
-  installs a focus trap. On each new answer the code sets `tabindex=-1` on the
-  turn and calls `focus()`, so a keyboard user is moved onto the response.
+  focus ring is `outline: 4px solid #1d4ed8` with `outline-offset: 3px` via
+  `:focus-visible`. (This note read "3px" until 2026-08-05. The page had since
+  moved to a thicker ring with an offset, which is the stronger result for
+  2.4.13 Focus Appearance — but a pre-audit that describes code the repo no
+  longer ships is worth nothing to the person doing the human pass, so every
+  claim in this section was re-verified against HEAD on 2026-08-05 and this one
+  was the only drift found.) No script installs a focus trap. On each new
+  answer the code sets `tabindex=-1` on the turn and calls `focus()`, so a
+  keyboard user is moved onto the response.
 - Needs human pass: confirm the focus *visibly* lands on the new turn and that
   the ring is perceivable at 400% and in high-contrast mode.
 
@@ -95,10 +112,17 @@ human" row to pass without an actual screen-reader session.
   answer can switch voice. Feedback buttons have `aria-label` ("Yes, helpful" /
   "No, not helpful") beside a "Was this helpful?" label. Citations render as
   `<a>AGENCY: Title</a> (fetched DATE)` inside a `<ul>`.
-- Minor finding (not a failure): the "Sources" caption is a `<strong>`, not a
-  heading, so it is not a screen-reader heading-nav target. It sits inside the
-  focused turn, so it is still reachable; consider an `<h3>` if the human pass
-  finds the sources hard to locate.
+- ~~Minor finding (not a failure): the "Sources" caption is a `<strong>`, not a
+  heading, so it is not a screen-reader heading-nav target.~~ **Fixed
+  2026-08-05.** It is now an `<h3>` on `web/index.html` (under the
+  "Conversation" `<h2>`) and an `<h2>` on `/embed` (whose only other heading is
+  its `<h1>`, so an `<h3>` would skip a level), styled to keep the inline bold
+  caption's appearance. Where an answer came from is exactly what a
+  screen-reader user goes looking for, and heading navigation is how they look;
+  the recorded transcript the independent audit grades already used
+  `<h3>Sources</h3>`, so the page riders actually use was the less accessible
+  of the two. The human pass should still confirm the sources are easy to
+  *find* by heading navigation, which is the part only listening can settle.
 - Needs human pass: whether the moved focus actually announces the new answer;
   whether the citation list reads as usable references rather than a bracket
   wall; whether the polite live region announces status without stealing focus;
@@ -121,6 +145,7 @@ human" row to pass without an actual screen-reader session.
 | Date | Tool + version | Platform | Pass / fail summary | Follow-ups |
 |---|---|---|---|---|
 | 2026-07-11 | source inspection + `web.a11y` static gate | n/a (code review) | Structure, keyboard wiring, ARIA, `lang`, target sizes, persistence all correct by inspection; static gate green. Screen-reader *listening* items not yet performed. | Human SR pass still required (rows above) |
+| 2026-08-05 | source inspection + widened `web.a11y` static gate | n/a (code review) | Re-verified the 2026-07-11 claims against HEAD: one drift (focus ring, corrected above). Fixed the open "Sources is a `<strong>`" finding on both answering surfaces. Widened the gate from `web/index.html` to all four public pages; `/embed`, `/offline`, and `/guide` were previously unchecked and all three pass. Still **no screen reader was used** — every listening row is untouched. | Human SR pass still required, now across four pages |
 | _pending_ | NVDA/Firefox or VoiceOver/Safari | desktop + mobile | not yet performed | |
 
 Until a row here records a real screen-reader pass, do not present the demo as

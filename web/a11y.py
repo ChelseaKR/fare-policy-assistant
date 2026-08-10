@@ -1,5 +1,5 @@
-"""Structural accessibility checker for the demo page (WCAG 2.2 AA, the parts a
-static check can verify).
+"""Structural accessibility checker for every public page (WCAG 2.2 AA, the
+parts a static check can verify).
 
 This is the merge gate, in the spirit of a pure-Python structural checker: it
 catches the regressions a static analysis can catch — a missing page language,
@@ -9,7 +9,17 @@ replace a manual screen-reader pass or the advisory axe/pa11y run in CI; colour
 contrast and live-region behaviour need those. What it asserts, it asserts
 honestly; what it cannot, it leaves to the human pass recorded in the model card.
 
-    uv run python -m web.a11y            # check web/index.html, exit 1 on issues
+Until 2026-08-05 this checked `web/index.html` and nothing else, while three
+other pages are served publicly: `/embed`, the widget an agency puts on its own
+fare page; `/offline`, the printable dated policy reference for a rider with no
+signal at the stop; and `/guide`, the no-input-field walkthrough built for
+riders who would rather browse than type. Those last two exist specifically for
+low-signal and low-literacy riders, which makes them the pages where a
+structural regression would land hardest, and they were the ones nothing
+watched. All four passed on the day the gate was widened — the point is that
+from here a regression on any of them fails a build instead of shipping.
+
+    uv run python -m web.a11y            # check every public page, exit 1 on issues
 """
 
 from __future__ import annotations
@@ -98,14 +108,43 @@ def check_html(html: str) -> list[str]:
     return issues
 
 
+def public_pages() -> dict[str, str]:
+    """Every HTML surface a member of the public can reach, rendered.
+
+    `/offline` and `/guide` are generated from the committed corpus and `/embed`
+    is a module constant, so all three render here with no network, no model
+    call, and no credentials — which is why they can be gate-checked on every
+    pull request alongside the static demo page.
+    """
+    # Imported here, not at module scope: `web.a11y` is also imported by the
+    # unit tests purely for `check_html`, and those must not pay for a corpus
+    # load to exercise a pure string check.
+    from assistant.ingest import load_chunks
+    from web import embed
+    from web.guide import render_guide
+    from web.offline import render_offline_reference
+
+    chunks = load_chunks()
+    return {
+        "web/index.html": PAGE.read_text(encoding="utf-8"),
+        "/embed (agency-embeddable widget)": embed.EMBED_HTML,
+        "/offline (printable rider reference)": render_offline_reference(chunks),
+        "/guide (guided fare finder)": render_guide(chunks),
+    }
+
+
 def main() -> int:
-    issues = check_html(PAGE.read_text(encoding="utf-8"))
-    if issues:
-        print("Accessibility issues in web/index.html:")
-        for i in issues:
-            print(f"  - {i}")
+    failed = False
+    for name, html in public_pages().items():
+        issues = check_html(html)
+        if issues:
+            failed = True
+            print(f"Accessibility issues in {name}:")
+            for i in issues:
+                print(f"  - {i}")
+    if failed:
         return 1
-    print("web/index.html: structural a11y checks pass (WCAG 2.2 AA, static subset)")
+    print("every public page: structural a11y checks pass (WCAG 2.2 AA, static subset)")
     return 0
 
 

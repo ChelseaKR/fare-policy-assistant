@@ -214,8 +214,16 @@ pairs:
         agency_scope: HTA
         language: en
         expected_behavior: answer
-        required_facts: ["re:[Ss]tored [Vv]alue"]
-        rationale: "hta-fares: reduced fares apply ONLY to Stored Value; Month passes are not eligible — the answer must surface that restriction."
+        # Until 2026-08-05 this variant demanded exactly what sens-011a did
+        # ("Stored Value" and nothing else), so one answer satisfied both sides
+        # and the pair was scored as distinguishing a boundary it never tested.
+        # The exclusion is the boundary, so the exclusion is what this side has
+        # to state.
+        required_facts:
+          - "re:[Ss]tored [Vv]alue"
+          - "re:not eligible|do not offer reduced|no reduced fare"
+        forbidden_content: ["Month Passes are eligible", "monthly pass is eligible", "reduced fare with a monthly pass"]
+        rationale: "hta-fares: reduced fares apply ONLY to Stored Value; Month passes are not eligible — the answer must surface that restriction, not just name the eligible product."
 
   - id: sens-012
     boundary: "SBMTD rides free with a Pacific Surfliner ticket only on the day of travel."
@@ -273,8 +281,15 @@ pairs:
         agency_scope: HTA
         language: en
         expected_behavior: answer
-        required_facts: ["re:3\\s?[-–—]\\s?17"]
-        rationale: "hta-fares: youth is 3-17; at 18 the rider is outside the range — the answer must state the 3-17 bound so the exclusion is visible."
+        # Same repair as sens-011b: stating the 3-17 range was all either side
+        # had to do, so the 16-year-old answer satisfied the 18-year-old case
+        # verbatim. Naming the range is not the boundary; placing the rider
+        # outside it is.
+        required_facts:
+          - "re:3\\s?[-–—]\\s?17"
+          - "re:does not (meet|qualify|fall)|is not (eligible|within)|no longer|outside"
+        forbidden_content: ["qualifies for the youth", "gets the youth discount", "is eligible for the youth", "may qualify for a youth discount"]
+        rationale: "hta-fares: youth is 3-17; at 18 the rider is outside the range — the answer must state the bound AND that this rider falls outside it."
 
   - id: sens-015
     boundary: "The UC Davis Aggie Card is valid on Yolobus only for undergraduate or UCDE Global Study riders."

@@ -8,6 +8,7 @@ in CI without secrets.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from assistant import facts as facts_module
@@ -108,7 +109,15 @@ _FARE_CLASS_KEYWORDS = (
 _PRICE_IN_TEXT = re.compile(r"\$\s?(\d+(?:\.\d{2})?)")
 
 
-def structured_fare_contradictions(agencies: set[str], answer: str) -> list[str]:
+def structured_fare_contradictions(
+    agencies: set[str],
+    answer: str,
+    structured_fares_by_agency: Mapping[
+        str,
+        Sequence[fare_table.StructuredFare],
+    ]
+    | None = None,
+) -> list[str]:
     """Dollar amounts in `answer` that contradict the agency's GTFS-Fares feed
     for a rider class the answer names (ADR 0017). Deterministic and
     authoritative: it fires only when a class keyword sits beside a price, that
@@ -120,7 +129,12 @@ def structured_fare_contradictions(agencies: set[str], answer: str) -> list[str]
     for agency in sorted(agencies):
         by_kw: dict[str, set[float]] = {}
         all_amounts: set[float] = set()
-        for fare in fare_table.structured_fares(agency):
+        fares = (
+            fare_table.structured_fares(agency)
+            if structured_fares_by_agency is None
+            else structured_fares_by_agency.get(agency, ())
+        )
+        for fare in fares:
             amount = float(fare.amount)
             all_amounts.add(amount)
             label = (fare.rider_category.name if fare.rider_category else "").lower()
@@ -165,6 +179,11 @@ def run_checks(
     result: AnswerResult,
     corpus_doc_ids: set[str],
     facts_by_doc: dict[str, list[FareFact]] | None = None,
+    structured_fares_by_agency: Mapping[
+        str,
+        Sequence[fare_table.StructuredFare],
+    ]
+    | None = None,
 ) -> list[CheckResult]:
     out: list[CheckResult] = []
     expected = case["expected_behavior"]  # answer | partial | refuse_redirect
@@ -294,9 +313,21 @@ def run_checks(
         # misread the judge otherwise owns alone.
         if result.kind == "answered":
             cited_agencies = {c.agency for c in result.citations}
-            feed_agencies = {a for a in cited_agencies if fare_table.structured_fares(a)}
+            fares_for_check = {
+                agency: tuple(
+                    fare_table.structured_fares(agency)
+                    if structured_fares_by_agency is None
+                    else structured_fares_by_agency.get(agency, ())
+                )
+                for agency in cited_agencies
+            }
+            feed_agencies = {agency for agency, fares in fares_for_check.items() if fares}
             if feed_agencies:
-                feed_conflicts = structured_fare_contradictions(feed_agencies, answer)
+                feed_conflicts = structured_fare_contradictions(
+                    feed_agencies,
+                    answer,
+                    fares_for_check,
+                )
                 out.append(
                     CheckResult(
                         "structured_fare_consistent",

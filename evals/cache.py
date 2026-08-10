@@ -246,29 +246,30 @@ class CachingModel:
 
 def case_content_key(
     *,
-    case_id: str,
-    question_or_turns: str,
-    expected_behavior: str,
-    provider: str,
-    answer_model: str,
-    judge_model: str,
-    corpus_version: str,
-    prompt_versions: dict[str, str],
+    case_semantics_version: str,
+    run_context_version: str,
     run_judges: bool,
+    replicates: int,
 ) -> str:
-    """Whole-case content key used by `--since`: identifies whether a case's
-    inputs are unchanged since a prior run, so that run's record can be
-    reused wholesale (no answer call, no judge call, no re-scoring)."""
+    """Whole-case content key used by ``--since``.
+
+    ``case_semantics_version`` hashes the complete post-flatten case mapping,
+    not only its question and broad expected behavior. ``run_context_version``
+    hashes the evaluated release/configuration plus the exact suites, facts,
+    GTFS inputs, prompts, evaluator implementation, and requested models.
+    Keeping this final key intentionally small makes omissions impossible here:
+    callers must first construct the validated, schema-versioned attestation
+    context. Legacy records have no matching context version and therefore
+    cannot be reused.
+    """
+    if not isinstance(replicates, int) or isinstance(replicates, bool) or replicates < 1:
+        raise ValueError("replicates must be a positive integer")
     return _digest(
         [
-            case_id,
-            question_or_turns,
-            expected_behavior,
-            provider,
-            answer_model,
-            judge_model,
-            corpus_version,
-            json.dumps(prompt_versions, sort_keys=True),
+            "fare-assistant.eval-case-cache.v2",
+            case_semantics_version,
+            run_context_version,
             str(run_judges),
+            str(replicates),
         ]
     )

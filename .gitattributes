@@ -3,6 +3,7 @@
 corpus/raw/*.html binary
 corpus/raw/*.pdf binary
 corpus/raw/*.meta.yaml -text
+corpus/raw/gtfs/snapshots/**/feed.zip binary
 corpus/snapshots/** -text
 corpus/snapshots/**/raw/*.html binary
 corpus/snapshots/**/raw/*.pdf binary

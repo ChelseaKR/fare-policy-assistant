@@ -30,6 +30,116 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Corrected a published claim: the counterfactual sensitivity line said "13/15
+  boundary pairs correctly distinguished" and now says "13/15 boundary pairs
+  passed", with a second number beside it.** A pair passes when both of its
+  variants pass their own checks. Whether the two answers came out *different* —
+  which is what "distinguished" asserts and what the whole suite exists to show —
+  was never measured. `evals/runner.py::pair_discrimination` measures it by
+  replaying each variant's recorded answer through its sibling's required facts
+  and forbidden content: a pair whose answers are mutually interchangeable
+  demonstrates nothing about its boundary, however green it scored. On the
+  promoted run **11 of 15 pairs produce answers the per-variant checks can tell
+  apart**; `sens-003`, `sens-011`, `sens-013`, and `sens-015` do not, and the
+  report now names them. Both numbers come from the same recorded answers: 13/15
+  did not change and nothing was re-scored, but it now reads as what it is.
+  Reported and not yet gated — gating it today would fail the committed report
+  with no credentialed run available to regenerate it, and a gap that is
+  published is not a gap that is hidden.
+- `EVALS.md` and `docs/eval-report.html` were regenerated from the same promoted
+  2026-07-12 run to carry that line. No re-scoring; the scoreboard, parity
+  table, calibration section, and failure traces are byte-identical.
+- The structural accessibility gate covers every public page instead of the
+  chat page alone. `/embed` is what an agency puts on its own fare page, and
+  `/offline` and `/guide` exist for riders with no signal at the stop or who
+  would rather browse than type — the audience least able to route around a
+  problem, and the pages nothing was watching. All three passed on the day the
+  gate was widened, so this fixes no present defect; it stops a future one from
+  shipping unnoticed. All three render from the committed corpus with no
+  network and no credentials, which is why they can be checked on every pull
+  request.
+- The "Sources" caption under an answer is a heading now (`<h3>` on the chat
+  page, `<h2>` on `/embed`, whose only other heading is its `<h1>`), styled to
+  keep the inline bold caption's appearance. It was a `<strong>`, which is not
+  a screen-reader heading-navigation target — and where an answer came from is
+  the thing a screen-reader user goes looking for. The recorded transcript the
+  independent audit grades already used `<h3>Sources</h3>`; the page riders
+  actually use was the less accessible of the two.
+- Re-verified every code claim in the `a11y-walkthrough.md` pre-audit against
+  HEAD and corrected one drift (the focus ring is 4px with a 3px offset, not
+  3px). **The manual screen-reader pass is still not done**, on any of the four
+  pages, and none of the above is a substitute for it.
+- **Corrected a published number: judge-vs-human Cohen's κ was 1.000 in
+  `EVALS.md` and is now reported as undefined.** Cohen's κ is 0/0 when both
+  raters give the same verdict every time; returning 1.0 there is a convention
+  that reads as perfect agreement measured. It was not measured. Both labels in
+  the sample that recorded a human/judge *disagreement* (`ml-004`,
+  `ground-024`) had gone stale when a prompt bump changed their answers, so the
+  four labels left were the agreeing half of the set and could not have
+  produced any other number. `EVALS.md` was regenerated from the same promoted
+  run — no re-scoring, only corrected presentation — and now says so.
+- The calibration section publishes the shortfall as a number rather than as
+  the adjective "small": 4 scored labels against a floor of 37, which is
+  `CLAUDE.md`'s 10% sample over the 367 (case, judge) pairs the promoted run
+  judged. It also states plainly when a sample contains no disagreement at all,
+  because a reader cannot tell that apart from a clean 100%.
+- `EVALS.md`'s header distinguishes a live run that called the provider from
+  one served entirely from cache. The promoted 2026-07-12 baseline was
+  published as `(full, live)` while all 553 of its answer and judge calls were
+  cache hits: the answers are real completions recorded under byte-identical
+  prompts, which is what makes the run valid regression evidence (ADR 0022),
+  but no call was made and the $3.16 on the cost line is a list-price estimate
+  over reused tokens, not money spent that day.
+- Closed a circularity hole in the calibration tooling. `--emit` pre-filled
+  each template's `human_passed` with the judge's own verdict "as a
+  placeholder", so a relabeling pass that accepted the defaults would have
+  graded the judge against itself and reported perfect agreement while
+  measuring nothing — and nothing detected it. Templates now emit a null
+  verdict, and `load_labels` refuses any row still carrying the TEMPLATE marker
+  or a non-boolean verdict.
+- Added `python -m evals.calibration --worksheet <run_dir>`: a floor-sized,
+  deterministic relabeling worksheet that takes every pair the judge failed
+  first, then fills round-robin across suites. The committed sample had 14 of
+  its 16 labels on pairs the judge had passed, which is how it ended up unable
+  to disagree. The generated worksheet is committed at
+  `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` — 37 rows, 9 of
+  them judge-failures, all nine suites represented, **every verdict blank
+  because only a person can fill them in.** This is queued work, not evidence.
+  It also replaces a README pointer to
+  `judge_relabel_worksheet_2026-07-11.jsonl`, a file that never existed.
+- Every `mirror_of` declaration is now gate-checked before a run makes its
+  first model call: a mirror must name a real case, in a different language,
+  scoped to the same agency, expecting the same behavior, and carrying at least
+  as many `required_facts` as the case it mirrors. The bilingual parity gate
+  publishes a points delta between mirrored cases, and that delta is only an
+  equity measurement if the pairs are pairs. Three of the 22 pairs in the
+  promoted baseline were not: `ml-008` pointed at a case that was already
+  `ml-004`'s mirror, asked a different question, and declared no required facts
+  at all while its mirror had to produce "DD Form 214"; `ml-011` had dropped
+  its mirror's `65` fact, so the Spanish answer never had to state the age
+  criterion the English answer did; `ml-022` is scoped to MST but pointed at a
+  Yolobus case, so the pair measured two corpora rather than two languages. The
+  gate reported a 0.0-point gap across all three.
+- Corrected the three pairs (`ml-008` now mirrors `edge-048`, `ml-022` mirrors
+  `edge-045`, `ml-011` regained the `65` fact) and gave
+  `parity-scope-medical-es` the `agency_scope` its declared mirror carries.
+  Replaying the promoted run's recorded answers through the repaired map leaves
+  every verdict unchanged and the parity delta at 0.0 points over 22 pairs.
+  **The published number did not improve; what it certifies did.** Before the
+  repair, 0.0 points was computed over 19 real pairs and 3 mismatched ones, and
+  a weaker Spanish case passing more easily read on the scoreboard as equity.
+- Corrected the README's Status section, which had said since 2026-07-05 that
+  the EN/ES answer-quality gap exceeded the project's own ≤5-point target. The
+  mirrored-case gap has been 0.0 points since the 2026-07-12 run. What is
+  actually outstanding is the `docs/I18N.md` §7 native-Spanish benchmark, which
+  has never been measured — an unmeasured property, not a failing one, and not
+  a passing one either.
+- Known-stale artifact, stated rather than fixed: `evals/govchat/golden.jsonl`
+  still carries the pre-repair `pair_id` values for `ml-008`, `ml-011`, and
+  `ml-022`, so the independent audit's 0.581 multilingual anchor-fidelity score
+  was computed over those three mispairings too. Regenerating it requires a
+  credentialed `make audit` recording run; the provenance gate does not flag it
+  because the export's prompt and corpus versions are unchanged.
 - CI persists the content-keyed answer/judge cache between runs, so a pull
   request that cannot change an answer no longer re-buys the smoke suite's
   model calls, and a merge to `main` no longer re-scores the tree its own pull
@@ -44,6 +154,115 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- `evals/spanish_quality.py` and a committed, entirely blank rating census at
+  `evals/spanish/native_es_rubric_2026-08-05.jsonl`: the half of `docs/I18N.md`
+  §7 the bilingual parity gate cannot reach. That gate compares a Spanish
+  answer's pass/fail against its English mirror's, and every check behind those
+  two verdicts asks whether a citation resolves, a required fact appears, the
+  classifier says `es`, and no determination phrase is present. Spanish that is
+  stilted, wrongly registered, or full of anglicisms satisfies all of them. **The
+  0.0-point parity delta would not move if every Spanish answer read like a
+  machine translation, because nothing in it is looking.**
+  The module publishes the rubric (fluent / register / terminology, each stated
+  as the question a rater answers) and emits a **census** rather than a sample:
+  all 28 Spanish answers from the promoted run, 7 marked `fixed_string` because
+  they render the committed gettext refusals that `docs/I18N.md` records as
+  pre-existing human translation, so the catalog is never counted as model
+  output. `make spanish-quality` walks the sheet offline, one answer at a time,
+  showing the Spanish on its own — no English mirror, since parity already
+  compares those, and no default rating. `EVALS.md` now carries a
+  **Native-Spanish answer quality** section reporting **not measured**, with the
+  shortfall as a number; `summarize` returns `None` per dimension below the
+  census floor rather than a percentage over answers nobody read, and a test
+  asserts no zero is rendered.
+  Two things are deliberately absent. No rating was authored: a model rating its
+  own Spanish is the same circularity closed on the calibration templates. And
+  no question set was authored: §7 asks for **externally sourced** native-Spanish
+  questions, and machine-written Spanish questions are exactly what that
+  excludes. Every census row therefore reads `question_source: repo_mirror`, so
+  even a fully rated sheet describes the Spanish this repo writes rather than
+  Spanish as riders write it — a field in the data instead of a caveat in prose.
+- The harness self-test (`make eval-selftest`) plants a defect against every
+  check the grader emits, not 8 of 13. The five with no planted defect were
+  `language_match`, `refused`, `redirect_present`, `verification_handoff_present`
+  and `structured_contract_schema_valid` — among them the only thing that makes
+  the multilingual suite a language test rather than a second English suite, and
+  the entirety of the refusal suite's deterministic scoring. Those two suites
+  score 22/22 and 34/34; a check that has never failed and was never shown *able*
+  to fail is indistinguishable from one that cannot. All five now flip from pass
+  to fail on a planted defect (a Spanish case answered in English, a refusal case
+  that answers, a decline that points nowhere, a criterion stated with no next
+  step, a response whose kind falls outside the typed contract), and a new test
+  reads the check names out of `evals/checks.py` so a future check without a
+  scenario fails CI instead of quietly widening the gap again.
+- The i18n catalog-parity gate (G5/G6) checks its own denominator. Every check
+  in it iterates over the template's msgid set, so an empty `messages.pot` made
+  all of them vacuous: the gate printed "catalog parity OK: 0 msgids" and exited
+  0 while nothing rider-facing was translated. G2-lite catches a template that
+  *drifts* from the sources, but a commit emptying the sources and the template
+  together drifts from nothing. An empty template now fails. The committed one
+  carries 7 msgids.
+- The below-macro escape hatch expires on its own. `expected_below_macro.json`
+  has always instructed "delete the entry the moment the suite recovers", with
+  nothing behind the instruction: an annotation left over a suite that climbed
+  back above the floor stayed a live waiver, sitting exactly where the next real
+  regression would land and absorbing it silently. `runner.stale_annotations`
+  now fails the gate on an annotation whose suite ran and is at or above the
+  floor. Suites that did not run (a `--suite` subset) are out of view rather than
+  stale. The one committed annotation, `conversation`, is still doing work: 80.0%
+  against a floor of 89.0%.
+- The committed-report regression gate catches two more ways a report can
+  describe a worse system than the baseline. A baseline suite **absent** from
+  `EVALS.md` used to be skipped as "a missing-provenance problem for
+  `evals/provenance.py`" — but provenance compares prompt and corpus versions and
+  has never looked at suite composition, so the responsibility sat with a module
+  that does not implement it and a report regenerated from a `--suite` subset
+  passed everything. And a suite that **shrank** was invisible: `suite_regressed`
+  requires both a pass-rate drop and a pass-count drop, so deleting the two cases
+  a suite fails takes it from 46/48 to 46/46 and trips neither condition.
+  Deleting the failing test is the oldest way to turn a board green. Both now
+  fail the gate; both share the existing escape (`--update-baseline` with a
+  written rationale), so a deliberate retirement is a line in the diff.
+- Every minimal pair's variants are now gate-checked before a run makes its
+  first model call (`evals/runner.py::pair_problems` / `check_pairs`), the same
+  shape as the mirror gate: two variants of a counterfactual pair may not demand
+  identical `required_facts` and `forbidden_content`, and no variant may demand
+  neither. `pair_verdicts` scores a pair as distinguished only when every
+  variant passes, on the stated grounds that "the per-variant required_facts /
+  forbidden_content prove the answer actually changed across the boundary" —
+  which holds only if the two sides ask for different things. Two of the 15
+  pairs in the promoted baseline did not: `sens-011`'s variants both required
+  only "Stored Value", though its boundary is that a *monthly* pass is excluded
+  from the reduced fare; `sens-014`'s both required only the 3-17 youth range,
+  though its boundary is that an 18-year-old falls outside it. Both were
+  reported as boundaries correctly distinguished.
+- Both pairs were repaired against the corpus rather than around the gate:
+  `sens-011b` must now state the exclusion, not just name the eligible product,
+  and must not assert that a monthly pass is reduced-fare eligible; `sens-014b`
+  must place the 18-year-old outside the range, not merely recite it. Replaying
+  the promoted run's recorded answers through the repaired cases leaves every
+  verdict unchanged; the suite's pass rate does not move.
+- `python -m evals.calibration --review <worksheet>` (also `make relabel`): a
+  labeling surface for the judge-calibration worksheet. Labeling a row means
+  reading an answer, its retrieved passages, and the case's expected behavior,
+  and none of that was on screen — it had to be dug out of `results.jsonl` by
+  hand, 37 times, which is a fair share of why the sample has sat at 4 labels
+  against a floor of 37. The command walks the unlabeled rows offline from the
+  committed run, prints the judge's committed criterion, the question, the
+  prior turns, the passages, and the answer, then records the reviewer's
+  verdict and required one-line reason. It **never proposes a verdict**: there
+  is no default, and pressing Enter re-asks rather than resolving — the same
+  circularity closed on `--emit`, which used to pre-fill `human_passed` with
+  the judge's own call. It **withholds `judge_said` until after the reviewer
+  answers**, because a reviewer shown the verdict first confirms it, and this
+  worksheet exists precisely because the previous sample could only confirm.
+  It **refuses to record a verdict when the recorded answer no longer matches
+  the row's `answer_sha256`**, reporting the row instead: a label pinned to an
+  answer the reviewer did not read is worse than a blank. Each completed row is
+  written back through an atomic replace, so an interrupted session keeps every
+  verdict already given and a partly-labeled worksheet reopens where it
+  stopped. The committed worksheet is still 37 blank rows, and the test that
+  keeps it blank is unchanged; this removes the friction, not the human.
 - Layered corpus identity and source-complete archives: a full
   `content_version` now covers every behavior-relevant stored chunk field and
   order while excluding observation date; `snapshot_version` adds verified

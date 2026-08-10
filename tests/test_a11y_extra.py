@@ -73,3 +73,42 @@ def test_main_reports_issues_on_a_broken_page(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(a11y, "PAGE", broken)
     assert main() == 1
     assert "Accessibility issues" in capsys.readouterr().out
+
+
+# ── every public surface, not just the demo page ─────────────────────────────
+
+
+def test_the_gate_covers_every_public_page():
+    """Until 2026-08-05 the gate read `web/index.html` alone. `/embed` is what
+    an agency puts on its own fare page, and `/offline` and `/guide` exist for
+    riders with no signal or who would rather browse than type — the audience a
+    structural regression hurts most, and the pages nothing was watching."""
+    pages = a11y.public_pages()
+    assert set(pages) == {
+        "web/index.html",
+        "/embed (agency-embeddable widget)",
+        "/offline (printable rider reference)",
+        "/guide (guided fare finder)",
+    }
+    for name, html in pages.items():
+        assert a11y.check_html(html) == [], name
+
+
+def test_the_sources_caption_is_a_heading_on_both_answering_surfaces():
+    """Where an answer came from is the thing a screen-reader user goes looking
+    for, and heading navigation is how they look. The caption was a <strong> on
+    both surfaces, which is not a heading-nav target — while the recorded
+    transcript the independent audit grades already used <h3>Sources</h3>."""
+    from pathlib import Path
+
+    from web import embed
+
+    page = Path(a11y.PAGE).read_text(encoding="utf-8")
+    assert 'createElement("h3")' in page and '"sources-h"' in page
+    # The embed's only other heading is its h1, so h3 would skip a level.
+    assert 'createElement("h2")' in embed.EMBED_HTML and '"sources-h"' in embed.EMBED_HTML
+    for source in (page, embed.EMBED_HTML):
+        assert ".sources-h { font-size: inherit" in source, (
+            "the heading must keep the inline-caption look it replaced, or the "
+            "accessibility fix lands as a visual regression"
+        )

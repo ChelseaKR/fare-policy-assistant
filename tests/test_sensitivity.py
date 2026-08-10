@@ -191,7 +191,7 @@ def test_report_renders_boundary_pairs_line():
         "total": {"passed": 24, "total": 30},
     }
     md = report.generate_markdown(summary, [])
-    assert "12/15 boundary pairs correctly distinguished" in md
+    assert "12/15 boundary pairs passed" in md
 
 
 def test_report_omits_sensitivity_line_when_no_pair_stats():
@@ -208,4 +208,194 @@ def test_report_omits_sensitivity_line_when_no_pair_stats():
         "total": {"passed": 1, "total": 1},
     }
     md = report.generate_markdown(summary, [])
-    assert "boundary pairs correctly distinguished" not in md
+    assert "boundary pairs passed" not in md
+
+
+# ── the pair's own denominator ───────────────────────────────────────────────
+#
+# A pair verdict claims the assistant discriminated across a boundary. That
+# claim rests on the two variants demanding different evidence, and on the two
+# answers actually coming out different. Neither was checked until 2026-08-05,
+# and the promoted report's "13/15 correctly distinguished" was published over
+# two pairs whose variants asked for exactly the same thing.
+
+
+def _variant(case_id, pair_id, **kw):
+    case = {
+        "id": case_id,
+        "pair_id": pair_id,
+        "expected_behavior": "answer",
+        "agency_scope": "MST",
+        "language": "en",
+        "required_facts": ["65"],
+    }
+    case.update(kw)
+    return case
+
+
+def test_pair_gate_flags_variants_that_demand_identical_evidence():
+    cases = {c["id"]: c for c in [_variant("p-a", "p"), _variant("p-b", "p")]}
+    (problem,) = runner.pair_problems(cases)
+    assert "p-a, p-b" in problem
+    assert "one answer satisfies both sides" in problem
+
+
+def test_pair_gate_accepts_variants_whose_demands_differ():
+    cases = {
+        c["id"]: c
+        for c in [
+            _variant("p-a", "p", required_facts=["65"]),
+            _variant("p-b", "p", required_facts=["62"]),
+        ]
+    }
+    assert runner.pair_problems(cases) == []
+
+
+def test_pair_gate_accepts_a_variant_that_only_adds_forbidden_content():
+    cases = {
+        c["id"]: c
+        for c in [
+            _variant("p-a", "p"),
+            _variant("p-b", "p", forbidden_content=["rides free"]),
+        ]
+    }
+    assert runner.pair_problems(cases) == []
+
+
+def test_pair_gate_flags_a_variant_that_demands_nothing():
+    cases = {
+        c["id"]: c
+        for c in [
+            _variant("p-a", "p", required_facts=[]),
+            _variant("p-b", "p", required_facts=["62"]),
+        ]
+    }
+    (problem,) = runner.pair_problems(cases)
+    assert "declares neither required_facts nor forbidden_content" in problem
+
+
+def test_pair_gate_ignores_ordinary_cases():
+    assert runner.pair_problems({"edge-001": {"id": "edge-001", "required_facts": ["65"]}}) == []
+
+
+def test_check_pairs_passes_on_the_committed_suites():
+    runner.check_pairs()  # no raise
+
+
+def test_check_pairs_refuses_to_run_an_eval_over_undifferentiated_pairs(monkeypatch, capsys):
+    """The gate runs before the first model call, like check_mirrors: a run that
+    cannot measure what it reports should not be paid for."""
+    monkeypatch.setattr(
+        runner,
+        "load_suites",
+        lambda: [{"cases": [_variant("p-a", "p"), _variant("p-b", "p")]}],
+    )
+    with pytest.raises(SystemExit) as exc:
+        runner.check_pairs()
+    assert exc.value.code == 1
+    assert "MINIMAL-PAIR GATE" in capsys.readouterr().err
+
+
+def test_discrimination_marks_interchangeable_answers():
+    cases = {
+        c["id"]: c
+        for c in [
+            _variant("p-a", "p", required_facts=["65"]),
+            _variant("p-b", "p", required_facts=["62"]),
+        ]
+    }
+    both = "Seniors are 65+ on MST and 62+ on Yolobus."
+    result = runner.pair_discrimination(
+        [{"case_id": "p-a", "answer": both}, {"case_id": "p-b", "answer": both}], cases
+    )
+    assert result["p"]["discriminating"] is False
+    assert len(result["p"]["interchangeable"]) == 2
+
+
+def test_discrimination_marks_answers_the_checks_can_tell_apart():
+    cases = {
+        c["id"]: c
+        for c in [
+            _variant("p-a", "p", required_facts=["65"]),
+            _variant("p-b", "p", required_facts=["62"]),
+        ]
+    }
+    result = runner.pair_discrimination(
+        [
+            {"case_id": "p-a", "answer": "Seniors are 65+ on MST."},
+            {"case_id": "p-b", "answer": "Seniors are 62+ on Yolobus."},
+        ],
+        cases,
+    )
+    assert result["p"]["discriminating"] is True
+    assert result["p"]["interchangeable"] == []
+
+
+def test_discrimination_skips_a_pair_whose_variants_are_not_all_in_the_run():
+    """A smoke subset that kept one side of a pair is out of view, not evidence
+    that the pair fails to discriminate."""
+    cases = {
+        c["id"]: c for c in [_variant("p-a", "p"), _variant("p-b", "p", required_facts=["62"])]
+    }
+    assert runner.pair_discrimination([{"case_id": "p-a", "answer": "65"}], cases) == {}
+
+
+def test_report_publishes_how_many_pairs_could_be_told_apart():
+    summary = {
+        "run_at": "2026-07-02T00:00:00+00:00",
+        "mode": "full",
+        "offline": True,
+        "judges_ran": False,
+        "answer_model": "mock",
+        "judge_model": "mock",
+        "prompt_versions": {"system": "v1"},
+        "duration_seconds": 1.0,
+        "suites": {
+            "sensitivity": {
+                "passed": 4,
+                "total": 4,
+                "pass_rate": 100.0,
+                "pairs_passed": 2,
+                "pairs_total": 2,
+            }
+        },
+        "total": {"passed": 4, "total": 4},
+    }
+    same = "Stored Value passes are eligible; no reduced fare on Day, Week, or Month passes."
+    records = [
+        {
+            "case_id": "sens-011a",
+            "suite": "sensitivity",
+            "passed": True,
+            "checks": [],
+            "judges": [],
+            "answer": same,
+        },
+        {
+            "case_id": "sens-011b",
+            "suite": "sensitivity",
+            "passed": True,
+            "checks": [],
+            "judges": [],
+            "answer": same,
+        },
+        {
+            "case_id": "sens-002a",
+            "suite": "sensitivity",
+            "passed": True,
+            "checks": [],
+            "judges": [],
+            "answer": "On MST a senior is 65+.",
+        },
+        {
+            "case_id": "sens-002b",
+            "suite": "sensitivity",
+            "passed": True,
+            "checks": [],
+            "judges": [],
+            "answer": "62+ on HTA.",
+        },
+    ]
+    md = report.generate_markdown(summary, records)
+    assert "produced answers the per-variant checks can tell apart" in md
+    assert "Interchangeable pairs: sens-011." in md

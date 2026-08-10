@@ -65,6 +65,26 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: evals/attestation.py
+    marker: "fare-assistant.eval-attestation.v1"
+    note: >
+      Evaluation attestation and content-addressed input identities are generic.
+      Choose project-owned schema namespaces, restate the auxiliary evidence
+      inputs (including any domain-specific feed files), and update the
+      evaluator source-tree roots for the new package before publishing
+      attestations.
+  - path: src/assistant/promotion_evidence.py
+    marker: "fare-assistant.eval-attestation.v1"
+    note: >
+      Exact promotion-evidence verification is generic. Replace the
+      fare-assistant evaluation schema namespaces with the new project's
+      namespaces before accepting or publishing evidence.
+  - path: src/assistant/release_attestation.py
+    marker: "fare-assistant.promotion-attestation.v1"
+    note: >
+      The immutable runtime-to-evaluation attestation contract is generic.
+      Choose a stable, project-owned promotion-attestation schema namespace
+      before publishing release evidence.
   - path: src/assistant/release_identity.py
     marker: "fare-assistant.release.v1"
     note: >
@@ -90,6 +110,16 @@ generic_edit:
       disabled, medicare, veteran, youth/student, child free, regular) names this
       domain's reduced-fare programs and must be re-stated as the new domain's
       benefit categories.
+  - path: evals/spanish_quality.py
+    marker: "mst-fares-es.md"
+    note: >
+      The census/rubric/blank-sheet mechanism is generic: it measures the answer
+      quality of a second language that pass/fail parity cannot see. Two things
+      are this domain's. The target language is Spanish because this corpus has
+      one agency-authored Spanish document; a new domain names its own. And the
+      terminology dimension points at corpus/processed/mst-fares-es.md as the
+      reference for published vocabulary, which must be re-stated as the new
+      domain's own source-language document.
   - path: evals/selftest.py
     marker: "DD Form 214"
     note: >
@@ -129,6 +159,7 @@ domain_specific:
   - corpus/                          # manifest.yaml + raw/ snapshots
   - evals/suites/                    # case content written from this corpus
   - evals/govchat/                   # exported golden.jsonl + baseline
+  - evals/spanish/                   # rating census over this corpus's answers
   - docs/audits/                     # GovChat-Eval run artifacts
   - prompts/                         # system/answer prompts naming transit
   - tests/test_domain.py

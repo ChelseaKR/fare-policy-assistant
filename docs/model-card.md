@@ -85,8 +85,13 @@ also records its exact fresh/cache token usage and an estimated cost (cache
 writes and reads use their distinct rates), and checks the LLM
 judge against a hand-labeled sample (`evals/calibration/judge_labels.jsonl`):
 the report prints judge-vs-human agreement and Cohen's κ over that sample
-(harness in `evals/calibration.py`). An independent black-box audit by the
-external GovChat-Eval harness is in [docs/audits/](audits/methodology.md).
+(harness in `evals/calibration.py`). That sample is currently 4 scored labels
+against a floor of 37; the queued replacement is
+`evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl`, labeled with
+`make relabel`, which shows each row's criterion, question, passages, and
+answer, and records a verdict only after the reviewer states one. An
+independent black-box audit by the external GovChat-Eval harness is in
+[docs/audits/](audits/methodology.md).
 
 Known limits found by the harness so far:
 

@@ -18,8 +18,13 @@ LOG_GROUP="/aws/lambda/$FN"
 LOGGING_CONFIG="LogFormat=JSON,ApplicationLogLevel=INFO,SystemLogLevel=WARN,LogGroup=$LOG_GROUP"
 ROLE_NAME="$FN-role"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD="$ROOT/infra/build"
+BUILD="${FPA_BUILD_DIR:-$ROOT/infra/build}"
 BUNDLE="$BUILD/bundle"
+PROMOTION_BUILD="$BUILD/promotion"
+PROMOTION_RUNTIME_EVIDENCE="$BUILD/promotion-runtime.json"
+PROMOTION_RUN_POINTER="$BUILD/promotion-run-path"
+EVAL_BUNDLE_POINTER="$BUILD/promotion-evidence-pointer.json"
+PROMOTION_RUNS_ROOT="${FPA_PROMOTION_RUNS_ROOT:-$ROOT/evals/runs}"
 API_ID="${FPA_API_ID:-}"
 SOURCE_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
 [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
@@ -32,12 +37,23 @@ if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]]; the
   exit 2
 fi
 
-for required_command in aws curl jq openssl uv; do
+for required_command in aws chmod cmp curl find install jq mktemp mv openssl uv; do
   command -v "$required_command" >/dev/null 2>&1 || {
     echo "$required_command is required" >&2
     exit 2
   }
 done
+
+sha256_hex() {
+  local digest
+  digest="$(openssl dgst -sha256 <"$1")"
+  digest="${digest##* }"
+  [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
+    echo "could not compute SHA-256 for $1" >&2
+    return 1
+  }
+  printf '%s\n' "$digest"
+}
 if [[ -n "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
   && ! "$LEGACY_IDENTITY_ROLLBACK_VERSION" =~ ^[1-9][0-9]*$ ]]; then
   echo "FPA_LEGACY_IDENTITY_ROLLBACK_VERSION must be a numeric published version" >&2
@@ -1462,7 +1478,11 @@ fi
 # ── bundle ───────────────────────────────────────────────────────────────────
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
-rm -rf "$BUNDLE" "$BUILD/bundle.zip"
+rm -rf "$BUNDLE" "$BUILD/bundle.zip" "$PROMOTION_BUILD"
+rm -f \
+  "$PROMOTION_RUNTIME_EVIDENCE" \
+  "$PROMOTION_RUN_POINTER" \
+  "$EVAL_BUNDLE_POINTER"
 mkdir -p \
   "$BUNDLE/src" \
   "$BUNDLE/corpus/processed" \
@@ -2015,11 +2035,493 @@ _test_metric_filter_event handler-errors-v2 "$HANDLER_ERROR_V2_FILTER" .answer_r
 _test_metric_filter_event bedrock-calls '{ $.model_called IS TRUE }' .answer_request 1
 _test_metric_filter_event answer-duration "$ANSWER_DURATION_FILTER" .answer_request 1
 
+verify_promotion_trio() {
+  local evidence_dir="$1"
+  local expected_summary_sha="$2"
+  local expected_results_sha="$3"
+  local expected_promotion_sha="$4"
+  local evidence_name
+  local unexpected_entry
+  local receipt
+
+  [[ -d "$evidence_dir" && ! -L "$evidence_dir" ]] || {
+    echo "promotion evidence bundle is not a regular directory" >&2
+    return 1
+  }
+  for evidence_name in summary.json results.jsonl promotion.json; do
+    [[ -f "$evidence_dir/$evidence_name" \
+      && ! -L "$evidence_dir/$evidence_name" ]] || {
+      echo "promotion evidence bundle is missing regular $evidence_name" >&2
+      return 1
+    }
+  done
+  unexpected_entry="$(
+    find "$evidence_dir" -mindepth 1 -maxdepth 1 \
+      ! -name summary.json ! -name results.jsonl ! -name promotion.json \
+      -print -quit
+  )"
+  [[ -z "$unexpected_entry" ]] || {
+    echo "promotion evidence bundle must contain exactly the verified trio" >&2
+    return 1
+  }
+  [[ "$(sha256_hex "$evidence_dir/summary.json")" == "$expected_summary_sha" \
+    && "$(sha256_hex "$evidence_dir/results.jsonl")" == "$expected_results_sha" \
+    && "$(sha256_hex "$evidence_dir/promotion.json")" == "$expected_promotion_sha" ]] || {
+    echo "promotion evidence bundle digest does not match its pointer" >&2
+    return 1
+  }
+
+  receipt="$(
+    cd "$ROOT"
+    FPA_DEPLOY_PROMOTION_DIR="$evidence_dir" \
+      FPA_DEPLOY_EXPECTED_SOURCE="$SOURCE_REVISION" \
+      FPA_DEPLOY_EXPECTED_CONFIG="$CONFIG_VERSION" \
+      FPA_DEPLOY_EXPECTED_CONTENT="$CONTENT_VERSION" \
+      FPA_DEPLOY_EXPECTED_SNAPSHOT="$SNAPSHOT_VERSION" \
+      FPA_DEPLOY_EXPECTED_RELEASE="$RELEASE_VERSION" \
+      FPA_DEPLOY_EXPECTED_CORPUS="$PINNED_CORPUS_VERSION" \
+      FPA_DEPLOY_EXPECTED_ARTIFACT="$CANDIDATE_CODE_SHA" \
+      FPA_DEPLOY_EXPECTED_FUNCTION_VERSION="$NEW_VERSION" \
+      uv run python -c '
+import json
+import os
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from assistant.promotion_evidence import verify_promotion_evidence
+
+root = Path(os.environ["FPA_DEPLOY_PROMOTION_DIR"])
+evidence = verify_promotion_evidence(
+    summary_path=root / "summary.json",
+    results_path=root / "results.jsonl",
+    promotion_path=root / "promotion.json",
+    freshness_budget=timedelta(days=7),
+    clock=lambda: datetime.now(UTC),
+)
+receipt = evidence.as_dict()
+print(json.dumps(
+    {
+        "status": evidence.status,
+        "summary_sha256": evidence.summary_sha256,
+        "results_sha256": evidence.results_sha256,
+        "promotion_sha256": evidence.promotion_sha256,
+        "runtime_release": receipt["runtime_release"],
+    },
+    sort_keys=True,
+    separators=(",", ":"),
+))
+'
+  )"
+  jq -e \
+    --arg summary "$expected_summary_sha" \
+    --arg results "$expected_results_sha" \
+    --arg promotion "$expected_promotion_sha" \
+    --arg source "$SOURCE_REVISION" \
+    --arg config "$CONFIG_VERSION" \
+    --arg content "$CONTENT_VERSION" \
+    --arg snapshot "$SNAPSHOT_VERSION" \
+    --arg release "$RELEASE_VERSION" \
+    --arg corpus "$PINNED_CORPUS_VERSION" \
+    --arg artifact "$CANDIDATE_CODE_SHA" \
+    --arg function_version "$NEW_VERSION" '
+      .status == "verified"
+      and .summary_sha256 == $summary
+      and .results_sha256 == $results
+      and .promotion_sha256 == $promotion
+      and .runtime_release.source_revision == $source
+      and .runtime_release.config_version == $config
+      and .runtime_release.content_version == $content
+      and .runtime_release.snapshot_version == $snapshot
+      and .runtime_release.release_version == $release
+      and .runtime_release.corpus_version == $corpus
+      and .runtime_release.artifact_code_sha256 == $artifact
+      and .runtime_release.function_version == $function_version
+    ' <<<"$receipt" >/dev/null || {
+    echo "full promotion evidence verifier returned an unexpected receipt" >&2
+    return 1
+  }
+  printf '%s\n' "$receipt"
+}
+
+# Bind the exact numbered candidate to a complete, live, uncached evaluation
+# before either alias can move. The runner writes the machine-readable pointer
+# only after strict parity/regression gates and a post-run identity recheck.
+mkdir -p "$PROMOTION_BUILD"
+(
+  cd "$ROOT"
+  FPA_RELEASE_EFFECTIVE_ENVIRONMENT_JSON="$LAMBDA_ENV" \
+    uv run python -m evals.runner \
+      --full \
+      --promotion \
+      --no-cache \
+      --release-descriptor "$BUNDLE/release/release.json" \
+      --run-path-output "$PROMOTION_RUN_POINTER"
+)
+[[ -f "$PROMOTION_RUN_POINTER" && ! -L "$PROMOTION_RUN_POINTER" ]] || {
+  echo "promotion runner did not write a regular eval-bundle pointer" >&2
+  exit 1
+}
+PROMOTION_RUN_POINTER_SNAPSHOT="$(
+  mktemp "$BUILD/.promotion-run-pointer-snapshot.XXXXXX"
+)"
+install -m 0444 "$PROMOTION_RUN_POINTER" "$PROMOTION_RUN_POINTER_SNAPSHOT"
+PROMOTION_RUN_POINTER_CANONICAL="$(mktemp "$BUILD/.promotion-run-pointer.XXXXXX")"
+if ! jq -e -s 'length == 1 and (.[0] | type == "object")' \
+    "$PROMOTION_RUN_POINTER_SNAPSHOT" >/dev/null \
+  || ! jq -S -c . \
+    "$PROMOTION_RUN_POINTER_SNAPSHOT" >"$PROMOTION_RUN_POINTER_CANONICAL" \
+  || ! cmp -s \
+    "$PROMOTION_RUN_POINTER_SNAPSHOT" "$PROMOTION_RUN_POINTER_CANONICAL"; then
+  echo "promotion eval-bundle pointer is not canonical JSON" >&2
+  rm -f "$PROMOTION_RUN_POINTER_CANONICAL" "$PROMOTION_RUN_POINTER_SNAPSHOT"
+  exit 1
+fi
+rm -f "$PROMOTION_RUN_POINTER_CANONICAL"
+PROMOTION_RUN_POINTER_JSON="$(<"$PROMOTION_RUN_POINTER_SNAPSHOT")"
+rm -f "$PROMOTION_RUN_POINTER_SNAPSHOT"
+jq -e '
+  keys == [
+    "bundle_path",
+    "content_address",
+    "results_sha256",
+    "run_dir",
+    "schema",
+    "summary_sha256"
+  ]
+  and .schema == "fare-assistant.eval-run-bundle-pointer.v1"
+  and (.run_dir | type == "string" and startswith("/"))
+  and (.bundle_path | type == "string" and startswith("/"))
+  and (.content_address | test("^[0-9a-f]{64}$"))
+  and (.summary_sha256 | test("^[0-9a-f]{64}$"))
+  and (.results_sha256 | test("^[0-9a-f]{64}$"))
+' <<<"$PROMOTION_RUN_POINTER_JSON" >/dev/null || {
+  echo "promotion eval-bundle pointer has an invalid closed schema" >&2
+  exit 1
+}
+PROMOTION_RUN_DIR="$(jq -r '.run_dir' <<<"$PROMOTION_RUN_POINTER_JSON")"
+PROMOTION_EVAL_BUNDLE="$(jq -r '.bundle_path' <<<"$PROMOTION_RUN_POINTER_JSON")"
+PROMOTION_EVAL_CONTENT_ADDRESS="$(
+  jq -r '.content_address' <<<"$PROMOTION_RUN_POINTER_JSON"
+)"
+PROMOTION_EVAL_SUMMARY_SHA="$(
+  jq -r '.summary_sha256' <<<"$PROMOTION_RUN_POINTER_JSON"
+)"
+PROMOTION_EVAL_RESULTS_SHA="$(
+  jq -r '.results_sha256' <<<"$PROMOTION_RUN_POINTER_JSON"
+)"
+[[ "$PROMOTION_RUN_DIR" == /* \
+  && "$(dirname "$PROMOTION_RUN_DIR")" == "$PROMOTION_RUNS_ROOT" \
+  && "$(basename "$PROMOTION_RUN_DIR")" =~ ^[0-9]{8}T[0-9]{6}Z(-[0-9]{2})?$ \
+  && -d "$PROMOTION_RUNS_ROOT" \
+  && ! -L "$PROMOTION_RUNS_ROOT" \
+  && -d "$PROMOTION_RUN_DIR" \
+  && ! -L "$PROMOTION_RUN_DIR" ]] || {
+  echo "promotion runner returned an unsafe or unexpected run directory" >&2
+  exit 1
+}
+[[ "$PROMOTION_EVAL_BUNDLE" \
+    == "$PROMOTION_RUN_DIR/bundles/$PROMOTION_EVAL_CONTENT_ADDRESS" \
+  && -d "$PROMOTION_RUN_DIR/bundles" \
+  && ! -L "$PROMOTION_RUN_DIR/bundles" \
+  && -d "$PROMOTION_EVAL_BUNDLE" \
+  && ! -L "$PROMOTION_EVAL_BUNDLE" ]] || {
+  echo "promotion pointer does not identify its content-addressed run bundle" >&2
+  exit 1
+}
+for promotion_input in summary.json results.jsonl bundle.json; do
+  [[ -f "$PROMOTION_EVAL_BUNDLE/$promotion_input" \
+    && ! -L "$PROMOTION_EVAL_BUNDLE/$promotion_input" ]] || {
+    echo "promotion eval bundle is missing regular $promotion_input" >&2
+    exit 1
+  }
+done
+PROMOTION_EVAL_EXTRA="$(
+  find "$PROMOTION_EVAL_BUNDLE" -mindepth 1 -maxdepth 1 \
+    ! -name summary.json ! -name results.jsonl ! -name bundle.json \
+    -print -quit
+)"
+[[ -z "$PROMOTION_EVAL_EXTRA" ]] || {
+  echo "promotion eval bundle contains an unexpected entry" >&2
+  exit 1
+}
+PROMOTION_BUNDLE_MANIFEST_SOURCE="$PROMOTION_EVAL_BUNDLE/bundle.json"
+PROMOTION_BUNDLE_MANIFEST="$(
+  mktemp "$BUILD/.promotion-bundle-manifest-snapshot.XXXXXX"
+)"
+install -m 0444 "$PROMOTION_BUNDLE_MANIFEST_SOURCE" "$PROMOTION_BUNDLE_MANIFEST"
+PROMOTION_BUNDLE_MANIFEST_CANONICAL="$(
+  mktemp "$BUILD/.promotion-bundle-manifest.XXXXXX"
+)"
+if ! jq -e -s 'length == 1 and (.[0] | type == "object")' \
+    "$PROMOTION_BUNDLE_MANIFEST" >/dev/null \
+  || ! jq -S -c . "$PROMOTION_BUNDLE_MANIFEST" \
+    >"$PROMOTION_BUNDLE_MANIFEST_CANONICAL" \
+  || ! cmp -s \
+    "$PROMOTION_BUNDLE_MANIFEST" \
+    "$PROMOTION_BUNDLE_MANIFEST_CANONICAL"; then
+  echo "promotion eval-bundle manifest is not canonical JSON" >&2
+  rm -f "$PROMOTION_BUNDLE_MANIFEST_CANONICAL" "$PROMOTION_BUNDLE_MANIFEST"
+  exit 1
+fi
+rm -f "$PROMOTION_BUNDLE_MANIFEST_CANONICAL"
+jq -e \
+  --arg summary "$PROMOTION_EVAL_SUMMARY_SHA" \
+  --arg results "$PROMOTION_EVAL_RESULTS_SHA" '
+    keys == ["results_sha256", "schema", "summary_sha256"]
+    and .schema == "fare-assistant.eval-run-bundle.v1"
+    and .summary_sha256 == $summary
+    and .results_sha256 == $results
+  ' "$PROMOTION_BUNDLE_MANIFEST" >/dev/null || {
+  echo "promotion eval-bundle manifest disagrees with its pointer" >&2
+  exit 1
+}
+[[ "$(sha256_hex "$PROMOTION_BUNDLE_MANIFEST")" \
+    == "$PROMOTION_EVAL_CONTENT_ADDRESS" \
+  && "$(sha256_hex "$PROMOTION_EVAL_BUNDLE/summary.json")" \
+    == "$PROMOTION_EVAL_SUMMARY_SHA" \
+  && "$(sha256_hex "$PROMOTION_EVAL_BUNDLE/results.jsonl")" \
+    == "$PROMOTION_EVAL_RESULTS_SHA" ]] || {
+  echo "promotion eval bundle does not match its content address or file digests" >&2
+  rm -f "$PROMOTION_BUNDLE_MANIFEST"
+  exit 1
+}
+rm -f "$PROMOTION_BUNDLE_MANIFEST"
+
+POST_EVAL_SOURCE_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
+[[ "$POST_EVAL_SOURCE_REVISION" == "$SOURCE_REVISION" \
+  && -z "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]] || {
+  echo "source state changed during promotion evaluation" >&2
+  exit 1
+}
+
+# Stage only from the runner's atomically published, content-addressed bundle.
+# Re-hash both destinations against its pointer so a source swap between the
+# two independent copies cannot compose a mixed evaluation.
+install -m 0644 \
+  "$PROMOTION_EVAL_BUNDLE/summary.json" \
+  "$PROMOTION_BUILD/summary.json"
+install -m 0644 \
+  "$PROMOTION_EVAL_BUNDLE/results.jsonl" \
+  "$PROMOTION_BUILD/results.jsonl"
+[[ "$(sha256_hex "$PROMOTION_BUILD/summary.json")" \
+    == "$PROMOTION_EVAL_SUMMARY_SHA" \
+  && "$(sha256_hex "$PROMOTION_BUILD/results.jsonl")" \
+    == "$PROMOTION_EVAL_RESULTS_SHA" ]] || {
+  echo "staged promotion evidence differs from the atomic eval-bundle pointer" >&2
+  exit 1
+}
+
+# The evaluation may be long. Re-read the immutable candidate and its runtime
+# mode so an operator/runtime drift cannot be hidden behind the earlier smoke.
+POST_EVAL_CANDIDATE_CONFIG="$(
+  aws lambda get-function-configuration \
+    --function-name "$FN" --qualifier "$NEW_VERSION" \
+    --region "$REGION" --output json
+)"
+if ! same_versioned_release_config \
+  "$PUBLISHED_CONFIG" "$POST_EVAL_CANDIDATE_CONFIG"; then
+  echo "numbered candidate changed during promotion evaluation" >&2
+  exit 1
+fi
+POST_EVAL_CODE_SHA="$(jq -r '.CodeSha256' <<<"$POST_EVAL_CANDIDATE_CONFIG")"
+[[ "$POST_EVAL_CODE_SHA" == "$LOCAL_CODE_SHA" \
+  && "$POST_EVAL_CODE_SHA" == "$CANDIDATE_CODE_SHA" ]] || {
+  echo "post-evaluation candidate artifact digest does not match the local bundle" >&2
+  exit 1
+}
+assert_managed_release_config \
+  "$POST_EVAL_CANDIDATE_CONFIG" "post-evaluation numbered candidate"
+POST_EVAL_RUNTIME_MODE="$(
+  aws lambda get-runtime-management-config \
+    --function-name "$FN" --qualifier "$NEW_VERSION" \
+    --region "$REGION" --query UpdateRuntimeOn --output text
+)"
+[[ "$POST_EVAL_RUNTIME_MODE" == "FunctionUpdate" ]] || {
+  echo "candidate runtime mode changed during promotion evaluation" >&2
+  exit 1
+}
+
+# This is deliberately the only runtime projection written to disk. The
+# complete Lambda environment contains a history-signing secret and must never
+# cross into public promotion evidence.
+jq -n \
+  --arg source_revision "$SOURCE_REVISION" \
+  --arg config_version "$CONFIG_VERSION" \
+  --arg content_version "$CONTENT_VERSION" \
+  --arg snapshot_version "$SNAPSHOT_VERSION" \
+  --arg release_version "$RELEASE_VERSION" \
+  --arg corpus_version "$PINNED_CORPUS_VERSION" \
+  --arg artifact_code_sha256 "$POST_EVAL_CODE_SHA" \
+  --arg function_version "$NEW_VERSION" '{
+    source_revision: $source_revision,
+    config_version: $config_version,
+    content_version: $content_version,
+    snapshot_version: $snapshot_version,
+    release_version: $release_version,
+    corpus_version: $corpus_version,
+    artifact_code_sha256: $artifact_code_sha256,
+    function_version: $function_version
+  }' >"$PROMOTION_RUNTIME_EVIDENCE"
+PROMOTION_BUILD_SUMMARY="$(
+  cd "$ROOT"
+  uv run python scripts/build_promotion_attestation.py \
+    --runtime "$PROMOTION_RUNTIME_EVIDENCE" \
+    --summary "$PROMOTION_BUILD/summary.json" \
+    --results "$PROMOTION_BUILD/results.jsonl" \
+    --output "$PROMOTION_BUILD/promotion.json"
+)"
+if ! jq -e \
+  --arg output "$PROMOTION_BUILD/promotion.json" '
+    .output_path == $output
+    and (.attestation_sha256 | test("^[0-9a-f]{64}$"))
+  ' <<<"$PROMOTION_BUILD_SUMMARY" >/dev/null; then
+  echo "promotion attestation builder returned an invalid receipt" >&2
+  exit 1
+fi
+PROMOTION_ATTESTATION_SHA="$(
+  jq -r '.attestation_sha256' <<<"$PROMOTION_BUILD_SUMMARY"
+)"
+[[ -f "$PROMOTION_BUILD/promotion.json" \
+  && ! -L "$PROMOTION_BUILD/promotion.json" ]] || {
+  echo "promotion attestation was not written as a regular file" >&2
+  exit 1
+}
+STAGED_SUMMARY_SHA="$(sha256_hex "$PROMOTION_BUILD/summary.json")"
+STAGED_RESULTS_SHA="$(sha256_hex "$PROMOTION_BUILD/results.jsonl")"
+STAGED_PROMOTION_SHA="$(sha256_hex "$PROMOTION_BUILD/promotion.json")"
+[[ "$STAGED_PROMOTION_SHA" == "$PROMOTION_ATTESTATION_SHA" ]] || {
+  echo "promotion builder receipt does not identify the exact staged attestation bytes" >&2
+  exit 1
+}
+
+# The builder composes the attestation, but the shared verifier is the complete
+# consumer predicate. Run it against the exact three staged files before those
+# bytes are eligible for publication.
+verify_promotion_trio \
+  "$PROMOTION_BUILD" \
+  "$STAGED_SUMMARY_SHA" \
+  "$STAGED_RESULTS_SHA" \
+  "$STAGED_PROMOTION_SHA" >/dev/null
+
+# The canonical promotion attestation commits to the exact summary/results
+# digests, so its SHA-256 is the content address for the closed evidence trio.
+# Populate an unpublished sibling first; only the final pointer is replaced
+# atomically after every copied byte re-matches the verified staging receipt.
+PROMOTION_ARCHIVE="$BUILD/promotions/$NEW_VERSION/$PROMOTION_ATTESTATION_SHA"
+PROMOTION_ARCHIVE_PARENT="$(dirname "$PROMOTION_ARCHIVE")"
+mkdir -p "$PROMOTION_ARCHIVE_PARENT"
+PROMOTION_ARCHIVE_STAGING="$(
+  mktemp -d "$PROMOTION_ARCHIVE_PARENT/.${PROMOTION_ATTESTATION_SHA}.XXXXXX"
+)"
+for promotion_artifact in summary.json results.jsonl promotion.json; do
+  install -m 0444 \
+    "$PROMOTION_BUILD/$promotion_artifact" \
+    "$PROMOTION_ARCHIVE_STAGING/$promotion_artifact"
+done
+if [[ -e "$PROMOTION_ARCHIVE" ]]; then
+  [[ -d "$PROMOTION_ARCHIVE" && ! -L "$PROMOTION_ARCHIVE" ]] || {
+    echo "retained promotion evidence path is not a regular directory" >&2
+    exit 1
+  }
+  for promotion_artifact in summary.json results.jsonl promotion.json; do
+    if [[ ! -f "$PROMOTION_ARCHIVE/$promotion_artifact" \
+      || -L "$PROMOTION_ARCHIVE/$promotion_artifact" ]] \
+        || ! cmp -s \
+          "$PROMOTION_ARCHIVE_STAGING/$promotion_artifact" \
+          "$PROMOTION_ARCHIVE/$promotion_artifact"; then
+      echo "retained promotion evidence conflicts with the current artifact" >&2
+      exit 1
+    fi
+  done
+  rm -rf "$PROMOTION_ARCHIVE_STAGING"
+else
+  chmod 0555 "$PROMOTION_ARCHIVE_STAGING"
+  mv "$PROMOTION_ARCHIVE_STAGING" "$PROMOTION_ARCHIVE"
+fi
+chmod 0555 "$PROMOTION_ARCHIVE"
+for promotion_artifact in summary.json results.jsonl promotion.json; do
+  if [[ -e "$PROMOTION_ARCHIVE/$promotion_artifact" ]]; then
+    continue
+  else
+    echo "atomically published promotion bundle is incomplete" >&2
+    exit 1
+  fi
+done
+
+EVAL_BUNDLE_POINTER_TEMP="$(mktemp "$BUILD/.promotion-evidence-pointer.XXXXXX")"
+jq -n -S -c \
+  --arg bundle_path "$PROMOTION_ARCHIVE" \
+  --arg content_address "$PROMOTION_ATTESTATION_SHA" \
+  --arg function_version "$NEW_VERSION" \
+  --arg summary_sha256 "$STAGED_SUMMARY_SHA" \
+  --arg results_sha256 "$STAGED_RESULTS_SHA" \
+  --arg promotion_sha256 "$STAGED_PROMOTION_SHA" '{
+    schema: "fare-assistant.eval-bundle-pointer.v1",
+    bundle_path: $bundle_path,
+    content_address: $content_address,
+    function_version: $function_version,
+    summary_sha256: $summary_sha256,
+    results_sha256: $results_sha256,
+    promotion_sha256: $promotion_sha256
+  }' >"$EVAL_BUNDLE_POINTER_TEMP"
+chmod 0444 "$EVAL_BUNDLE_POINTER_TEMP"
+mv "$EVAL_BUNDLE_POINTER_TEMP" "$EVAL_BUNDLE_POINTER"
+[[ -f "$EVAL_BUNDLE_POINTER" && ! -L "$EVAL_BUNDLE_POINTER" ]] || {
+  echo "promotion evidence pointer was not atomically published as a regular file" >&2
+  exit 1
+}
+
 # Apply the function-wide cost ceiling before a first deployment creates any
 # public route. Existing releases already carry this value; reapplying it is
 # idempotent shared-infrastructure reconciliation.
 aws lambda put-function-concurrency --function-name "$FN" --region "$REGION" \
   --reserved-concurrent-executions "$RESERVED_CONCURRENCY" >/dev/null
+
+# Resolve the atomic pointer rather than trusting in-memory paths, recheck its
+# content address and exact digests, then invoke the full consumer predicate
+# immediately before the first possible candidate alias mutation.
+EVAL_BUNDLE_POINTER_JSON="$(<"$EVAL_BUNDLE_POINTER")"
+jq -e \
+  --arg bundle_path "$PROMOTION_ARCHIVE" \
+  --arg content_address "$PROMOTION_ATTESTATION_SHA" \
+  --arg function_version "$NEW_VERSION" \
+  --arg summary_sha256 "$STAGED_SUMMARY_SHA" \
+  --arg results_sha256 "$STAGED_RESULTS_SHA" \
+  --arg promotion_sha256 "$STAGED_PROMOTION_SHA" '
+    keys == [
+      "bundle_path",
+      "content_address",
+      "function_version",
+      "promotion_sha256",
+      "results_sha256",
+      "schema",
+      "summary_sha256"
+    ]
+    and .schema == "fare-assistant.eval-bundle-pointer.v1"
+    and .bundle_path == $bundle_path
+    and .content_address == $content_address
+    and .function_version == $function_version
+    and .summary_sha256 == $summary_sha256
+    and .results_sha256 == $results_sha256
+    and .promotion_sha256 == $promotion_sha256
+  ' <<<"$EVAL_BUNDLE_POINTER_JSON" >/dev/null || {
+  echo "promotion evidence pointer is malformed or changed after publication" >&2
+  exit 1
+}
+POINTER_BUNDLE_PATH="$(jq -r '.bundle_path' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+POINTER_SUMMARY_SHA="$(jq -r '.summary_sha256' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+POINTER_RESULTS_SHA="$(jq -r '.results_sha256' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+POINTER_PROMOTION_SHA="$(jq -r '.promotion_sha256' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+verify_promotion_trio \
+  "$POINTER_BUNDLE_PATH" \
+  "$POINTER_SUMMARY_SHA" \
+  "$POINTER_RESULTS_SHA" \
+  "$POINTER_PROMOTION_SHA" >/dev/null
+[[ "$(git -C "$ROOT" rev-parse HEAD)" == "$SOURCE_REVISION" \
+  && -z "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]] || {
+  echo "source state changed before promotion evidence was consumed" >&2
+  exit 1
+}
 
 if [[ "$HAS_LIVE_ALIAS" == "true" && "$NEW_VERSION" == "$OLD_VERSION" ]]; then
   echo "candidate is already the live immutable version $NEW_VERSION; no alias move needed"
@@ -2403,6 +2905,9 @@ echo "content version: $CONTENT_VERSION"
 echo "snapshot version: $SNAPSHOT_VERSION"
 echo "config version: $CONFIG_VERSION"
 echo "release version: $RELEASE_VERSION"
+echo "promotion attestation sha256: $PROMOTION_ATTESTATION_SHA"
+echo "promotion evidence: $PROMOTION_ARCHIVE"
+echo "promotion evidence pointer: $EVAL_BUNDLE_POINTER"
 echo "disabled documents pending review: $DISABLED_DOC_IDS"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
 echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

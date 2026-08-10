@@ -249,3 +249,53 @@ def test_latest_run_dir_errors_with_no_runs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "EVAL_RUNS_DIR", tmp_path)
     with pytest.raises(SystemExit):
         report.latest_run_dir()
+
+
+def test_a_fully_cached_live_run_says_so_in_its_header():
+    """The promoted 2026-07-12 baseline was published as `(full, live)` while
+    all 553 of its model calls came from the on-disk cache. The answers are
+    real completions recorded under byte-identical prompts, so the run is valid
+    regression evidence, but "live" alone reads as "called the provider"."""
+    summary = {
+        "run_at": "2026-07-12T05:01:17+00:00",
+        "mode": "full",
+        "offline": False,
+        "execution": {
+            "cache": {
+                "enabled": True,
+                "answer_hits": 186,
+                "answer_calls": 186,
+                "judge_hits": 367,
+                "judge_calls": 367,
+            }
+        },
+    }
+    assert (
+        report._run_mode_label(summary)
+        == "full, live provider — every model call served from cache"
+    )
+
+
+def test_a_partly_cached_run_is_still_labelled_live():
+    # One real call is enough for "live" to mean what a reader expects; the
+    # cost line carries the hit count for the rest.
+    summary = {
+        "mode": "full",
+        "offline": False,
+        "execution": {
+            "cache": {
+                "enabled": True,
+                "answer_hits": 185,
+                "answer_calls": 186,
+                "judge_hits": 367,
+                "judge_calls": 367,
+            }
+        },
+    }
+    assert report._run_mode_label(summary) == "full, live"
+
+
+def test_an_offline_run_keeps_its_own_label():
+    assert report._run_mode_label({"mode": "smoke", "offline": True}) == (
+        "smoke, offline — deterministic checks only"
+    )

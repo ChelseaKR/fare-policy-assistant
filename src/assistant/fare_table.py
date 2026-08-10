@@ -51,7 +51,10 @@ def load_rider_categories(agency: str) -> dict[str, RiderCategory]:
     """Rider categories declared in a v2 feed (`rider_categories.txt`), keyed by
     id. Empty for a v1 feed or an agency with no snapshot — the fares then carry
     no typed category, which callers handle as `None`."""
-    path = gtfs.GTFS_RAW_DIR / agency / "rider_categories.txt"
+    try:
+        path = gtfs.feed_snapshot_directory(agency) / "rider_categories.txt"
+    except FileNotFoundError:
+        return {}
     if not path.exists():
         return {}
     out: dict[str, RiderCategory] = {}

@@ -7,6 +7,7 @@ false-positive guard, and the no_feed/no-snapshot coverage cases.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import zipfile
@@ -83,7 +84,7 @@ _V2_ZIP_FILES = {
 # ── fetch ────────────────────────────────────────────────────────────────────
 
 
-def test_fetch_all_snapshots_only_fare_members(tmp_path, monkeypatch):
+def test_fetch_all_retains_exact_zip_receipt_and_only_consumed_fare_files(tmp_path, monkeypatch):
     raw, _ = _point_config_at(tmp_path, monkeypatch)
     manifest = {
         "user_agent": "test-agent/0.1",
@@ -94,20 +95,47 @@ def test_fetch_all_snapshots_only_fare_members(tmp_path, monkeypatch):
     monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: manifest["gtfs_feeds"])
     monkeypatch.setattr("assistant.gtfs.ingest.load_manifest", lambda: manifest)
 
+    feed_zip = _build_zip(_V1_ZIP_FILES)
+
     def handler(request):
-        return httpx.Response(200, content=_build_zip(_V1_ZIP_FILES))
+        return httpx.Response(200, content=feed_zip)
 
     monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
 
-    gtfs.fetch_all()
+    assert gtfs.fetch_all() is True
 
-    agency_dir = raw / "gtfs" / "MST"
+    selected = gtfs.load_current_snapshot_set()
+    assert selected is not None
+    agency_dir = selected["MST"].directory
+    assert selected["MST"].fares_schema == "v1"
+    assert selected["MST"].http_status == 200
+    assert selected["MST"].requested_url == "https://mst.org/google_transit.zip"
+    assert (agency_dir / "feed.zip").read_bytes() == feed_zip
     assert (agency_dir / "fare_attributes.txt").exists()
-    assert (agency_dir / "agency.txt").exists()
+    assert not (agency_dir / "agency.txt").exists()
+    assert not (agency_dir / "fare_rules.txt").exists()
     assert not (agency_dir / "stops.txt").exists(), "geo files should not be snapshotted"
-    meta = json.loads((agency_dir / "meta.json").read_text())
-    assert meta["fares_version"] == "v1"
-    assert "fare_attributes.txt" in meta["fare_files"]
+    receipt_bytes = (agency_dir / "receipt.json").read_bytes()
+    receipt = json.loads(receipt_bytes)
+    assert receipt_bytes == gtfs._canonical_json(receipt)
+    assert receipt["schema"] == gtfs.GTFS_RECEIPT_SCHEMA
+    assert receipt["fares_schema"] == "v1"
+    assert receipt["requested_url"] == "https://mst.org/google_transit.zip"
+    assert receipt["final_url"] == "https://mst.org/google_transit.zip"
+    assert receipt["http_status"] == 200
+    assert receipt["zip"] == {
+        "bytes": len(feed_zip),
+        "sha256": hashlib.sha256(feed_zip).hexdigest(),
+    }
+    assert [row["name"] for row in receipt["extracted_files"]] == ["fare_attributes.txt"]
+    assert agency_dir.name == hashlib.sha256(receipt_bytes).hexdigest()
+    current_bytes = (raw / "gtfs" / "current.json").read_bytes()
+    assert current_bytes == gtfs._canonical_json(json.loads(current_bytes))
+    current = json.loads(current_bytes)
+    assert gtfs.current_snapshot_set_version() == current["set_version"]
+    assert len(current["set_version"]) == 64
+    fares = gtfs.parse_fares("MST")
+    assert fares and all(fare.agency == "MST" for fare in fares)
 
 
 def test_fetch_all_bad_zip_is_reported_not_raised(tmp_path, monkeypatch, capsys):
@@ -123,12 +151,15 @@ def test_fetch_all_bad_zip_is_reported_not_raised(tmp_path, monkeypatch, capsys)
 
     monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
 
-    gtfs.fetch_all()  # must not raise
+    assert gtfs.fetch_all() is False  # must not raise
 
     assert "FAIL" in capsys.readouterr().err
+    assert not (gtfs.GTFS_RAW_DIR / "current.json").exists()
 
 
-def test_fetch_all_only_filter(tmp_path, monkeypatch):
+def test_fetch_all_only_filter_atomically_replaces_one_member_of_existing_set(
+    tmp_path, monkeypatch
+):
     raw, _ = _point_config_at(tmp_path, monkeypatch)
     feeds = [
         {"agency": "MST", "url": "https://mst.org/g.zip", "fares_version": "v1"},
@@ -145,10 +176,201 @@ def test_fetch_all_only_filter(tmp_path, monkeypatch):
 
     monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
 
-    gtfs.fetch_all(only={"MST"})
+    assert gtfs.fetch_all() is True
+    first = gtfs.load_current_snapshot_set()
+    assert first is not None
+    sbmtd_version = first["SBMTD"].snapshot_version
 
-    assert (raw / "gtfs" / "MST").exists()
+    assert gtfs.fetch_all(only={"MST"}) is True
+    second = gtfs.load_current_snapshot_set()
+    assert second is not None
+
+    assert set(second) == {"MST", "SBMTD"}
+    assert second["SBMTD"].snapshot_version == sbmtd_version
+    assert not (raw / "gtfs" / "MST").exists()
     assert not (raw / "gtfs" / "SBMTD").exists()
+
+
+def test_partial_multi_feed_failure_preserves_exact_current_set(tmp_path, monkeypatch):
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    feeds = [
+        {"agency": "MST", "url": "https://mst.org/g.zip", "fares_version": "v1"},
+        {"agency": "SBMTD", "url": "https://sbmtd.gov/g.zip", "fares_version": "v2"},
+    ]
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: feeds)
+    monkeypatch.setattr(
+        "assistant.gtfs.ingest.load_manifest",
+        lambda: {"user_agent": "test-agent/0.1"},
+    )
+    failing = False
+    changed_v1 = dict(_V1_ZIP_FILES)
+    changed_v1["fare_attributes.txt"] = changed_v1["fare_attributes.txt"].replace("2.00", "3.00")
+
+    def handler(request):
+        if "mst" in str(request.url):
+            files = changed_v1 if failing else _V1_ZIP_FILES
+            return httpx.Response(200, content=_build_zip(files))
+        if failing:
+            return httpx.Response(200, content=b"truncated-not-a-zip")
+        return httpx.Response(200, content=_build_zip(_V2_ZIP_FILES))
+
+    monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
+    assert gtfs.fetch_all() is True
+    current_path = raw / "gtfs" / "current.json"
+    before_pointer = current_path.read_bytes()
+    before = gtfs.load_current_snapshot_set()
+    assert before is not None
+    before_versions = {agency: item.snapshot_version for agency, item in before.items()}
+    before_snapshots = sorted(
+        str(path.relative_to(raw / "gtfs")) for path in (raw / "gtfs" / "snapshots").glob("*/*")
+    )
+
+    failing = True
+    assert gtfs.fetch_all() is False
+
+    assert current_path.read_bytes() == before_pointer
+    after = gtfs.load_current_snapshot_set()
+    assert after is not None
+    assert {agency: item.snapshot_version for agency, item in after.items()} == before_versions
+    assert (
+        sorted(
+            str(path.relative_to(raw / "gtfs")) for path in (raw / "gtfs" / "snapshots").glob("*/*")
+        )
+        == before_snapshots
+    )
+    assert not list((raw / "gtfs").glob(".transaction.*"))
+
+
+def test_pointer_write_failure_preserves_previous_selection(tmp_path, monkeypatch):
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "gtfs_feeds": [{"agency": "MST", "url": "https://mst.org/g.zip", "fares_version": "v1"}],
+    }
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: manifest["gtfs_feeds"])
+    monkeypatch.setattr("assistant.gtfs.ingest.load_manifest", lambda: manifest)
+    changed = False
+    changed_files = dict(_V1_ZIP_FILES)
+    changed_files["fare_attributes.txt"] = changed_files["fare_attributes.txt"].replace(
+        "2.00", "4.00"
+    )
+
+    def handler(request):
+        files = changed_files if changed else _V1_ZIP_FILES
+        return httpx.Response(200, content=_build_zip(files))
+
+    monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
+    assert gtfs.fetch_all() is True
+    current = raw / "gtfs" / "current.json"
+    before = current.read_bytes()
+
+    changed = True
+
+    def fail_before_replace(root, payload):
+        raise OSError("injected pointer write failure")
+
+    monkeypatch.setattr(gtfs, "_atomic_write_current", fail_before_replace)
+    assert gtfs.fetch_all() is False
+
+    assert current.read_bytes() == before
+    selected = gtfs.load_current_snapshot_set()
+    assert selected is not None
+    assert gtfs.parse_fares("MST")[0].amount == pytest.approx(2.00)
+
+
+@pytest.mark.parametrize(
+    "malicious_name",
+    [
+        "../outside.txt",
+        "/absolute.txt",
+        "nested\\windows.txt",
+        "nested/../../escape.txt",
+    ],
+)
+def test_malicious_zip_member_aborts_transaction_without_writing_outside(
+    malicious_name, tmp_path, monkeypatch
+):
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "gtfs_feeds": [{"agency": "MST", "url": "https://mst.org/g.zip", "fares_version": "v1"}],
+    }
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: manifest["gtfs_feeds"])
+    monkeypatch.setattr("assistant.gtfs.ingest.load_manifest", lambda: manifest)
+    files = dict(_V1_ZIP_FILES)
+    files[malicious_name] = "do not extract"
+
+    def handler(request):
+        return httpx.Response(200, content=_build_zip(files))
+
+    monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
+
+    assert gtfs.fetch_all() is False
+
+    assert not (raw / "gtfs" / "current.json").exists()
+    assert not (raw / "outside.txt").exists()
+    assert not (tmp_path / "escape.txt").exists()
+    assert not list((raw / "gtfs").glob(".transaction.*"))
+
+
+def test_first_partial_fetch_requires_a_complete_transaction(tmp_path, monkeypatch, capsys):
+    _point_config_at(tmp_path, monkeypatch)
+    feeds = [
+        {"agency": "MST", "url": "https://mst.org/g.zip", "fares_version": "v1"},
+        {"agency": "SBMTD", "url": "https://sbmtd.gov/g.zip", "fares_version": "v2"},
+    ]
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: feeds)
+    monkeypatch.setattr(
+        "assistant.gtfs.ingest.load_manifest",
+        lambda: {"user_agent": "test-agent/0.1"},
+    )
+
+    def handler(request):
+        return httpx.Response(200, content=_build_zip(_V1_ZIP_FILES))
+
+    monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
+
+    assert gtfs.fetch_all(only={"MST"}) is False
+
+    assert "first transactional GTFS fetch must include every configured feed" in (
+        capsys.readouterr().err
+    )
+    assert not (gtfs.GTFS_RAW_DIR / "current.json").exists()
+
+
+def test_selected_snapshot_validation_rejects_retained_file_tampering(tmp_path, monkeypatch):
+    _point_config_at(tmp_path, monkeypatch)
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "gtfs_feeds": [{"agency": "MST", "url": "https://mst.org/g.zip", "fares_version": "v1"}],
+    }
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: manifest["gtfs_feeds"])
+    monkeypatch.setattr("assistant.gtfs.ingest.load_manifest", lambda: manifest)
+
+    def handler(request):
+        return httpx.Response(200, content=_build_zip(_V1_ZIP_FILES))
+
+    monkeypatch.setattr("assistant.gtfs.httpx.Client", _mock_client(handler))
+    assert gtfs.fetch_all() is True
+    selected = gtfs.load_current_snapshot_set()
+    assert selected is not None
+    (selected["MST"].directory / "fare_attributes.txt").write_text(
+        "fare_id,price\nRegular,999.00\n"
+    )
+
+    with pytest.raises(gtfs.GTFSStorageError, match="differs from the exact ZIP"):
+        gtfs.load_current_snapshot_set()
+
+
+def test_corrupt_transactional_pointer_never_falls_back_to_legacy(tmp_path, monkeypatch):
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    legacy = raw / "gtfs" / "MST"
+    legacy.mkdir(parents=True)
+    (legacy / "fare_attributes.txt").write_text("fare_id,price\nRegular,2.00\n")
+    (raw / "gtfs" / "current.json").write_text('{"schema":"broken"}\n')
+
+    with pytest.raises(gtfs.GTFSStorageError):
+        gtfs.parse_fares("MST")
 
 
 # ── parse ────────────────────────────────────────────────────────────────────
@@ -322,6 +544,14 @@ def test_main_check_dispatch(tmp_path, monkeypatch):
     gtfs.main()
 
     assert (processed / "gtfs_cross_check.json").exists()
+
+
+def test_main_fetch_failure_exits_nonzero(monkeypatch):
+    monkeypatch.setattr(gtfs, "fetch_all", lambda only=None: False)
+    monkeypatch.setattr("sys.argv", ["gtfs", "fetch"])
+
+    with pytest.raises(SystemExit, match="1"):
+        gtfs.main()
 
 
 def test_main_unknown_command_exits(monkeypatch):

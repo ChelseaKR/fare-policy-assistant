@@ -118,3 +118,37 @@ def test_negotiate_lang(header: str | None, expected: str) -> None:
 
 def test_default_language_is_supported() -> None:
     assert DEFAULT_LANGUAGE in SUPPORTED_LANGUAGES
+
+
+def test_catalog_parity_gate_refuses_an_empty_template(tmp_path, monkeypatch, capsys):
+    """The gate's own denominator.
+
+    Every G5/G6 check iterates over the template's msgid set, so an empty
+    template makes all of them vacuous: the gate prints "catalog parity OK: 0
+    msgids" and exits 0 while nothing rider-facing is translated. G2-lite
+    catches a template that drifts from the sources, but a commit that empties
+    the sources and the template together drifts from nothing.
+    """
+    from babel.messages.catalog import Catalog
+    from babel.messages.pofile import write_po
+
+    from tools import check_catalog_parity as gate
+
+    locales = tmp_path / "locales"
+    for name in gate.CATALOGS:
+        (locales / name / "LC_MESSAGES").mkdir(parents=True)
+        with (locales / name / "LC_MESSAGES" / "messages.po").open("wb") as fh:
+            write_po(fh, Catalog(locale=name))
+    with (locales / "messages.pot").open("wb") as fh:
+        write_po(fh, Catalog())
+
+    monkeypatch.setattr(gate, "LOCALES", locales)
+    monkeypatch.setattr(gate, "POT", locales / "messages.pot")
+    assert gate.main() == 1
+    assert "no msgids" in capsys.readouterr().err
+
+
+def test_the_committed_template_is_not_empty():
+    from tools import check_catalog_parity as gate
+
+    assert len(gate._ids(gate._load(gate.POT, None))) >= 6

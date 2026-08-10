@@ -45,10 +45,13 @@ git query for developer convenience only.
 
 from __future__ import annotations
 
+import base64
 import hmac
 import json
 import os
+import re
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent  # bundle root mirrors the repo root
@@ -57,9 +60,33 @@ sys.path.insert(0, str(_ROOT / "src"))
 from assistant import config  # noqa: E402
 from assistant.corpus import corpus_summary, diff_corpus  # noqa: E402
 from assistant.ingest import Chunk  # noqa: E402
+from assistant.promotion_evidence import (  # noqa: E402
+    PromotionEvidenceError,
+    verify_promotion_evidence,
+)
 
 MAX_BODY_BYTES = 16 * 1024
 VERSION_HISTORY_PATH = config.CORPUS_DIR / "version_history.json"
+PROMOTED_EVAL_SUMMARY_PATH = _ROOT / "evals" / "promoted" / "summary.json"
+PROMOTED_EVAL_RESULTS_PATH = _ROOT / "evals" / "promoted" / "results.jsonl"
+PROMOTED_EVAL_ATTESTATION_PATH = _ROOT / "evals" / "promoted" / "promotion.json"
+PROMOTED_EVAL_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
+
+_SOURCE_REVISION = re.compile(r"^[0-9a-f]{40}$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_CORPUS_VERSION = re.compile(r"^[0-9a-f]{12}$")
+_FUNCTION_VERSION = re.compile(r"^[1-9][0-9]*$")
+
+_IDENTITY_ENVIRONMENT = {
+    "source_revision": "FPA_SOURCE_REVISION",
+    "config_version": "FPA_CONFIG_VERSION",
+    "content_version": "FPA_PINNED_CONTENT_VERSION",
+    "snapshot_version": "FPA_PINNED_SNAPSHOT_VERSION",
+    "release_version": "FPA_RELEASE_VERSION",
+    "corpus_version": "FPA_PINNED_CORPUS_VERSION",
+    "artifact_code_sha256": "FPA_ARTIFACT_CODE_SHA256",
+}
+_RELEASE_IDENTITY_FIELDS = tuple(_IDENTITY_ENVIRONMENT)
 
 _SECURITY_HEADERS = {
     "cache-control": "no-store",
@@ -76,9 +103,32 @@ _SECURITY_HEADERS = {
 # (an object with get_alias / get_function_configuration methods) so the live
 # release status is testable without AWS credentials.
 _client_factory = None
+_http_client_factory = None
 _ssm_client_factory = None
 _resolved_console_token: str | None = None
 _console_token_resolved = False
+
+
+def _clock() -> datetime:
+    return datetime.now(UTC)
+
+
+class LiveIdentityError(RuntimeError):
+    """One or more production observations cannot describe one live release."""
+
+    def __init__(self, *mismatches: str):
+        unique = tuple(dict.fromkeys(mismatches)) or ("live_identity",)
+        super().__init__("live rider identity observations are incoherent")
+        self.mismatches = unique
+
+
+class PromotedEvalError(ValueError):
+    """The fixed promoted receipt is absent, malformed, or non-promotable."""
+
+    def __init__(self, *mismatches: str):
+        unique = tuple(dict.fromkeys(mismatches)) or ("evaluation",)
+        super().__init__("promoted evaluation evidence is invalid")
+        self.mismatches = unique
 
 
 def _response(status: int, body: str, content_type: str = "application/json") -> dict:
@@ -207,10 +257,7 @@ def _lambda_client():
 def _rider_function_name() -> str:
     name = os.environ.get("FPA_RIDER_FUNCTION_NAME")
     if not name:
-        raise RuntimeError(
-            "FPA_RIDER_FUNCTION_NAME is not set; the console does not know which "
-            "rider Lambda to update."
-        )
+        raise LiveIdentityError("aws.function_name")
     return name
 
 
@@ -218,56 +265,233 @@ def _rider_alias_name() -> str:
     return os.environ.get("FPA_RIDER_ALIAS", "live")
 
 
-def live_release_status() -> dict:
-    """Return configuration from the immutable alias that receives traffic.
+def _rider_base_url() -> str:
+    base_url = os.environ.get("FPA_RIDER_BASE_URL", "").strip()
+    if not base_url:
+        raise LiveIdentityError("runtime.base_url")
+    if not base_url.startswith("https://"):
+        raise LiveIdentityError("runtime.base_url")
+    return base_url.rstrip("/")
 
-    Reading ``$LATEST`` here would report a failed or partially staged deploy as
-    production. Resolve the alias first, then read through that same alias so
-    the version pointer and configuration describe one atomic release.
+
+def _http_client():
+    if _http_client_factory is not None:
+        return _http_client_factory()
+    import httpx
+
+    return httpx.Client(timeout=5.0, follow_redirects=False, trust_env=False)
+
+
+def _canonical_artifact_digest(value: object) -> str | None:
+    if not isinstance(value, str) or value != value.strip():
+        return None
+    try:
+        decoded = base64.b64decode(value, validate=True)
+    except (TypeError, ValueError):
+        return None
+    if len(decoded) != 32 or base64.b64encode(decoded).decode("ascii") != value:
+        return None
+    return value
+
+
+def _validated_alias(alias: object, *, observation: str) -> tuple[str, str | None]:
+    if not isinstance(alias, dict):
+        raise LiveIdentityError(f"alias.{observation}")
+    routing = alias.get("RoutingConfig", {})
+    if not isinstance(routing, dict):
+        raise LiveIdentityError("alias.routing_weights")
+    weights = routing.get("AdditionalVersionWeights", {})
+    if not isinstance(weights, dict) or weights:
+        raise LiveIdentityError("alias.routing_weights")
+    version = alias.get("FunctionVersion")
+    if not isinstance(version, str) or not _FUNCTION_VERSION.fullmatch(version):
+        raise LiveIdentityError("alias.function_version")
+    revision = alias.get("RevisionId")
+    if revision is not None and (not isinstance(revision, str) or not revision):
+        raise LiveIdentityError(f"alias.{observation}")
+    return version, revision
+
+
+def _aws_release_observation(current: object, expected_version: str) -> tuple[dict, dict]:
+    if not isinstance(current, dict):
+        raise LiveIdentityError("aws.configuration")
+    configured_version = current.get("Version")
+    if configured_version != expected_version:
+        raise LiveIdentityError("aws.function_version")
+
+    environment = current.get("Environment", {})
+    if not isinstance(environment, dict):
+        raise LiveIdentityError("aws.environment")
+    variables = environment.get("Variables", {})
+    if not isinstance(variables, dict):
+        raise LiveIdentityError("aws.environment")
+
+    identity = {field: variables.get(name) for field, name in _IDENTITY_ENVIRONMENT.items()}
+    mismatches: list[str] = []
+    for field in ("source_revision",):
+        value = identity[field]
+        if not isinstance(value, str) or not _SOURCE_REVISION.fullmatch(value):
+            mismatches.append(f"aws.{field}")
+    for field in (
+        "config_version",
+        "content_version",
+        "snapshot_version",
+        "release_version",
+    ):
+        value = identity[field]
+        if not isinstance(value, str) or not _SHA256.fullmatch(value):
+            mismatches.append(f"aws.{field}")
+    corpus_version = identity["corpus_version"]
+    if not isinstance(corpus_version, str) or not _CORPUS_VERSION.fullmatch(corpus_version):
+        mismatches.append("aws.corpus_version")
+    artifact = _canonical_artifact_digest(identity["artifact_code_sha256"])
+    if artifact is None:
+        mismatches.append("aws.artifact_code_sha256")
+    code_sha = _canonical_artifact_digest(current.get("CodeSha256"))
+    if code_sha is None:
+        mismatches.append("aws.CodeSha256")
+    elif artifact is not None and not hmac.compare_digest(code_sha, artifact):
+        mismatches.append("aws.CodeSha256")
+    if mismatches:
+        raise LiveIdentityError(*mismatches)
+
+    return identity, variables
+
+
+def _runtime_release_observation(expected: dict, expected_version: str) -> dict:
+    client = _http_client()
+    try:
+        response = client.get(f"{_rider_base_url()}/version")
+        if getattr(response, "status_code", None) != 200:
+            raise LiveIdentityError("runtime.http_status")
+        try:
+            runtime = response.json()
+        except Exception as exc:  # noqa: BLE001 - a non-JSON runtime is incoherent
+            raise LiveIdentityError("runtime.json") from exc
+    except LiveIdentityError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - network/TLS errors are one safe state
+        raise LiveIdentityError("runtime.unreachable") from exc
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
+
+    if not isinstance(runtime, dict):
+        raise LiveIdentityError("runtime.json")
+    mismatches: list[str] = []
+    if runtime.get("identity_status") != "verified":
+        mismatches.append("runtime.identity_status")
+    if runtime.get("function_version") != expected_version:
+        mismatches.append("runtime.function_version")
+    for field in _RELEASE_IDENTITY_FIELDS:
+        value = runtime.get(field)
+        if not isinstance(value, str) or value != expected[field]:
+            mismatches.append(f"runtime.{field}")
+    if mismatches:
+        raise LiveIdentityError(*mismatches)
+    return runtime
+
+
+def live_release_status() -> dict:
+    """Observe one immutable release through AWS and the public rider route.
+
+    The alias is read both before and after the public observation. A 200
+    console status therefore means the unweighted numeric alias, its qualified
+    configuration, its exact ZIP digest, and the rider-visible ``/version``
+    response all named the same release without a detected cutover race.
     """
-    client = _lambda_client()
+    try:
+        client = _lambda_client()
+    except Exception as exc:  # noqa: BLE001 - AWS client failures are one safe state
+        raise LiveIdentityError("aws.client") from exc
     fn = _rider_function_name()
     alias_name = _rider_alias_name()
-    alias = client.get_alias(FunctionName=fn, Name=alias_name)
-    weights = alias.get("RoutingConfig", {}).get("AdditionalVersionWeights", {})
-    if not isinstance(weights, dict) or weights:
-        raise RuntimeError(
-            f"rider alias {alias_name!r} has weighted routing; live status is ambiguous"
-        )
-    version = alias.get("FunctionVersion")
-    if not isinstance(version, str) or not version.isdigit():
-        raise RuntimeError(f"rider alias {alias_name!r} does not resolve to a numbered version")
-    current = client.get_function_configuration(FunctionName=fn, Qualifier=alias_name)
-    configured_version = str(current.get("Version", ""))
-    if configured_version and configured_version != version:
-        raise RuntimeError(
-            f"rider alias {alias_name!r} changed while status was read; retry the request"
-        )
-    env = dict(current.get("Environment", {}).get("Variables", {}))
+    try:
+        before = client.get_alias(FunctionName=fn, Name=alias_name)
+    except Exception as exc:  # noqa: BLE001 - AWS failures are a single safe state
+        raise LiveIdentityError("alias.initial") from exc
+    version, revision = _validated_alias(before, observation="initial")
+    try:
+        current = client.get_function_configuration(FunctionName=fn, Qualifier=version)
+    except Exception as exc:  # noqa: BLE001 - AWS failures are a single safe state
+        raise LiveIdentityError("aws.configuration") from exc
+    identity, env = _aws_release_observation(current, version)
+    runtime = _runtime_release_observation(identity, version)
+    try:
+        after = client.get_alias(FunctionName=fn, Name=alias_name)
+    except Exception as exc:  # noqa: BLE001 - AWS failures are a single safe state
+        raise LiveIdentityError("alias.final") from exc
+    final_version, final_revision = _validated_alias(after, observation="final")
+    alias_mismatches: list[str] = []
+    if final_version != version:
+        alias_mismatches.append("alias.function_version")
+    if revision is not None and final_revision is not None and revision != final_revision:
+        alias_mismatches.append("alias.revision")
+    if alias_mismatches:
+        raise LiveIdentityError(*alias_mismatches)
+
+    disabled_raw = env.get("FPA_DISABLED_DOC_IDS", "")
+    embed_ancestors = env.get("FPA_EMBED_ANCESTORS", "'self'")
+    if not isinstance(disabled_raw, str):
+        raise LiveIdentityError("aws.disabled_documents")
+    if not isinstance(embed_ancestors, str) or not embed_ancestors:
+        raise LiveIdentityError("aws.embed_ancestors")
     return {
         "alias": alias_name,
         "function_version": version,
-        "pinned_corpus_version": env.get("FPA_PINNED_CORPUS_VERSION"),
-        "disabled_documents": sorted(
-            doc_id for doc_id in env.get("FPA_DISABLED_DOC_IDS", "").split(",") if doc_id
-        ),
-        "embed_ancestors": env.get("FPA_EMBED_ANCESTORS", "'self'"),
+        "identity_status": "verified",
+        **identity,
+        "pinned_corpus_version": identity["corpus_version"],
+        "disabled_documents": sorted(doc_id for doc_id in disabled_raw.split(",") if doc_id),
+        "embed_ancestors": embed_ancestors,
+        "runtime_as_of": runtime.get("as_of"),
     }
 
 
 # ── eval report ──────────────────────────────────────────────────────────────
 
 
-def latest_eval_report() -> dict | None:
-    runs_dir = config.EVAL_RUNS_DIR
-    if not runs_dir.exists():
-        return None
-    run_dirs = sorted((p for p in runs_dir.iterdir() if p.is_dir()), key=lambda p: p.name)
-    for run_dir in reversed(run_dirs):
-        summary_path = run_dir / "summary.json"
-        if summary_path.exists():
-            return json.loads(summary_path.read_text(encoding="utf-8"))
-    return None
+def promoted_eval_status(live: dict, available_corpus: dict) -> tuple[dict, bool]:
+    """Verify the exact evidence trio against one coherent live release.
+
+    The shared verifier is the sole parser for promotion evidence.  The console
+    receives only its sanitized projection; raw questions, answers, rationales,
+    and retrieved passages never cross the API boundary.
+    """
+    try:
+        evidence = verify_promotion_evidence(
+            summary_path=PROMOTED_EVAL_SUMMARY_PATH,
+            results_path=PROMOTED_EVAL_RESULTS_PATH,
+            promotion_path=PROMOTED_EVAL_ATTESTATION_PATH,
+            freshness_budget=timedelta(seconds=PROMOTED_EVAL_MAX_AGE_SECONDS),
+            clock=_clock,
+        )
+    except PromotionEvidenceError as exc:
+        raise PromotedEvalError(*exc.mismatches) from exc
+
+    mismatches: list[str] = []
+    runtime_release = evidence.attestation.runtime_release
+    for field in (
+        "source_revision",
+        "config_version",
+        "content_version",
+        "snapshot_version",
+        "release_version",
+        "corpus_version",
+        "artifact_code_sha256",
+        "function_version",
+    ):
+        if getattr(runtime_release, field) != live.get(field):
+            mismatches.append(f"evaluation.runtime_release.{field}")
+
+    for field in ("content_version", "corpus_version"):
+        if available_corpus.get(field) != live.get(field):
+            mismatches.append(f"catalog.{field}")
+
+    if mismatches:
+        raise PromotedEvalError(*mismatches)
+    return evidence.as_dict(), not evidence.fresh
 
 
 # ── routes ───────────────────────────────────────────────────────────────────
@@ -285,13 +509,71 @@ def _read_body(event: dict) -> dict:
 
 
 def _status(event: dict) -> dict:
-    live = live_release_status()
+    try:
+        live = live_release_status()
+    except LiveIdentityError as exc:
+        return _json(
+            503,
+            {
+                "state": "invalid",
+                "status": "invalid",
+                "error": "Live rider identity observations are incoherent.",
+                "mismatches": list(exc.mismatches),
+            },
+        )
+
+    try:
+        available_corpus = corpus_summary()
+    except Exception:  # noqa: BLE001 - the packaged catalog is one observed dependency
+        return _json(
+            503,
+            {
+                "state": "invalid",
+                "status": "invalid",
+                "error": "The console catalog bundle is unavailable.",
+                "mismatches": ["catalog.unavailable"],
+            },
+        )
+    common = {
+        "available_corpus": available_corpus,
+        "live": live,
+        "rider_function": os.environ.get("FPA_RIDER_FUNCTION_NAME"),
+    }
+    try:
+        evaluation, stale = promoted_eval_status(live, available_corpus)
+    except PromotedEvalError as exc:
+        return _json(
+            409,
+            {
+                **common,
+                "state": "invalid",
+                "status": "invalid",
+                "error": "Promoted evaluation evidence is absent, invalid, or non-promotable.",
+                "mismatches": list(exc.mismatches),
+            },
+        )
+    if stale:
+        return _json(
+            409,
+            {
+                **common,
+                "evaluation": evaluation,
+                "state": "warning",
+                "status": "stale",
+                "error": (
+                    "The promoted evaluation matches live, but is older than its freshness budget."
+                ),
+                "mismatches": ["evaluation.age"],
+            },
+        )
     return _json(
         200,
         {
-            "available_corpus": corpus_summary(),
-            "live": live,
-            "rider_function": os.environ.get("FPA_RIDER_FUNCTION_NAME"),
+            **common,
+            "evaluation": evaluation,
+            "state": "coherent",
+            "status": "verified",
+            "mismatches": [],
         },
     )
 
@@ -347,10 +629,55 @@ def _embed_config_post(event: dict) -> dict:
 
 
 def _eval_report(event: dict) -> dict:
-    report = latest_eval_report()
-    if report is None:
-        return _json(404, {"error": "No eval run recorded yet."})
-    return _json(200, report)
+    try:
+        live = live_release_status()
+    except LiveIdentityError as exc:
+        return _json(
+            503,
+            {
+                "state": "invalid",
+                "status": "invalid",
+                "error": "Live rider identity observations are incoherent.",
+                "mismatches": list(exc.mismatches),
+            },
+        )
+    try:
+        available_corpus = corpus_summary()
+    except Exception:  # noqa: BLE001 - the packaged catalog is one observed dependency
+        return _json(
+            503,
+            {
+                "state": "invalid",
+                "status": "invalid",
+                "error": "The console catalog bundle is unavailable.",
+                "mismatches": ["catalog.unavailable"],
+            },
+        )
+    try:
+        evaluation, stale = promoted_eval_status(live, available_corpus)
+    except PromotedEvalError as exc:
+        return _json(
+            409,
+            {
+                "state": "invalid",
+                "status": "invalid",
+                "error": "Promoted evaluation evidence is absent, invalid, or non-promotable.",
+                "mismatches": list(exc.mismatches),
+            },
+        )
+    if stale:
+        return _json(
+            409,
+            {
+                "state": "warning",
+                "status": "stale",
+                "error": (
+                    "The promoted evaluation matches live, but is older than its freshness budget."
+                ),
+                "mismatches": ["evaluation.age"],
+            },
+        )
+    return _json(200, evaluation)
 
 
 _ROUTES = {
@@ -462,9 +789,9 @@ CONSOLE_HTML = """<!doctype html>
   </section>
 
   <section aria-labelledby="eval-h">
-    <h2 id="eval-h">Latest eval report</h2>
+    <h2 id="eval-h">Promoted eval report</h2>
     <div id="eval-body"></div>
-    <button id="refresh-eval" type="button">Load eval report</button>
+    <button id="refresh-eval" type="button">Load promoted eval report</button>
   </section>
 
   <p id="status" role="status" aria-live="polite"></p>
@@ -481,6 +808,12 @@ CONSOLE_HTML = """<!doctype html>
   function say(msg, isError) {
     statusEl.className = isError ? "error" : "";
     statusEl.textContent = msg;
+  }
+
+  function failureText(r, fallback) {
+    var message = r.data && r.data.error ? String(r.data.error) : fallback;
+    var names = r.data && Array.isArray(r.data.mismatches) ? r.data.mismatches : [];
+    return names.length ? message + " Mismatches: " + names.map(String).join(", ") + "." : message;
   }
 
   function token() {
@@ -503,16 +836,25 @@ CONSOLE_HTML = """<!doctype html>
   });
 
   document.getElementById("refresh-status").addEventListener("click", function () {
+    var body = document.getElementById("status-body");
+    body.textContent = "Checking AWS, the public rider runtime, and promoted evidence…";
     api("/console/api/status").then(function (r) {
-      if (!r.ok) { say(r.data.error || "Could not load status.", true); return; }
+      if (!r.ok) {
+        var problem = failureText(r, "Could not verify live status.");
+        body.textContent = problem;
+        say(problem, true);
+        return;
+      }
       var d = r.data;
       var live = d.live;
       var pin = live.pinned_corpus_version || "no pin set";
-      document.getElementById("status-body").innerHTML =
+      body.innerHTML =
+        "<p><strong>Verified:</strong> AWS, the rider runtime, and the promoted eval agree.</p>" +
         "<p>Alias <code>" + esc(live.alias) + "</code> points to immutable Lambda " +
         "version <code>" + esc(live.function_version) + "</code>.</p>" +
+        "<p>Release: <code>" + esc(live.release_version) + "</code></p>" +
         "<p>Approved corpus pin: <code>" + esc(pin) + "</code></p>" +
-        "<p>Contained documents: <code>" +
+        "<p>Disabled documents: <code>" +
         esc(live.disabled_documents.join(", ") || "none") + "</code></p>" +
         "<p>Embed origins: <code>" + esc(live.embed_ancestors) + "</code></p>" +
         "<p>Console catalog bundle: <code>" +
@@ -523,14 +865,20 @@ CONSOLE_HTML = """<!doctype html>
   });
 
   document.getElementById("refresh-versions").addEventListener("click", function () {
+    var versionsBody = document.getElementById("versions-body");
+    versionsBody.textContent = "Loading versions…";
     api("/console/api/versions").then(function (r) {
-      if (!r.ok) { say(r.data.error || "Could not load versions.", true); return; }
+      if (!r.ok) {
+        versionsBody.textContent = failureText(r, "Could not load versions.");
+        say(versionsBody.textContent, true);
+        return;
+      }
       var rows = r.data.versions.map(function (v) {
         return "<tr><td><code>" + esc(v.corpus_version) + "</code></td><td>" + esc(v.commit) +
           "</td><td>" + esc(v.committed_at) + "</td><td>" + esc(v.documents) +
           "</td></tr>";
       }).join("");
-      document.getElementById("versions-body").innerHTML =
+      versionsBody.innerHTML =
         "<table><thead><tr><th>corpus_version</th><th>commit</th><th>committed</th>" +
         "<th>docs</th></tr></thead><tbody>" + rows + "</tbody></table>";
       say("Versions loaded.");
@@ -540,14 +888,20 @@ CONSOLE_HTML = """<!doctype html>
   document.getElementById("run-diff").addEventListener("click", function () {
     var from = document.getElementById("diff-from").value.trim();
     var to = document.getElementById("diff-to").value.trim();
+    var diffBody = document.getElementById("diff-body");
     if (!from || !to) { say("Enter both a from and a to version.", true); return; }
+    diffBody.textContent = "Loading comparison…";
     api("/console/api/diff?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to))
       .then(function (r) {
-        if (!r.ok) { say(r.data.error || "Could not load diff.", true); return; }
+        if (!r.ok) {
+          diffBody.textContent = failureText(r, "Could not load diff.");
+          say(diffBody.textContent, true);
+          return;
+        }
         var d = r.data;
         function list(items) { return items.length ? "<ul>" + items.map(function (i) {
           return "<li>" + esc(i) + "</li>"; }).join("") + "</ul>" : "<p>none</p>"; }
-        document.getElementById("diff-body").innerHTML =
+        diffBody.innerHTML =
           "<p><strong>Added</strong></p>" + list(d.added) +
           "<p><strong>Removed</strong></p>" + list(d.removed) +
           "<p><strong>Changed</strong></p>" + list(d.changed);
@@ -556,19 +910,25 @@ CONSOLE_HTML = """<!doctype html>
   });
 
   document.getElementById("refresh-eval").addEventListener("click", function () {
+    var evalBody = document.getElementById("eval-body");
+    evalBody.textContent = "Loading promoted evaluation…";
     api("/console/api/eval-report").then(function (r) {
-      if (!r.ok) { say(r.data.error || "No eval report yet.", true); return; }
+      if (!r.ok) {
+        evalBody.textContent = failureText(r, "No promoted eval report yet.");
+        say(evalBody.textContent, true);
+        return;
+      }
       var d = r.data;
-      var rows = Object.keys(d.suites || {}).map(function (name) {
-        var s = d.suites[name];
-        // summary.json's pass_rate is already a 0-100 percentage
-        // (evals/runner.py rounds 100 * passed / total to one decimal).
-        return "<tr><td>" + esc(name) + "</td><td>" + s.passed + "/" + s.total +
-          "</td><td>" + Number(s.pass_rate).toFixed(1) + "%</td></tr>";
+      var rows = (d.suites || []).map(function (s) {
+        // The verifier's pass_rate is already a 0-100 percentage.
+        return "<tr><td>" + esc(s.name) + "</td><td>" + esc(s.passed) + "/" + esc(s.total) +
+          "</td><td>" + esc(Number(s.pass_rate).toFixed(1)) + "%</td></tr>";
       }).join("");
-      document.getElementById("eval-body").innerHTML =
-        "<p>Run at " + esc(d.run_at) + " (" + esc(d.mode) + ", " +
-        (d.offline ? "offline" : "live") + ")</p>" +
+      evalBody.innerHTML =
+        "<p>Verified run <code>" + esc(d.run_id) + "</code> at " + esc(d.run_at) +
+        "; promotion receipt <code>" + esc(d.promotion_sha256) + "</code>.</p>" +
+        "<p>Total: " + esc(d.total.passed) + "/" + esc(d.total.total) + " (" +
+        esc(Number(d.total.pass_rate).toFixed(1)) + "%).</p>" +
         "<table><thead><tr><th>suite</th><th>passed</th><th>rate</th></tr></thead><tbody>" +
         rows + "</tbody></table>";
       say("Eval report loaded.");

@@ -15,6 +15,17 @@ fact), and asserts that the specific check meant to catch it flips from pass to
 fail — and only that check's family. No model calls; the deterministic gate is
 pure, so CI can enforce this.
 
+Every check `evals/checks.py` emits has a scenario here, and
+`tests/test_selftest.py::test_every_check_the_grader_can_emit_has_a_planted_defect`
+reads the names out of the grader's source to keep that true. It was not true
+until 2026-08-05: five checks had no planted defect, among them `language_match`
+(what makes the multilingual suite a language test rather than a second English
+suite) and `refused` / `redirect_present` (the entirety of the refusal suite's
+deterministic scoring). Those suites score 22/22 and 34/34, and a check that has
+never failed and was never shown able to fail is indistinguishable from one that
+cannot — the shape of bug that left the bilingual parity gate saturated for a
+month while nothing validated its own denominator.
+
     python -m evals.selftest        # prints a report, exits 1 if any defect slips
 
 A defect that *survives* (mutated answer still passes its check) is a hole in
@@ -197,6 +208,85 @@ def _scenarios() -> list[Scenario]:
             mutate=lambda r: replace(
                 r, answer=f"Veterans show some paperwork [doc:{doc_id}], as of {AS_OF}."
             ),
+        ),
+        # ── added 2026-08-05 ──────────────────────────────────────────────
+        # The five scenarios below cover the five checks `run_checks` emits
+        # that nothing here had ever planted a defect against. Three of them
+        # are the only deterministic teeth their suite has: `language_match`
+        # is what makes the multilingual suite a language test rather than a
+        # second English suite, and `refused` / `redirect_present` are the
+        # whole of the refusal suite's non-judge scoring. Refusal has scored
+        # 34/34 and multilingual 22/22; a check that has never failed and was
+        # never shown able to fail is indistinguishable from one that cannot.
+        # `test_every_emitted_check_has_a_planted_defect` keeps the set closed.
+        Scenario(
+            name="answered in the wrong language",
+            check="language_match",
+            case={"expected_behavior": "answer", "agency_scope": "MST", "language": "es"},
+            clean=_clean(
+                doc_id,
+                f"El pase mensual con descuento cuesta {good_price} [doc:{doc_id}]. "
+                f"Segun las politicas publicadas al {AS_OF}, confirme con la agencia.",
+                agency=fact.agency,
+            ),
+            # The Spanish case answered in English: the mirrored-pair parity
+            # number is only an equity measurement if this fails.
+            mutate=lambda r: replace(
+                r,
+                answer=f"The discounted monthly pass costs {good_price} [doc:{doc_id}]. "
+                f"Based on policies published as of {AS_OF}, please confirm with the agency.",
+            ),
+        ),
+        Scenario(
+            name="answers a question it was supposed to decline",
+            check="refused",
+            case={"expected_behavior": "refuse_redirect", "language": "en"},
+            clean=AnswerResult(
+                question="q",
+                answer="I don't have a published policy that answers that. "
+                "Please contact the agency's customer service.",
+                kind="refused_no_support",
+                citations=[],
+            ),
+            mutate=lambda r: replace(r, kind="answered"),
+        ),
+        Scenario(
+            name="declines without pointing anywhere",
+            check="redirect_present",
+            case={"expected_behavior": "refuse_redirect", "language": "en"},
+            clean=AnswerResult(
+                question="q",
+                answer="I don't have a published policy that answers that. "
+                "Please contact the agency's customer service.",
+                kind="refused_no_support",
+                citations=[],
+            ),
+            mutate=lambda r: replace(
+                r, answer="I don't have a published policy that answers that."
+            ),
+        ),
+        Scenario(
+            name="states the criterion and stops",
+            check="verification_handoff_present",
+            case={"expected_behavior": "answer", "language": "en", "requires_handoff": True},
+            clean=_clean(
+                doc_id,
+                f"The published criterion is age 65 and over [doc:{doc_id}], as of {AS_OF}. "
+                "Contact the agency to apply and verify your eligibility.",
+            ),
+            mutate=lambda r: replace(
+                r,
+                answer=f"The published criterion is age 65 and over [doc:{doc_id}], as of {AS_OF}.",
+            ),
+        ),
+        Scenario(
+            name="answer that cannot be rendered as the typed contract",
+            check="structured_contract_schema_valid",
+            case={"expected_behavior": "answer", "language": "en"},
+            clean=_clean(doc_id, base_answer),
+            # A kind outside the contract's enum: the UI would silently fall
+            # back to prose, which this check exists to count rather than hide.
+            mutate=lambda r: replace(r, kind="answered_partial"),
         ),
     ]
 
