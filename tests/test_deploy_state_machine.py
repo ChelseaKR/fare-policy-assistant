@@ -10,13 +10,19 @@ from pathlib import Path
 from typing import Any
 
 from assistant import config
+from assistant.corpus import corpus_version
 
 DEPLOY = config.REPO_ROOT / "infra" / "deploy.sh"
 ACCOUNT = "123456789012"
 REGION = "us-west-2"
 FUNCTION = "fare-policy-assistant-demo"
 API_ID = "test-api"
-CORPUS_VERSION = "0938fff0539a"
+# Derived from the tree rather than hardcoded: deploy.sh computes the pinned
+# corpus identity from the working corpus at deploy time, so a legitimate
+# corpus refresh (e.g. the scheduled freshness loop) must not break these
+# simulations. Failure-path tests that need a *wrong* version construct their
+# own mismatched strings.
+CORPUS_VERSION = corpus_version()
 HISTORY_KEY = "0" * 64
 SOURCE_REVISION = "a" * 40
 IDENTITY_ARTIFACT = "A" * 43 + "="
