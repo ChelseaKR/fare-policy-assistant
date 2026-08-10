@@ -471,6 +471,51 @@ def test_main_process_dispatch(tmp_path, monkeypatch):
     assert (processed / "chunks.jsonl").exists()
 
 
+def test_dash_m_invocation_archives_with_the_canonical_chunk_class(
+    tmp_path, monkeypatch
+):
+    # Regression: ``python -m assistant.ingest process`` runs this module as
+    # ``__main__``, whose Chunk class is a distinct object from
+    # ``assistant.ingest.Chunk``. Before the ``__main__`` delegation shim,
+    # identity validation rejected every CLI-produced chunk with
+    # "chunks[0] must be a Chunk" and the archive step crashed, which is how
+    # the scheduled corpus-freshness loop silently lost its process stage.
+    # Drive the real ``-m`` path with runpy rather than calling main().
+    import runpy
+    import sys
+    import warnings
+
+    manifest = {
+        "user_agent": "x",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "mst-fares",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            }
+        ],
+    }
+    raw, processed = _point_config_at(tmp_path, monkeypatch, manifest)
+    _write_html_snapshot(raw)
+    monkeypatch.setattr(sys, "argv", ["assistant.ingest", "process"])
+    with warnings.catch_warnings():
+        # runpy warns that assistant.ingest is already imported; that shadowed
+        # double-import is precisely the condition under test.
+        warnings.simplefilter("ignore", RuntimeWarning)
+        runpy.run_module("assistant.ingest", run_name="__main__")
+
+    assert (processed / "chunks.jsonl").exists()
+    snapshots = tmp_path / "snapshots"
+    assert snapshots.exists() and any(snapshots.iterdir()), (
+        "the -m entrypoint must reach the snapshot archive step with "
+        "canonically-typed chunks"
+    )
+
+
 def test_main_unknown_command_exits():
     import pytest
 
