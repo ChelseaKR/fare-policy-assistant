@@ -1,4 +1,20 @@
 {
-  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated. Empty: the 2026-07-11 eval-remediation promotion re-baselined EVALS.md and baseline.json to the v10 A-D run (192/201), so all prior lags are resolved.",
-  "acknowledged": []
+  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated. Current entries: 2026-08-10 hta.org domain move, pending the next promoted eval run.",
+  "acknowledged": [
+    {
+      "artifact": "EVALS.md",
+      "field": "corpus_version",
+      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+    },
+    {
+      "artifact": "baseline.json",
+      "field": "corpus_version",
+      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+    },
+    {
+      "artifact": "golden.jsonl",
+      "field": "corpus_version",
+      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+    }
+  ]
 }
