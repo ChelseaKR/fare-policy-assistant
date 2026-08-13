@@ -20,6 +20,13 @@ itself a cross-container guarantee -- it resets on cold start and is
 invisible to sibling containers (see ADR 0004 amendment, "a true
 cross-container rate limit"). Then a 500-character question cap, and the
 pinned 1024-token answer ceiling in config.
+
+Those are all *aggregate*: they bound total spend but let one actor consume
+the whole allowance and starve every real rider. `web/ratelimit.py` adds the
+per-caller layer that none of them provide, plus a spend breaker that stops
+new model calls while leaving the non-model routes (`/`, `/offline`,
+`/guide`, `/embed`, `/version`) and already-cached answers working, so a
+cutoff degrades to the offline guide instead of an error page (ADR 0025).
 """
 
 from __future__ import annotations
@@ -43,6 +50,7 @@ from assistant.answer import AnswerResult, answer_question  # noqa: E402
 from assistant.contract import build_structured_answer  # noqa: E402
 from assistant.models import get_model  # noqa: E402
 from assistant.retrieve import default_retriever  # noqa: E402
+from web import ratelimit  # noqa: E402
 from web.csp import html_csp  # noqa: E402
 
 MAX_QUESTION_CHARS = config.MAX_QUESTION_CHARS
@@ -573,6 +581,24 @@ def _ask(event: dict) -> dict:
         return _json(
             400, {"error": f"Please keep questions under {MAX_QUESTION_CHARS} characters."}
         )
+    # Per-caller quota, checked before any release, history, cache, or model
+    # work. This is the layer the aggregate gateway throttle cannot provide:
+    # it stops one source from spending everyone else's allowance. Malformed
+    # bodies above return 400 without consuming quota; they cost no model call
+    # and the gateway throttle already bounds them.
+    if not ratelimit.check(event, route="ask", limit=config.RATE_LIMIT_ASK_PER_WINDOW).allowed:
+        telemetry.log_caller_rate_limited(route="ask", limit=config.RATE_LIMIT_ASK_PER_WINDOW)
+        return _json(
+            429,
+            {
+                "error": (
+                    "You have asked a lot of questions in the last minute. "
+                    "Please wait a moment and try again."
+                ),
+                "offline": "/offline",
+                "guide": "/guide",
+            },
+        )
     try:
         release_status = _release_status()
     except release_identity.ReleaseIdentityError:
@@ -622,6 +648,38 @@ def _ask(event: dict) -> dict:
                     structured_ok=cached["structured"] is not None,
                 )
                 return _json(200, cached)
+
+        # Spend cutoff. Checked here, after the cache lookup above, so a tripped
+        # breaker still serves answers this container already paid for; only a
+        # *new* model call is refused. Every non-model route keeps working, so
+        # the service degrades to the offline reference rather than going dark.
+        # The deploy's direct health check bypasses it for the same reason it
+        # bypasses cache and budget: a release must still be verifiable.
+        if not direct_health and ratelimit.breaker_open():
+            telemetry.log_spend_cutoff_served(route="ask")
+            telemetry.log_answer_request(
+                kind="spend_cutoff",
+                language=None,
+                question_chars=len(question),
+                turns=len(history),
+                request_duration_ms=round(1000 * (time.monotonic() - started)),
+                cache="miss",
+                model_called=False,
+                structured_ok=None,
+                status_code=503,
+            )
+            return _json(
+                503,
+                {
+                    "error": (
+                        "New answers are paused right now while we look at usage. "
+                        "The offline fare reference and the guided fare finder are "
+                        "still available and cover the same published policies."
+                    ),
+                    "offline": "/offline",
+                    "guide": "/guide",
+                },
+            )
 
         if not direct_health and _over_budget(time.monotonic()):
             telemetry.log_answer_request(
@@ -721,7 +779,22 @@ def _ask(event: dict) -> dict:
 def _feedback(event: dict) -> dict:
     """Record a thumbs up/down. Logs only the verdict, the response kind, and the
     language — never the question or answer. Nothing identifies the rider; the
-    aggregate is queryable in CloudWatch without storing any content."""
+    aggregate is queryable in CloudWatch without storing any content.
+
+    Rate-limited per caller on its own quota. This route calls no model, so it
+    was previously left unguarded, but "free" is not the same as "harmless": an
+    unlimited feedback endpoint lets one source flood the log group (which is
+    billed) and skew the FeedbackDown metric an operator is paged on. Its quota
+    is separate from the ask quota, so leaving feedback on a page cannot use up
+    a rider's ability to ask another question.
+    """
+    if not ratelimit.check(
+        event, route="feedback", limit=config.RATE_LIMIT_FEEDBACK_PER_WINDOW
+    ).allowed:
+        telemetry.log_caller_rate_limited(
+            route="feedback", limit=config.RATE_LIMIT_FEEDBACK_PER_WINDOW
+        )
+        return _json(429, {"error": "Too much feedback in the last minute. Please wait a moment."})
     try:
         data = json.loads(event.get("body") or "")
         verdict = data.get("verdict")

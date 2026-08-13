@@ -22,6 +22,17 @@ criteria and routes the decision to the agency.
   birth dates, contact details) are refused before retrieval.
 - *Output:* a fare-policy answer drawn only from the corpus.
 - *Corpus:* public agency documents, dated and versioned. No personal data.
+- *Caller address:* since 2026-08-12 the service processes the requesting IP
+  address for rate limiting (ADR 0025). An IP address is personal data. It is
+  read from the gateway request context, passed directly into a keyed hash,
+  and discarded within the request. It is never logged, never returned, and
+  never stored. What is stored is a secret-keyed HMAC digest of
+  (window, route, address) truncated to 128 bits, alongside an integer count,
+  with a TTL of roughly two minutes. The window is part of the hashed
+  material, so the digest changes every 60 seconds and cannot be assembled
+  into a session or a usage history. The digest is not reversible to an
+  address without the secret, and rotating the secret makes every stored row
+  permanently unlinkable. The digest itself is never logged.
 
 **Retention and transient state.** Plaintext rider questions and conversation
 history are not written to application logs, databases, or the server answer
@@ -54,7 +65,9 @@ document its own lawful basis, processor terms, and retention configuration.
 | A rider volunteers PII in free text | Medium | Medium | Input guard refuses recognized identifiers before retrieval/model use; refused content is not cached or logged. An unmatched value may still be processed transiently, so the UI warns riders not to provide personal details (`src/assistant/guards.py`, ADR 0004). |
 | Sensitive attribute inferred/retained | Low | Medium | No account/profile database and no content logs; attributes are not solicited. Current-tab history and successful answer payloads are transient as described above. |
 | Automated eligibility decision affecting a person | Low | High | Out of scope by design: output guard blocks determination language; eval refusal suite tests it; the agency decides (model card, `evals/suites/refusal.yaml`). |
-| Re-identification from logs | Low | Low | Logs carry counts/timings only; 14-day retention. |
+| Re-identification from logs | Low | Low | Logs carry counts/timings only; 14-day retention. No IP, user agent, or rate-limit digest is logged (ADR 0019, ADR 0025); `tests/test_deploy_rate_limit.py` asserts no telemetry helper accepts a caller identifier. |
+| Re-identification from rate-limit state | Low | Low | Stored keys are secret-keyed HMAC digests that rotate every 60 seconds and expire in about two minutes. A dump of the table yields no address and no linkage between windows. Rotating the key (a redeploy variable) breaks linkage immediately. Residual: a party holding both the live secret and the table can test whether a *guessed* address is currently being counted, for the length of one window (ADR 0025). |
+| One caller denying service to every other rider | Was High, now Low | High | Per-caller quotas on `/api/ask` and `/api/feedback` (ADR 0025). Before that change the gateway throttle was aggregate only, so a single source sustaining 2 rps could turn every rider away at no cost. Distributed floods remain bounded only in aggregate. |
 | Third-party processor exposure (model provider) | Low | Medium | Successful question text that passed the identifier guard reaches the configured model; recognized PII is refused first. Production adoption requires review of the operator's current provider terms and retention controls. |
 
 ## 4. Residual risk and conclusion
@@ -63,7 +76,16 @@ Residual risk is **low**. The dominant control is architectural: the system does
 not need or request an identity, creates no rider profile, keeps no content logs,
 and does not make decisions about people. The main residual exposure is a rider
 typing an identifier the guard does not match, or another person viewing
-current-tab history or transient cached output. A production deployment should
+current-tab history or transient cached output.
+
+One property weakened since the previous revision: the service now processes a
+caller's IP address for rate limiting and stores a derived value for about two
+minutes (ADR 0025). This is recorded rather than glossed, because "we derive
+nothing from the request" was previously true without qualification and is no
+longer. The mitigations are described above; the reason for accepting the change
+is that the alternative left any single actor able to deny service to every
+rider at will, which is a worse outcome for the same people this assessment
+protects. A production deployment should
 confirm the deployment-hardening checklist in `SECURITY.md`, set appropriate
 log/provider retention and processor agreements, conduct legal review, and
 re-run this DPIA against its live configuration.

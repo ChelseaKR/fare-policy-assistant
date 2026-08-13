@@ -457,8 +457,13 @@ def _runtime_payload(environment: Mapping[str, str]) -> dict[str, object]:
             "answer_cache_size": config.ANSWER_CACHE_SIZE,
             "max_history_turns": config.MAX_HISTORY_TURNS,
             "max_history_answer_chars": config.MAX_HISTORY_ANSWER_CHARS,
+            "rate_limit_window_seconds": config.RATE_LIMIT_WINDOW_SECONDS,
+            "rate_limit_ask_per_window": config.RATE_LIMIT_ASK_PER_WINDOW,
+            "rate_limit_feedback_per_window": config.RATE_LIMIT_FEEDBACK_PER_WINDOW,
+            "spend_breaker_cache_seconds": config.SPEND_BREAKER_CACHE_SECONDS,
         },
         "answer_cache_key_schema": config.ANSWER_CACHE_KEY_SCHEMA,
+        "caller_digest_schema": config.CALLER_DIGEST_SCHEMA,
     }
 
 
@@ -681,6 +686,7 @@ def _validate_config_payload(value: object) -> Mapping[str, object]:
             "history_signing",
             "limits",
             "answer_cache_key_schema",
+            "caller_digest_schema",
         },
         "runtime",
     )
@@ -716,12 +722,17 @@ def _validate_config_payload(value: object) -> Mapping[str, object]:
             "answer_cache_size",
             "max_history_turns",
             "max_history_answer_chars",
+            "rate_limit_window_seconds",
+            "rate_limit_ask_per_window",
+            "rate_limit_feedback_per_window",
+            "spend_breaker_cache_seconds",
         },
         "runtime.limits",
     )
     for name in limits:
         _integer(limits[name], f"runtime.limits.{name}", minimum=1)
     _string(runtime["answer_cache_key_schema"], "runtime.answer_cache_key_schema")
+    _string(runtime["caller_digest_schema"], "runtime.caller_digest_schema")
 
     _validate_receipt(payload["answer_contract"], "answer_contract")
     judge_calls = _exact_fields(
