@@ -36,6 +36,36 @@ def _post(question: str) -> dict:
     return web_handler.handler(_event(body={"question": question}))
 
 
+def _yolobus_only_sentence_in(bodies: list[str]) -> str:
+    """A sentence unique to yolobus-fares that every given page actually renders.
+
+    Containment tests need a string proving Yolobus material is present. Writing
+    one as a literal pins a fare period into an assertion that is not about fare
+    periods: this test used to hard-code "All fares are effective July 1, 2025"
+    and broke the moment Yolobus published its 2026-2027 fares. Deriving the
+    marker means the test follows the corpus instead of dating it.
+    """
+    from assistant import config
+
+    chunks = [
+        json.loads(line)
+        for line in (config.PROCESSED_DIR / "chunks.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    others = " ".join(c["text"] for c in chunks if c.get("doc_id") != "yolobus-fares")
+    candidates = [
+        sentence.strip()
+        for chunk in chunks
+        if chunk.get("doc_id") == "yolobus-fares"
+        for sentence in chunk["text"].replace("\n", " ").split(". ")
+        if len(sentence.strip()) >= 40
+        and sentence.strip() not in others
+        and all(sentence.strip() in body for body in bodies)
+    ]
+    assert candidates, "no yolobus-only sentence is rendered on these pages to anchor on"
+    return max(candidates, key=len)
+
+
 def _log_records(caplog, event: str) -> list[logging.LogRecord]:
     return [record for record in caplog.records if getattr(record, "event", None) == event]
 
@@ -297,13 +327,16 @@ class TestVersion:
         ]
 
     def test_disabled_documents_are_removed_from_offline_and_guide(self, monkeypatch):
-        marker = "All fares are effective July 1, 2025"
         monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
         web_handler._OFFLINE_HTML = None
         web_handler._GUIDE_HTML = None
-        for path in ("/offline", "/guide"):
-            warm_body = web_handler.handler(_event(method="GET", path=path))["body"]
-            assert marker in warm_body
+        warm = {
+            path: web_handler.handler(_event(method="GET", path=path))["body"]
+            for path in ("/offline", "/guide")
+        }
+        marker = _yolobus_only_sentence_in(list(warm.values()))
+        for body in warm.values():
+            assert marker in body
 
         # Changing containment policy in a warm process must invalidate both
         # rendered-page caches and remove the disabled material immediately.
