@@ -364,7 +364,8 @@ verification domain.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
-(`docs/decisions/0002`).
+(`docs/decisions/0002`). Re-checked 2026-08-12: its robots.txt permits the fare
+pages, the WAF still returns 403 to this project's fetcher, and it remains out.
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored

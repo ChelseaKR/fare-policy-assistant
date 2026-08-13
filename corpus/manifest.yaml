@@ -14,6 +14,13 @@
 #   unitrans.ucdavis.edu was in the original pilot list but its WAF returns 403 to
 #   non-browser clients; per the "polite fetching only" rule it was dropped and
 #   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
+#   Re-checked 2026-08-12 before adding a sixth agency, and unchanged. Its
+#   robots.txt is permissive (HTTP 200, stock Drupal, nothing disallowed under
+#   /passes, /fare-policy, or /other-passes-and-accepted-fares, no Crawl-delay,
+#   no Content-Signal header on any response), but every HTML page still
+#   returns a Cloudflare 403 to this project's own fetcher, from a residential
+#   IP rather than a datacenter one. robots.txt and the WAF disagree and the
+#   WAF is what a fetcher meets. Still excluded. Evidence in docs/decisions/0002.
 #
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says

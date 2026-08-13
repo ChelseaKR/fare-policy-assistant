@@ -31,3 +31,52 @@ does not train on fetched content; it retrieves and quotes it with
 attribution and a link back to the source. The signal and our reading of it
 are recorded in the manifest so a reviewer can disagree with the reasoning
 rather than discover it.
+
+## Re-check (2026-08-12): the Unitrans exclusion holds
+
+Unitrans came up again as the candidate sixth agency, so the June finding was
+re-tested rather than assumed. Two things had changed since June: the fetcher
+has been rewritten, and a WAF that blocks one client does not necessarily block
+every client, so a 403 seen once is not a permanent property of a site. Neither
+changed the answer.
+
+Evidence, gathered from a residential California IP rather than a datacenter or
+CI runner, using the manifest's own user agent and its 10-second crawl delay:
+
+- `unitrans.ucdavis.edu/robots.txt` returns HTTP 200 and is permissive. Stock
+  Drupal file, `User-agent: *`, disallowing only `/core/`, `/profiles/`,
+  `/admin/`, `/search/`, `/comment/reply/`, and the `/user/` auth paths. None
+  of the fare pages is disallowed. No `Crawl-delay` directive. No
+  Content-Signal header on any response from the host.
+- `unitrans.ucdavis.edu/sitemap.xml` also returns 200. Both it and robots.txt
+  are served from the Cloudflare edge cache (`cf-cache-status: HIT`), which is
+  why the two static text files get through while pages do not.
+- Every HTML page returns 403 with a Cloudflare "Attention Required!" body:
+  `/`, `/fares`, `/passes`, `/fare-policy`, `/other-passes-and-accepted-fares`,
+  and the Spanish `/es/passes`.
+- `assistant.ingest.fetch_all`, this project's own fetcher, was pointed at
+  `/passes` and `/` through a scratch manifest. Both failed 403.
+- Control, same user agent, same session: `yolobus.com/fares/`,
+  `www.sacrt.com/fares/`, and `hta.org/fares/` all returned 200. The user agent
+  is not the problem and the fetcher is not broken.
+
+So robots.txt and the WAF disagree about this site, and the WAF is what a
+fetcher actually meets. Reading the pages would mean sending a User-Agent this
+project is not, which is the workaround declined above in June. The decision
+stands. The way in is to ask UC Davis to allowlist an identified research
+crawler, not to disguise the client, and until that happens Unitrans stays out
+of the corpus. Anyone re-litigating this should re-run the probes rather than
+trust this paragraph: the point of dating it is that it can expire.
+
+Two things were noticed while checking and are recorded here because they would
+otherwise be lost, not because this ADR acts on them:
+
+- Unitrans publishes localized `/es/` and `/zh-hans/` pages. That is genuine
+  multilingual corpus value the block costs, and an argument for making the
+  allowlist request rather than writing Unitrans off.
+- The sitemap lists a news item at `/news/zippass-retiring-june-30-0`
+  (`lastmod` 2026-06-22) whose slug says the UC Davis ZipPass retired June 30.
+  The page itself is behind the same 403, so the claim is unread. The committed
+  Yolobus fares snapshot lists a "UC Davis Zip Pass" among the passes accepted
+  for unlimited rides. That is a possible staleness in a document already in the
+  corpus, not a Unitrans question, and someone should check it against Yolobus.
