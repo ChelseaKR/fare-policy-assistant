@@ -5,11 +5,11 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-eight California transit agencies: Monterey-Salinas Transit (MST), Santa
+nine California transit agencies: Monterey-Salinas Transit (MST), Santa
 Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
 Transit Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO
-(SCMTD), and Solano County Transit (SolTrans). It explains published policy. It
-does not decide anything about any person.
+(SCMTD), Solano County Transit (SolTrans), and Fresno Area Express (FAX). It
+explains published policy. It does not decide anything about any person.
 
 ## Intended users and uses
 
@@ -69,8 +69,9 @@ available behind a config switch.
 
 ## Data
 
-Fifteen public web pages fetched 2026-06-12 (HTA added 2026-06-16; Santa Cruz
-METRO's three pages added 2026-08-13) with an identified user agent,
+Twenty-one public web pages and two public PDF documents, fetched with an
+identified user agent between 2026-06-12 and 2026-08-13 (HTA added 2026-06-16;
+the Elk Grove, Santa Cruz METRO, SolTrans, and FAX documents added 2026-08-13),
 honoring robots.txt and crawl delays; URLs, dates, and license notes in
 `corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
 in the system.

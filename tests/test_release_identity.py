@@ -133,7 +133,7 @@ def _serialized(payload: object) -> bytes:
 
 # The three goldens below rebind whenever the hashed release config changes, and the
 # domain profile is part of that config (`_resolved_config_payload` hashes
-# `_domain_payload`). Every agency added on 2026-08-12 therefore moved them.
+# `_domain_payload`). Every agency added on 2026-08-12/13 therefore moved them.
 # That is the mechanism working: a deployed release's identity is supposed to record
 # which agencies it can answer for. Re-derive these, never loosen the assertion.
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
@@ -161,29 +161,31 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # active domain profile's scopes and aliases. They move when the domain
     # genuinely changes and must not move otherwise.
     #
-    # Three branches rebound these off the same five-agency base on 2026-08-12,
+    # Four branches rebound these off the same five-agency base on 2026-08-12,
     # each unaware of the others, so the history is worth stating in full:
     #   Elk Grove (E-tran, 4 aliases)   -> 24314b16…733a / 9c48bbe9…a3c7 / 37d9f967…cab7
     #   Santa Cruz METRO (SCMTD, 6)     -> 6620411d…5ebb5 / fdb1a140…9fdc2 / b4d99a2c…9764e
     #   SolTrans (7 aliases)            -> e105f5fc…80d2 / b75db932…2c4a / 172977b5…41f7
+    #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
     # Merging E-tran and SCMTD produced a fourth, distinct identity
-    # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e), and merging SolTrans on
-    # top produces the fifth and current one below: an eight-entry `scopes` tuple
-    # and 33 aliases in one domain block. None of the branch values is what HEAD
-    # ships, because HEAD carries all three additions and no branch did. The
-    # values below were re-derived by building the descriptor from this fixture
-    # against the merged profile, not lifted from any branch or from a failure
-    # message. Before any of the three additions: 56ef528a…d337 / fbc9799c…e675
-    # / 249b0835…907a.
+    # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
+    # merging FAX on top of that produces the sixth and current one below: a
+    # nine-entry `scopes` tuple and 37 aliases in one domain block. None of the
+    # branch values is what HEAD ships, because HEAD carries all four additions
+    # and no branch did. The values below were re-derived by building the
+    # descriptor from this fixture against the merged profile, not lifted from
+    # any branch or from a failure message. Before any of the four additions:
+    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "ef5786da19496e96e15e118a9974a96f690d6a47a28bd48309e6849dddbedda1"
+        first.config_version == "50fb01a990c29bad1d20b64a371c9f6c4e76f173717338153383eb05ce124999"
     )
     assert (
-        first.release_version == "e04eea416e4330b65afe5674f8b41807e3e54cdd74067f5c67de39ca0edf87a1"
+        first.release_version == "816ff4028414386422d426ba55e218c2eb981e2006dd7fc9e1fb471e4fa4cb94"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "50e32157cffab710f0ba84b52637c9ae41d29815238252712dbb2172c5a98e50"
+        == "df00d69422d7034c46271580a7a44cdbf3c629e0be6d5e3d583fb1a27183b626"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

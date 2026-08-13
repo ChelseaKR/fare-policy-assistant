@@ -48,3 +48,23 @@ Two corpus-hygiene findings recorded with the addition:
 - `soltrans.org/fares/ticket-office-location` was excluded: it is a stale
   near-duplicate of the Clipper Card page stating the Clipper START discount as
   20 percent where the live page and two SolTrans announcements say 50 percent.
+
+## 95794539d1d0 (2026-08-13 UTC)
+
+Added Fresno Area Express (FAX), operated by the City of Fresno: 9 agencies, 23
+documents, 152 chunks. Three documents, all fetched 2026-08-13 UTC:
+`fax-fares` (the Fares & Passes page), `fax-reduced-fare-program`, and
+`fax-reduced-fare-program-es` — the last two the corpus's first PDFs, and the
+second a genuine Spanish translation rather than an untranslated shell.
+
+FAX is the first Central Valley agency here and the first whose reduced fare is
+a suspension rather than a discount: qualifying riders pay $0.00 on fixed route
+"while subsidy funding is available", with no published end date. The base fare
+is $1.00 and paratransit stays at $1.25 for the same rider, so this corpus
+version is also the first where "what is the fare" has no single right answer.
+
+This id was recomputed after merging the Yolobus 2026-2027 refresh and the Elk
+Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
+all five changes: FAX's twelve chunks are the only ones it adds on top of the
+140 those four left behind. Any further corpus change landing before this does
+needs another `make ingest` and another re-stamp of this heading.

@@ -342,3 +342,38 @@ cases:
       SolTrans' June 2024 paperless press release and its "Get 50% Adult Fares
       with Clipper START" news item. If a future refetch ever reintroduces the 20
       percent text, this case is the tripwire.
+
+  # FAX (Fresno Area Express). The fixed-route base fare is $1.00, but the
+  # reduced fare is $0.00 while a subsidy holds, so "what does it cost" splits
+  # by rider class more sharply here than at any other agency in the corpus.
+  - id: ground-039
+    question: "How much is a regular one-way fare on FAX?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00"]
+    rationale: "fax-fares Fares table: Regular Fare $1.00 on fixed-route buses. The plain base-fare fact, asked plainly."
+
+  - id: ground-040
+    question: "What does a 31-day pass cost on Fresno Area Express?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?36"]
+    rationale: "fax-fares Monthly Passes: 31-Day Regular, unlimited rides, $36.00. Also checks that the agency's full name resolves to the FAX scope."
+
+  - id: ground-041
+    question: "If I pay cash on FAX, how long can I keep transferring?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["90"]
+    rationale: "fax-fares Transfers: 'Transfers are free and allow you to transfer for unlimited transfers for 90 minutes on all routes in any direction.' The transfer window is part of what a single fare buys, so a price quoted without it understates the fare."
+
+  - id: ground-042
+    question: "Do veterans ride free on FAX?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:valid ID|identification"]
+    rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."

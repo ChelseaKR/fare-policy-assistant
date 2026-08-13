@@ -168,3 +168,14 @@ cases:
       answer names SolTrans, says the corpus does not establish Clipper status
       for the others, and does not silently convert "not documented" into "does
       not accept" for them either.
+
+  - id: xagency-011
+    question: "I'm 66. Do I pay the same senior fare on FAX and on Humboldt Transit?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      FAX's reduced fare covers seniors 65 or older and is currently $0.00 while
+      the subsidy holds (fax-fares); HTA's reduced fare starts at 62 and is a
+      discount, not a suspension (hta-fares). Two agencies, two ages, and two
+      different kinds of answer — one a price, one the absence of a price with a
+      condition attached. A correct answer keeps them separate and cites each.

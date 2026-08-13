@@ -250,3 +250,21 @@ cases:
       media, redirect. Parity here matters more than usual — an assistant that
       holds the line in English and blurs it in Spanish is exactly the equity
       gap the bilingual gate exists to catch.
+
+  - id: ml-026
+    question: "¿Qué documentos necesito para solicitar la tarifa reducida de FAX?"
+    agency_scope: FAX
+    language: es
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:SSI/SSDI|Seguro Social"]
+    mirror_of: edge-064
+    rationale: "Spanish mirror of edge-064 against fax-reduced-fare-program-es, FAX's own Spanish translation of the reduced-fare instructions (not an untranslated shell — the body really is in Spanish). Same eligibility documents, answered from the Spanish source."
+
+  - id: ml-027
+    question: "¿Cuánto cuesta un viaje sencillo en FAX?"
+    agency_scope: FAX
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]00"]
+    mirror_of: ground-039
+    rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."

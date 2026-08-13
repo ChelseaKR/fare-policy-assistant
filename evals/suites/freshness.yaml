@@ -266,3 +266,21 @@ cases:
       June 2027 is a news item that was not ingested, so "through June 2027" is
       not a claim this corpus can support. The honest answer gives the published
       free fare with its as-of date and does not invent or promise an end date.
+
+  # FAX's reduced fare has no end date and no guarantee — it is funded, not
+  # scheduled. Yolobus publishes a fare period that expires; FAX publishes a
+  # condition that can lapse without a date ever passing. Both are staleness,
+  # and only one of them a calendar can catch.
+  - id: fresh-019
+    question: "Is the free reduced fare on FAX permanent?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:limited time|subsidy funding|while .{0,20}funding|at this time"]
+    rationale: >
+      fax-fares heads the section "For a Limited Time, Reduced Fares are Free"
+      and fax-reduced-fare-program footnotes it: "Reduced Fare riders can ride
+      free at this time while subsidy funding is available." Neither page gives
+      an end date, so the honest answer is the published condition, not a
+      promise and not a guess at when it ends. An answer that says only "free"
+      has dropped the only qualifier the agency wrote.
