@@ -10,6 +10,7 @@ accessible transcript, provenance, multilingual pairing) and the hashed write.
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -185,3 +186,98 @@ def test_write_dataset_emits_dataset_level_provenance(tmp_path, monkeypatch):
     assert declared is not None, "no # provenance: header line emitted"
     assert declared["corpus_version"] == provenance.head_corpus_version()
     assert declared["prompt_versions"] == provenance.head_prompt_versions(provenance.ANSWER_PROMPTS)
+
+
+# ── the license note (a non-grant, not a grant) ──────────────────────────────
+
+
+class TestLicenseNote:
+    """The dataset's `license` field is this project's only machine-readable
+    statement about third-party text, and it is stamped on every row. It must
+    not assert a license the project does not hold. Until 2026-08-12 it said
+    "public record", which is a CPRA disclosure status, not a copyright grant.
+    """
+
+    def test_the_note_is_a_non_grant(self):
+        note = gx.LICENSE_NOTE.lower()
+        assert "no license granted" in note
+        assert "not licensed for redistribution" in note
+        assert "copyright of the respective transit agency" in note
+        assert "corpus/license-note.md" in note
+        # The old claim, and its neighbors, must not come back.
+        assert "public record" not in note
+        assert "public domain" not in note
+
+    def test_every_exported_row_carries_it(self, dataset):
+        assert dataset, "empty export"
+        for item in dataset:
+            assert item["provenance"]["license"] == gx.LICENSE_NOTE
+
+    def test_the_committed_dataset_carries_it(self):
+        # The committed golden.jsonl is what a downstream reuser actually reads,
+        # so the gate is on the file, not only on the generator. If this fails
+        # after a note change, run `make audit-restamp-license`.
+        text = gx.DATASET_PATH.read_text(encoding="utf-8")
+        rows = [json.loads(ln) for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+        assert rows
+        stale = [r["id"] for r in rows if r.get("provenance", {}).get("license") != gx.LICENSE_NOTE]
+        assert not stale, f"{len(stale)} committed rows carry a stale license note: {stale[:5]}"
+
+
+class TestRestampLicense:
+    def _fixture(self, tmp_path):
+        path = tmp_path / "golden.jsonl"
+        header = "# header line one\n# provenance: {}\n"
+        rows = [
+            {"id": "a", "provenance": {"source": "MST", "license": "public record — old"}},
+            {"id": "b", "provenance": {"source": "SacRT", "license": "public record — old"}},
+        ]
+        body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows)
+        path.write_text(header + body + "\n", encoding="utf-8")
+        return path
+
+    def test_rewrites_the_note_and_leaves_everything_else_alone(self, tmp_path):
+        path = self._fixture(tmp_path)
+        changed = gx.restamp_license(path)
+        assert changed == 2
+        lines = path.read_text(encoding="utf-8").splitlines()
+        # The provenance header states what the answers were recorded against;
+        # a metadata correction must not restate it.
+        assert lines[0] == "# header line one"
+        assert lines[1] == "# provenance: {}"
+        rows = [json.loads(ln) for ln in lines if not ln.startswith("#")]
+        assert [r["provenance"]["license"] for r in rows] == [gx.LICENSE_NOTE] * 2
+        assert [r["provenance"]["source"] for r in rows] == ["MST", "SacRT"]
+
+    def test_refreshes_the_sha256_sidecar(self, tmp_path):
+        path = self._fixture(tmp_path)
+        gx.restamp_license(path)
+        sidecar = path.with_suffix(".jsonl.sha256").read_text().strip()
+        assert sidecar == hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def test_is_idempotent(self, tmp_path):
+        path = self._fixture(tmp_path)
+        gx.restamp_license(path)
+        before = path.read_bytes()
+        assert gx.restamp_license(path) == 0
+        assert path.read_bytes() == before
+
+    def test_defaults_to_the_committed_dataset(self, tmp_path, monkeypatch):
+        path = self._fixture(tmp_path)
+        monkeypatch.setattr(gx, "DATASET_PATH", path)
+        assert gx.restamp_license() == 2
+
+    def test_main_restamp_flag_touches_no_model(self, tmp_path, monkeypatch):
+        path = self._fixture(tmp_path)
+        monkeypatch.setattr(gx, "DATASET_PATH", path)
+        monkeypatch.setattr(
+            gx, "build_dataset", lambda **kw: pytest.fail("restamp must not re-record")
+        )
+        monkeypatch.setattr("sys.argv", ["govchat_export", "--restamp-license"])
+        gx.main()
+        rows = [
+            json.loads(ln)
+            for ln in path.read_text(encoding="utf-8").splitlines()
+            if not ln.startswith("#")
+        ]
+        assert all(r["provenance"]["license"] == gx.LICENSE_NOTE for r in rows)

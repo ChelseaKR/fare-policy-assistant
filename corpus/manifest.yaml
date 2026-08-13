@@ -3,7 +3,7 @@
 # and stamps fetch_date. Snapshots are committed; the UI and report disclose
 # "based on policies published as of <fetch_date>".
 #
-# Robots/permissions notes (checked 2026-06-11):
+# Robots/permissions notes (checked 2026-06-11) — these govern FETCHING only:
 #   mst.org      robots.txt allows * with Crawl-delay 10; Cloudflare Content-Signal
 #                "search=yes, ai-train=no" (ai-input unspecified). We do not train on
 #                this content; it is retrieved and quoted with attribution. Fetched
@@ -14,6 +14,36 @@
 #   unitrans.ucdavis.edu was in the original pilot list but its WAF returns 403 to
 #   non-browser clients; per the "polite fetching only" rule it was dropped and
 #   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
+#
+# Redistribution terms (checked 2026-08-12) — a separate question, and the one
+# that matters for a repository that commits the snapshots. robots.txt says
+# whether a crawler may fetch a page; it says nothing about whether anyone may
+# republish it. Recorded here as URLs only: read the agency's terms yourself, do
+# not read a summary of them written by this project. Where no terms page could
+# be found, that is stated plainly; silence is not permission, and this project
+# claims no redistribution right over any of it (see corpus/LICENSE-NOTE.md and
+# NOTICE). Every page below also carries the agency's own copyright line in its
+# footer, preserved in the corpus/raw/ snapshots.
+#   MST      terms of use: none located, checked 2026-08-12 (site sitemap and
+#            page footers list only https://mst.org/privacy-policy/, which covers
+#            visitor data collection). Footer: "©2026 Monterey-Salinas Transit".
+#   SBMTD    terms of use: https://sbmtd.gov/disclaimer/#terms_of_use
+#            (one page carrying both the privacy policy and the terms of use).
+#            Footer: "© 2026 Santa Barbara MTD, All rights Reserved."
+#   Yolobus  terms of use: none located, checked 2026-08-12 (page sitemap and
+#            footer list only https://yolobus.com/privacy-policy/). Footer:
+#            "© Copyright 2026 Yolo Transportation District All Rights Reserved".
+#   SacRT    website terms of use: none located, checked 2026-08-12.
+#            https://www.sacrt.com/terms-conditions/ exists but is purchase-order
+#            terms for vendors, not site or content terms. Footer: "© 2026
+#            Sacramento Regional Transit District. All rights reserved."
+#   HTA      terms of use: none located, checked 2026-08-12 (the site returns its
+#            home page with HTTP 200 for unknown paths, so a 200 on a guessed
+#            /terms/ URL is not evidence a terms page exists; the footer links no
+#            legal pages). Footer: "© 2026 HTA. All rights reserved".
+# The per-document `license_note` fields below describe what the material is and
+# the Content-Signal seen when it was fetched. None of them is a grant of rights
+# by this project, which has none to give.
 
 user_agent: "fare-policy-assistant-research/0.1 (portfolio reference project; ckellyreif@gmail.com)"
 crawl_delay_seconds: 10
