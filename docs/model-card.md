@@ -78,13 +78,17 @@ in the system.
 
 ## Evaluation
 
-216 cases across groundedness, refusal, edge-case, multilingual, freshness,
+258 cases across groundedness, refusal, edge-case, multilingual, freshness,
 multi-turn conversation, cross-agency, counterfactual sensitivity, and
 stretch-language (Tagalog) suites; method and
 current scores in [EVALS.md](../EVALS.md). The scores published there predate
-Santa Cruz METRO: the fourteen SCMTD cases added 2026-08-12 have not been
-scored in a promoted live run yet, and EVALS.md carries the matching
-corpus-version waiver in `evals/stale_acknowledged.json` until one happens.
+four of the nine agencies: the cases added 2026-08-12/13 for Elk Grove e-tran,
+Santa Cruz METRO, SolTrans and Fresno Area Express have not been scored in a
+promoted live run. They also predate system prompt v11 (2026-08-13), which
+widened the scope rule from five named agencies to all nine; the published
+scores were produced under v10, which instructed the model to decline the four
+newest. `evals/stale_acknowledged.json` carries the matching corpus-version and
+prompt-version waivers until a promoted run replaces them.
 Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
 also records its exact fresh/cache token usage and an estimated cost (cache
