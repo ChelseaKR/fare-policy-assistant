@@ -32,7 +32,8 @@ uv run python -m assistant.cli --offline "What proof do I need for the veteran f
 
 `make verify` is exactly the AUTO-GATE set CI runs (see the portfolio-wide
 [CI/CD standard](https://github.com/ChelseaKR/portfolio-standards/blob/main/CI-CD-STANDARD.md)'s
-`make verify` parity requirement) — if it is green locally, the mechanical part
+`make verify` parity requirement, in a private repository you will get a 404 from
+without access) — if it is green locally, the mechanical part
 of CI will be too. `make test` alone (ruff + mypy + pytest, no i18n) is a
 faster inner loop while iterating, but is not the full gate.
 
@@ -44,9 +45,12 @@ This repo's cross-cutting rigor (coverage floors, SAST/secret-scan gates,
 accessibility, i18n, AI-eval calibration, and the rest) is defined once in
 [`ChelseaKR/portfolio-standards`](https://github.com/ChelseaKR/portfolio-standards)
 and referenced, not repeated, here (`standards.yml` pins and freshness-checks
-the exact version this repo was last measured against). This repo's own
-conformance declaration is the "Standards conformance" table in
-[`README.md`](README.md#standards-conformance).
+the exact version this repo was last measured against). That repository is
+**private**: every link to it in this repo 404s for anyone without access, so an
+outside contributor should read the gates as they are implemented here (the
+`Makefile` targets and `.github/workflows/`) and not expect to reach the rubric
+behind them. This repo's own conformance declaration is the "Standards
+conformance" table in [`README.md`](README.md#standards-conformance).
 
 ## What "done" means
 

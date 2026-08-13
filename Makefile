@@ -3,7 +3,7 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
+.PHONY: fetch index ingest eval smoke report audit audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
 
 # The committed relabeling worksheet `make relabel` opens by default.
 WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
@@ -71,6 +71,9 @@ audit:        ## Independent GovChat-Eval audit: record answers, then run the ex
 		--dataset "$(CURDIR)/evals/govchat/golden.jsonl" \
 		--baseline "$(CURDIR)/evals/govchat/baseline.json" \
 		--out "$(CURDIR)/docs/audits"
+
+audit-restamp-license: ## Rewrite the committed golden.jsonl's per-row license note from evals/govchat_export.LICENSE_NOTE (offline; no answers re-recorded, provenance header untouched, .sha256 refreshed)
+	uv run python -m evals.govchat_export --restamp-license
 
 test:         ## Run the unit suite with the branch-coverage gate (offline; no paid calls)
 	uv run pytest -q --cov=assistant --cov=web --cov=evals --cov-branch \

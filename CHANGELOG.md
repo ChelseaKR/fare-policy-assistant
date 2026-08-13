@@ -30,6 +30,38 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Corrected a false license assertion. Every one of the 195 rows in
+  `evals/govchat/golden.jsonl` stamped `"license": "public record — California
+  transit agency fare policy pages"` over quoted agency text.** "Public record"
+  is a disclosure status under the California Public Records Act, not a
+  copyright license and not a public-domain dedication, and it contradicted the
+  "all rights reserved" notices inside the very pages being quoted. It was this
+  project's only affirmative grant over third-party text, it was
+  machine-readable, and it sat in the dataset most likely to be reused
+  downstream. The field now states the non-grant: the text remains the
+  respective agency's copyright, reproduced as short excerpts for evaluation and
+  analysis, not licensed for redistribution. Fixed at the generator
+  (`evals/govchat_export.LICENSE_NOTE`) and applied with a new
+  `make audit-restamp-license`, which rewrites that field and nothing else, so
+  the 195 recorded answers and the dataset's provenance header stay exactly as
+  they were recorded. A test now fails if the committed dataset drifts from the
+  generator's note.
+- Widened the `NOTICE` carve-out from `corpus/raw/` alone to every location
+  third-party agency text actually lives: the processed markdown and chunks, the
+  schema-2 snapshots, retained version chunk sets, the golden dataset's
+  `sources[]`, the judge label packet, and the excerpts inside `EVALS.md` and
+  `docs/eval-report.*`. As written, MIT purported to sublicense roughly 1.5 MB
+  the project cannot sublicense.
+- Restated the second-harness audit accurately in the README, the model card,
+  the procurement brief, and `docs/audits/methodology.md`. GovChat-Eval is a real
+  and genuinely separate harness, blind to this system's internals, and it is
+  also written by the same author, private, and unrunnable from outside
+  (`make audit` needs a local clone; the CI job is scheduled-only). "Independent
+  audit" was a claim a skeptical reader would test and find wanting; it now reads
+  as a second-harness replay of committed answers.
+- Marked every link to the private `portfolio-standards` and `govchat-eval`
+  repositories as private, so a reader who gets a 404 knows the page is
+  access-controlled rather than missing.
 - **Corrected a published claim: the counterfactual sensitivity line said "13/15
   boundary pairs correctly distinguished" and now says "13/15 boundary pairs
   passed", with a second number beside it.** A pair passes when both of its
@@ -154,6 +186,15 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- `corpus/LICENSE-NOTE.md`: a plain-English statement of what is in the corpus
+  directory, whose copyright it is, why it is committed (re-running a dated
+  evaluation), what a downstream reader may and may not assume, and each
+  agency's own site and terms of use. Linked from `README.md` and `NOTICE`.
+- `corpus/manifest.yaml` now records redistribution terms beside the existing
+  robots.txt/Content-Signal review, with the date checked. robots.txt governs
+  fetching; it says nothing about republishing. SBMTD publishes site terms of
+  use; MST, Yolobus, SacRT, and HTA had none we could locate, and that is
+  recorded as such rather than left blank.
 - `evals/spanish_quality.py` and a committed, entirely blank rating census at
   `evals/spanish/native_es_rubric_2026-08-05.jsonl`: the half of `docs/I18N.md`
   §7 the bilingual parity gate cannot reach. That gate compares a Spanish

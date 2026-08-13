@@ -89,9 +89,9 @@ the report prints judge-vs-human agreement and Cohen's κ over that sample
 against a floor of 37; the queued replacement is
 `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl`, labeled with
 `make relabel`, which shows each row's criterion, question, passages, and
-answer, and records a verdict only after the reviewer states one. An
-independent black-box audit by the external GovChat-Eval harness is in
-[docs/audits/](audits/methodology.md).
+answer, and records a verdict only after the reviewer states one. A second,
+black-box pass by the separate GovChat-Eval harness (same author, not public) is
+in [docs/audits/](audits/methodology.md).
 
 Known limits found by the harness so far:
 

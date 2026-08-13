@@ -58,9 +58,13 @@ Live model runs and the other backends are covered in
 ## Standards conformance
 
 Assessed against [`ChelseaKR/portfolio-standards`](https://github.com/ChelseaKR/portfolio-standards)
-(pinned version in `.standards-version`; `standards.yml` checks staleness on
+(**private repository** — the link returns 404 unless you have access; the
+pinned version is in `.standards-version` and `standards.yml` checks staleness on
 every push). "Applies" means the standard's AUTO/REVIEW gates are being worked
-toward, not that they all pass yet — see the linked gap for current state.
+toward, not that they all pass yet — see the linked gap for current state. The
+standard itself is not readable from outside, so treat each row below as this
+repo's own claim about its state, evidenced by the files and gates it names,
+rather than as something an outside reader can check against the rubric.
 
 | Standard | Applies? | State |
 |---|---|---|
@@ -72,7 +76,7 @@ toward, not that they all pass yet — see the linked gap for current state.
 | Accessibility | Applies | Partial. Merge-blocking structural and browser pa11y/axe gates are green, and as of 2026-08-05 the structural gate covers all four public pages rather than the chat page alone — `/embed`, `/offline`, and `/guide` were previously unchecked, and all three passed on the day it was widened. The "Sources" caption is now a heading on both answering surfaces, so screen-reader heading navigation reaches it. The manual screen-reader walkthrough is still pending (`docs/audits/a11y-walkthrough.md`), and nothing above substitutes for it: no screen reader has been used on any of the four pages. |
 | Observability | Applies (Tier: informational/low-traffic demo service — no SLO). Privacy-safe JSON records correlate request/model outcomes with Lambda-owned IDs and expose canonical provider/model, token-derived estimated cost, and request/model duration without content or request metadata. Promotion captures the numbered candidate's real log tail and tests the installed CloudWatch filters before moving `live`. Alarms, dashboard, 14-day retention, and the account's $20/month `fare-demo` AWS Budget provide layered backstops; a confirmed SNS subscriber remains operator-supplied. | — |
 | Internationalization | Applies | English and Spanish are the supported answer languages. Gettext catalogs for EN/ES/TL have 9 merge-blocking gates (`docs/I18N.md`), but Tagalog remains experimental: its 15-case stretch suite uses cross-lingual retrieval over a corpus with no agency-authored Tagalog source page and is excluded from the production-core release denominator. The Spanish parity delta is 0.0 points over 22 mirror pairs, each of which a merge-blocking mirror-integrity gate holds to the same agency, expected behavior, and required-fact count as the English case it mirrors (added 2026-08-05; it found three malformed pairs, all of which had been reporting parity). Still open: the §7 native-Spanish benchmark has never been run, so the 0.0 covers this repo's own mirrored cases and nothing beyond them. It is now scaffolded, not just named — a published rubric plus a committed, entirely blank census of all 28 Spanish answers (`evals/spanish/native_es_rubric_2026-08-05.jsonl`, `make spanish-quality`), reported in `EVALS.md` as **not measured** and never as a zero; 0 of 28 are rated and 0 of 28 questions are externally sourced. Separately, the independent lexical multilingual proxy remains below threshold at 0.581, computed over a `golden.jsonl` export that still carries the three pre-repair pairings. |
-| AI Evaluation | Applies | This is the project's thesis: 186 production-core English/Spanish cases, 15 separately reported experimental Tagalog cases, versioned prompts, a committed regression baseline, and an independent GovChat-Eval audit. The promoted baseline remains **192/201 (95.5%)** overall and **177/186 (95.2%)** production-core. The latest observed nightly is lower at **190/201 overall and 175/186 production-core**, with the cross-agency gate red, so it has not replaced the baseline. A direct probe confirmed both the answer and judge models are deterministic at temperature 0. Judge calibration is the weakest evidence here and is now labeled as such on the report itself: 4 scored labels against a floor of 37 (10% of the promoted run's 367 judged pairs), and κ is **undefined**, not the 1.000 published until 2026-08-05 — every label that recorded a human/judge disagreement had gone stale, so the surviving sample was the agreeing half and could only report 100%. A floor-sized, failure-first relabeling worksheet is committed at `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` (`python -m evals.calibration --worksheet <run_dir>`); it holds 37 unlabeled rows and needs a human. `make relabel` walks those rows offline, showing each one's judge criterion, question, retrieved passages, and answer, and recording the reviewer's verdict and reason; it never proposes a verdict and withholds the judge's own call until after the reviewer has given theirs. |
+| AI Evaluation | Applies | This is the project's thesis: 186 production-core English/Spanish cases, 15 separately reported experimental Tagalog cases, versioned prompts, a committed regression baseline, and a second-harness GovChat-Eval replay (that harness is a separate project by the same author and is private, so the replay is not a third-party audit). The promoted baseline remains **192/201 (95.5%)** overall and **177/186 (95.2%)** production-core. The latest observed nightly is lower at **190/201 overall and 175/186 production-core**, with the cross-agency gate red, so it has not replaced the baseline. A direct probe confirmed both the answer and judge models are deterministic at temperature 0. Judge calibration is the weakest evidence here and is now labeled as such on the report itself: 4 scored labels against a floor of 37 (10% of the promoted run's 367 judged pairs), and κ is **undefined**, not the 1.000 published until 2026-08-05 — every label that recorded a human/judge disagreement had gone stale, so the surviving sample was the agreeing half and could only report 100%. A floor-sized, failure-first relabeling worksheet is committed at `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` (`python -m evals.calibration --worksheet <run_dir>`); it holds 37 unlabeled rows and needs a human. `make relabel` walks those rows offline, showing each one's judge criterion, question, retrieved passages, and answer, and recording the reviewer's verdict and reason; it never proposes a verdict and withholds the judge's own call until after the reviewer has given theirs. |
 | Documentation | Applies | Partial. This table is new (2026-07-05); ADRs, model card, and CONTRIBUTING exist and are dated. `CHANGELOG.md` added 2026-07-05. No tracking issue filed yet. |
 | Responsible-Tech Framework | Applies (civic domain touching age/disability/income/veteran status). Misuse-resistance is code-enforced and tested (`src/assistant/guards.py`). The three governance artifacts now exist, synthesized from ADR 0004, `SECURITY.md`, and the model card: a DPIA (`docs/dpia.md`), an AI risk register (`docs/ai-risk-register.md`), and an EU-AI-Act classification (`docs/eu-ai-act-classification.md`) — the last of which shows the "never determine eligibility" invariant is what keeps the system below the Annex III high-risk line. | — |
 
@@ -176,7 +180,7 @@ English and Spanish, and EVALS.md prints its own "Stretch-language parity
 the gap is a counted number, not a claim. Full details in
 `docs/model-card.md`.
 
-## Independent audit
+## Second-harness audit
 
 This section leads with an audit, not a victory lap, on purpose. An agency is
 liable for what its chatbot tells a rider: a Canadian tribunal held an airline
@@ -190,19 +194,29 @@ fabrication; the note under the table explains exactly why, and that note is
 part of the result.
 
 The harness above is white-box: its checks know this corpus's doc-ids, the
-`guards.py` rules, and the agency-scope contract. As a second, independent
-layer, the deployed assistant is also audited by
+`guards.py` rules, and the agency-scope contract. As a second layer, the
+deployed assistant's recorded answers are replayed through
 [GovChat-Eval](https://github.com/ChelseaKR/govchat-eval) — a separate
-evaluation project that sees only questions, recorded answers, and declared
-ground truth. A system graded only by its author is a weaker claim than one an
-outside tool also audits. (This is the same eval engine, and `civic-rag-starter-kit`
-the same RAG template, that the rest of the civic-AI family is built on; this
-project was built end to end first, and those are the generalization of its
-[`docs/adapting.md`](docs/adapting.md) promise.)
+evaluation project, with its own suites and its own judge, that sees only
+questions, recorded answers, and declared ground truth. (This is the same eval
+engine, and `civic-rag-starter-kit` the same RAG template, that the rest of the
+civic-AI family is built on; this project was built end to end first, and those
+are the generalization of its [`docs/adapting.md`](docs/adapting.md) promise.)
 
-`make audit` records the deployed pipeline's answers into a content-hashed
-dataset and replays them through GovChat-Eval. Latest run (committed under
-[`docs/audits/`](docs/audits/eval-report.md)). Read the table with the note
+Be precise about how independent that is. The second harness is genuinely
+separate code with a different scoring model, and it is blind to this system's
+internals, which is why it finds things the white-box suites cannot. It is also
+written by the same author and is **not public**: that GitHub link 404s for
+anyone without access, `make audit` needs a local clone at `../govchat-eval`,
+and the CI audit job is scheduled-only and skipped on pull requests for the same
+reason. So this is a second-harness replay of committed answers, not a
+third-party audit, and nobody outside can rerun it today. What an outside reader
+can check right now is the input and the output: the recorded dataset
+(`evals/govchat/golden.jsonl`, content-hashed) and the committed report under
+[`docs/audits/`](docs/audits/eval-report.md).
+
+`make audit` records the deployed pipeline's answers into that content-hashed
+dataset and replays them through GovChat-Eval. Read the table with the note
 directly beneath it: several low scores are the floor of a deterministic lexical
 judge, not fabrication, and the explanation is part of the result, not an excuse
 for it.
@@ -351,6 +365,15 @@ verification domain.
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`).
+
+None of that fare text belongs to this project. It is each agency's copyrighted
+work, snapshotted so a dated evaluation can be re-run against what it was scored
+on, and it is carved out of this repository's MIT License in
+[`NOTICE`](NOTICE). [`corpus/LICENSE-NOTE.md`](corpus/LICENSE-NOTE.md) states in
+plain English whose it is, what you may and may not assume about it, and where
+each agency's own site and terms of use are. `corpus/manifest.yaml` records the
+robots/Content-Signal review that governed fetching separately from each
+agency's redistribution terms, because those are different questions.
 
 The corpus keeps its stable legacy version ID for deployed pins and existing
 clients, and now also reports a full `content_version` over every
