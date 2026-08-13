@@ -20,6 +20,14 @@ itself a cross-container guarantee -- it resets on cold start and is
 invisible to sibling containers (see ADR 0004 amendment, "a true
 cross-container rate limit"). Then a 500-character question cap, and the
 pinned 1024-token answer ceiling in config.
+
+`/api/feedback` carries its own window (`_feedback_over_budget`) rather than a
+share of the answer budget: it buys no model call, so spending Bedrock budget on
+it would let feedback traffic starve riders waiting for an answer. It is bounded
+anyway because it is unauthenticated and writes a CloudWatch record per accepted
+call, which makes an unbounded route a log-volume amplifier even at zero model
+cost. Both of its bounds are content-blind -- a body-size check and a counter --
+so nothing about the rider is inspected or retained to apply them.
 """
 
 from __future__ import annotations
@@ -50,6 +58,7 @@ MAX_QUESTION_CHARS = config.MAX_QUESTION_CHARS
 # chars) plus three truncated history turns is a few KB; 16 KB is comfortable
 # headroom and well under the API Gateway 10 MB ceiling.
 MAX_BODY_BYTES = config.MAX_BODY_BYTES
+FEEDBACK_PER_MINUTE = config.FEEDBACK_PER_MINUTE  # per container; the no-model-call feedback route
 REQUESTS_PER_MINUTE = config.REQUESTS_PER_MINUTE  # per container, in-process backstop; the gateway
 # throttle (infra/deploy.sh) is the cross-container ceiling -- see module
 # docstring and ADR 0004 amendment "a true cross-container rate limit".
@@ -242,6 +251,10 @@ def _version_payload() -> dict:
 
 
 _RECENT: deque[float] = deque()
+# Independent window for the no-model-call feedback route (see
+# `_feedback_over_budget`). Per container, like `_RECENT`, and with the same
+# cold-start caveat: a backstop, not a cross-container guarantee.
+_FEEDBACK_RECENT: deque[float] = deque()
 # Per-container answer cache: identical questions return the recorded payload
 # without a model call, since the corpus is fixed and the model runs at
 # temperature 0. Cache keys are process-local keyed HMAC digests, never plaintext
@@ -469,6 +482,21 @@ def _policy_identity_error() -> dict | None:
     return None
 
 
+def _window_exceeded(recent: deque[float], limit: int, now: float) -> bool:
+    """Shared sliding-window accounting for the per-container budgets below.
+
+    Counts only admitted calls: when the window is already full the timestamp
+    is not recorded, so a sustained flood cannot push the window forward and
+    starve the route past the point the limit describes.
+    """
+    while recent and now - recent[0] > 60.0:
+        recent.popleft()
+    if len(recent) >= limit:
+        return True
+    recent.append(now)
+    return False
+
+
 def _over_budget(now: float) -> bool:
     """Per-container sliding-window backstop (defense in depth only).
 
@@ -480,12 +508,18 @@ def _over_budget(now: float) -> bool:
     container. This function exists only to stop one warm container from
     running away with Bedrock spend between gateway-throttle windows.
     """
-    while _RECENT and now - _RECENT[0] > 60.0:
-        _RECENT.popleft()
-    if len(_RECENT) >= REQUESTS_PER_MINUTE:
-        return True
-    _RECENT.append(now)
-    return False
+    return _window_exceeded(_RECENT, REQUESTS_PER_MINUTE, now)
+
+
+def _feedback_over_budget(now: float) -> bool:
+    """Separate budget for `/api/feedback`, with the same caveats as above.
+
+    Deliberately its own window rather than a share of the answer budget:
+    feedback buys no model call, so spending the Bedrock budget on it would let
+    thumbs-down traffic starve riders waiting for an answer, and folding it in
+    would make the answer limit mean two different things.
+    """
+    return _window_exceeded(_FEEDBACK_RECENT, FEEDBACK_PER_MINUTE, now)
 
 
 def _direct_health_bypass(event: dict) -> bool:
@@ -721,9 +755,22 @@ def _ask(event: dict) -> dict:
 def _feedback(event: dict) -> dict:
     """Record a thumbs up/down. Logs only the verdict, the response kind, and the
     language — never the question or answer. Nothing identifies the rider; the
-    aggregate is queryable in CloudWatch without storing any content."""
+    aggregate is queryable in CloudWatch without storing any content.
+
+    Bounded before parsing: the route is unauthenticated and buys no model call,
+    but every accepted call writes a CloudWatch record, so an unbounded route is
+    a log-volume amplifier. Both bounds are content-blind — a size check and a
+    per-container counter — so nothing about the rider is inspected, derived, or
+    retained in order to apply them.
+    """
+    if _feedback_over_budget(time.monotonic()):
+        telemetry.log_feedback_rate_limited()
+        return _json(429, {"error": "Too many requests right now. Please try again in a minute."})
+    body = event.get("body") or ""
+    if len(body) > MAX_BODY_BYTES:
+        return _json(413, {"error": "Request too large."})
     try:
-        data = json.loads(event.get("body") or "")
+        data = json.loads(body)
         verdict = data.get("verdict")
     except (ValueError, AttributeError):
         verdict = None

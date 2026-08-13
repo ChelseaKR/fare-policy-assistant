@@ -49,7 +49,11 @@ as the only source of truth.
 - **Cost and abuse bounds.** A per-container request budget, Lambda reserved
   concurrency, an API Gateway throttle, a 500-character question cap, a request
   body size cap, and an IAM policy scoped to `bedrock:InvokeModel` on the pinned
-  model only.
+  model only. `/api/feedback` has its own separate per-container budget and the
+  same body-size cap: it buys no model call, so it must not spend the answer
+  budget, but it is unauthenticated and writes a log record per accepted call,
+  which would otherwise leave an unbounded log-volume amplifier on a route with
+  no Bedrock cost to bound it. Both feedback bounds are content-blind.
 
 ## Deployment hardening checklist
 

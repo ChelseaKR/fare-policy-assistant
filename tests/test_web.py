@@ -21,6 +21,7 @@ from web import handler as web_handler
 def offline(monkeypatch):
     monkeypatch.setenv("FPA_PROVIDER", "mock")
     web_handler._RECENT.clear()
+    web_handler._FEEDBACK_RECENT.clear()
     web_handler._ANSWER_CACHE.clear()
 
 
@@ -935,6 +936,49 @@ class TestFeedback:
     def test_invalid_verdict_rejected(self):
         assert self._fb({"verdict": "maybe"})["statusCode"] == 400
         assert self._fb({})["statusCode"] == 400
+
+    def test_feedback_budget_returns_429(self):
+        """Unauthenticated and free of model cost, but every accepted call writes
+        a CloudWatch record — so the route still needs a ceiling."""
+        now = time.monotonic()
+        web_handler._FEEDBACK_RECENT.extend([now] * web_handler.FEEDBACK_PER_MINUTE)
+        assert self._fb({"verdict": "up"})["statusCode"] == 429
+
+    def test_feedback_rate_limit_record_carries_no_content(self, caplog):
+        now = time.monotonic()
+        web_handler._FEEDBACK_RECENT.extend([now] * web_handler.FEEDBACK_PER_MINUTE)
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            self._fb({"verdict": "down", "kind": "answered", "language": "en"})
+        record = _log_records(caplog, "feedback_rate_limited")[-1]
+        # Rejected before the body was read: nothing about the rider, and not
+        # even the fields a normal feedback record carries.
+        for forbidden in ("verdict", "kind", "language", "question", "answer"):
+            assert not hasattr(record, forbidden), forbidden
+
+    def test_oversized_feedback_body_rejected_before_parsing(self):
+        resp = web_handler.handler(
+            {
+                "requestContext": {"http": {"method": "POST"}},
+                "rawPath": "/api/feedback",
+                "body": "x" * (web_handler.MAX_BODY_BYTES + 1),
+            }
+        )
+        assert resp["statusCode"] == 413
+
+    def test_feedback_does_not_consume_the_answer_budget(self):
+        """Feedback buys no model call, so it must not spend the Bedrock budget
+        — otherwise thumbs-down traffic could starve riders awaiting answers."""
+        for _ in range(web_handler.FEEDBACK_PER_MINUTE):
+            assert self._fb({"verdict": "up"})["statusCode"] == 200
+        assert len(web_handler._RECENT) == 0
+        assert self._fb({"verdict": "up"})["statusCode"] == 429
+        # The answer route is untouched by the exhausted feedback window.
+        assert (
+            web_handler.handler(_event(body={"question": "Do youth ride free on Yolobus?"}))[
+                "statusCode"
+            ]
+            == 200
+        )
 
     def test_feedback_logs_no_content(self, caplog):
         # Even if a client sends question/answer text, the handler must not log it.

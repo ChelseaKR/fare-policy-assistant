@@ -123,6 +123,17 @@ def log_feedback(*, verdict: str, kind: str | None, language: str | None) -> Non
     )
 
 
+def log_feedback_rate_limited() -> None:
+    """Record that a feedback submission was refused by the per-container budget.
+
+    Deliberately carries no fields beyond the common envelope: the request was
+    rejected before its body was read, so there is no verdict, kind, or language
+    to report, and there is nothing about the rider to report either. Operators
+    get a countable signal; the record cannot describe who was refused.
+    """
+    _emit(logging.INFO, "feedback_rate_limited", {})
+
+
 def log_handler_error(*, route: str, error_type: str) -> None:
     """Record only an exception class for an API handler failure."""
     _emit(

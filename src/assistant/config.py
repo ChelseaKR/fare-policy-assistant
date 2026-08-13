@@ -99,6 +99,14 @@ _AWS_REGION = re.compile(r"^[a-z]{2}(?:-gov)?-[a-z]+-[1-9][0-9]*$")
 MAX_QUESTION_CHARS = 500
 MAX_BODY_BYTES = 16 * 1024
 REQUESTS_PER_MINUTE = 8
+# `/api/feedback` costs no model call, so it is deliberately looser than the
+# answer budget above — but it is unauthenticated and writes a CloudWatch record
+# per call, so an unbounded route is a log-volume and cost amplifier even though
+# no Bedrock spend is involved. A rider submits at most one verdict per answer,
+# and the gateway stage throttle already caps the whole API at a couple of
+# requests per second, so this is generous for real use and still bounds the
+# damage one warm container can do.
+FEEDBACK_PER_MINUTE = 30
 ANSWER_CACHE_SIZE = 256
 MAX_HISTORY_TURNS = 3
 MAX_HISTORY_ANSWER_CHARS = 1200

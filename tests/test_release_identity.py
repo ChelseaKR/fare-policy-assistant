@@ -145,14 +145,14 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
 
     assert first == second
     assert (
-        first.config_version == "48cbb2231ea6b7aab69ddaaf312b9793b2f9e6c743694bd936884fec9b1da257"
+        first.config_version == "afa59fe2b2aff2103526de43d450341b2d78238517d4b8119c1b6b392875f925"
     )
     assert (
-        first.release_version == "205d2a029efb87579e1321bd3af10ca23a2263346679c1566ebb411d5f13b2a8"
+        first.release_version == "b40860ba74d2c1ce8bd600d603a8ceb529d6ba014aba7dd4b858f274b2cb5a91"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "41dd896f017b9de004b0ce0967d226030521672a99c4d21c353170c6f80c4cd0"
+        == "63dd1fff736e6b7cd16468eec0ef6deac35f3b95e0c1a6f132630df6bc926467"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
