@@ -26,10 +26,10 @@ Transit (MST), Santa Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit
 (SacRT), and Humboldt Transit Authority (HTA). Fetch dates per document are in
 `corpus/manifest.yaml` and the per-snapshot `corpus/raw/<id>.meta.yaml` files.
 
-## e435247ed7bd (2026-08-13 UTC)
+## f459805469ef (2026-08-13 UTC)
 
 Added Fresno Area Express (FAX), operated by the City of Fresno: 6 agencies, 14
-documents, 102 chunks. Three documents, all fetched 2026-08-13 UTC:
+documents, 101 chunks. Three documents, all fetched 2026-08-13 UTC:
 `fax-fares` (the Fares & Passes page), `fax-reduced-fare-program`, and
 `fax-reduced-fare-program-es` — the last two the corpus's first PDFs, and the
 second a genuine Spanish translation rather than an untranslated shell.
@@ -40,6 +40,6 @@ a suspension rather than a discount: qualifying riders pay $0.00 on fixed route
 is $1.00 and paratransit stays at $1.25 for the same rider, so this corpus
 version is also the first where "what is the fare" has no single right answer.
 
-This id was computed on a branch that changed nothing else in the corpus. If
-another corpus change merges first, re-run `make ingest` and re-stamp this
-heading with the id that run reports.
+This id was recomputed after merging the Yolobus 2026-2027 refresh, so it
+covers both changes. Any further corpus change landing before this does needs
+another `make ingest` and another re-stamp of this heading.

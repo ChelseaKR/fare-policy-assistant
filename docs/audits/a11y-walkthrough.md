@@ -26,7 +26,10 @@ than type — the audience least able to route around a problem. At minimum, wal
 documents, so heading structure is the whole navigation story) and `/embed` for
 keyboard operability inside an iframe, which is the one context the standalone
 page never exercises. As of 2026-08-05 all four are covered by the structural
-gate (`python -m web.a11y`); none of them has had a human pass.
+gate (`python -m web.a11y`), and as of 2026-08-12 all four are also covered by
+the merge-blocking browser gate (axe + HTML CodeSniffer at WCAG2AA), which until
+then had only ever loaded the chat page. All four pass both runners. None of
+them has had a human pass.
 
 ## Checklist
 
@@ -146,6 +149,7 @@ human" row to pass without an actual screen-reader session.
 |---|---|---|---|---|
 | 2026-07-11 | source inspection + `web.a11y` static gate | n/a (code review) | Structure, keyboard wiring, ARIA, `lang`, target sizes, persistence all correct by inspection; static gate green. Screen-reader *listening* items not yet performed. | Human SR pass still required (rows above) |
 | 2026-08-05 | source inspection + widened `web.a11y` static gate | n/a (code review) | Re-verified the 2026-07-11 claims against HEAD: one drift (focus ring, corrected above). Fixed the open "Sources is a `<strong>`" finding on both answering surfaces. Widened the gate from `web/index.html` to all four public pages; `/embed`, `/offline`, and `/guide` were previously unchecked and all three pass. Still **no screen reader was used** — every listening row is untouched. | Human SR pass still required, now across four pages |
+| 2026-08-12 | pa11y 9.1.1, runners axe + htmlcs (headless Chrome) | n/a (automated, CI) | Widened the **browser** gate from `web/index.html` to all four public pages and added HTML CodeSniffer alongside axe, so eight page/runner combinations now gate every PR. `/embed`, `/offline`, and `/guide` had never been loaded in a browser by any check. **All four pass both runners with zero violations** — no defects to fix, so the value here is regression protection, not remediation. Still **no screen reader was used**; every listening row is untouched. | Human SR pass still required across four pages |
 | _pending_ | NVDA/Firefox or VoiceOver/Safari | desktop + mobile | not yet performed | |
 
 Until a row here records a real screen-reader pass, do not present the demo as

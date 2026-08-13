@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for five California transit agencies, wrapped in a
+and reduced-fare policies for six California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -367,7 +367,8 @@ the first whose reduced fare is a funded suspension rather than a discount.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
-(`docs/decisions/0002`).
+(`docs/decisions/0002`). Re-checked 2026-08-12: its robots.txt permits the fare
+pages, the WAF still returns 403 to this project's fetcher, and it remains out.
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored

@@ -10,6 +10,8 @@ silent in the right places.
 
 from __future__ import annotations
 
+import pytest
+
 from web import a11y
 from web.a11y import check_html, main
 
@@ -92,6 +94,41 @@ def test_the_gate_covers_every_public_page():
     }
     for name, html in pages.items():
         assert a11y.check_html(html) == [], name
+
+
+def test_emit_writes_every_public_page_for_the_browser_gate(tmp_path):
+    """The axe/htmlcs job loads real files, so `--emit` must produce one per
+    public page. Both gates read `public_pages()`, so coverage cannot diverge."""
+    written = a11y.emit_pages(tmp_path)
+
+    assert {p.name for p in written} == set(a11y.PAGE_FILENAMES.values())
+    assert len(written) == len(a11y.public_pages())
+    for path in written:
+        # Non-trivial, parseable HTML — not an empty or truncated file.
+        assert path.read_text(encoding="utf-8").lstrip().startswith("<!doctype html")
+        assert a11y.check_html(path.read_text(encoding="utf-8")) == [], path.name
+
+
+def test_emit_refuses_when_the_filename_map_drifts_from_the_page_list(tmp_path, monkeypatch):
+    """A new public page added to `public_pages()` without a filename must fail
+    the build loudly. Silently skipping it is how three pages went unchecked in
+    a browser for months."""
+    # Capture the real implementation before replacing the attribute, or the
+    # replacement would call itself.
+    real_pages = a11y.public_pages()
+    monkeypatch.setattr(
+        a11y,
+        "public_pages",
+        lambda: {**real_pages, "/newsurface (added later)": "<!doctype html><html></html>"},
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        a11y.emit_pages(tmp_path)
+    assert "/newsurface (added later)" in str(excinfo.value)
+
+
+def test_emit_usage_error_without_a_directory(capsys):
+    assert main(["--emit"]) == 2
+    assert "usage" in capsys.readouterr().err
 
 
 def test_the_sources_caption_is_a_heading_on_both_answering_surfaces():

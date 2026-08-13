@@ -8,11 +8,11 @@
     "Yolobus"
   ],
   "archive_schema": 2,
-  "archived_at": "2026-08-13T03:04:48+00:00",
+  "archived_at": "2026-08-13T03:29:11+00:00",
   "artifacts": {
     "chunks.jsonl": {
-      "bytes": 110229,
-      "sha256": "b0b200c1c1f22644c2ac0b7d9135a9a21d2ef86e6f3ecca75c4b12a848543774"
+      "bytes": 110010,
+      "sha256": "75a4b957e95d3b6330673a660f32b97f5ee145a740a5785ef8d44ae9c3d3313b"
     },
     "manifest.snapshot.yaml": {
       "bytes": 2834,
@@ -107,12 +107,12 @@
       "sha256": "102f40b6b13ddd8fc231c018748a98bae672f74f73fc1da3e17569407b21b89d"
     },
     "raw/yolobus-fares.html": {
-      "bytes": 84761,
-      "sha256": "af66a88a0c070ee652e3d5568ae5ae0dfd6662fc87cdf0b7a6b064d0dcb3398c"
+      "bytes": 84334,
+      "sha256": "33b4fbc5083617e47814a7793c05cbe2e7d7f1da651dab3f80f03fbce2eb60e8"
     },
     "raw/yolobus-fares.meta.yaml": {
       "bytes": 233,
-      "sha256": "9e6521fe8ff982f45427be989607164d8aaaf8edc37e58135c83b249780aadac"
+      "sha256": "8e727993c652c77da472f053fd9b3c338161ba976286b03e33c6cc4f2943260a"
     },
     "raw/yolobus-purchasing.html": {
       "bytes": 74417,
@@ -132,14 +132,14 @@
     },
     "source-evidence.json": {
       "bytes": 5696,
-      "sha256": "2620de1e0ad62098284a083e706214d128a84360e1f1f9eea15bbd26cc9817c2"
+      "sha256": "80ffdf424d918d9cb6cbfdbbb7618f7a2365693b3256347849ae8ac8f6135325"
     }
   },
   "as_of": "2026-08-13",
-  "chunks": 102,
-  "content_version": "7e5e98ae3f7f6e26b31b028fa710a21d140579b281cf87d6e1e6f6659dc68001",
-  "content_version_short": "7e5e98ae3f7f",
-  "corpus_version": "e435247ed7bd",
+  "chunks": 101,
+  "content_version": "4a5310c5315540e1f538e763468b2168a746f5e9720210908f51401b1b138705",
+  "content_version_short": "4a5310c53155",
+  "corpus_version": "f459805469ef",
   "documents": 14,
   "evidence": "raw_and_receipts_verified",
   "identity_schemas": {
@@ -147,6 +147,6 @@
     "snapshot": "fare-assistant.snapshot.v1"
   },
   "scope": "web_policy",
-  "snapshot_version": "86387031510c5d35b0c7cb7e7b7ba2b6fae757646c8c40db31a8fb6c86a05380",
-  "snapshot_version_short": "86387031510c"
+  "snapshot_version": "8b6d6da7a8105256b214fbc2542187f18a8ff3cbbded1f6fe90f748c67f71d14",
+  "snapshot_version_short": "8b6d6da7a810"
 }

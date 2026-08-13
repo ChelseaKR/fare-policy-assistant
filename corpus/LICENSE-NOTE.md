@@ -6,9 +6,9 @@ project, and this project cannot give you permission to reuse it.
 ## What is here
 
 Twelve web pages and two PDF documents published by six California transit
-agencies, fetched once each (ten on 2026-06-12, one refetched on 2026-08-10
-after its site moved, and three added on 2026-08-13 UTC), plus everything
-derived from them:
+agencies, fetched once each (nine on 2026-06-12, one refetched on 2026-08-10
+after its site moved, one refetched on 2026-08-13 UTC for a new fare period,
+and three added on 2026-08-13 UTC), plus everything derived from them:
 
 | Path | What it holds |
 |---|---|

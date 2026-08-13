@@ -111,13 +111,13 @@
       "requested_url": "https://sbmtd.gov/fares-passes/"
     },
     {
-      "chunk_fetch_date": "2026-06-12",
+      "chunk_fetch_date": "2026-08-13",
       "doc_id": "yolobus-fares",
       "effective_format": "html",
       "final_url": "https://yolobus.com/fares/",
       "http_status": 200,
-      "raw_bytes": 84761,
-      "raw_sha256": "af66a88a0c070ee652e3d5568ae5ae0dfd6662fc87cdf0b7a6b064d0dcb3398c",
+      "raw_bytes": 84334,
+      "raw_sha256": "33b4fbc5083617e47814a7793c05cbe2e7d7f1da651dab3f80f03fbce2eb60e8",
       "requested_url": "https://yolobus.com/fares/"
     },
     {
