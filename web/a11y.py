@@ -5,9 +5,10 @@ This is the merge gate, in the spirit of a pure-Python structural checker: it
 catches the regressions a static analysis can catch — a missing page language,
 an unlabeled control, a skipped heading level, a link with no text, a disabled
 zoom, a control with no minimum target size in the stylesheet. It does NOT
-replace a manual screen-reader pass or the advisory axe/pa11y run in CI; colour
-contrast and live-region behaviour need those. What it asserts, it asserts
-honestly; what it cannot, it leaves to the human pass recorded in the model card.
+replace a manual screen-reader pass or the merge-blocking browser gate in CI;
+colour contrast and live-region behaviour need those. What it asserts, it
+asserts honestly; what it cannot, it leaves to the human pass recorded in the
+model card.
 
 Until 2026-08-05 this checked `web/index.html` and nothing else, while three
 other pages are served publicly: `/embed`, the widget an agency puts on its own
@@ -20,6 +21,7 @@ watched. All four passed on the day the gate was widened — the point is that
 from here a regression on any of them fails a build instead of shipping.
 
     uv run python -m web.a11y            # check every public page, exit 1 on issues
+    uv run python -m web.a11y --emit DIR # render every public page for the browser gate
 """
 
 from __future__ import annotations
@@ -133,7 +135,54 @@ def public_pages() -> dict[str, str]:
     }
 
 
-def main() -> int:
+# Filenames used when rendering the public pages to disk for the browser-based
+# gate (`--emit`). Keyed by the same labels `public_pages()` returns, and
+# `emit_pages` refuses to write unless the two agree exactly — so a fifth public
+# page cannot be added to `public_pages()` and then silently skipped by the
+# axe/pa11y job, which is precisely how `/embed`, `/offline`, and `/guide` went
+# unchecked in a browser until 2026-08-12.
+PAGE_FILENAMES: dict[str, str] = {
+    "web/index.html": "index.html",
+    "/embed (agency-embeddable widget)": "embed.html",
+    "/offline (printable rider reference)": "offline.html",
+    "/guide (guided fare finder)": "guide.html",
+}
+
+
+def emit_pages(target: Path) -> list[Path]:
+    """Render every public page into ``target`` and return the paths written.
+
+    The browser gate (axe + HTML CodeSniffer) needs real files to load. Both
+    gates read the same `public_pages()` definition, so neither can drift out
+    of coverage while the other stays green.
+    """
+    pages = public_pages()
+    missing = sorted(set(pages) - set(PAGE_FILENAMES))
+    unexpected = sorted(set(PAGE_FILENAMES) - set(pages))
+    if missing or unexpected:
+        raise SystemExit(
+            "PAGE_FILENAMES is out of sync with public_pages(); "
+            f"no filename for {missing}, no such page for {unexpected}"
+        )
+    target.mkdir(parents=True, exist_ok=True)
+    written = []
+    for label, html in pages.items():
+        path = target / PAGE_FILENAMES[label]
+        path.write_text(html, encoding="utf-8")
+        written.append(path)
+    return written
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    if args and args[0] == "--emit":
+        if len(args) < 2:
+            print("usage: python -m web.a11y --emit <directory>", file=sys.stderr)
+            return 2
+        for path in emit_pages(Path(args[1])):
+            print(f"wrote {path}")
+        return 0
+
     failed = False
     for name, html in public_pages().items():
         issues = check_html(html)
