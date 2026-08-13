@@ -131,7 +131,20 @@ def _serialized(payload: object) -> bytes:
     return (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
+# The three goldens below rebind whenever the hashed release config changes, and the
+# domain profile is part of that config (`_resolved_config_payload` hashes
+# `_domain_payload`). Every agency added on 2026-08-12/13 therefore moved them.
+# That is the mechanism working: a deployed release's identity is supposed to record
+# which agencies it can answer for. Re-derive these, never loosen the assertion.
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
+    # These goldens are meant to move only when the logical release genuinely
+    # changes, and to make you say why in the diff when it does. The domain
+    # profile's `scopes` and `aliases` are part of the config identity (see
+    # release_identity.py, the "domain" block), so an assistant that answers for
+    # a new agency is a different logical release and must not keep the previous
+    # release_version. Corpus content is not in this hash — that is
+    # `corpus_version`, pinned separately — so ingest alone would not have moved
+    # these three; registering the scope did.
     first = _descriptor(config_case)
     reversed_environment = dict(reversed(list(config_case.environment.items())))
     second_config = _config(config_case, environment=reversed_environment)
@@ -146,19 +159,33 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     assert first == second
     # These goldens bind the whole behavior-complete config, which includes the
     # active domain profile's scopes and aliases. They move when the domain
-    # genuinely changes and must not move otherwise. Last rebound 2026-08-13,
-    # when Elk Grove Transit Services (E-tran) was added as the sixth scope with
-    # its rider aliases; the previous values were 56ef528a…d337 / fbc9799c…e675
-    # / 249b0835…907a.
+    # genuinely changes and must not move otherwise.
+    #
+    # Four branches rebound these off the same five-agency base on 2026-08-12,
+    # each unaware of the others, so the history is worth stating in full:
+    #   Elk Grove (E-tran, 4 aliases)   -> 24314b16…733a / 9c48bbe9…a3c7 / 37d9f967…cab7
+    #   Santa Cruz METRO (SCMTD, 6)     -> 6620411d…5ebb5 / fdb1a140…9fdc2 / b4d99a2c…9764e
+    #   SolTrans (7 aliases)            -> e105f5fc…80d2 / b75db932…2c4a / 172977b5…41f7
+    #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
+    # Merging E-tran and SCMTD produced a fourth, distinct identity
+    # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
+    # merging FAX on top of that produces the sixth and current one below: a
+    # nine-entry `scopes` tuple and 37 aliases in one domain block. None of the
+    # branch values is what HEAD ships, because HEAD carries all four additions
+    # and no branch did. The values below were re-derived by building the
+    # descriptor from this fixture against the merged profile, not lifted from
+    # any branch or from a failure message. Before any of the four additions:
+    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "201031662eabb243dc826f018c53b5923949cbef75cc8732998ac4b9ce1b279f"
+        first.config_version == "50fb01a990c29bad1d20b64a371c9f6c4e76f173717338153383eb05ce124999"
     )
     assert (
-        first.release_version == "cf3fbc959d12115bd669744122897bd3f1c43d46a82cfcb0e33a0091903127ba"
+        first.release_version == "816ff4028414386422d426ba55e218c2eb981e2006dd7fc9e1fb471e4fa4cb94"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "23bc74f883038fc4ae625b61a04f0151dbc996b3d26bf181449fb7b75c1e1a7b"
+        == "df00d69422d7034c46271580a7a44cdbf3c629e0be6d5e3d583fb1a27183b626"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

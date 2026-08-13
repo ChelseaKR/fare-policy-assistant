@@ -62,6 +62,25 @@ def test_never_computes_or_claims_eligibility():
     # The excellence bar's specific hazard: no field inviting rider attributes.
     # Structural proof that no field exists at all is
     # `test_no_input_fields_anywhere_in_the_page`; this is the copy half.
+    #
+    # Two branches narrowed this scan at the same time, each for its own agency,
+    # and this keeps both narrowings as two assertions rather than choosing one.
+    # The page must render every chunk verbatim (test_every_chunk_text_is_
+    # rendered_verbatim), so a bare noun phrase fires on the agencies' own words:
+    # E-tran lists "a passport showing date of birth" and Santa Cruz METRO lists
+    # "Identification that displays date of birth (e.g. passports & birth
+    # certificates)" among the documents that prove age at the farebox. Both are
+    # an agency naming an accepted document — the opposite of this page asking a
+    # rider for one.
+    #
+    # First: every bait phrased as the page ADDRESSING the rider must be absent
+    # from the WHOLE page, quoted policy included. These match no corpus text in
+    # either agency, so the strictest possible scope still holds for them.
+    for bait in ("enter your age", "what is your age", "your income is", "your date of birth"):
+        assert bait not in html.lower()
+    # Second: in this page's own copy — quoted passages stripped, see
+    # `_guide_chrome` — even the bare noun phrase is out of bounds, because
+    # nothing this project wrote has any business naming a birth date at all.
     chrome = _guide_chrome(html).lower()
     for bait in ("enter your age", "what is your age", "your income is", "date of birth"):
         assert bait not in chrome

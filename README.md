@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for seven California transit agencies, wrapped in a
+and reduced-fare policies for nine California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -70,7 +70,7 @@ rather than as something an outside reader can check against the rubric.
 |---|---|---|
 | Quality & Metrics | Applies | Partial. Coverage gate (90% branch) is green; DORA ledger and AI-capabilities checklist not yet started. No tracking issue filed yet — this row is the gap record until one is. |
 | Code Quality | Applies | Partial. `ruff format --check`, pytest strict flags, and `.python-version` landed 2026-07-05; mypy strict mode and ruff's full pinned rule set (`S`, `C90`) are not yet on; no pre-commit config; no CODEOWNERS-enforced review. No tracking issue filed yet. |
-| Security & Supply-Chain | Applies | Partial. SAST (Semgrep) and secret-scan (gitleaks) are blocking; dependency-vulnerability scanning (`pip-audit`) landed 2026-07-05 (see `security.yml`). No ASVS level declared, no CodeQL, no zizmor, no Scorecard yet. No tracking issue filed yet. |
+| Security & Supply-Chain | Applies | Partial. SAST (Semgrep) and secret-scan (gitleaks) are blocking; dependency-vulnerability scanning (`pip-audit`) landed 2026-07-05 (see `security.yml`). CodeQL (python + actions) and zizmor landed 2026-08-13; zizmor reports no findings at high severity across all nine workflows, which matters because `security.yml` already cited zizmor findings by name without the tool ever running. No ASVS level declared. **Scorecard is deliberately not added**: the OpenSSF action publishes to a public API and several of its checks (Branch-Protection, and the signed-releases and CII-Best-Practices probes) only score meaningfully on a public repository, so running it here would produce noise rather than a posture. It belongs with the decision about making this repo public, not before it. No tracking issue filed yet. |
 | CI/CD | Applies | Partial. OIDC-only credentials, SHA-pinned actions, per-job least-privilege permissions (including `corpus-freshness.yml`, fixed 2026-07-05). No branch-ruleset artifact, no CODEOWNERS-enforced review (`CODEOWNERS` file added 2026-07-05; the hosted branch-protection setting itself is a manual, human action — see the 2026-07-05 execution log in the audit folder). No tracking issue filed yet. |
 | Release & Versioning | Applies | Partial. `.github/workflows/release.yml` (added 2026-07-10) is tag-triggered on `v*`: checks the tag matches `pyproject.toml`'s version, re-runs `make verify` at the tagged commit, builds sdist+wheel, generates a CycloneDX 1.7 SBOM, attests SLSA build provenance, and creates a GitHub Release with the matching `CHANGELOG.md` section as notes. Nothing is published to a package index (no PyPI project registered, no other repo pins this one), so the GitHub Release is the publish target, not Trusted Publishing — the pipeline still exists so the deployed artifact is traceable to a signed, tested, tagged build. No tracking issue filed yet. |
 | Accessibility | Applies | Partial. Merge-blocking structural and browser pa11y/axe gates are green, and as of 2026-08-05 the structural gate covers all four public pages rather than the chat page alone — `/embed`, `/offline`, and `/guide` were previously unchecked, and all three passed on the day it was widened. The "Sources" caption is now a heading on both answering surfaces, so screen-reader heading navigation reaches it. The manual screen-reader walkthrough is still pending (`docs/audits/a11y-walkthrough.md`), and nothing above substitutes for it: no screen reader has been used on any of the four pages. |
@@ -356,14 +356,24 @@ make fetch && make ingest
 
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
-Authority (HTA), Elk Grove Transit Services (e-tran), and Fresno Area Express
-(FAX), snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
+Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
+Solano County Transit (SolTrans), and Fresno Area Express (FAX),
+snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
 document. MST and SBMTD are the two agencies live
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
+
+SolTrans is the only Clipper participant in the corpus. That is the point of
+including it and also its main hazard: Clipper is a regional card, so a rider
+reads a Clipper answer as generalizing across the Bay Area, while the corpus
+holds exactly one agency's side of it. The `xagency-009` / `xagency-010` cases
+require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
+page is annotated in the manifest to separate its own policy from its
+assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
+WestCat, County Connection), which it does not speak for.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block

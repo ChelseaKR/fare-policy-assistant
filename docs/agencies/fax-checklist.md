@@ -23,7 +23,7 @@ not checked are not oversights, and each says what is left.
       FAX publishes no Spanish *fares page* — the fare table exists only in
       English — but it does publish the reduced-fare program instructions in
       Spanish as a real translation, and that is `fax-reduced-fare-program-es`.
-      So `ml-023` is a same-language case and `ml-024` is an honest
+      So `ml-026` is a same-language case and `ml-027` is an honest
       cross-lingual one, the same split MST gives us.
 - [x] `make fetch && make ingest` run; snapshots committed under `corpus/raw/`.
       Fetched through `assistant.ingest fetch` with the manifest's user agent
@@ -37,15 +37,18 @@ not checked are not oversights, and each says what is left.
       cutoffs, income limits, document alternatives, what stacks with what).
       The boundary that matters most here is not an age: it is that the reduced
       fare is a *fixed-route* suspension, so a rider who rides free on the bus
-      still pays $1.25 on Handy Ride (`edge-056`).
+      still pays $1.25 on Handy Ride (`edge-061`).
 - [x] Cases mirrored into the real suites: `groundedness`, `refusal`,
       `cross_agency`, `multilingual`, `freshness` — matching the coverage the
-      other agencies get. 16 cases: ground-034..037, edge-056..062, fresh-014,
-      ml-023, ml-024, xagency-007, refuse-028 — renumbered above e-tran's when
-      that agency merged first, and nothing but the ids changed. `make coverage`
+      other agencies get. 16 cases: ground-039..042, edge-061..067, fresh-019,
+      ml-026, ml-027, xagency-011, refuse-028 — renumbered twice, first above
+      e-tran's and then above Santa Cruz METRO's and SolTrans's when those three
+      agencies merged first, and nothing but the ids changed. `make coverage`
       reported three FAX blind spots (veteran, youth/student, child free) after
-      the first thirteen; ground-037, edge-061, and edge-062 close them, and the
-      matrix now reports no blind spot for any agency.
+      the first thirteen; ground-042, edge-066, and edge-067 close them, and the
+      matrix now reports no blind spot for FAX. The one blind spot it still
+      reports, SolTrans / child free, arrived with SolTrans and is not FAX's to
+      close.
 - [x] Every `draft: true` flag removed and the `draft_fax.yaml` file deleted
       once its cases have moved into the real suites.
 
@@ -69,6 +72,7 @@ not checked are not oversights, and each says what is left.
       (`746df4c`) called it real drift, fixed it to v5, and re-validated. The
       same split applies here, because a prompt edit changes rider-facing
       behavior and CONTRIBUTING requires a live `make eval` to land one, and the
-      merged e-tran PR made the same call for the same reason. One consistency
-      pass should now name both new agencies at once. Sequence it before anyone
-      points a rider at FAX answers.
+      merged e-tran PR made the same call for the same reason, as did Santa
+      Cruz METRO and SolTrans. One consistency pass should now name all four new
+      agencies at once. Sequence it before anyone points a rider at FAX
+      answers.

@@ -208,19 +208,63 @@ cases:
     rationale: "Spanish mirror of edge-045 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff. Mirror repaired 2026-08-05: this pointed at edge-034, the Yolobus case in the same RR4 family, so the pair compared an MST answer against a Yolobus answer and measured corpus difference as if it were language difference. edge-045 is the MST member of that family and asks this exact question in English."
 
   - id: ml-023
+    question: "¿Cuánto cuesta un viaje sencillo en Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-033
+    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-033 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."
+
+  # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
+  # SolTrans publishes no Spanish pages — its sitemap enumerates the whole site
+  # and contains no /es/ path — so both cases below are honest cross-lingual
+  # ones: a Spanish question answered from English-only sources.
+  - id: ml-024
+    question: "¿Tienen que pagar los jóvenes para viajar en SolTrans?"
+    agency_scope: SolTrans
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:(?i)gratis|sin costo|no pagan"]
+    mirror_of: ground-036
+    rationale: >
+      Cross-lingual mirror of ground-036: soltrans-fare-table (English only)
+      prices Youth (18 &under) as FREE on every SolTrans service. The Spanish
+      answer must say so and cite the English passage, matching the parity bar
+      the other English-only agencies are held to.
+
+  - id: ml-025
+    question: "Uso una tarjeta Clipper en SolTrans. ¿También funciona en SacRT?"
+    language: es
+    expected_behavior: partial
+    required_facts: ["re:(?i)soltrans"]
+    forbidden_content:
+      - "SacRT acepta Clipper"
+      - "sí, puede usarla en SacRT"
+      - "su tarjeta Clipper funciona en SacRT"
+    mirror_of: xagency-009
+    rationale: >
+      Spanish mirror of the Clipper scope case. The over-generalization risk is
+      identical in both languages and the guard against it must be too: answer
+      the SolTrans half, say the corpus establishes nothing about SacRT's fare
+      media, redirect. Parity here matters more than usual — an assistant that
+      holds the line in English and blurs it in Spanish is exactly the equity
+      gap the bilingual gate exists to catch.
+
+  - id: ml-026
     question: "¿Qué documentos necesito para solicitar la tarifa reducida de FAX?"
     agency_scope: FAX
     language: es
     expected_behavior: answer
     required_facts: ["Medicare", "re:SSI/SSDI|Seguro Social"]
-    mirror_of: edge-059
-    rationale: "Spanish mirror of edge-052 against fax-reduced-fare-program-es, FAX's own Spanish translation of the reduced-fare instructions (not an untranslated shell — the body really is in Spanish). Same eligibility documents, answered from the Spanish source."
+    mirror_of: edge-064
+    rationale: "Spanish mirror of edge-064 against fax-reduced-fare-program-es, FAX's own Spanish translation of the reduced-fare instructions (not an untranslated shell — the body really is in Spanish). Same eligibility documents, answered from the Spanish source."
 
-  - id: ml-024
+  - id: ml-027
     question: "¿Cuánto cuesta un viaje sencillo en FAX?"
     agency_scope: FAX
     language: es
     expected_behavior: answer
     required_facts: ["re:\\$\\s?1[.,]00"]
-    mirror_of: ground-034
+    mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."

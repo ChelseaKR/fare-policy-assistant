@@ -40,16 +40,6 @@ cases:
       sacrt-fares). A correct answer attributes each fare to its agency with a
       citation, rather than reporting one figure for both.
 
-  - id: xagency-007
-    question: "I'm 66. Do I pay the same senior fare on FAX and on Humboldt Transit?"
-    language: en
-    expected_behavior: answer
-    rationale: >
-      FAX's reduced fare covers seniors 65 or older and is currently $0.00 while
-      the subsidy holds (fax-fares); HTA's reduced fare starts at 62 and is a
-      discount, not a suspension (hta-fares). Two agencies, two ages, and two
-      different kinds of answer — one a price, one the absence of a price with a
-      condition attached. A correct answer keeps them separate and cites each.
   # Elk Grove (E-tran) x SacRT. The single most likely boundary crossing in the
   # corpus: e-tran annexed into SacRT in 2021, the E-prefix routes kept their own
   # fare table, and a rider going from Elk Grove into Sacramento meets both. Every
@@ -90,3 +80,102 @@ cases:
       must hold to the published scope and point the rider at SacRT's own light
       rail fares (sacrt-fares) rather than extending a city-funded bus program to a
       mode the page never mentions.
+
+  - id: xagency-007
+    question: "Is the fare cap the same on MST and Santa Cruz METRO?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6", "re:31[ -]day"]
+    rationale: >
+      The sharpest conflation risk in the corpus, because the two agencies are
+      neighbors, both run contactless fare payment, and both are Cal-ITP Benefits
+      agencies — so the surface story is identical and the rules are not. MST
+      publishes three concrete caps: $6 per day, $20 per week, $70 per month
+      (mst-fares). Santa Cruz METRO publishes a daily cap and a rolling 31-day cap
+      that starts at the first tap, and publishes NO weekly cap at all
+      (scmtd-tap2cruz); its cap amounts live in a fare-table image that is not in
+      the corpus. A correct answer keeps the two apart, cites each, and says
+      METRO's amounts are not in the published text it has. The failure this case
+      exists to catch is quoting MST's $6/$20/$70 — or, worse, MST's weekly cap —
+      as if it were METRO's, which would send a Santa Cruz rider looking for a
+      weekly cap that does not exist.
+
+  - id: xagency-008
+    question: "Do 17-year-olds get the discount fare on MST and on Santa Cruz METRO?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:18 years and under|18 and under", "re:free"]
+    rationale: >
+      Same discount word, two different structures. MST lists "18 years and under"
+      as a discount-fare category outright (mst-fares). Santa Cruz METRO does not:
+      its Discount Fare is "adults age 65 and over, people with disabilities", and
+      a 17-year-old is served instead by the Youth Cruz Free Program, which is free
+      rather than discounted and covers local Santa Cruz County routes only
+      (scmtd-fares-passes). The answer must give each agency its own rule with its
+      own citation. Carrying MST's youth discount across the county line is the
+      error; so is reporting METRO's youth program as a "discount fare", which
+      would understate it.
+
+  # ── The Clipper scope case (added 2026-08-12 with SolTrans) ────────────────
+  # This is the case SolTrans was added for. Clipper is a *regional* fare card,
+  # so a rider naturally reads any Clipper answer as generalizing across the Bay
+  # Area — and the assistant has exactly one agency's Clipper documentation and
+  # zero evidence about anyone else's. Correct behavior is to answer the SolTrans
+  # half and visibly stop.
+  - id: xagency-009
+    question: "I use a Clipper card on SolTrans. Will it work on SacRT too?"
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:(?i)soltrans"]
+    forbidden_content:
+      - "SacRT accepts Clipper"
+      - "Clipper works on SacRT"
+      - "yes, you can use it on SacRT"
+      - "SacRT also accepts Clipper"
+      - "your Clipper card will work on SacRT"
+    rationale: >
+      Both agencies are in the corpus, but only one side of this question is.
+      soltrans-clipper-card and soltrans-ways-to-pay document Clipper acceptance
+      on SolTrans in detail; sacrt-fares says nothing about Clipper at all, and
+      neither does any other document in the corpus. SacRT is a Sacramento-region
+      agency outside the Clipper service area, so the regional-card intuition is
+      not merely unsupported here, it is probably wrong.
+
+      The correct answer states SolTrans' Clipper acceptance with a citation,
+      says plainly that the published SolTrans material does not establish
+      anything about SacRT's fare media, and sends the rider to SacRT. It must
+      not reason "Clipper is a regional Bay Area card, therefore it works on
+      SacRT" — that inference has no passage behind it. Expected `partial`
+      rather than `answer` because half the question is genuinely unanswerable
+      from this corpus, and rather than `refuse_redirect` because the SolTrans
+      half is fully answerable and withholding it would be unhelpful.
+
+  - id: xagency-010
+    question: "Which agencies in your corpus take Clipper?"
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:(?i)soltrans"]
+    forbidden_content:
+      - "MST accepts Clipper"
+      - "Yolobus accepts Clipper"
+      - "Humboldt Transit accepts Clipper"
+      - "all of them accept Clipper"
+    rationale: >
+      The direct form of xagency-009. SolTrans is the only Clipper participant
+      documented in this corpus; MST, SBMTD, Yolobus, SacRT, and HTA each publish
+      their own agency-local fare media (Courtesy Cards, Tap-to-Pay, stored-value
+      passes) and no corpus passage says any of them takes Clipper. The honest
+      answer names SolTrans, says the corpus does not establish Clipper status
+      for the others, and does not silently convert "not documented" into "does
+      not accept" for them either.
+
+  - id: xagency-011
+    question: "I'm 66. Do I pay the same senior fare on FAX and on Humboldt Transit?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      FAX's reduced fare covers seniors 65 or older and is currently $0.00 while
+      the subsidy holds (fax-fares); HTA's reduced fare starts at 62 and is a
+      discount, not a suspension (hta-fares). Two agencies, two ages, and two
+      different kinds of answer — one a price, one the absence of a price with a
+      condition attached. A correct answer keeps them separate and cites each.

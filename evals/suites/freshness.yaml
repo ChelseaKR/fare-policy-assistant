@@ -111,23 +111,6 @@ cases:
       citation — and did so even when the fresh HTA passage was retrieved but never
       cited at all.
 
-  # FAX's reduced fare has no end date and no guarantee — it is funded, not
-  # scheduled. Yolobus publishes a fare period that expires; FAX publishes a
-  # condition that can lapse without a date ever passing. Both are staleness,
-  # and only one of them a calendar can catch.
-  - id: fresh-014
-    question: "Is the free reduced fare on FAX permanent?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["re:limited time|subsidy funding|while .{0,20}funding|at this time"]
-    rationale: >
-      fax-fares heads the section "For a Limited Time, Reduced Fares are Free"
-      and fax-reduced-fare-program footnotes it: "Reduced Fare riders can ride
-      free at this time while subsidy funding is available." Neither page gives
-      an end date, so the honest answer is the published condition, not a
-      promise and not a guess at when it ends. An answer that says only "free"
-      has dropped the only qualifier the agency wrote.
   # Elk Grove. The fare page and the senior-pass page fail freshness in opposite
   # directions, which is why both are cased: one publishes an explicit end date,
   # the other publishes no effective range at all.
@@ -193,3 +176,111 @@ cases:
       the question names one, so it would need an unscoped question, and it may
       not pass. Worth adding once cross_agency is healthy, as an honest failure
       rather than a broken gate.
+
+  - id: fresh-014
+    question: "Can I still buy a 7-Day Pass on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["July 1, 2026", "December 31, 2026"]
+    rationale: >
+      scmtd-fares-passes: "Beginning July 1, 2026, the 3-Day, 7-Day, & 15-Ride Pass
+      will no longer be sold. 3-Day, 7-Day, & 15-Ride passes purchased on/before
+      June 30, 2026 will be accepted through December 31, 2026." Both halves matter
+      and they point opposite ways: the rider cannot buy one today, and a rider who
+      already holds one has not lost it yet. An answer that gives only the
+      withdrawal reads as "your pass is worthless"; one that gives only the
+      honoring window reads as "go buy one". This is also the currency evidence for
+      the whole METRO fare table — it is a rule that took effect in the current
+      fare period, which is how we know the snapshot is not stale.
+
+  - id: fresh-015
+    question: "Can I tap my credit card to pay on a Santa Cruz METRO bus today?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:[Ss]ummer 2026"]
+    rationale: >
+      A forward-looking statement whose own window is open right now, which is the
+      hardest freshness shape. scmtd-tap2cruz and scmtd-fares-passes both say METRO
+      "will launch Tap2Cruz ... in Summer 2026" — future tense — while the same
+      Tap2Cruz page says discounted contactless fares "are now available" via
+      Cal-ITP Benefits. The snapshot date is inside the announced window, so the
+      corpus genuinely cannot settle whether the readers are live today. Correct
+      behavior is to report what METRO published, disclose the as-of date, and
+      decline to assert either that it has launched or that it has not, pointing
+      the rider at METRO. Asserting a launch is the failure; so is flatly denying
+      one.
+
+  # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
+  - id: fresh-016
+    question: "Can I buy a paper 31-day pass for SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["July 1, 2024"]
+    forbidden_content:
+      - "you can buy a paper pass"
+      - "purchase a paper pass at"
+    rationale: >
+      A retired product still advertised on a live page. SolTrans' fare table is
+      stamped "Effective Sunday, December 5, 2021" and still tells riders to
+      "use cash or a paper pass", still prices 31-Day Passes, and still carries
+      paper-pass handling rules ("do not laminate or punch holes in passes").
+      SolTrans eliminated paper passes on all Local Routes and Express Lines
+      effective Monday, July 1, 2024 (soltrans-paperless-fares, ingested
+      alongside the fare table for exactly this reason), with paper surviving
+      only on Paratransit. The right answer surfaces the 2024-07-01 elimination
+      and points the rider at the digital options SolTrans actually offers
+      (Clipper, Clipper START, Token Transit) plus exact cash for one-way fares
+      and day passes — it must not read the price off the older page and tell the
+      rider to go buy one.
+
+  - id: fresh-017
+    question: "How old is the SolTrans fare information you're using?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      SolTrans' fare table carries an open-ended effective date — "Effective
+      Sunday, December 5, 2021", with no end date — so unlike Yolobus (whose
+      committed period expired 2026-06-30) it has not lapsed on its own terms and
+      remains the agency's current published table. It is nonetheless the oldest
+      effective stamp in the corpus and predates two changes SolTrans itself
+      announced afterwards: the 2024-07-01 paper-pass elimination and the
+      2026-08-02 Systemwide Redesign of routes and schedules. The assistant must
+      disclose a date rather than presenting the figures as timeless.
+
+  - id: fresh-018
+    question: "Is the SolTrans Youth Ride Free program still running?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: partial
+    required_facts: []
+    rationale: >
+      Deliberately expected `partial`. The corpus prices Youth (18 and under) as
+      FREE across every SolTrans service, so the assistant can answer that youth
+      currently ride free. What the corpus does *not* contain is the program's
+      end date: SolTrans' August 2025 press release extending the pilot through
+      June 2027 is a news item that was not ingested, so "through June 2027" is
+      not a claim this corpus can support. The honest answer gives the published
+      free fare with its as-of date and does not invent or promise an end date.
+
+  # FAX's reduced fare has no end date and no guarantee — it is funded, not
+  # scheduled. Yolobus publishes a fare period that expires; FAX publishes a
+  # condition that can lapse without a date ever passing. Both are staleness,
+  # and only one of them a calendar can catch.
+  - id: fresh-019
+    question: "Is the free reduced fare on FAX permanent?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:limited time|subsidy funding|while .{0,20}funding|at this time"]
+    rationale: >
+      fax-fares heads the section "For a Limited Time, Reduced Fares are Free"
+      and fax-reduced-fare-program footnotes it: "Reduced Fare riders can ride
+      free at this time while subsidy funding is available." Neither page gives
+      an end date, so the honest answer is the published condition, not a
+      promise and not a guess at when it ends. An answer that says only "free"
+      has dropped the only qualifier the agency wrote.

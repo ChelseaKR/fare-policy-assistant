@@ -41,7 +41,7 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "FAX"),
+    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans", "FAX"),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -68,6 +68,29 @@ TRANSIT = DomainProfile(
         "etran": "E-tran",
         "e tran": "E-tran",
         "elk grove": "E-tran",
+        # Santa Cruz METRO. "metro" alone is deliberately absent: it is what
+        # riders of half the agencies in California call their own operator, and
+        # an alias that broad would pull unrelated questions into this scope.
+        "scmtd": "SCMTD",
+        "scmetro": "SCMTD",
+        "santa cruz": "SCMTD",
+        "santa cruz metro": "SCMTD",
+        "watsonville": "SCMTD",
+        "tap2cruz": "SCMTD",
+        "soltrans": "SolTrans",
+        "sol trans": "SolTrans",
+        "solano": "SolTrans",
+        "solano county transit": "SolTrans",
+        "solanoexpress": "SolTrans",
+        "vallejo": "SolTrans",
+        "benicia": "SolTrans",
+        # Deliberately NOT aliased: "clipper". Clipper is a regional fare card
+        # operated by MTC and accepted by many Bay Area agencies, most of which
+        # are not in this corpus. Mapping the word to SolTrans would make the
+        # assistant answer agency-specific Clipper questions as if they were
+        # SolTrans questions — the exact over-generalization the
+        # soltrans-clipper-scope eval cases exist to prevent.
+        #
         # Fresno Area Express, operated by the City of Fresno. "Handy Ride" is
         # its paratransit brand and riders name it without naming FAX.
         "fax": "FAX",

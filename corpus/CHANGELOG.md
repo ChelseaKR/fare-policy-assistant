@@ -26,10 +26,33 @@ Transit (MST), Santa Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit
 (SacRT), and Humboldt Transit Authority (HTA). Fetch dates per document are in
 `corpus/manifest.yaml` and the per-snapshot `corpus/raw/<id>.meta.yaml` files.
 
-## 227cb2da65b0 (2026-08-13 UTC)
+## a68e77ff4673 (2026-08-12)
 
-Added Fresno Area Express (FAX), operated by the City of Fresno: 7 agencies, 16
-documents, 109 chunks. Three documents, all fetched 2026-08-13 UTC:
+Sixth agency: Solano County Transit (SolTrans), Vallejo/Benicia plus the
+SolanoExpress lines. Four documents, 20 chunks (110 total). Added because it is
+the corpus's first Clipper participant — until now every agency's fare media was
+agency-local, so the assistant had no grounding at all for "does my Clipper card
+work here".
+
+Added: `soltrans-fare-table`, `soltrans-clipper-card`, `soltrans-ways-to-pay`,
+`soltrans-paperless-fares`. Fetched 2026-08-12 (receipts stamp 2026-08-13 UTC).
+
+Two corpus-hygiene findings recorded with the addition:
+
+- `soltrans-fare-table` is stamped "Effective Sunday, December 5, 2021" with no
+  end date — current by the agency's own labeling, not lapsed — but it predates
+  SolTrans' 2024-07-01 elimination of paper passes and still tells riders to use
+  one. `soltrans-paperless-fares` is ingested as the dated correction, the same
+  role `sbmtd-farechange` plays for SBMTD, and eval case fresh-016 pins the
+  behavior.
+- `soltrans.org/fares/ticket-office-location` was excluded: it is a stale
+  near-duplicate of the Clipper Card page stating the Clipper START discount as
+  20 percent where the live page and two SolTrans announcements say 50 percent.
+
+## 95794539d1d0 (2026-08-13 UTC)
+
+Added Fresno Area Express (FAX), operated by the City of Fresno: 9 agencies, 23
+documents, 152 chunks. Three documents, all fetched 2026-08-13 UTC:
 `fax-fares` (the Fares & Passes page), `fax-reduced-fare-program`, and
 `fax-reduced-fare-program-es` — the last two the corpus's first PDFs, and the
 second a genuine Spanish translation rather than an untranslated shell.
@@ -41,6 +64,7 @@ is $1.00 and paratransit stays at $1.25 for the same rider, so this corpus
 version is also the first where "what is the fare" has no single right answer.
 
 This id was recomputed after merging the Yolobus 2026-2027 refresh and the Elk
-Grove (e-tran) addition, so it covers all three changes. Any further corpus
-change landing before this does needs another `make ingest` and another
-re-stamp of this heading.
+Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
+all five changes: FAX's twelve chunks are the only ones it adds on top of the
+140 those four left behind. Any further corpus change landing before this does
+needs another `make ingest` and another re-stamp of this heading.

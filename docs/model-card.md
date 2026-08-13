@@ -5,11 +5,11 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-seven California transit agencies: Monterey-Salinas Transit (MST), Santa
+nine California transit agencies: Monterey-Salinas Transit (MST), Santa
 Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
-Transit Authority (HTA), Elk Grove Transit Services (e-tran), and Fresno Area
-Express (FAX). It explains published policy. It does not decide anything about
-any person.
+Transit Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO
+(SCMTD), Solano County Transit (SolTrans), and Fresno Area Express (FAX). It
+explains published policy. It does not decide anything about any person.
 
 ## Intended users and uses
 
@@ -69,17 +69,23 @@ available behind a config switch.
 
 ## Data
 
-Fourteen public web pages and two public PDF documents, fetched with an
-identified user agent between 2026-06-12 and 2026-08-13, honoring robots.txt and
-crawl delays; URLs, dates, and license notes in `corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
+Twenty-one public web pages and two public PDF documents, fetched with an
+identified user agent between 2026-06-12 and 2026-08-13 (HTA added 2026-06-16;
+the Elk Grove, Santa Cruz METRO, SolTrans, and FAX documents added 2026-08-13),
+honoring robots.txt and crawl delays; URLs, dates, and license notes in
+`corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
 in the system.
 
 ## Evaluation
 
-201 cases across groundedness, refusal, edge-case, multilingual, freshness,
+216 cases across groundedness, refusal, edge-case, multilingual, freshness,
 multi-turn conversation, cross-agency, counterfactual sensitivity, and
 stretch-language (Tagalog) suites; method and
-current scores in [EVALS.md](../EVALS.md). Deterministic
+current scores in [EVALS.md](../EVALS.md). The scores published there predate
+Santa Cruz METRO: the fourteen SCMTD cases added 2026-08-12 have not been
+scored in a promoted live run yet, and EVALS.md carries the matching
+corpus-version waiver in `evals/stale_acknowledged.json` until one happens.
+Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
 also records its exact fresh/cache token usage and an estimated cost (cache
 writes and reads use their distinct rates), and checks the LLM

@@ -1,0 +1,99 @@
+documents:
+- id: mst-fares
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Fares
+  url: https://mst.org/fares/
+  format: null
+  language: en
+- id: mst-fares-benefits
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Benefits (Cal-ITP reduced fares)
+  url: https://mst.org/fares/benefits/
+  format: null
+  language: en
+- id: mst-veterans-resource
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Veterans Resource
+  url: https://mst.org/mobility/veterans-resource/
+  format: null
+  language: en
+- id: mst-fares-es
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Tarifas (Spanish fares page)
+  url: https://mst.org/es/fares/
+  format: null
+  language: es
+- id: sbmtd-fares-passes
+  agency: SBMTD
+  agency_full: Santa Barbara Metropolitan Transit District
+  title: Fares & Passes
+  url: https://sbmtd.gov/fares-passes/
+  format: null
+  language: en
+- id: sbmtd-farechange
+  agency: SBMTD
+  agency_full: Santa Barbara Metropolitan Transit District
+  title: Fare Change
+  url: https://sbmtd.gov/farechange/
+  format: null
+  language: en
+- id: yolobus-fares
+  agency: Yolobus
+  agency_full: Yolo County Transportation District
+  title: Fares
+  url: https://yolobus.com/fares/
+  format: null
+  language: en
+- id: yolobus-reduced-fare-id
+  agency: Yolobus
+  agency_full: Yolo County Transportation District
+  title: Reduced Fare ID
+  url: https://yolobus.com/reducedfareid/
+  format: null
+  language: en
+- id: yolobus-purchasing
+  agency: Yolobus
+  agency_full: Yolo County Transportation District
+  title: Purchasing a Ticket or Pass
+  url: https://yolobus.com/purchasing-a-ticket-or-pass/
+  format: null
+  language: en
+- id: sacrt-fares
+  agency: SacRT
+  agency_full: Sacramento Regional Transit District
+  title: Fares
+  url: https://www.sacrt.com/fares/
+  format: null
+  language: en
+- id: hta-fares
+  agency: HTA
+  agency_full: Humboldt Transit Authority
+  title: Fares
+  url: https://hta.org/fares/
+  format: null
+  language: en
+- id: scmtd-fares-passes
+  agency: SCMTD
+  agency_full: Santa Cruz Metropolitan Transit District
+  title: Fares & Passes
+  url: https://scmetro.org/rider-info/fares-passes/
+  format: null
+  language: en
+- id: scmtd-accessibility
+  agency: SCMTD
+  agency_full: Santa Cruz Metropolitan Transit District
+  title: Accessibility (discount fares and Discount Photo ID Card)
+  url: https://scmetro.org/rider-info/accessibility/
+  format: null
+  language: en
+- id: scmtd-tap2cruz
+  agency: SCMTD
+  agency_full: Santa Cruz Metropolitan Transit District
+  title: Tap2Cruz (contactless payment and fare capping)
+  url: https://scmetro.org/tap2cruz/
+  format: null
+  language: en

@@ -415,86 +415,6 @@ cases:
     requires_handoff: true
     rationale: "mst-fares Courtesy Cards: obtain an application in person at the MST Bus Stop Shop (201 Pearl Street), Marina Transit Exchange (280 Reservation Road), or Salinas Transit Center (110 Salinas Street). The next step is the location (RR1, E6)."
 
-  # FAX boundaries. The distinctive one is that FAX's reduced fare is a fare
-  # *suspension* on fixed route only — the same rider still pays on paratransit
-  # — so "your fare is free" is right and wrong in the same sentence depending
-  # on which service the rider is asking about.
-  - id: edge-056
-    question: "I have a FAX reduced fare ID and I ride the bus for free. Is Handy Ride free for me too?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["re:\\$\\s?1\\.25", "re:not included|does not (apply|cover|include)|only.{0,30}fixed[- ]route|excluded"]
-    rationale: >
-      fax-fares: "Qualifying Reduced Fare riders can board any FAX Fixed Route
-      bus at no cost to the rider... Handy Ride is not included," and the Handy
-      Ride table charges the ADA-eligible rider $1.25 per ride. This is the case
-      that fails if the assistant answers from the headline fare alone: the
-      free reduced fare is real, and quoting it for a paratransit trip tells a
-      disabled rider on a fixed income that a trip is free when it costs $1.25
-      each way. Both the $1.25 and the fixed-route-only limit must appear.
-
-  - id: edge-057
-    question: "I'm 60 and I have a Medicare card. Can I get the FAX reduced fare, or do I have to be 65?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["Medicare", "65"]
-    rationale: "fax-fares lists Reduced Fare riders as seniors 65 or older with ID, people with disabilities with valid ID, OR Medicare card holders. Two independent paths (R1-6): age is not a precondition for the Medicare path, and the answer must not merge them or rule on the rider."
-
-  - id: edge-058
-    question: "Where do I go in person to get the FAX reduced-fare ID card, and what hours?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["re:3590 N\\.? Blackstone|Manchester Transit Center", "re:8:30"]
-    requires_handoff: true
-    rationale: "fax-reduced-fare-program: apply at the FAX Manchester Transit Center, 3590 N. Blackstone Ave.; ID cards are made Monday through Friday from 8:30 a.m. to 3:30 p.m. The next step is where and when, and both are in the passage (RR1, E6)."
-
-  - id: edge-059
-    question: "I have a disability but no Medicare card. What else can I bring to qualify for the FAX reduced fare?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["re:SSI/SSDI|Social Security Disability", "re:[Pp]lacard"]
-    rationale: "fax-reduced-fare-program lists three alternative eligibility documents alongside a federal or state photo ID: a Medicare card, a DMV Disabled Person Placard Receipt, or an SSI/SSDI award letter dated within 12 months. The document-alternatives boundary: naming only the Medicare card would send a qualifying rider away."
-
-  - id: edge-060
-    question: "My personal care attendant rides with me on FAX. Do they pay?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["free", "re:note|letterhead|provider|verified"]
-    rationale: >
-      Two passages have to be held together. fax-fares prices a Personal Care
-      Attendant to an ADA certified individual at Free, and
-      fax-reduced-fare-program conditions it: the rider brings a note from their
-      healthcare provider on the provider's letterhead to Manchester Transit
-      Center, and the PCA rides free once MTC verifies it. "Free" without the
-      condition sends someone to the curb with an attendant who has not been
-      approved yet.
-
-  - id: edge-061
-    question: "My 10-year-old rides FAX with me. Does she pay?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["12", "free"]
-    rationale: "fax-fares: children age 12 and under ride free, children under 6 must be accompanied by an adult, and the table's note adds that children must be accompanied by a fare-paying family member. A 10-year-old is inside the free range; the accompaniment condition is what makes the answer complete."
-
-  - id: edge-062
-    question: "I take classes at Fresno City College. What do I pay on FAX?"
-    agency_scope: FAX
-    language: en
-    expected_behavior: answer
-    required_facts: ["free", "re:\\.75"]
-    rationale: >
-      fax-fares: students, faculty, and staff at Fresno State, Fresno City
-      College, and Clovis Community College swipe their ID for a free ride
-      because their institutions subsidize the fare, while "all other students"
-      buy single fares at $0.75. Fresno City College is in the subsidized group,
-      so the honest answer names the free path and the $0.75 path and says which
-      one the college falls in, without asserting the rider is enrolled.
   # Elk Grove Transit Services (e-tran) boundaries. Each fact below is in the
   # snapshot cited in its rationale; none is inferred.
   - id: edge-049
@@ -521,3 +441,184 @@ cases:
     required_facts: ["62"]
     requires_handoff: true
     rationale: "etran-senior-pass: the City-funded pilot is open to Elk Grove residents aged 62+, and a rider boards by showing either the Elk Grove Senior Transit Pass or a government-issued photo ID proving age. The passes are issued at Elk Grove City Hall, District 56, and SacRT's Customer Service Center at 1225 R Street, where Elk Grove residency and proof of age are required. The answer states the published criterion and routes the rider to whoever issues the pass; it never rules that this rider qualifies (RR4)."
+
+  # Santa Cruz METRO. Three boundaries METRO actually publishes, plus the one
+  # thing its corpus deliberately does not contain (edge-053).
+  - id: edge-052
+    question: "I'm 68 and I have a Medicare card. Can I use it to apply for the Santa Cruz METRO Discount Photo ID Card?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Mm]edicare", "65"]
+    requires_handoff: true
+    rationale: "scmtd-accessibility publishes the same document in two roles and they do not match. Under 'Older Adults ... must present one of the following', a Medicare ID Card IS accepted proof to a bus operator when boarding at the discount fare. Under 'Discount Photo ID Cards / Application Criteria for Older Adults', the accepted identification is the same list 'except Medicare ID'. So the honest answer is: yes for riding today, no for the card application, where METRO wants proof of the 65+ age (driver's license, State ID, passport, birth certificate, Senior Citizen ID). An answer that collapses the two roles into one yes or one no is wrong in a way the rider only discovers at the Customer Service window."
+
+  - id: edge-053
+    question: "If I pay with a contactless card on Santa Cruz METRO, what is the most I can be charged in one day?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:cap", "re:31[ -]day"]
+    requires_handoff: true
+    rationale: "scmtd-tap2cruz states that a daily cap and a rolling 31-day cap exist, that the 31-day period starts with the first tap, and that contactless 'will never cost more than the standard Fixed Route fares' — but it publishes the cap AMOUNTS only in a fare-table image, which the pipeline does not ingest (HTML and PDF only, ADR 0008). So no corpus passage contains the daily cap figure. Same shape as edge-038: the answer must give the rule it can cite, say the amount is not in the published text it has, and send the rider to METRO's fare chart or Customer Service (831) 425-8600 — not quote a number. Quoting the single-ride $2.00 as if it answered the question is the specific failure here, because the adult day cap is lower than the $6.00 cash Day Pass and a rider told '$2.00 a ride' will over-pay by buying a pass."
+
+  - id: edge-054
+    question: "My 16-year-old rides Santa Cruz METRO — do they get the discount fare?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:free", "re:65"]
+    rationale: "scmtd-fares-passes: METRO's Discount Fare is defined as 'adults age 65 and over, people with disabilities' — a 16-year-old is not in it. The right answer is better than the discount fare and comes from a different program: the Youth Cruz Free Program, under which K-12 students ride FREE on all routes within Santa Cruz County. The trap is real and named: MST, in the same corpus and the neighboring county, gives its discount fare to '18 years and under', so a model that has learned one California youth rule will apply it here. Note the limit — Youth Cruz Free is local service only; the Amtrak/Highway 17 Express is a separate tier."
+
+  - id: edge-055
+    question: "On Santa Cruz METRO I sometimes tap my phone and sometimes tap the plastic card from the same bank account. Does my fare still cap?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:same payment method"]
+    rationale: "scmtd-tap2cruz: 'You must use the same payment method throughout all your trips to qualify for benefits like fare capping, and automatic discount fares', and the Tip immediately above it is explicit that a physical card and its digital-wallet twin 'count as different payment methods'. Splitting taps across the two silently forfeits the cap. This is the account-based failure mode a rider cannot see happening, and it is published, so the assistant has no excuse for missing it."
+
+  - id: edge-056
+    question: "I'm a veteran — can I get the discount fare on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Vv]eteran", "re:Cal-?ITP"]
+    requires_handoff: true
+    rationale: "R1-6 two-ways-to-qualify, and the two ways do not describe the same veteran. At the farebox (scmtd-accessibility), the only veteran document METRO lists is 'A Disabled Veteran's ID Card', filed under 'People with disabilities' — so that path runs through a service-connected disability. Through contactless payment (scmtd-tap2cruz), 'Discounted contactless fares are now available for older adults (ages 65+), Veterans, and Medicare cardholders' via CalITP Benefits, with no disabled qualifier attached. A veteran without a disability ID is served by the second and not obviously by the first. The answer must present both paths and their difference rather than merging them into one 'veterans get the discount', and must not rule on this rider."
+
+  - id: edge-057
+    question: "If I have a Santa Cruz METRO Discount Photo ID Card, does my 10-year-old ride free with me?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:discount fare rate|discount rate", "re:gold dot"]
+    rationale: "scmtd-accessibility, 'Discount Photo ID Cards': children age 17 and under 'may ride at the discount fare rate when accompanying a parent who travels with a METRO Discount Photo ID Card', and only once Attachment B has been filed and a 'gold dot' added to the card. Discounted is not free, and the benefit is not automatic — both are easy to overstate, especially next to the neighbouring passage where a Personal Care Attendant genuinely does ride free (green dot). The corpus also gives this child a second, better route the answer may mention: a K-12 student rides free on local service under Youth Cruz Free regardless of the parent's card."
+
+  # ── SolTrans eligibility boundaries (added 2026-08-12) ─────────────────────
+  - id: edge-058
+    question: "I'm 82 and I ride SolTrans — do I still pay the senior fare?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free", "80"]
+    rationale: >
+      SolTrans publishes two different senior outcomes and the boundary between
+      them is age 80, not 65. soltrans-fare-table: the Reduced category is "Ages
+      65 and over, disabled or Medicare recipient", but separately "Seniors 80+
+      ride FREE on SolTrans and FAST local routes and SolanoExpress lines. To
+      qualify, present a photo ID with birth year indicating 80+ to the
+      operator." An 82-year-old is in both categories, and the correct answer is
+      the free one. Answering "reduced fare" would be defensible-looking and
+      wrong — which is exactly why this boundary is cased.
+
+  - id: edge-059
+    question: "What do I have to show the driver to get the reduced fare on SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)medicare", "re:(?i)RTC|Regional Transit Connection"]
+    requires_handoff: true
+    rationale: >
+      soltrans-fare-table lists five alternative proofs, any one of which
+      qualifies: a photo ID with birthdate indicating 65+, a valid Medicare card
+      with photo ID, a Regional Transit Connection (RTC) Discount Card, DMV
+      Disabled License Plate registration, or a DMV Disabled Parking Placard
+      printout. The answer must present them as alternatives ("one of the
+      following"), not as a checklist to satisfy all of, and must not rule on
+      whether this rider qualifies (R1-2, R1-6).
+
+  - id: edge-060
+    question: "I take one SolTrans bus and then transfer to another SolTrans bus. Do I pay twice?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)day pass"]
+    rationale: >
+      soltrans-clipper-card: "Note: There are no transfers within the SolTrans
+      system, (i.e. from one SolTrans route to another). For same-day, multi-route
+      trips, passengers should purchase day passes." This is a counter-intuitive
+      answer a rider is likely to get wrong by analogy with other agencies, and
+      it is unambiguous SolTrans policy — no third party involved — so the
+      assistant should answer it plainly and recommend the day pass.
+
+  # FAX boundaries. The distinctive one is that FAX's reduced fare is a fare
+  # *suspension* on fixed route only — the same rider still pays on paratransit
+  # — so "your fare is free" is right and wrong in the same sentence depending
+  # on which service the rider is asking about.
+  - id: edge-061
+    question: "I have a FAX reduced fare ID and I ride the bus for free. Is Handy Ride free for me too?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.25", "re:not included|does not (apply|cover|include)|only.{0,30}fixed[- ]route|excluded"]
+    rationale: >
+      fax-fares: "Qualifying Reduced Fare riders can board any FAX Fixed Route
+      bus at no cost to the rider... Handy Ride is not included," and the Handy
+      Ride table charges the ADA-eligible rider $1.25 per ride. This is the case
+      that fails if the assistant answers from the headline fare alone: the
+      free reduced fare is real, and quoting it for a paratransit trip tells a
+      disabled rider on a fixed income that a trip is free when it costs $1.25
+      each way. Both the $1.25 and the fixed-route-only limit must appear.
+
+  - id: edge-062
+    question: "I'm 60 and I have a Medicare card. Can I get the FAX reduced fare, or do I have to be 65?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "65"]
+    rationale: "fax-fares lists Reduced Fare riders as seniors 65 or older with ID, people with disabilities with valid ID, OR Medicare card holders. Two independent paths (R1-6): age is not a precondition for the Medicare path, and the answer must not merge them or rule on the rider."
+
+  - id: edge-063
+    question: "Where do I go in person to get the FAX reduced-fare ID card, and what hours?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:3590 N\\.? Blackstone|Manchester Transit Center", "re:8:30"]
+    requires_handoff: true
+    rationale: "fax-reduced-fare-program: apply at the FAX Manchester Transit Center, 3590 N. Blackstone Ave.; ID cards are made Monday through Friday from 8:30 a.m. to 3:30 p.m. The next step is where and when, and both are in the passage (RR1, E6)."
+
+  - id: edge-064
+    question: "I have a disability but no Medicare card. What else can I bring to qualify for the FAX reduced fare?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:SSI/SSDI|Social Security Disability", "re:[Pp]lacard"]
+    rationale: "fax-reduced-fare-program lists three alternative eligibility documents alongside a federal or state photo ID: a Medicare card, a DMV Disabled Person Placard Receipt, or an SSI/SSDI award letter dated within 12 months. The document-alternatives boundary: naming only the Medicare card would send a qualifying rider away."
+
+  - id: edge-065
+    question: "My personal care attendant rides with me on FAX. Do they pay?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:note|letterhead|provider|verified"]
+    rationale: >
+      Two passages have to be held together. fax-fares prices a Personal Care
+      Attendant to an ADA certified individual at Free, and
+      fax-reduced-fare-program conditions it: the rider brings a note from their
+      healthcare provider on the provider's letterhead to Manchester Transit
+      Center, and the PCA rides free once MTC verifies it. "Free" without the
+      condition sends someone to the curb with an attendant who has not been
+      approved yet.
+
+  - id: edge-066
+    question: "My 10-year-old rides FAX with me. Does she pay?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["12", "free"]
+    rationale: "fax-fares: children age 12 and under ride free, children under 6 must be accompanied by an adult, and the table's note adds that children must be accompanied by a fare-paying family member. A 10-year-old is inside the free range; the accompaniment condition is what makes the answer complete."
+
+  - id: edge-067
+    question: "I take classes at Fresno City College. What do I pay on FAX?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:\\.75"]
+    rationale: >
+      fax-fares: students, faculty, and staff at Fresno State, Fresno City
+      College, and Clovis Community College swipe their ID for a free ride
+      because their institutions subsidize the fare, while "all other students"
+      buy single fares at $0.75. Fresno City College is in the subsidized group,
+      so the honest answer names the free path and the $0.75 path and says which
+      one the college falls in, without asserting the rider is enrolled.
