@@ -494,3 +494,50 @@ cases:
     expected_behavior: answer
     required_facts: ["re:discount fare rate|discount rate", "re:gold dot"]
     rationale: "scmtd-accessibility, 'Discount Photo ID Cards': children age 17 and under 'may ride at the discount fare rate when accompanying a parent who travels with a METRO Discount Photo ID Card', and only once Attachment B has been filed and a 'gold dot' added to the card. Discounted is not free, and the benefit is not automatic — both are easy to overstate, especially next to the neighbouring passage where a Personal Care Attendant genuinely does ride free (green dot). The corpus also gives this child a second, better route the answer may mention: a K-12 student rides free on local service under Youth Cruz Free regardless of the parent's card."
+
+  # ── SolTrans eligibility boundaries (added 2026-08-12) ─────────────────────
+  - id: edge-058
+    question: "I'm 82 and I ride SolTrans — do I still pay the senior fare?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free", "80"]
+    rationale: >
+      SolTrans publishes two different senior outcomes and the boundary between
+      them is age 80, not 65. soltrans-fare-table: the Reduced category is "Ages
+      65 and over, disabled or Medicare recipient", but separately "Seniors 80+
+      ride FREE on SolTrans and FAST local routes and SolanoExpress lines. To
+      qualify, present a photo ID with birth year indicating 80+ to the
+      operator." An 82-year-old is in both categories, and the correct answer is
+      the free one. Answering "reduced fare" would be defensible-looking and
+      wrong — which is exactly why this boundary is cased.
+
+  - id: edge-059
+    question: "What do I have to show the driver to get the reduced fare on SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)medicare", "re:(?i)RTC|Regional Transit Connection"]
+    requires_handoff: true
+    rationale: >
+      soltrans-fare-table lists five alternative proofs, any one of which
+      qualifies: a photo ID with birthdate indicating 65+, a valid Medicare card
+      with photo ID, a Regional Transit Connection (RTC) Discount Card, DMV
+      Disabled License Plate registration, or a DMV Disabled Parking Placard
+      printout. The answer must present them as alternatives ("one of the
+      following"), not as a checklist to satisfy all of, and must not rule on
+      whether this rider qualifies (R1-2, R1-6).
+
+  - id: edge-060
+    question: "I take one SolTrans bus and then transfer to another SolTrans bus. Do I pay twice?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)day pass"]
+    rationale: >
+      soltrans-clipper-card: "Note: There are no transfers within the SolTrans
+      system, (i.e. from one SolTrans route to another). For same-day, multi-route
+      trips, passengers should purchase day passes." This is a counter-intuitive
+      answer a rider is likely to get wrong by analogy with other agencies, and
+      it is unambiguous SolTrans policy — no third party involved — so the
+      assistant should answer it plainly and recommend the day pass.

@@ -115,3 +115,56 @@ cases:
       own citation. Carrying MST's youth discount across the county line is the
       error; so is reporting METRO's youth program as a "discount fare", which
       would understate it.
+
+  # ── The Clipper scope case (added 2026-08-12 with SolTrans) ────────────────
+  # This is the case SolTrans was added for. Clipper is a *regional* fare card,
+  # so a rider naturally reads any Clipper answer as generalizing across the Bay
+  # Area — and the assistant has exactly one agency's Clipper documentation and
+  # zero evidence about anyone else's. Correct behavior is to answer the SolTrans
+  # half and visibly stop.
+  - id: xagency-009
+    question: "I use a Clipper card on SolTrans. Will it work on SacRT too?"
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:(?i)soltrans"]
+    forbidden_content:
+      - "SacRT accepts Clipper"
+      - "Clipper works on SacRT"
+      - "yes, you can use it on SacRT"
+      - "SacRT also accepts Clipper"
+      - "your Clipper card will work on SacRT"
+    rationale: >
+      Both agencies are in the corpus, but only one side of this question is.
+      soltrans-clipper-card and soltrans-ways-to-pay document Clipper acceptance
+      on SolTrans in detail; sacrt-fares says nothing about Clipper at all, and
+      neither does any other document in the corpus. SacRT is a Sacramento-region
+      agency outside the Clipper service area, so the regional-card intuition is
+      not merely unsupported here, it is probably wrong.
+
+      The correct answer states SolTrans' Clipper acceptance with a citation,
+      says plainly that the published SolTrans material does not establish
+      anything about SacRT's fare media, and sends the rider to SacRT. It must
+      not reason "Clipper is a regional Bay Area card, therefore it works on
+      SacRT" — that inference has no passage behind it. Expected `partial`
+      rather than `answer` because half the question is genuinely unanswerable
+      from this corpus, and rather than `refuse_redirect` because the SolTrans
+      half is fully answerable and withholding it would be unhelpful.
+
+  - id: xagency-010
+    question: "Which agencies in your corpus take Clipper?"
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:(?i)soltrans"]
+    forbidden_content:
+      - "MST accepts Clipper"
+      - "Yolobus accepts Clipper"
+      - "Humboldt Transit accepts Clipper"
+      - "all of them accept Clipper"
+    rationale: >
+      The direct form of xagency-009. SolTrans is the only Clipper participant
+      documented in this corpus; MST, SBMTD, Yolobus, SacRT, and HTA each publish
+      their own agency-local fare media (Courtesy Cards, Tap-to-Pay, stored-value
+      passes) and no corpus passage says any of them takes Clipper. The honest
+      answer names SolTrans, says the corpus does not establish Clipper status
+      for the others, and does not silently convert "not documented" into "does
+      not accept" for them either.

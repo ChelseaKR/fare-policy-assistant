@@ -131,6 +131,11 @@ def _serialized(payload: object) -> bytes:
     return (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
+# The three goldens below rebind whenever the hashed release config changes, and the
+# domain profile is part of that config (`_resolved_config_payload` hashes
+# `_domain_payload`). Every agency added on 2026-08-12 therefore moved them.
+# That is the mechanism working: a deployed release's identity is supposed to record
+# which agencies it can answer for. Re-derive these, never loosen the assertion.
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
     # These goldens are meant to move only when the logical release genuinely
     # changes, and to make you say why in the diff when it does. The domain
@@ -156,27 +161,29 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # active domain profile's scopes and aliases. They move when the domain
     # genuinely changes and must not move otherwise.
     #
-    # Rebound 2026-08-12 on the merge that brought the sixth and seventh agencies
-    # together. Two branches each rebound these values off the five-agency base:
-    # Elk Grove Transit Services (E-tran, 4 aliases) landed first as the sixth
-    # scope, taking them to 24314b16…733a / 9c48bbe9…a3c7 / 37d9f967…cab7; Santa
-    # Cruz METRO (SCMTD, 6 aliases) rebound the same five-agency base separately
-    # to 6620411d…5ebb5 / fdb1a140…9fdc2 / b4d99a2c…9764e. Neither of those two is
-    # what HEAD ships, because HEAD now carries BOTH: a seven-entry `scopes` tuple
-    # and all ten new aliases in one domain block, which is a third input and so a
-    # third identity. The values below were re-derived by building the descriptor
-    # from this fixture against the merged profile, not lifted from either branch
-    # or from a failure message. Before either addition the values were
-    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    # Three branches rebound these off the same five-agency base on 2026-08-12,
+    # each unaware of the others, so the history is worth stating in full:
+    #   Elk Grove (E-tran, 4 aliases)   -> 24314b16…733a / 9c48bbe9…a3c7 / 37d9f967…cab7
+    #   Santa Cruz METRO (SCMTD, 6)     -> 6620411d…5ebb5 / fdb1a140…9fdc2 / b4d99a2c…9764e
+    #   SolTrans (7 aliases)            -> e105f5fc…80d2 / b75db932…2c4a / 172977b5…41f7
+    # Merging E-tran and SCMTD produced a fourth, distinct identity
+    # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e), and merging SolTrans on
+    # top produces the fifth and current one below: an eight-entry `scopes` tuple
+    # and 33 aliases in one domain block. None of the branch values is what HEAD
+    # ships, because HEAD carries all three additions and no branch did. The
+    # values below were re-derived by building the descriptor from this fixture
+    # against the merged profile, not lifted from any branch or from a failure
+    # message. Before any of the three additions: 56ef528a…d337 / fbc9799c…e675
+    # / 249b0835…907a.
     assert (
-        first.config_version == "fbc8438da69f4247781bde06c226914952353d6257965c3a60a7168d8290cecb"
+        first.config_version == "ef5786da19496e96e15e118a9974a96f690d6a47a28bd48309e6849dddbedda1"
     )
     assert (
-        first.release_version == "51d712691e42af758fd3b1d1be6f6263b59174fef18b8d3ae924139117d037b0"
+        first.release_version == "e04eea416e4330b65afe5674f8b41807e3e54cdd74067f5c67de39ca0edf87a1"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "c1750946be2fb6b27e5f6c929788c0b6ab52229c3264413f7c04eb100226e14e"
+        == "50e32157cffab710f0ba84b52637c9ae41d29815238252712dbb2172c5a98e50"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
