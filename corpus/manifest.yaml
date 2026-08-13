@@ -15,6 +15,43 @@
 #   non-browser clients; per the "polite fetching only" rule it was dropped and
 #   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
 #
+# Robots/permissions note for Santa Cruz METRO (checked 2026-08-12) — read this
+# one before trusting it, because METRO answers on two hosts and they do not say
+# the same thing.
+#   scmetro.org  is where the pages live and is the host this project fetched.
+#                Its robots.txt (nginx, WordPress default) is four lines:
+#                "User-agent: *  /  Disallow: /wp-admin/  /  Allow:
+#                /wp-admin/admin-ajax.php  /  Sitemap:
+#                https://scmetro.org/wp-sitemap.xml". No Content-Signal, no
+#                per-agent rules, nothing excluded but the WP admin directory.
+#                All three documents below sit outside /wp-admin/ and were
+#                fetched with the identified user agent and the 10s crawl delay.
+#   www.scmtd.com is METRO's legacy domain. It no longer serves the pages (it
+#                301s to scmetro.org) but it is still fronted by Cloudflare, and
+#                Cloudflare's managed robots.txt there says something stronger:
+#                "User-agent: *  /  Content-Signal: search=yes,ai-train=no,
+#                use=reference  /  Allow: /", followed by a managed block list
+#                that disallows named AI crawlers outright — Amazonbot,
+#                Applebot-Extended, Bytespider, CCBot, ClaudeBot,
+#                CloudflareBrowserRenderingCrawler, Google-Extended, GPTBot,
+#                meta-externalagent. The file is entirely Cloudflare's managed
+#                block; METRO has authored no rules of its own in it.
+#   How this project read that, so a reviewer can disagree with the reasoning
+#   rather than have to reconstruct it: the fetcher is
+#   fare-policy-assistant-research/0.1, it is none of the named crawlers, and it
+#   did not present any other agent's name — so it falls under `User-agent: *`,
+#   which both hosts allow. `ai-train=no` is honored: this project does not train
+#   on fetched content, it retrieves and quotes it with attribution and a link
+#   back. `ai-input` is left unspecified on the legacy host, which the signal's
+#   own preamble says neither grants nor restricts — the same unresolved position
+#   already recorded for mst.org, and this project's use (retrieval) is ai-input.
+#   Two things a reviewer may reasonably weigh differently, and neither is hidden
+#   here: the legacy host's managed list names ClaudeBot, and a maintainer who
+#   treats an agent-initiated fetch as covered by that line should drop this
+#   agency the way Unitrans was dropped; and `use=reference` is a signal about
+#   how AI systems may consume content, which bears on committing snapshots, not
+#   just on fetching them.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
@@ -37,6 +74,12 @@
 #            https://www.sacrt.com/terms-conditions/ exists but is purchase-order
 #            terms for vendors, not site or content terms. Footer: "© 2026
 #            Sacramento Regional Transit District. All rights reserved."
+#   SCMTD    terms of use governing content reuse: none located, checked
+#            2026-08-12. The site publishes a "Privacy & Use Policy" at
+#            https://scmetro.org/organization/privacy-use/ (effective March 15,
+#            2023), which covers visitor data collection and its vendors' terms
+#            of service; it says nothing about copying or republishing METRO's
+#            own page content. Footer: "©2026 SC Metro, All Rights Reserved."
 #   HTA      terms of use: none located, checked 2026-08-12 (the site returns its
 #            home page with HTTP 200 for unknown paths, so a 200 on a guessed
 #            /terms/ URL is not evidence a terms page exists; the footer links no
@@ -157,6 +200,83 @@ documents:
     url: https://hta.org/fares/
     language: en
     license_note: "Public agency fare information."
+
+  # ── Santa Cruz METRO ──────────────────────────────────────────────────────
+  # Added as the sixth agency (2026-08-12). Mid-size coastal California district,
+  # the same shape as MST and SBMTD, and like them a live Cal-ITP Benefits agency
+  # (see scmtd-tap2cruz). Split three ways the way Yolobus is: the fare table, the
+  # reduced-fare eligibility rules, and the account-based payment rules — because
+  # METRO publishes each on a different page and the third one changes the answer
+  # to "what does a ride cost".
+  - id: scmtd-fares-passes
+    agency: SCMTD
+    agency_full: Santa Cruz Metropolitan Transit District
+    title: "Fares & Passes"
+    url: https://scmetro.org/rider-info/fares-passes/
+    language: en
+    license_note: "Public agency fare information; scmetro.org serves no Content-Signal."
+  # Discount-fare eligibility and the Discount Photo ID Card live on the
+  # Accessibility page, not the Fares page: the Fares page's "View Discount Fare
+  # Eligibility & Apply" button links to /rider-info/accessibility/#discount-fares.
+  - id: scmtd-accessibility
+    agency: SCMTD
+    agency_full: Santa Cruz Metropolitan Transit District
+    title: "Accessibility (discount fares and Discount Photo ID Card)"
+    url: https://scmetro.org/rider-info/accessibility/
+    language: en
+    license_note: "Public agency fare information; scmetro.org serves no Content-Signal."
+  # FARE CAPPING. METRO runs an account-based contactless product (Tap2Cruz, on
+  # Littlepay) whose daily and rolling-31-day caps mean the per-ride and day-pass
+  # figures on the Fares page are not what a tapping rider ends up paying. The
+  # capping RULE is published here in prose and nowhere else; without this page in
+  # the corpus the assistant would quote a single-ride price as the whole answer.
+  # Known gap, stated plainly: the cap AMOUNTS are published only inside a PNG
+  # fare table (see the note at the end of this agency's block), so they are not
+  # in the corpus and no answer can cite them.
+  - id: scmtd-tap2cruz
+    agency: SCMTD
+    agency_full: Santa Cruz Metropolitan Transit District
+    title: "Tap2Cruz (contactless payment and fare capping)"
+    url: https://scmetro.org/tap2cruz/
+    language: en
+    license_note: "Public agency fare information; scmetro.org serves no Content-Signal."
+  # Two further METRO pages were fetched and then excluded, so the choice is on
+  # the record rather than looking like an oversight:
+  #   /rider-info/fares-passes/transfer-policy/ — the METRO/MST interoperability
+  #     rules it carries are already on the Fares page, in the "Transfers to Other
+  #     Transit Operators" section; a second near-duplicate copy would add
+  #     verbatim third-party text without adding a fact.
+  #   /rider-info/fares-passes/splash-pass-faqs/ — mobile-app mechanics
+  #     (activation, ticket expiry) rather than fare or eligibility policy.
+  #
+  # Fare period, verified 2026-08-12 (the check Yolobus did not get; see
+  # docs/audits/eval-regression-2026-06-30.md for what that cost). METRO
+  # publishes no effective-date banner in the HTML of any page above. The date is
+  # carried instead by the fare-table image on /tap2cruz/,
+  # wp-content/uploads/2026/03/Fare-Table_2026.png, whose alt text reads "Fare
+  # table for Santa Cruz METRO effective 7/1/2026, including fare caps for
+  # payment with Tap2Cruz." Effective 2026-07-01, no end date published, so it
+  # covers today. Every figure in that image matches the HTML fare table
+  # snapshotted in scmtd-fares-passes ($2.00 / $6.00 / $65.00 adult local,
+  # $1.00 / $3.00 / $32.00 discount, $7.00 / $14.00 / $145.00 Highway 17), which
+  # is independent corroboration that the committed text is the current period
+  # and not a stale copy. Corroborating: the Fares page carries a rule that only
+  # took effect this period ("Beginning July 1, 2026, the 3-Day, 7-Day, & 15-Ride
+  # Pass will no longer be sold", with those passes honored through 2026-12-31).
+  #
+  # What is NOT in the corpus, and must not be answered from it: the Tap2Cruz cap
+  # amounts. The image above is the only place METRO publishes them ($5.00 adult
+  # day cap, $2.50 discount day cap, $65.00 / $32.00 31-day, $14.00 / $145.00 on
+  # Highway 17). Image text is not ingested — the pipeline reads HTML and PDF
+  # (ADR 0008), and alt text is not extracted — so no chunk contains those
+  # figures and no answer can cite them. The prose on /tap2cruz/ does carry the
+  # rule (daily and 31-day caps exist; the 31-day cap is rolling from the first
+  # tap; the same payment method must be used throughout), which is what the
+  # assistant can ground on. Note the direction of the error this prevents: the
+  # adult day cap ($5.00) is LOWER than the cash Day Pass ($6.00), so an
+  # assistant that saw only the Fares page would quote a day price higher than
+  # what a tapping rider actually pays. Re-check on any refetch: if METRO ever
+  # publishes the cap amounts as HTML, they belong in the corpus.
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

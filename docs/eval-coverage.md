@@ -6,9 +6,10 @@ Cells: number of eval cases touching that agency x program. `-` means the corpus
 
 | Agency | senior | disabled | medicare | veteran | youth/student | child free | regular |
 |---|---|---|---|---|---|---|---|
-| HTA | 7 | 1 | - | - | 5 | - | 5 |
-| MST | 21 | 3 | 7 | 14 | 4 | - | 7 |
+| HTA | 8 | 1 | - | - | 5 | - | 5 |
+| MST | 23 | 5 | 7 | 15 | 5 | - | 8 |
 | SBMTD | 8 | 4 | 1 | - | 4 | 3 | 11 |
+| SCMTD | 5 | 4 | 2 | 1 | 3 | 1 | 7 |
 | SacRT | 8 | 2 | - | - | 4 | - | 8 |
 | Yolobus | 9 | 5 | 4 | - | 12 | 6 | 5 |
 

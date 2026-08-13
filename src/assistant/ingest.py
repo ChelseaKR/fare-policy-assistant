@@ -34,8 +34,15 @@ from assistant import facts as facts_module
 _STRIP_TAGS = ("script", "style", "nav", "header", "footer", "form", "noscript", "iframe", "svg")
 _HEADING_TAGS = ("h1", "h2", "h3", "h4")
 # Sections whose heading matches are navigation/boilerplate, not policy.
+# "nearby transit routes" is Santa Cruz METRO's trip-planner and service-alert
+# widget, which every scmetro.org page renders above its content. It carries a
+# live "Alerts updated at: <timestamp>" line, so leaving it in would both put a
+# bus-stop detour notice into fare retrieval and change the chunk text on every
+# refetch, moving corpus identity for a reason that has nothing to do with policy.
 _BOILERPLATE_HEADINGS = re.compile(
-    r"(quick links|follow us|newsletter|sign up|related pages|search|menu|share this)", re.I
+    r"(quick links|follow us|newsletter|sign up|related pages|search|menu|share this"
+    r"|nearby transit routes)",
+    re.I,
 )
 
 

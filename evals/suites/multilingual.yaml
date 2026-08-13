@@ -206,3 +206,12 @@ cases:
     forbidden_content: ["usted califica", "usted es elegible"]
     mirror_of: edge-045
     rationale: "Spanish mirror of edge-045 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff. Mirror repaired 2026-08-05: this pointed at edge-034, the Yolobus case in the same RR4 family, so the pair compared an MST answer against a Yolobus answer and measured corpus difference as if it were language difference. edge-045 is the MST member of that family and asks this exact question in English."
+
+  - id: ml-023
+    question: "¿Cuánto cuesta un viaje sencillo en Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-030
+    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-030 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."

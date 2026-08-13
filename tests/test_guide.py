@@ -44,7 +44,19 @@ def test_never_computes_or_claims_eligibility():
     html = render_guide(load_chunks())
     assert "does not decide whether you qualify" in html
     # The excellence bar's specific hazard: no field inviting rider attributes.
-    for bait in ("enter your age", "what is your age", "your income is", "date of birth"):
+    # Every bait is phrased as the page ADDRESSING the rider, because that is the
+    # hazard — copy this page authored, not policy text it quotes. The page is
+    # required to render every chunk verbatim (test_every_chunk_text_is_rendered_
+    # verbatim), so a bare noun phrase here would fire on the agencies' own words:
+    # "date of birth" was such a bait until Santa Cruz METRO joined the corpus
+    # listing "Identification that displays date of birth (e.g. passports & birth
+    # certificates)" among the documents that prove age at the farebox. That is an
+    # agency naming an accepted document, the opposite of this page asking a rider
+    # for one. Narrowed to "your date of birth", which still catches "enter your
+    # date of birth" and "what is your date of birth" and matches no corpus text.
+    # The structural guarantee is separate and unweakened: see
+    # test_no_input_fields_anywhere_in_the_page.
+    for bait in ("enter your age", "what is your age", "your income is", "your date of birth"):
         assert bait not in html.lower()
 
 

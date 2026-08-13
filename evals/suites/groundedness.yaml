@@ -239,3 +239,27 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?5\\.00"]
     rationale: "hta-fares: 1 Day Pass $5.00."
+
+  - id: ground-030
+    question: "How much is a single ride on Santa Cruz METRO local service if I pay cash?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "scmtd-fares-passes CASH FARES: 'Adult (age 18 and over) $2.00 Cash/1 Ride' on Local Service in Santa Cruz County."
+
+  - id: ground-031
+    question: "What does the discount fare cost per ride on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "65"]
+    rationale: "scmtd-fares-passes CASH FARES: 'Discount Fare (adults age 65 and over, people with disabilities) $1.00 Cash/1 Ride'. The age belongs in the answer because METRO's discount fare is defined by who qualifies, not just by the price."
+
+  - id: ground-032
+    question: "How much does the Amtrak/Highway 17 Express cost on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?7\\.00"]
+    rationale: "scmtd-fares-passes CASH FARES: the Amtrak/Highway 17 Express is a separate fare tier from local service at $7.00 Cash/1 Ride, and local Day and 31-Day Passes explicitly exclude it."

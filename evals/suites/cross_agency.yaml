@@ -39,3 +39,38 @@ cases:
       Yolobus and SacRT publish their own single-ride fares (yolobus-fares,
       sacrt-fares). A correct answer attributes each fare to its agency with a
       citation, rather than reporting one figure for both.
+
+  - id: xagency-004
+    question: "Is the fare cap the same on MST and Santa Cruz METRO?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6", "re:31[ -]day"]
+    rationale: >
+      The sharpest conflation risk in the corpus, because the two agencies are
+      neighbors, both run contactless fare payment, and both are Cal-ITP Benefits
+      agencies — so the surface story is identical and the rules are not. MST
+      publishes three concrete caps: $6 per day, $20 per week, $70 per month
+      (mst-fares). Santa Cruz METRO publishes a daily cap and a rolling 31-day cap
+      that starts at the first tap, and publishes NO weekly cap at all
+      (scmtd-tap2cruz); its cap amounts live in a fare-table image that is not in
+      the corpus. A correct answer keeps the two apart, cites each, and says
+      METRO's amounts are not in the published text it has. The failure this case
+      exists to catch is quoting MST's $6/$20/$70 — or, worse, MST's weekly cap —
+      as if it were METRO's, which would send a Santa Cruz rider looking for a
+      weekly cap that does not exist.
+
+  - id: xagency-005
+    question: "Do 17-year-olds get the discount fare on MST and on Santa Cruz METRO?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:18 years and under|18 and under", "re:free"]
+    rationale: >
+      Same discount word, two different structures. MST lists "18 years and under"
+      as a discount-fare category outright (mst-fares). Santa Cruz METRO does not:
+      its Discount Fare is "adults age 65 and over, people with disabilities", and
+      a 17-year-old is served instead by the Youth Cruz Free Program, which is free
+      rather than discounted and covers local Santa Cruz County routes only
+      (scmtd-fares-passes). The answer must give each agency its own rule with its
+      own citation. Carrying MST's youth discount across the county line is the
+      error; so is reporting METRO's youth program as a "discount fare", which
+      would understate it.

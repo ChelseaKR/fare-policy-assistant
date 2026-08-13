@@ -1,20 +1,20 @@
 {
-  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated. Current entries: 2026-08-10 hta.org domain move, pending the next promoted eval run.",
+  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated. Current entries: 2026-08-10 hta.org domain move and the 2026-08-12 addition of Santa Cruz METRO, both pending the next promoted eval run.",
   "acknowledged": [
     {
       "artifact": "EVALS.md",
       "field": "corpus_version",
-      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+      "reason": "Two causes, both pending the same regeneration. (1) 2026-08-10: hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. (2) 2026-08-12: Santa Cruz METRO (SCMTD) added as the sixth agency \u2014 three new documents and 24 new chunks \u2014 rebinding corpus_version again to d188cfaae266. Unlike (1) this IS new policy text, so the committed scores were computed against a corpus that does not contain it: they remain valid for the cases they cover and say nothing at all about the new SCMTD cases, which have never been scored live. Regenerate these artifacts at the next promoted eval run and remove these entries."
     },
     {
       "artifact": "baseline.json",
       "field": "corpus_version",
-      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+      "reason": "Two causes, both pending the same regeneration. (1) 2026-08-10: hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. (2) 2026-08-12: Santa Cruz METRO (SCMTD) added as the sixth agency \u2014 three new documents and 24 new chunks \u2014 rebinding corpus_version again to d188cfaae266. Unlike (1) this IS new policy text, so the committed scores were computed against a corpus that does not contain it: they remain valid for the cases they cover and say nothing at all about the new SCMTD cases, which have never been scored live. Regenerate these artifacts at the next promoted eval run and remove these entries."
     },
     {
       "artifact": "golden.jsonl",
       "field": "corpus_version",
-      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+      "reason": "Two causes, both pending the same regeneration. (1) 2026-08-10: hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. (2) 2026-08-12: Santa Cruz METRO (SCMTD) added as the sixth agency \u2014 three new documents and 24 new chunks \u2014 rebinding corpus_version again to d188cfaae266. Unlike (1) this IS new policy text, so the committed scores were computed against a corpus that does not contain it: they remain valid for the cases they cover and say nothing at all about the new SCMTD cases, which have never been scored live. Regenerate these artifacts at the next promoted eval run and remove these entries."
     }
   ]
 }

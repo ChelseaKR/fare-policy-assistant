@@ -132,6 +132,15 @@ def _serialized(payload: object) -> bytes:
 
 
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
+    # These goldens are meant to move only when the logical release genuinely
+    # changes, and to make you say why in the diff when it does. Last moved
+    # 2026-08-12, adding Santa Cruz METRO (SCMTD) as the sixth agency: the domain
+    # profile's `scopes` and `aliases` are part of the config identity (see
+    # release_identity.py, the "domain" block), so an assistant that now answers
+    # for a sixth agency is a different logical release and must not keep the
+    # five-agency release_version. Corpus content is not in this hash — that is
+    # `corpus_version`, pinned separately — so ingest alone would not have moved
+    # these three; registering the scope did.
     first = _descriptor(config_case)
     reversed_environment = dict(reversed(list(config_case.environment.items())))
     second_config = _config(config_case, environment=reversed_environment)
@@ -145,14 +154,14 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
 
     assert first == second
     assert (
-        first.config_version == "56ef528a02ed9cb6c4600034536eeaaffe0acaf031119d0a87b5df54ba74d337"
+        first.config_version == "6620411dc9e9cfcfdba93ee5d475d94ae03bc27b488e06f2b3abcbefacb5ebb5"
     )
     assert (
-        first.release_version == "fbc9799c85ab29f908aab7196624138e85e6c1fdd23896f1c74635bf9c1eb675"
+        first.release_version == "fdb1a140b3da5bc7d1ac8939847fbf3c70d7e05f2e21658d04f8658570f9fdc2"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "249b0835404dcbd2c338e05bed8f48a0d50ca143712e3ac82185ff859044907a"
+        == "b4d99a2c23e11a4156274d32cf20b57a0f33d6e7b80e9a946db557cf0bd9764e"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
