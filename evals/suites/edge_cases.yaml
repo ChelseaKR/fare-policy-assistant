@@ -414,3 +414,30 @@ cases:
     required_facts: ["re:Pearl Street|Reservation Road|Salinas Street"]
     requires_handoff: true
     rationale: "mst-fares Courtesy Cards: obtain an application in person at the MST Bus Stop Shop (201 Pearl Street), Marina Transit Exchange (280 Reservation Road), or Salinas Transit Center (110 Salinas Street). The next step is the location (RR1, E6)."
+
+  # Elk Grove Transit Services (e-tran) boundaries. Each fact below is in the
+  # snapshot cited in its rationale; none is inferred.
+  - id: edge-049
+    question: "I only ride Elk Grove routes E110 through E116. Is the cheaper Elk Grove monthly pass enough for me?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:E110", "re:\\$\\s?80"]
+    rationale: "etran-fares publishes two 31-day passes with different route coverage: the Local Monthly Pass ($80.00) is valid only on routes E110-E116, while the Monthly Unrestricted Pass ($100.00) covers every route with an 'E' designation. A rider who names only E110-E116 is inside the Local pass's coverage, so the answer must distinguish the two rather than quoting one monthly price."
+
+  - id: edge-050
+    question: "I am boarding an Elk Grove bus with three children who are all under 5. What do I pay for them?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\btwo\\b|\\b2\\b", "re:\\$\\s?1\\.10"]
+    rationale: "etran-fares 'Free Fares': up to two children under 5 ride free with a paying adult, and 'Student fares apply for additional children' — the student single fare in the same document's table is $1.10. The boundary is the third child, which is exactly where an answer that stops at 'children under 5 ride free' goes wrong."
+
+  - id: edge-051
+    question: "I am 65 and I live in Elk Grove. How do I start riding the E routes for free?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    requires_handoff: true
+    rationale: "etran-senior-pass: the City-funded pilot is open to Elk Grove residents aged 62+, and a rider boards by showing either the Elk Grove Senior Transit Pass or a government-issued photo ID proving age. The passes are issued at Elk Grove City Hall, District 56, and SacRT's Customer Service Center at 1225 R Street, where Elk Grove residency and proof of age are required. The answer states the published criterion and routes the rider to whoever issues the pass; it never rules that this rider qualifies (RR4)."

@@ -239,3 +239,29 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?5\\.00"]
     rationale: "hta-fares: 1 Day Pass $5.00."
+
+  # Elk Grove Transit Services (e-tran). Scoped separately from SacRT because
+  # the E-prefix routes publish their own fare table; see corpus/manifest.yaml.
+  - id: ground-030
+    question: "How much is a single ride on an Elk Grove e-tran bus?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.25"]
+    rationale: "etran-fares fare table: Single Fare, Basic, $2.25. SacRT's own basic single ride is $2.50 (sacrt-fares), so quoting the wrong one of the two is the specific failure this case guards."
+
+  - id: ground-031
+    question: "What does a transfer cost on an Elk Grove bus and how long is it good for?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?0\\.50|50 cents", "120"]
+    rationale: "etran-fares 'Transfers': Elk Grove transfers are issued only when boarding, cost $0.50, and are valid for 120 minutes and one use."
+
+  - id: ground-032
+    question: "How much does a senior pay per ride on the Elk Grove routes?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.10", "62"]
+    rationale: "etran-fares fare table: the Military/Senior/Medicare/Disabled single fare is $1.10, and the discount section sets the senior threshold at age 62+."
