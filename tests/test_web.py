@@ -318,6 +318,33 @@ class TestVersion:
             assert "active page-view version" in contained_body
 
 
+class TestFeedbackBodyCap:
+    def test_oversized_feedback_body_is_refused_before_parsing(self):
+        """The per-caller limiter bounds how often, not how large.
+
+        /api/ask has been size-capped for a while; /api/feedback was not, so a
+        single accepted call could hand json.loads anything the gateway would
+        carry. The check is content-blind: it reads a length, never the body.
+        """
+        from assistant import config
+
+        oversized = "x" * (config.MAX_BODY_BYTES + 1)
+        resp = web_handler.handler(
+            {
+                "requestContext": {"http": {"method": "POST"}},
+                "rawPath": "/api/feedback",
+                "body": oversized,
+            }
+        )
+        assert resp["statusCode"] == 413
+
+    def test_a_normal_verdict_still_gets_through(self):
+        resp = web_handler.handler(
+            _event(method="POST", path="/api/feedback", body={"verdict": "up"})
+        )
+        assert resp["statusCode"] == 200
+
+
 class TestEmbedWidget:
     def _embed(self):
         return web_handler.handler(_event(method="GET", path="/embed"))

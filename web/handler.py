@@ -795,6 +795,12 @@ def _feedback(event: dict) -> dict:
             route="feedback", limit=config.RATE_LIMIT_FEEDBACK_PER_WINDOW
         )
         return _json(429, {"error": "Too much feedback in the last minute. Please wait a moment."})
+    # Bounded before parsing, as /api/ask already is. The per-caller limiter
+    # above bounds how OFTEN this route is called; it says nothing about how
+    # large one call may be, and json.loads would otherwise run over any body
+    # the gateway accepts. The check is content-blind: a length, nothing read.
+    if len(event.get("body") or "") > MAX_BODY_BYTES:
+        return _json(413, {"error": "Request too large."})
     try:
         data = json.loads(event.get("body") or "")
         verdict = data.get("verdict")
