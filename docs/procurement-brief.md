@@ -54,9 +54,10 @@ them.
 
 Two independent layers, on purpose.
 
-1. **The project's own harness (white-box).** 118 cases across six suites
+1. **The project's own harness (white-box).** 258 cases across nine suites
    (groundedness, refusal, edge cases, multilingual, freshness, multi-turn
-   conversation). Each case is a YAML record a non-engineer can read: the
+   conversation, cross-agency, counterfactual sensitivity, and stretch-language
+   Tagalog). Each case is a YAML record a non-engineer can read: the
    question, the agency scope, the expected behavior, and the facts or citations
    it must contain. Scoring combines deterministic checks (citation resolves,
    forbidden phrases absent, language matches, "as of" present) with an LLM judge
