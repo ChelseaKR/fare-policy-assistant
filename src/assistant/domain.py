@@ -41,7 +41,7 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "SolTrans"),
+    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans"),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -60,6 +60,23 @@ TRANSIT = DomainProfile(
         "eureka": "HTA",
         "arcata": "HTA",
         "redwood transit": "HTA",
+        # Elk Grove Transit Services. SacRT has operated these routes since the
+        # 2021 annexation, but riders still say "e-tran" and "the Elk Grove bus",
+        # and the E-prefix routes keep their own fare table, so the alias points
+        # at its own scope rather than folding into SacRT.
+        "e-tran": "E-tran",
+        "etran": "E-tran",
+        "e tran": "E-tran",
+        "elk grove": "E-tran",
+        # Santa Cruz METRO. "metro" alone is deliberately absent: it is what
+        # riders of half the agencies in California call their own operator, and
+        # an alias that broad would pull unrelated questions into this scope.
+        "scmtd": "SCMTD",
+        "scmetro": "SCMTD",
+        "santa cruz": "SCMTD",
+        "santa cruz metro": "SCMTD",
+        "watsonville": "SCMTD",
+        "tap2cruz": "SCMTD",
         "soltrans": "SolTrans",
         "sol trans": "SolTrans",
         "solano": "SolTrans",

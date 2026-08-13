@@ -240,6 +240,56 @@ cases:
     required_facts: ["re:\\$\\s?5\\.00"]
     rationale: "hta-fares: 1 Day Pass $5.00."
 
+  # Elk Grove Transit Services (e-tran). Scoped separately from SacRT because
+  # the E-prefix routes publish their own fare table; see corpus/manifest.yaml.
+  - id: ground-030
+    question: "How much is a single ride on an Elk Grove e-tran bus?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.25"]
+    rationale: "etran-fares fare table: Single Fare, Basic, $2.25. SacRT's own basic single ride is $2.50 (sacrt-fares), so quoting the wrong one of the two is the specific failure this case guards."
+
+  - id: ground-031
+    question: "What does a transfer cost on an Elk Grove bus and how long is it good for?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?0\\.50|50 cents", "120"]
+    rationale: "etran-fares 'Transfers': Elk Grove transfers are issued only when boarding, cost $0.50, and are valid for 120 minutes and one use."
+
+  - id: ground-032
+    question: "How much does a senior pay per ride on the Elk Grove routes?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.10", "62"]
+    rationale: "etran-fares fare table: the Military/Senior/Medicare/Disabled single fare is $1.10, and the discount section sets the senior threshold at age 62+."
+
+  - id: ground-033
+    question: "How much is a single ride on Santa Cruz METRO local service if I pay cash?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "scmtd-fares-passes CASH FARES: 'Adult (age 18 and over) $2.00 Cash/1 Ride' on Local Service in Santa Cruz County."
+
+  - id: ground-034
+    question: "What does the discount fare cost per ride on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "65"]
+    rationale: "scmtd-fares-passes CASH FARES: 'Discount Fare (adults age 65 and over, people with disabilities) $1.00 Cash/1 Ride'. The age belongs in the answer because METRO's discount fare is defined by who qualifies, not just by the price."
+
+  - id: ground-035
+    question: "How much does the Amtrak/Highway 17 Express cost on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?7\\.00"]
+    rationale: "scmtd-fares-passes CASH FARES: the Amtrak/Highway 17 Express is a separate fare tier from local service at $7.00 Cash/1 Ride, and local Day and 31-Day Passes explicitly exclude it."
+
   # ── SolTrans (Solano County Transit), added 2026-08-12 ─────────────────────
   # NOTE for anyone adding fare-amount cases here: SolTrans' fare grid is
   # rendered as Webflow divs whose product-type headings ("Cash Fares", "Day
@@ -249,7 +299,7 @@ cases:
   # deliberately target facts stated in *prose*, which survives the round trip
   # intact. See the PR description; the chunker limitation is filed, not fixed
   # here, because changing it would rewrite every other agency's chunks too.
-  - id: ground-030
+  - id: ground-036
     question: "Does a 17-year-old have to pay to ride SolTrans?"
     agency_scope: SolTrans
     language: en
@@ -263,7 +313,7 @@ cases:
       own August 2025 press release confirms the Youth Ride Free program runs
       through June 2027, i.e. it covers today.
 
-  - id: ground-031
+  - id: ground-037
     question: "If I ride a SolTrans local bus and then take the Vallejo ferry to San Francisco, do I get any credit?"
     agency_scope: SolTrans
     language: en
@@ -277,7 +327,7 @@ cases:
       SolTrans' own published transfer arrangement, which is why it is a
       groundedness case rather than a third-party-assertion case.
 
-  - id: ground-032
+  - id: ground-038
     question: "How much of a discount does Clipper START give on SolTrans?"
     agency_scope: SolTrans
     language: en

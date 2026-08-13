@@ -28,6 +28,8 @@ def test_reexports_match_the_profile():
             "Yolobus",
             "SacRT",
             "HTA",
+            "E-tran",
+            "SCMTD",
             "SolTrans",
         )
     )
@@ -49,7 +51,7 @@ def test_clipper_is_not_an_agency_alias():
     SolTrans is the corpus's only Clipper participant, so mapping "clipper" to
     SolTrans would silently turn "does Clipper work on <other agency>?" into a
     SolTrans question and invite an answer the corpus cannot support. The word
-    is deliberately absent from the alias table; eval cases xagency-004/005 and
+    is deliberately absent from the alias table; eval cases xagency-009/010 and
     refuse-soltrans-001 cover the answer-side behavior.
     """
     p = domain.TRANSIT

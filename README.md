@@ -356,7 +356,8 @@ make fetch && make ingest
 
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
-Authority (HTA), and Solano County Transit (SolTrans),
+Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
+and Solano County Transit (SolTrans),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one. MST and SBMTD are the two agencies live
@@ -366,7 +367,7 @@ verification domain.
 SolTrans is the only Clipper participant in the corpus. That is the point of
 including it and also its main hazard: Clipper is a regional card, so a rider
 reads a Clipper answer as generalizing across the Bay Area, while the corpus
-holds exactly one agency's side of it. The `xagency-004` / `xagency-005` cases
+holds exactly one agency's side of it. The `xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
@@ -374,7 +375,8 @@ WestCat, County Connection), which it does not speak for.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
-(`docs/decisions/0002`).
+(`docs/decisions/0002`). Re-checked 2026-08-12: its robots.txt permits the fare
+pages, the WAF still returns 403 to this project's fetcher, and it remains out.
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored

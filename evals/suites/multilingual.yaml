@@ -207,24 +207,33 @@ cases:
     mirror_of: edge-045
     rationale: "Spanish mirror of edge-045 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff. Mirror repaired 2026-08-05: this pointed at edge-034, the Yolobus case in the same RR4 family, so the pair compared an MST answer against a Yolobus answer and measured corpus difference as if it were language difference. edge-045 is the MST member of that family and asks this exact question in English."
 
+  - id: ml-023
+    question: "¿Cuánto cuesta un viaje sencillo en Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-033
+    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-033 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."
+
   # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
   # SolTrans publishes no Spanish pages — its sitemap enumerates the whole site
   # and contains no /es/ path — so both cases below are honest cross-lingual
   # ones: a Spanish question answered from English-only sources.
-  - id: ml-023
+  - id: ml-024
     question: "¿Tienen que pagar los jóvenes para viajar en SolTrans?"
     agency_scope: SolTrans
     language: es
     expected_behavior: answer
     required_facts: ["re:(?i)gratis|sin costo|no pagan"]
-    mirror_of: ground-030
+    mirror_of: ground-036
     rationale: >
-      Cross-lingual mirror of ground-030: soltrans-fare-table (English only)
+      Cross-lingual mirror of ground-036: soltrans-fare-table (English only)
       prices Youth (18 &under) as FREE on every SolTrans service. The Spanish
       answer must say so and cite the English passage, matching the parity bar
       the other English-only agencies are held to.
 
-  - id: ml-024
+  - id: ml-025
     question: "Uso una tarjeta Clipper en SolTrans. ¿También funciona en SacRT?"
     language: es
     expected_behavior: partial
@@ -233,7 +242,7 @@ cases:
       - "SacRT acepta Clipper"
       - "sí, puede usarla en SacRT"
       - "su tarjeta Clipper funciona en SacRT"
-    mirror_of: xagency-004
+    mirror_of: xagency-009
     rationale: >
       Spanish mirror of the Clipper scope case. The over-generalization risk is
       identical in both languages and the guard against it must be too: answer

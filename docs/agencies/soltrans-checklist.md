@@ -27,7 +27,7 @@ as `SacRT` and `Yolobus`.
 - [x] A Spanish (`language: es`) fares page added if the agency publishes one;
       if it does not, say so in the PR so the multilingual gap is on purpose.
       **SolTrans publishes none.** Its sitemap enumerates the entire site and
-      contains no `/es/` path. Cases `ml-023` and `ml-024` are therefore honest
+      contains no `/es/` path. Cases `ml-024` and `ml-025` are therefore honest
       cross-lingual cases (Spanish question, English source), the same treatment
       Yolobus, SacRT, and HTA get. Stated in the PR.
 - [x] `make fetch && make ingest` run; snapshots committed under `corpus/raw/`.
@@ -41,11 +41,11 @@ as `SacRT` and `Yolobus`.
       rider `question` and `required_facts` filled from the quoted passage.
 - [x] Edge-case boundaries this agency actually publishes found and cased (age
       cutoffs, income limits, document alternatives, what stacks with what).
-      The load-bearing one is `edge-049`: SolTrans' Reduced category starts at
+      The load-bearing one is `edge-058`: SolTrans' Reduced category starts at
       65, but **Seniors 80+ ride free**, so 80 is the real boundary and
       "reduced fare" is the defensible-looking wrong answer for an 82-year-old.
-      Also cased: the five alternative reduced-fare proofs (`edge-050`), and
-      that there are no in-system transfers (`edge-051`).
+      Also cased: the five alternative reduced-fare proofs (`edge-059`), and
+      that there are no in-system transfers (`edge-060`).
 - [x] Cases mirrored into the real suites: `groundedness`, `refusal`,
       `cross_agency`, `multilingual`, `freshness` — matching the coverage the
       other agencies get. 13 cases across all five.
@@ -65,8 +65,8 @@ as `SacRT` and `Yolobus`.
 - [ ] New rider-facing behavior validated with a live `make eval` if it touched
       prompts / retrieval / answer (see CONTRIBUTING.md).
       **Not done — needs a live key.** No prompt, retrieval, or answer code was
-      changed, but the Clipper scope cases (`xagency-004`, `xagency-005`,
-      `ml-024`, `refuse-soltrans-001`) are judge-scored and unverified until
+      changed, but the Clipper scope cases (`xagency-009`, `xagency-010`,
+      `ml-025`, `refuse-soltrans-001`) are judge-scored and unverified until
       someone runs them live. Whether the current system prompt already
       suppresses the "Clipper is regional, therefore it works everywhere"
       inference is an open question this PR does not answer. Treat these four as
@@ -79,11 +79,11 @@ as `SacRT` and `Yolobus`.
 1. **Retired product on a live page.** SolTrans eliminated paper passes on all
    Local and Express routes effective 2024-07-01, but the fare table still tells
    riders to use one. `soltrans-paperless-fares` is ingested as the dated
-   correction and `fresh-014` pins the behavior.
+   correction and `fresh-016` pins the behavior.
 2. **Contradictory page excluded.** `/fares/ticket-office-location` states the
    Clipper START discount as 20 percent against 50 percent everywhere else;
    excluded rather than ingested, per the `sbmtd.gov/reduced/` precedent in
-   ADR 0002. `ground-032` is the tripwire.
+   ADR 0002. `ground-038` is the tripwire.
 3. **Chunker limitation, filed not fixed.** SolTrans' fare grid uses `<h2>`
    product-type headings with empty bodies ("Cash Fares", "Day Passes",
    "10-Ride Passes", "31-Day Passes"). `_finalize_sections` drops sections under

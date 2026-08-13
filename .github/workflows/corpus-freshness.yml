@@ -46,9 +46,42 @@ jobs:
         run: uv run python tools/corpus_refresh_report.py --snapshot-old /tmp/old.json
 
       - name: Re-snapshot and re-process the corpus
+        # `fetch` now keeps whatever answered and fails only when NOTHING did.
+        # It used to exit non-zero if any single source failed, which aborted
+        # this step and discarded every document that had fetched successfully:
+        # from 2026-07-13 to 2026-08-10 that turned an MST 403 and one stale URL
+        # into a total refresh outage, and Yolobus sat two months past a
+        # published fare change.
         run: |
           uv run python -m assistant.ingest fetch
           uv run python -m assistant.ingest process
+
+      # Unreachable sources must be visible to a human, not buried in a log of a
+      # job that passed. A source that stays unreachable is a corpus going stale
+      # in slow motion, which is the failure this whole workflow exists to catch.
+      - name: Surface any unreachable sources
+        id: unreachable
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report=corpus/raw/fetch-failures.json
+          if [ ! -f "$report" ]; then
+            echo "every manifest URL answered"
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "any=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Unreachable sources"
+            echo
+            echo "These manifest URLs did not answer. The refresh kept everything else."
+            echo
+            echo '```'
+            python -c 'import json;[print(f"{f[\"doc_id\"]}: {f[\"error\"]}") for f in json.load(open("corpus/raw/fetch-failures.json"))["failed"]]'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          python -c 'import json;[print(f"::warning title=corpus source unreachable::{f[\"doc_id\"]}: {f[\"error\"]}") for f in json.load(open("corpus/raw/fetch-failures.json"))["failed"]]'
 
       # Key the change decision on corpus_version, not a raw `git diff -- corpus/`:
       # furniture-only churn that leaves the policy text intact opens nothing. On a
@@ -74,3 +107,4 @@ jobs:
           labels: corpus, automated
           add-paths: |
             corpus/
+            ':!corpus/raw/fetch-failures.json'

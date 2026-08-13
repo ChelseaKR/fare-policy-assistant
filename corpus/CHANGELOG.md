@@ -43,7 +43,7 @@ Two corpus-hygiene findings recorded with the addition:
   end date — current by the agency's own labeling, not lapsed — but it predates
   SolTrans' 2024-07-01 elimination of paper passes and still tells riders to use
   one. `soltrans-paperless-fares` is ingested as the dated correction, the same
-  role `sbmtd-farechange` plays for SBMTD, and eval case fresh-014 pins the
+  role `sbmtd-farechange` plays for SBMTD, and eval case fresh-016 pins the
   behavior.
 - `soltrans.org/fares/ticket-office-location` was excluded: it is a stale
   near-duplicate of the Clipper Card page stating the Clipper START discount as

@@ -5,9 +5,12 @@ project, and this project cannot give you permission to reuse it.
 
 ## What is here
 
-Fifteen web pages published by six California transit agencies, fetched once
-each (ten on 2026-06-12, one refetched on 2026-08-10 after its site moved, and
-four SolTrans pages on 2026-08-12), plus everything derived from them:
+Twenty web pages published by eight California transit agencies: nine fetched
+on 2026-06-12, one refetched on 2026-08-10 after its site moved (hta-fares), and
+ten on 2026-08-13 (the yolobus-fares refetch for the new fare period, plus the
+two Elk Grove Transit Services, three Santa Cruz METRO, and four SolTrans pages
+added that day). Every page's exact fetch date is in `manifest.yaml` and in its
+`corpus/raw/*.meta.yaml`. Plus everything derived from them:
 
 | Path | What it holds |
 |---|---|
@@ -26,11 +29,15 @@ excerpts inside the failure traces in `EVALS.md` and `docs/eval-report.*`.
 
 Each agency's. Monterey-Salinas Transit, Santa Barbara MTD, Yolo County
 Transportation District (Yolobus), Sacramento Regional Transit District,
-Humboldt Transit Authority, and Solano County Transit (SolTrans) each publish
-these pages on their own sites. Seven of the fifteen snapshots carry an explicit
-"all rights reserved" line in the page footer; the four MST pages and the four
-SolTrans pages carry a bare copyright notice ("©2026 Monterey-Salinas Transit",
-"© 2024 SolTrans"), which reserves the same rights by default.
+Humboldt Transit Authority, Santa Cruz Metropolitan Transit District, and Solano
+County Transit (SolTrans) each publish these pages on their own sites; the two
+Elk Grove Transit Services (e-tran) pages are published by SacRT on sacrt.com.
+Twelve of the twenty snapshots carry an explicit "all rights reserved" line in
+the page footer (the three Santa Cruz METRO pages read "©2026 SC Metro, All
+Rights Reserved.", and both e-tran pages carry SacRT's "© 2026 Sacramento
+Regional Transit District. All rights reserved."); the four MST pages and the
+four SolTrans pages carry a bare copyright notice ("©2026 Monterey-Salinas
+Transit", "© 2024 SolTrans"), which reserves the same rights by default.
 Publishing something on a public agency website makes it publicly readable. It
 does not place it in the public domain, and California's Public Records Act
 governs disclosure, not copyright.
@@ -86,9 +93,11 @@ place to check whether what is snapshotted here still holds:
 | Yolobus (Yolo County Transportation District) | <https://yolobus.com/fares/> | no terms-of-use page located (checked 2026-08-12); site publishes a privacy policy only: <https://yolobus.com/privacy-policy/> |
 | Sacramento Regional Transit (SacRT) | <https://www.sacrt.com/fares/> | no website terms-of-use page located (checked 2026-08-12); <https://www.sacrt.com/terms-conditions/> exists but is purchase-order terms for vendors |
 | Humboldt Transit Authority (HTA) | <https://hta.org/fares/> | no terms-of-use page located (checked 2026-08-12) |
+| Elk Grove Transit Services (e-tran) | <https://www.sacrt.com/elk-grove-transit-fares/> | published on sacrt.com, so the SacRT row above governs; no separate terms page (checked 2026-08-12) |
+| Santa Cruz METRO (SCMTD) | <https://scmetro.org/rider-info/fares-passes/> | no content-reuse terms located (checked 2026-08-12); site publishes a Privacy & Use Policy covering visitor data and vendor terms only: <https://scmetro.org/organization/privacy-use/> |
 | Solano County Transit (SolTrans) | <https://www.soltrans.org/fares/fare-table> | no terms-of-use page located (checked 2026-08-12); the site's own sitemap enumerates one legal page only: <https://www.soltrans.org/about/policies/privacy-policy> |
 
 Where the table says "none located", that is the finding, not a gap someone
-forgot to fill: four of these six agencies publish no website terms of use we
+forgot to fill: five of these eight agencies publish no website terms of use we
 could find, and the absence of stated terms is not permission. Read each
 agency's own page rather than this summary of where to find it.
