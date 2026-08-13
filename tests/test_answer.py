@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from assistant import config
 from assistant.answer import _safe_url, answer_question
 from assistant.models import Completion, MockModel
@@ -188,6 +190,101 @@ class TestAnswerPipeline:
         assert "mst-fares" not in retrieved_ids
         assert result.kind == "answered_guarded"
         assert "unretrieved_citation:mst-fares" in result.guard_flags
+
+
+class TestAsOfDate:
+    """The rider-facing snapshot date must describe the cited evidence.
+
+    `as_of_date` is rendered as "Based on policies published as of <date>"
+    directly beneath the answer (web/index.html, web/embed.py) and is the one
+    claim this assistant makes about its own limits. It used to be
+    `max(fetch_date)` over the *retrieved* top-k, so a single recently
+    refetched document — HTA was refetched 2026-08-10 while every other agency
+    still sat at 2026-06-12 — dated an answer that stood on a two-month-older
+    citation to the fresh date. Documents are refetched one at a time, so a
+    mixed-age top-k is routine rather than exotic.
+    """
+
+    @staticmethod
+    def _mixed_freshness_retriever(chunks):
+        """The corpus fixture plus one Yolobus document refetched two months
+        later than the Yolobus fare page. Snapshots are taken per document, so
+        one agency's pages routinely carry different fetch dates."""
+        from assistant.retrieve import Retriever
+
+        fresh = replace(
+            chunks[1],
+            chunk_id="yolobus-fare-notice#0",
+            doc_id="yolobus-fare-notice",
+            doc_title="Fare Notices",
+            url="https://yolobus.com/notices/",
+            fetch_date="2026-08-10",
+            section="Fare Notices",
+            text=(
+                "Fare notice: the day pass price is unchanged at $6.00 and paper "
+                "tickets remain valid on every fixed route."
+            ),
+        )
+        # top_k covers the whole fixture, so the fresh document is in the
+        # retrieved set for any Yolobus query and the test cannot go vacuous.
+        return Retriever([*chunks, fresh], config.RetrievalConfig(top_k=len(chunks) + 1))
+
+    def test_headline_date_is_the_cited_passage_not_the_freshest_retrieved(self, chunks):
+        retriever = self._mixed_freshness_retriever(chunks)
+        result = answer_question(
+            "Do youth ride free on Yolobus?",
+            model=ScriptedModel(
+                "Youth ages 0-18 ride free [doc:yolobus-fares], based on policies "
+                "published as of 2026-06-12."
+            ),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "answered"
+        # Preconditions: the fresh document really was retrieved, and really was
+        # not cited. Without both, this test would pass for the wrong reason.
+        retrieved_dates = {sc.chunk.fetch_date for sc in result.passages}
+        assert "2026-08-10" in retrieved_dates
+        assert [c.doc_id for c in result.citations] == ["yolobus-fares"]
+        # The rider is told the date of the page the answer stands on, not the
+        # date of the page that merely turned up beside it.
+        assert result.as_of_date == "2026-06-12"
+        assert result.as_of_date != max(sc.chunk.fetch_date for sc in result.passages)
+
+    def test_headline_date_is_the_oldest_of_several_cited_passages(self, chunks):
+        # Weakest link: an answer resting on a June page and an August page is
+        # only verified as of June, because the June page could have changed
+        # since without anyone looking.
+        retriever = self._mixed_freshness_retriever(chunks)
+        result = answer_question(
+            "Do youth ride free on Yolobus and is the Yolobus day pass price unchanged?",
+            model=ScriptedModel(
+                "Youth ages 0-18 ride free on Yolobus [doc:yolobus-fares] and the day pass "
+                "price is unchanged [doc:yolobus-fare-notice], based on policies published "
+                "as of 2026-06-12."
+            ),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "answered"
+        assert {c.fetch_date for c in result.citations} == {"2026-06-12", "2026-08-10"}
+        assert result.as_of_date == "2026-06-12"
+
+    def test_declined_answer_still_dates_the_corpus_it_consulted(self, chunks):
+        # No citations exist on a decline, so there is no cited evidence to
+        # date; the field keeps describing the corpus that was consulted.
+        from assistant.retrieve import Retriever
+
+        strict = Retriever(chunks, config.RetrievalConfig(top_k=3, decline_z_threshold=50.0))
+        result = answer_question(
+            "Do youth ride free on Yolobus?",
+            model=MockModel(),
+            retriever=strict,
+            cfg=_cfg(),
+        )
+        assert result.kind == "refused_no_support"
+        assert result.citations == []
+        assert result.as_of_date == "2026-06-12"
 
 
 class TestMultiTurn:

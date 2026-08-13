@@ -465,6 +465,11 @@
       turn.appendChild(src);
     }
 
+    // The headline freshness claim. `as_of_date` is the oldest fetch date among
+    // the passages this answer cites (assistant.answer._as_of_cited), so this
+    // line and relativeAge() below describe the evidence under the answer, not
+    // whatever else retrieval happened to surface beside it. Per-source dates
+    // are in the "(fetched …)" lines above.
     if (data.as_of_date) {
       var asof = document.createElement("p");
       asof.className = "asof";

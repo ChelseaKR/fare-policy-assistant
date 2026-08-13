@@ -199,6 +199,9 @@ EMBED_HTML = """<!doctype html>
       ans.innerHTML = render(data.answer);
       ans.setAttribute("lang", data.language || "en");
       appendSources(ans, data.citations);
+      // Same headline freshness claim as the full page: `as_of_date` is the
+      // oldest fetch date among the passages this answer cites
+      // (assistant.answer._as_of_cited), not the newest passage retrieved.
       if (data.as_of_date) {
         var asof = document.createElement("p");
         asof.className = "asof";

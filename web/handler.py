@@ -666,6 +666,10 @@ def _ask(event: dict) -> dict:
         "language": response_language,
         "language_confidence": round(language_confidence, 3),
         "language_uncertain": language_uncertain,
+        # Rider-facing freshness claim: the oldest fetch date among the cited
+        # passages on an answered response (assistant.answer._as_of_cited).
+        # Not the corpus's own as-of date, which is in the version.json the
+        # console reads; an answer is only as current as what it stands on.
         "as_of_date": result.as_of_date,
         # Operational confidence band for integrators and staff; never alters
         # the answer or the guards (persona research F-16).
