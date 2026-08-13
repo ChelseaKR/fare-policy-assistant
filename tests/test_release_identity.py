@@ -144,15 +144,21 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     )
 
     assert first == second
+    # These goldens bind the whole behavior-complete config, which includes the
+    # active domain profile's scopes and aliases. They move when the domain
+    # genuinely changes and must not move otherwise. Last rebound 2026-08-13,
+    # when Elk Grove Transit Services (E-tran) was added as the sixth scope with
+    # its rider aliases; the previous values were 56ef528a…d337 / fbc9799c…e675
+    # / 249b0835…907a.
     assert (
-        first.config_version == "56ef528a02ed9cb6c4600034536eeaaffe0acaf031119d0a87b5df54ba74d337"
+        first.config_version == "24314b16d4b091e21925877c6859959502b3d74a4237c16dde66cdfbdd20733a"
     )
     assert (
-        first.release_version == "fbc9799c85ab29f908aab7196624138e85e6c1fdd23896f1c74635bf9c1eb675"
+        first.release_version == "9c48bbe9a3eb159bf07ce3a1d4adc6e0c5d55e90b7416b241f5eca0050d3a3c7"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "249b0835404dcbd2c338e05bed8f48a0d50ca143712e3ac82185ff859044907a"
+        == "37d9f96781ebd31e564ef612aa0a3140a80d77026d5d4771f6fa4af6f51cab7a"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

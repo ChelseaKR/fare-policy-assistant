@@ -39,3 +39,44 @@ cases:
       Yolobus and SacRT publish their own single-ride fares (yolobus-fares,
       sacrt-fares). A correct answer attributes each fare to its agency with a
       citation, rather than reporting one figure for both.
+
+  # Elk Grove (E-tran) x SacRT. The single most likely boundary crossing in the
+  # corpus: e-tran annexed into SacRT in 2021, the E-prefix routes kept their own
+  # fare table, and a rider going from Elk Grove into Sacramento meets both. Every
+  # fact each case needs is in a retrieved passage from one of the two agencies.
+  - id: xagency-004
+    question: "I am 62 and ride the Elk Grove buses. Is the senior fare the same when I ride SacRT?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      Both systems set the senior threshold at 62, and the two prices differ:
+      etran-fares puts the Military/Senior/Medicare/Disabled single fare at $1.10,
+      while sacrt-fares puts the senior single at $1.25. The trap is the shared age
+      cutoff, which invites an answer that treats "same age" as "same fare." A
+      correct answer gives each price with its own agency and citation.
+
+  - id: xagency-005
+    question: "Can I use my Elk Grove daily pass on SacRT light rail?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      etran-fares "Elk Grove Passes": the Elk Grove daily pass is valid for
+      unlimited rides on routes with an "E" prefix and the rider should "obtain a
+      transfer, if transferring to other SacRT services"; the same passage notes
+      that E routes accept SacRT tickets and passes, with a transfer fee on a light
+      rail single ride ticket. sacrt-fares gives the SacRT side: a $0.25 transfer
+      ticket. The acceptance runs one way, and an answer that reports it as
+      reciprocal sends the rider onto light rail holding a pass that does not cover
+      it.
+
+  - id: xagency-006
+    question: "Does the Elk Grove Senior Pass cover SacRT light rail too?"
+    language: en
+    expected_behavior: answer
+    rationale: >
+      etran-senior-pass defines the program's scope as "SacRT fixed-route bus
+      routes that begin or end within the City of Elk Grove," and lists exactly
+      which ones: E10-E19 and E110-E116. Light rail is not among them. The answer
+      must hold to the published scope and point the rider at SacRT's own light
+      rail fares (sacrt-fares) rather than extending a city-funded bus program to a
+      mode the page never mentions.

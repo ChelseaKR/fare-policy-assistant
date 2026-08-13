@@ -19,7 +19,18 @@ def test_reexports_match_the_profile():
     # The isolation did not change any value: the modules now read from the
     # profile, and the profile holds exactly what used to be hardcoded.
     p = domain.TRANSIT
-    assert config.KNOWN_AGENCIES == p.scopes == ("MST", "SBMTD", "Yolobus", "SacRT", "HTA")
+    assert (
+        config.KNOWN_AGENCIES
+        == p.scopes
+        == (
+            "MST",
+            "SBMTD",
+            "Yolobus",
+            "SacRT",
+            "HTA",
+            "E-tran",
+        )
+    )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact
     assert AGENCY_ALIASES == p.aliases
     assert guards.OUT_OF_SCOPE_PATTERNS == p.scope_topics

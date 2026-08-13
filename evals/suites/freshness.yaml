@@ -111,6 +111,36 @@ cases:
       citation — and did so even when the fresh HTA passage was retrieved but never
       cited at all.
 
+  # Elk Grove. The fare page and the senior-pass page fail freshness in opposite
+  # directions, which is why both are cased: one publishes an explicit end date,
+  # the other publishes no effective range at all.
+  - id: fresh-012
+    question: "How long does the Elk Grove Senior Pass program run?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["June 30, 2027", "re:\\$\\s?100,000"]
+    rationale: >
+      etran-senior-pass: the pilot is "available through June 30, 2027, or until
+      the $100,000 program fund is fully expended, whichever comes first." Today is
+      inside that window, so the answer states both halves of the condition. The
+      second half is not observable from any published page, so an answer that
+      reports only the date — or that assures the rider the program is still funded
+      — is wrong in the direction that strands a rider at the farebox.
+
+  - id: fresh-013
+    question: "Are the Elk Grove fares you have still the ones in effect?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      etran-fares carries a June 30, 2021 dateline and says the fares "will remain
+      the same at this time," with no effective range anywhere on the page. The
+      assistant cannot verify a fare period that was never published, so the only
+      honest answer is the snapshot date it holds plus a pointer to SacRT. This is
+      the Yolobus lesson in the opposite shape: there the committed range had
+      expired, here there is no range to check.
   - id: fresh-020
     question: "Can I use a UC Davis Zip Pass on Yolobus?"
     agency_scope: Yolobus
