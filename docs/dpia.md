@@ -58,6 +58,34 @@ before retrieval/model use, keeps no content logs or rider database, and leaves
 eligibility decisions to the agency. A production operator must establish and
 document its own lawful basis, processor terms, and retention configuration.
 
+**Model-provider logging, verified 2026-08-12.** The application not logging
+question text is only half the claim: Amazon Bedrock can be configured to
+deliver prompts and completions to CloudWatch or S3 independently of anything
+this code does, and until now this document asserted nothing either way. The
+account's configuration was read directly:
+
+```
+$ aws bedrock get-model-invocation-logging-configuration --region us-west-2
+loggingConfig.cloudWatchConfig.logGroupName   /aws/bedrock/invocations
+loggingConfig.textDataDeliveryEnabled         false
+loggingConfig.imageDataDeliveryEnabled        false
+loggingConfig.embeddingDataDeliveryEnabled    false
+loggingConfig.videoDataDeliveryEnabled        false
+```
+
+Invocation logging is on, so metadata (model, timestamps, token counts) is
+captured, and **every data-delivery flag is disabled**, so no prompt or
+completion text is delivered to that log group. Rider questions therefore do not
+reach `/aws/bedrock/invocations`.
+
+Two limits on that statement, both deliberate. It describes one account at one
+moment: the flags are account-wide Bedrock settings, not something this
+repository can pin or enforce, so an operator can enable text delivery without
+any change here. And it says nothing about the provider's own internal
+retention, which is a matter for the processor terms named above. A production
+operator should re-run the command above as part of its own review rather than
+inherit this finding.
+
 ## 3. Risks to data subjects, and mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
