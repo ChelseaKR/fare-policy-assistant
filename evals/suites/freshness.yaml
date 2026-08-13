@@ -123,9 +123,13 @@ cases:
       because nothing about the document is stale. The Yolobus fares page
       refreshed 2026-08-13, carrying the current 2026-2027 fare period, lists
       "UC Davis Zip Pass: with valid student ID" among accepted passes. ZipPass
-      retired on 2026-06-30: Unitrans announced it, and the corpus already holds
-      SacRT's own notice that the last day to use ZipPass tickets was
-      2026-04-30 (see fresh-003).
+      is a mobile ticketing app, not a card, and it is retired. Yolobus says so
+      itself at yolobus.com/zippass/: "The ZipPass mobile app has been
+      discontinued", with the last day to use existing passes given as
+      2026-04-30. The corpus independently holds SacRT's notice of the same
+      2026-04-30 date (see fresh-003), and Unitrans retired its side on
+      2026-06-30. So yolobus.com contradicts itself: one page retires the app,
+      another lists it as valid fare media for the current fare period.
 
       So the assistant is asked about a pass its only in-scope source says is
       accepted and that no longer exists. It cannot be expected to know the
