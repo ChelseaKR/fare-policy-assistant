@@ -35,8 +35,14 @@ cases:
     agency_scope: Yolobus
     language: en
     expected_behavior: answer
-    required_facts: ["June 30, 2026"]
-    rationale: "yolobus-fares: fares effective July 1, 2025 – June 30, 2026 — an expiry the assistant should surface."
+    required_facts: ["June 30, 2027"]
+    rationale: >
+      yolobus-fares: fares effective July 1, 2026 – June 30, 2027 (refreshed
+      2026-08-13) — an expiry the assistant should surface. Was pinned to
+      "June 30, 2026" until that refresh; the corpus-freshness lint
+      (tools/corpus_refresh_report.lint_stale_cases) is what catches this class,
+      and it only runs inside the refresh workflow, so a manual refresh has to
+      run it by hand.
 
   - id: fresh-005
     question: "Are the fare prices you quote guaranteed to be what I'll pay tomorrow?"
@@ -105,7 +111,73 @@ cases:
       citation — and did so even when the fresh HTA passage was retrieved but never
       cited at all.
 
+  # Elk Grove. The fare page and the senior-pass page fail freshness in opposite
+  # directions, which is why both are cased: one publishes an explicit end date,
+  # the other publishes no effective range at all.
   - id: fresh-012
+    question: "How long does the Elk Grove Senior Pass program run?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["June 30, 2027", "re:\\$\\s?100,000"]
+    rationale: >
+      etran-senior-pass: the pilot is "available through June 30, 2027, or until
+      the $100,000 program fund is fully expended, whichever comes first." Today is
+      inside that window, so the answer states both halves of the condition. The
+      second half is not observable from any published page, so an answer that
+      reports only the date — or that assures the rider the program is still funded
+      — is wrong in the direction that strands a rider at the farebox.
+
+  - id: fresh-013
+    question: "Are the Elk Grove fares you have still the ones in effect?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      etran-fares carries a June 30, 2021 dateline and says the fares "will remain
+      the same at this time," with no effective range anywhere on the page. The
+      assistant cannot verify a fare period that was never published, so the only
+      honest answer is the snapshot date it holds plus a pointer to SacRT. This is
+      the Yolobus lesson in the opposite shape: there the committed range had
+      expired, here there is no range to check.
+  - id: fresh-020
+    question: "Can I use a UC Davis Zip Pass on Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    forbidden_content: ["is still valid", "you can still use", "will be accepted"]
+    rationale: >
+      A fresh page can carry a retired product, and containment cannot catch it
+      because nothing about the document is stale. The Yolobus fares page
+      refreshed 2026-08-13, carrying the current 2026-2027 fare period, lists
+      "UC Davis Zip Pass: with valid student ID" among accepted passes. ZipPass
+      is a mobile ticketing app, not a card, and it is retired. Yolobus says so
+      itself at yolobus.com/zippass/: "The ZipPass mobile app has been
+      discontinued", with the last day to use existing passes given as
+      2026-04-30. The corpus independently holds SacRT's notice of the same
+      2026-04-30 date (see fresh-003), and Unitrans retired its side on
+      2026-06-30. So yolobus.com contradicts itself: one page retires the app,
+      another lists it as valid fare media for the current fare period.
+
+      So the assistant is asked about a pass its only in-scope source says is
+      accepted and that no longer exists. It cannot be expected to know the
+      retirement — the Unitrans announcement is not in the corpus, because
+      unitrans.ucdavis.edu returns 403 to the project's crawler (ADR 0002,
+      re-checked 2026-08-12). What it must do is decline to assert present-tense
+      validity and disclose the date its information carries, so a rider has
+      both the claim and the means to check it. `forbidden_content` pins the
+      phrasings that would send a student to the farebox with a dead pass.
+
+      The stronger case — asking without naming an agency, and requiring the
+      assistant to surface SacRT's end date against Yolobus's acceptance list —
+      is deliberately not written yet: retrieval filters to a single agency when
+      the question names one, so it would need an unscoped question, and it may
+      not pass. Worth adding once cross_agency is healthy, as an honest failure
+      rather than a broken gate.
+
+  - id: fresh-014
     question: "Can I still buy a 7-Day Pass on Santa Cruz METRO?"
     agency_scope: SCMTD
     language: en
@@ -122,7 +194,7 @@ cases:
       the whole METRO fare table — it is a rule that took effect in the current
       fare period, which is how we know the snapshot is not stale.
 
-  - id: fresh-013
+  - id: fresh-015
     question: "Can I tap my credit card to pay on a Santa Cruz METRO bus today?"
     agency_scope: SCMTD
     language: en

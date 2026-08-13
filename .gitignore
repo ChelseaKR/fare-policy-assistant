@@ -47,3 +47,8 @@ CLAUDE-fare-assistant.md
 
 # runtime-fetched portfolio-standards (never commit)
 .standards/
+
+# Transient: written by `ingest fetch` when a source is unreachable, read by
+# the corpus-freshness workflow, never committed. deploy.sh refuses a dirty
+# tree, so this must not linger after a local refresh.
+corpus/raw/fetch-failures.json

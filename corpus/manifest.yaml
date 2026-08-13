@@ -14,6 +14,41 @@
 #   unitrans.ucdavis.edu was in the original pilot list but its WAF returns 403 to
 #   non-browser clients; per the "polite fetching only" rule it was dropped and
 #   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
+#   Re-checked 2026-08-12 before adding a sixth agency, and unchanged. Its
+#   robots.txt is permissive (HTTP 200, stock Drupal, nothing disallowed under
+#   /passes, /fare-policy, or /other-passes-and-accepted-fares, no Crawl-delay,
+#   no Content-Signal header on any response), but every HTML page still
+#   returns a Cloudflare 403 to this project's own fetcher, from a residential
+#   IP rather than a datacenter one. robots.txt and the WAF disagree and the
+#   WAF is what a fetcher meets. Still excluded. Evidence in docs/decisions/0002.
+#
+# Elk Grove e-tran, permission findings (checked 2026-08-12). Two candidate hosts
+# were checked before the corpus entries below were written, and BOTH were ruled
+# out; the pages actually catalogued come from sacrt.com, already cleared above:
+#   elkgrove.gov  NO-GO. elkgrovecity.org 301s to elkgrove.gov. robots.txt itself
+#                 returns 200 and allows * (excluding /core/, /profiles/, /admin/,
+#                 /search*, /user/*), but every HTML path — including the site
+#                 root — returns HTTP 403 with a Cloudflare "Attention Required!"
+#                 interstitial to this project's identified research user agent.
+#                 That is the Unitrans wall (ADR 0002), and the same rule applies:
+#                 we do not spoof a browser user agent to get around a WAF, so the
+#                 City of Elk Grove's own transit pages are not fetched at all.
+#   www.e-tran.org NO-GO, and not for a robots reason: its robots.txt is fully
+#                 permissive (`Disallow:` empty, only /cgi-bin/ excluded). The
+#                 host is not the agency. It serves a stale third-party scrape of
+#                 sacrt.com — `<link rel="canonical" href="https://www.sacrt.com">`,
+#                 a footer reading "© 2022 Sacramento Regional Transit District",
+#                 and a trailing line reading "This is a free demo result from the
+#                 Wayback Machine Downloader. It is not a complete website." Its
+#                 sitemap.xml lists a single /trending/ URL and is stamped
+#                 "created with Free Online Sitemap Generator". Permission to crawl
+#                 a mirror is not authority to quote it as an agency's fare
+#                 schedule; excluded.
+#   Authoritative publisher: SacRT. e-tran and e-van annexed into SacRT in July
+#   2021, so Elk Grove fares are now published by SacRT on sacrt.com (cleared
+#   above, robots allows all bar wp internals) and fetched under the same
+#   Crawl-delay. Both Elk Grove pages below are HTML, not PDF; no PDF ingest
+#   (ADR 0008) was needed for this agency.
 #
 # Robots/permissions note for Santa Cruz METRO (checked 2026-08-12) — read this
 # one before trusting it, because METRO answers on two hosts and they do not say
@@ -74,6 +109,11 @@
 #            https://www.sacrt.com/terms-conditions/ exists but is purchase-order
 #            terms for vendors, not site or content terms. Footer: "© 2026
 #            Sacramento Regional Transit District. All rights reserved."
+#   E-tran   published on sacrt.com, so SacRT's line above governs; no separate
+#            terms page, checked 2026-08-12. The City of Elk Grove funds the
+#            Senior Pass program described on one of the pages but does not
+#            publish either page; elkgrove.gov is unreachable to this fetcher in
+#            any case (see the NO-GO note above).
 #   SCMTD    terms of use governing content reuse: none located, checked
 #            2026-08-12. The site publishes a "Privacy & Use Policy" at
 #            https://scmetro.org/organization/privacy-use/ (effective March 15,
@@ -201,8 +241,58 @@ documents:
     language: en
     license_note: "Public agency fare information."
 
+  # ── Elk Grove Transit Services (e-tran) ───────────────────────────────────
+  # Added as the sixth agency (2026-08-12). Scoped separately from SacRT on
+  # purpose: e-tran annexed into SacRT in July 2021, but the Elk Grove "E"-prefix
+  # routes still run their own fare table, and it differs from SacRT's core table
+  # on the numbers a rider is most likely to ask about — basic single ride $2.25
+  # vs SacRT's $2.50, transfer $0.50 vs SacRT's $0.25, daily $6.00 vs $7.00. Under
+  # one shared agency key those two tables would sit in the same retrieval bucket
+  # and the assistant could quote either figure for either question. A separate
+  # scope keeps the agency filter able to tell them apart.
+  #
+  # FARE PERIOD, verified 2026-08-12 (the Yolobus lesson: a committed fare period
+  # that has already expired is worse than no fare page at all):
+  #   etran-fares publishes NO effective range. Its dateline reads "June 30,
+  #   2021"; its metadata says published 2021-06-30, modified 2025-06-12; and its
+  #   body says the fares "will remain the same at this time," which was written
+  #   about July 2021. On its own that is ambiguous, not current. What makes it
+  #   current is the sibling page: etran-senior-pass, modified 2026-04-14,
+  #   describes a City program that launched 2026-03-30 and reimburses SacRT "at
+  #   the discounted single ride rate" for Elk Grove routes — i.e. SacRT was still
+  #   operating this fare table, with a discount tier, four months ago. The
+  #   $2.25/$1.10 figures also appear in the City's March 2026 council coverage of
+  #   that pilot. Treat the 2021 dateline as a stale *page* date over live fares,
+  #   not as a lapsed fare period. Re-check at the next corpus refresh; if a
+  #   future refresh finds the page still frozen at 2021 with no corroborating
+  #   sibling, contain it the way yolobus-fares was contained.
+  #   etran-senior-pass DOES publish an explicit range: "available through June
+  #   30, 2027, or until the $100,000 program fund is fully expended, whichever
+  #   comes first." Today (2026-08-12) is inside that window. The
+  #   fund-exhaustion condition is not observable from any published page, so the
+  #   assistant must never state the pass is still funded — only what the page
+  #   published. Eval case fresh-012 pins that behavior.
+  - id: etran-fares
+    agency: E-tran
+    agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional Transit District
+    title: "Elk Grove Transit Fares"
+    url: https://www.sacrt.com/elk-grove-transit-fares/
+    language: en
+    license_note: "Public agency fare information, published by SacRT; no Content-Signal served."
+  - id: etran-senior-pass
+    agency: E-tran
+    agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional Transit District
+    title: "Elk Grove Senior Pass"
+    url: https://www.sacrt.com/egsenior/
+    language: en
+    license_note: "Public agency fare information, published by SacRT; no Content-Signal served."
+  # No Spanish counterpart: sacrt.com serves Spanish through a Google Translate
+  # widget rather than published /es/ pages, so there is no Spanish source
+  # document to catalogue for this agency. The multilingual gap is deliberate.
+
   # ── Santa Cruz METRO ──────────────────────────────────────────────────────
-  # Added as the sixth agency (2026-08-12). Mid-size coastal California district,
+  # Added as the seventh agency (2026-08-12; written as the sixth, renumbered on
+  # merge because Elk Grove landed first). Mid-size coastal California district,
   # the same shape as MST and SBMTD, and like them a live Cal-ITP Benefits agency
   # (see scmtd-tap2cruz). Split three ways the way Yolobus is: the fare table, the
   # reduced-fare eligibility rules, and the account-based payment rules — because

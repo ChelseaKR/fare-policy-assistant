@@ -75,6 +75,7 @@ def fetch_all(only: set[str] | None = None) -> None:
 
     last_hit: dict[str, float] = {}
     failures = []
+    fetched = 0
     with httpx.Client(headers={"User-Agent": ua}, follow_redirects=True, timeout=30) as client:
         for doc in manifest["documents"]:
             if only and doc["id"] not in only:
@@ -113,11 +114,49 @@ def fetch_all(only: set[str] | None = None) -> None:
             (config.RAW_DIR / f"{doc['id']}.meta.yaml").write_text(
                 yaml.safe_dump(meta, sort_keys=False), encoding="utf-8"
             )
+            fetched += 1
             print(f"ok    {doc['id']}  {len(resp.content):>8} bytes  {resp.url}")
 
     if failures:
-        print(f"\n{len(failures)} document(s) failed; manifest entries unchanged.", file=sys.stderr)
-        raise SystemExit(1)
+        # Partial success is success. Every document that fetched has already
+        # been written above, so exiting non-zero here does not undo them: it
+        # aborts the workflow step, and the refresh, the diff, and the pull
+        # request that would have carried them never run. The successful
+        # snapshots are then discarded with the runner.
+        #
+        # That is not hypothetical. Every scheduled corpus-freshness run from
+        # 2026-07-13 through 2026-08-10 failed this way: MST returned 403 to
+        # GitHub's runners (it serves other networks fine) and hta-fares 404'd
+        # on a since-corrected URL, so five failures threw away the six
+        # documents that fetched. Yolobus published its 2026-2027 fares on
+        # July 1 and the corpus did not see them for two months, which left the
+        # document contained and the cross_agency suite at zero.
+        #
+        # So: fail loudly when NOTHING was retrieved, because that means the
+        # fetcher itself is broken. Otherwise report what failed, keep what
+        # worked, and let the reviewer see both in the pull request.
+        summary = f"{len(failures)} of {len(failures) + fetched} document(s) failed"
+        if not fetched:
+            print(f"\n{summary}; nothing was retrieved.", file=sys.stderr)
+            raise SystemExit(1)
+        print(
+            f"\n{summary}; keeping the {fetched} that succeeded. "
+            "Their manifest entries are unchanged.",
+            file=sys.stderr,
+        )
+        failure_report = config.RAW_DIR / "fetch-failures.json"
+        failure_report.write_text(
+            json.dumps(
+                {"failed": [{"doc_id": d, "error": e} for d, e in failures]},
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    else:
+        # Never leave a stale report behind to be read as a current failure.
+        (config.RAW_DIR / "fetch-failures.json").unlink(missing_ok=True)
 
 
 # ── clean + chunk ────────────────────────────────────────────────────────────

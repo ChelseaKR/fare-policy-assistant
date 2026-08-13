@@ -213,5 +213,5 @@ cases:
     language: es
     expected_behavior: answer
     required_facts: ["re:\\$\\s?2[.,]00"]
-    mirror_of: ground-030
-    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-030 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."
+    mirror_of: ground-033
+    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-033 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."

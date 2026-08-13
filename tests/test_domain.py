@@ -28,6 +28,7 @@ def test_reexports_match_the_profile():
             "Yolobus",
             "SacRT",
             "HTA",
+            "E-tran",
             "SCMTD",
         )
     )
