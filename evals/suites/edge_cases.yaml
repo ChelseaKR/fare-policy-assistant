@@ -441,3 +441,56 @@ cases:
     required_facts: ["62"]
     requires_handoff: true
     rationale: "etran-senior-pass: the City-funded pilot is open to Elk Grove residents aged 62+, and a rider boards by showing either the Elk Grove Senior Transit Pass or a government-issued photo ID proving age. The passes are issued at Elk Grove City Hall, District 56, and SacRT's Customer Service Center at 1225 R Street, where Elk Grove residency and proof of age are required. The answer states the published criterion and routes the rider to whoever issues the pass; it never rules that this rider qualifies (RR4)."
+
+  # Santa Cruz METRO. Three boundaries METRO actually publishes, plus the one
+  # thing its corpus deliberately does not contain (edge-053).
+  - id: edge-052
+    question: "I'm 68 and I have a Medicare card. Can I use it to apply for the Santa Cruz METRO Discount Photo ID Card?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Mm]edicare", "65"]
+    requires_handoff: true
+    rationale: "scmtd-accessibility publishes the same document in two roles and they do not match. Under 'Older Adults ... must present one of the following', a Medicare ID Card IS accepted proof to a bus operator when boarding at the discount fare. Under 'Discount Photo ID Cards / Application Criteria for Older Adults', the accepted identification is the same list 'except Medicare ID'. So the honest answer is: yes for riding today, no for the card application, where METRO wants proof of the 65+ age (driver's license, State ID, passport, birth certificate, Senior Citizen ID). An answer that collapses the two roles into one yes or one no is wrong in a way the rider only discovers at the Customer Service window."
+
+  - id: edge-053
+    question: "If I pay with a contactless card on Santa Cruz METRO, what is the most I can be charged in one day?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:cap", "re:31[ -]day"]
+    requires_handoff: true
+    rationale: "scmtd-tap2cruz states that a daily cap and a rolling 31-day cap exist, that the 31-day period starts with the first tap, and that contactless 'will never cost more than the standard Fixed Route fares' — but it publishes the cap AMOUNTS only in a fare-table image, which the pipeline does not ingest (HTML and PDF only, ADR 0008). So no corpus passage contains the daily cap figure. Same shape as edge-038: the answer must give the rule it can cite, say the amount is not in the published text it has, and send the rider to METRO's fare chart or Customer Service (831) 425-8600 — not quote a number. Quoting the single-ride $2.00 as if it answered the question is the specific failure here, because the adult day cap is lower than the $6.00 cash Day Pass and a rider told '$2.00 a ride' will over-pay by buying a pass."
+
+  - id: edge-054
+    question: "My 16-year-old rides Santa Cruz METRO — do they get the discount fare?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:free", "re:65"]
+    rationale: "scmtd-fares-passes: METRO's Discount Fare is defined as 'adults age 65 and over, people with disabilities' — a 16-year-old is not in it. The right answer is better than the discount fare and comes from a different program: the Youth Cruz Free Program, under which K-12 students ride FREE on all routes within Santa Cruz County. The trap is real and named: MST, in the same corpus and the neighboring county, gives its discount fare to '18 years and under', so a model that has learned one California youth rule will apply it here. Note the limit — Youth Cruz Free is local service only; the Amtrak/Highway 17 Express is a separate tier."
+
+  - id: edge-055
+    question: "On Santa Cruz METRO I sometimes tap my phone and sometimes tap the plastic card from the same bank account. Does my fare still cap?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:same payment method"]
+    rationale: "scmtd-tap2cruz: 'You must use the same payment method throughout all your trips to qualify for benefits like fare capping, and automatic discount fares', and the Tip immediately above it is explicit that a physical card and its digital-wallet twin 'count as different payment methods'. Splitting taps across the two silently forfeits the cap. This is the account-based failure mode a rider cannot see happening, and it is published, so the assistant has no excuse for missing it."
+
+  - id: edge-056
+    question: "I'm a veteran — can I get the discount fare on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Vv]eteran", "re:Cal-?ITP"]
+    requires_handoff: true
+    rationale: "R1-6 two-ways-to-qualify, and the two ways do not describe the same veteran. At the farebox (scmtd-accessibility), the only veteran document METRO lists is 'A Disabled Veteran's ID Card', filed under 'People with disabilities' — so that path runs through a service-connected disability. Through contactless payment (scmtd-tap2cruz), 'Discounted contactless fares are now available for older adults (ages 65+), Veterans, and Medicare cardholders' via CalITP Benefits, with no disabled qualifier attached. A veteran without a disability ID is served by the second and not obviously by the first. The answer must present both paths and their difference rather than merging them into one 'veterans get the discount', and must not rule on this rider."
+
+  - id: edge-057
+    question: "If I have a Santa Cruz METRO Discount Photo ID Card, does my 10-year-old ride free with me?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:discount fare rate|discount rate", "re:gold dot"]
+    rationale: "scmtd-accessibility, 'Discount Photo ID Cards': children age 17 and under 'may ride at the discount fare rate when accompanying a parent who travels with a METRO Discount Photo ID Card', and only once Attachment B has been filed and a 'gold dot' added to the card. Discounted is not free, and the benefit is not automatic — both are easy to overstate, especially next to the neighbouring passage where a Personal Care Attendant genuinely does ride free (green dot). The corpus also gives this child a second, better route the answer may mention: a K-12 student rides free on local service under Youth Cruz Free regardless of the parent's card."

@@ -132,6 +132,14 @@ def _serialized(payload: object) -> bytes:
 
 
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
+    # These goldens are meant to move only when the logical release genuinely
+    # changes, and to make you say why in the diff when it does. The domain
+    # profile's `scopes` and `aliases` are part of the config identity (see
+    # release_identity.py, the "domain" block), so an assistant that answers for
+    # a new agency is a different logical release and must not keep the previous
+    # release_version. Corpus content is not in this hash — that is
+    # `corpus_version`, pinned separately — so ingest alone would not have moved
+    # these three; registering the scope did.
     first = _descriptor(config_case)
     reversed_environment = dict(reversed(list(config_case.environment.items())))
     second_config = _config(config_case, environment=reversed_environment)
@@ -146,19 +154,29 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     assert first == second
     # These goldens bind the whole behavior-complete config, which includes the
     # active domain profile's scopes and aliases. They move when the domain
-    # genuinely changes and must not move otherwise. Last rebound 2026-08-13,
-    # when Elk Grove Transit Services (E-tran) was added as the sixth scope with
-    # its rider aliases; the previous values were 56ef528a…d337 / fbc9799c…e675
-    # / 249b0835…907a.
+    # genuinely changes and must not move otherwise.
+    #
+    # Rebound 2026-08-12 on the merge that brought the sixth and seventh agencies
+    # together. Two branches each rebound these values off the five-agency base:
+    # Elk Grove Transit Services (E-tran, 4 aliases) landed first as the sixth
+    # scope, taking them to 24314b16…733a / 9c48bbe9…a3c7 / 37d9f967…cab7; Santa
+    # Cruz METRO (SCMTD, 6 aliases) rebound the same five-agency base separately
+    # to 6620411d…5ebb5 / fdb1a140…9fdc2 / b4d99a2c…9764e. Neither of those two is
+    # what HEAD ships, because HEAD now carries BOTH: a seven-entry `scopes` tuple
+    # and all ten new aliases in one domain block, which is a third input and so a
+    # third identity. The values below were re-derived by building the descriptor
+    # from this fixture against the merged profile, not lifted from either branch
+    # or from a failure message. Before either addition the values were
+    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "24314b16d4b091e21925877c6859959502b3d74a4237c16dde66cdfbdd20733a"
+        first.config_version == "fbc8438da69f4247781bde06c226914952353d6257965c3a60a7168d8290cecb"
     )
     assert (
-        first.release_version == "9c48bbe9a3eb159bf07ce3a1d4adc6e0c5d55e90b7416b241f5eca0050d3a3c7"
+        first.release_version == "51d712691e42af758fd3b1d1be6f6263b59174fef18b8d3ae924139117d037b0"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "37d9f96781ebd31e564ef612aa0a3140a80d77026d5d4771f6fa4af6f51cab7a"
+        == "c1750946be2fb6b27e5f6c929788c0b6ab52229c3264413f7c04eb100226e14e"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

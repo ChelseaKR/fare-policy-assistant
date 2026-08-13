@@ -29,6 +29,7 @@ def test_reexports_match_the_profile():
             "SacRT",
             "HTA",
             "E-tran",
+            "SCMTD",
         )
     )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact

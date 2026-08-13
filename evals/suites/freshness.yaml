@@ -176,3 +176,38 @@ cases:
       the question names one, so it would need an unscoped question, and it may
       not pass. Worth adding once cross_agency is healthy, as an honest failure
       rather than a broken gate.
+
+  - id: fresh-014
+    question: "Can I still buy a 7-Day Pass on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["July 1, 2026", "December 31, 2026"]
+    rationale: >
+      scmtd-fares-passes: "Beginning July 1, 2026, the 3-Day, 7-Day, & 15-Ride Pass
+      will no longer be sold. 3-Day, 7-Day, & 15-Ride passes purchased on/before
+      June 30, 2026 will be accepted through December 31, 2026." Both halves matter
+      and they point opposite ways: the rider cannot buy one today, and a rider who
+      already holds one has not lost it yet. An answer that gives only the
+      withdrawal reads as "your pass is worthless"; one that gives only the
+      honoring window reads as "go buy one". This is also the currency evidence for
+      the whole METRO fare table — it is a rule that took effect in the current
+      fare period, which is how we know the snapshot is not stale.
+
+  - id: fresh-015
+    question: "Can I tap my credit card to pay on a Santa Cruz METRO bus today?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:[Ss]ummer 2026"]
+    rationale: >
+      A forward-looking statement whose own window is open right now, which is the
+      hardest freshness shape. scmtd-tap2cruz and scmtd-fares-passes both say METRO
+      "will launch Tap2Cruz ... in Summer 2026" — future tense — while the same
+      Tap2Cruz page says discounted contactless fares "are now available" via
+      Cal-ITP Benefits. The snapshot date is inside the announced window, so the
+      corpus genuinely cannot settle whether the readers are live today. Correct
+      behavior is to report what METRO published, disclose the as-of date, and
+      decline to assert either that it has launched or that it has not, pointing
+      the rider at METRO. Asserting a launch is the failure; so is flatly denying
+      one.
