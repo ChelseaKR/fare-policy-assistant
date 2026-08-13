@@ -187,6 +187,93 @@ def test_fetch_all_records_failures_and_exits_nonzero(tmp_path, monkeypatch):
         ingest.fetch_all()
 
 
+def test_fetch_all_keeps_partial_success_and_reports_what_failed(tmp_path, monkeypatch):
+    """One unreachable source must not discard the sources that answered.
+
+    Regression test for the corpus-freshness loop: every scheduled run from
+    2026-07-13 to 2026-08-10 exited non-zero because some documents 404'd or
+    403'd, which aborted the step before ingest and threw away the documents
+    that had fetched successfully. Yolobus went two months past a published
+    fare change as a result.
+    """
+    import json as _json
+
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "reachable",
+                "agency": "Yolobus",
+                "agency_full": "Yolobus",
+                "title": "Fares",
+                "url": "https://yolobus.com/fares/",
+                "language": "en",
+            },
+            {
+                "id": "blocked",
+                "agency": "MST",
+                "agency_full": "MST",
+                "title": "Fares",
+                "url": "https://mst.org/fares/",
+                "language": "en",
+            },
+        ],
+    }
+    _point_config_at(tmp_path, monkeypatch, manifest)
+
+    def handler(request):
+        if "mst.org" in str(request.url):
+            return httpx.Response(403, content=b"forbidden")
+        return httpx.Response(200, content=b"<html><body><main>Fares</main></body></html>")
+
+    monkeypatch.setattr("assistant.ingest.httpx.Client", _mock_client(handler))
+
+    from assistant import config, ingest
+
+    ingest.fetch_all()  # must NOT raise: one source answered
+
+    assert (config.RAW_DIR / "reachable.html").exists()
+    assert (config.RAW_DIR / "reachable.meta.yaml").exists()
+    assert not (config.RAW_DIR / "blocked.html").exists()
+
+    report = _json.loads((config.RAW_DIR / "fetch-failures.json").read_text())
+    assert [f["doc_id"] for f in report["failed"]] == ["blocked"]
+
+
+def test_fetch_all_clears_a_stale_failure_report_on_a_clean_run(tmp_path, monkeypatch):
+    manifest = {
+        "user_agent": "test-agent/0.1",
+        "crawl_delay_seconds": 0,
+        "documents": [
+            {
+                "id": "reachable",
+                "agency": "Yolobus",
+                "agency_full": "Yolobus",
+                "title": "Fares",
+                "url": "https://yolobus.com/fares/",
+                "language": "en",
+            }
+        ],
+    }
+    _point_config_at(tmp_path, monkeypatch, manifest)
+    page = b"<html><body><main>x</main></body></html>"
+    monkeypatch.setattr(
+        "assistant.ingest.httpx.Client",
+        _mock_client(lambda r: httpx.Response(200, content=page)),
+    )
+
+    from assistant import config, ingest
+
+    config.RAW_DIR.mkdir(parents=True, exist_ok=True)
+    stale = config.RAW_DIR / "fetch-failures.json"
+    stale.write_text('{"failed": [{"doc_id": "blocked", "error": "old"}]}\n', encoding="utf-8")
+
+    ingest.fetch_all()
+
+    assert not stale.exists(), "a clean run must not leave last week's failures readable as current"
+
+
 def test_fetch_all_only_filter_skips_unselected_docs(tmp_path, monkeypatch):
     manifest = {
         "user_agent": "test-agent/0.1",
