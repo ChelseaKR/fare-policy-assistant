@@ -37,14 +37,15 @@ not checked are not oversights, and each says what is left.
       cutoffs, income limits, document alternatives, what stacks with what).
       The boundary that matters most here is not an age: it is that the reduced
       fare is a *fixed-route* suspension, so a rider who rides free on the bus
-      still pays $1.25 on Handy Ride (`edge-049`).
+      still pays $1.25 on Handy Ride (`edge-056`).
 - [x] Cases mirrored into the real suites: `groundedness`, `refusal`,
       `cross_agency`, `multilingual`, `freshness` — matching the coverage the
-      other agencies get. 16 cases: ground-030..033, edge-049..055, fresh-012,
-      ml-023, ml-024, xagency-004, refuse-028. `make coverage` reported three
-      FAX blind spots (veteran, youth/student, child free) after the first
-      thirteen; ground-033, edge-054, and edge-055 close them, and the matrix
-      now reports no blind spot for any agency.
+      other agencies get. 16 cases: ground-034..037, edge-056..062, fresh-014,
+      ml-023, ml-024, xagency-007, refuse-028 — renumbered above e-tran's when
+      that agency merged first, and nothing but the ids changed. `make coverage`
+      reported three FAX blind spots (veteran, youth/student, child free) after
+      the first thirteen; ground-037, edge-061, and edge-062 close them, and the
+      matrix now reports no blind spot for any agency.
 - [x] Every `draft: true` flag removed and the `draft_fax.yaml` file deleted
       once its cases have moved into the real suites.
 
@@ -59,7 +60,7 @@ not checked are not oversights, and each says what is left.
 - [ ] New rider-facing behavior validated with a live `make eval` if it touched
       prompts / retrieval / answer (see CONTRIBUTING.md). **Not done.** No live
       run ships with this PR, so the 16 cases have never been scored against a
-      real model and `EVALS.md` still describes the five-agency corpus. The
+      real model and `EVALS.md` still describes a corpus without FAX. The
       provenance waiver in `evals/stale_acknowledged.json` says so out loud.
 - [ ] `prompts/system.txt` updated to name FAX. **Not done, deliberately.** The
       prompt still enumerates five agencies and instructs the model to decline
@@ -67,5 +68,7 @@ not checked are not oversights, and each says what is left.
       fifth-agency PR left the prompt at four and a follow-up consistency pass
       (`746df4c`) called it real drift, fixed it to v5, and re-validated. The
       same split applies here, because a prompt edit changes rider-facing
-      behavior and CONTRIBUTING requires a live `make eval` to land one.
-      Sequence the follow-up before anyone points a rider at FAX answers.
+      behavior and CONTRIBUTING requires a live `make eval` to land one, and the
+      merged e-tran PR made the same call for the same reason. One consistency
+      pass should now name both new agencies at once. Sequence it before anyone
+      points a rider at FAX answers.

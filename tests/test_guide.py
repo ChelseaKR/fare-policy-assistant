@@ -9,6 +9,8 @@ page must not drop anything from.
 
 from __future__ import annotations
 
+import re
+
 from assistant.ingest import load_chunks
 from web.a11y import check_html
 from web.guide import render_guide
@@ -40,12 +42,29 @@ def test_no_input_fields_anywhere_in_the_page():
         assert tag not in html
 
 
+def _guide_chrome(html: str) -> str:
+    """The guide's own copy, with the verbatim corpus passages removed.
+
+    Quoted policy text lives in `<div class="passage">…</div>`. An agency is
+    free to write "a passport showing date of birth" in its own ID list, and
+    E-tran does; that is the corpus talking, not this page asking a rider for
+    a birth date. Stripping the quotes keeps the bait scan below pointed at the
+    hazard it is actually about — copy this project wrote that solicits rider
+    attributes — instead of failing whenever a new agency's published text
+    happens to contain one of the phrases.
+    """
+    return re.sub(r'<div class="passage">.*?</div>', "", html, flags=re.S)
+
+
 def test_never_computes_or_claims_eligibility():
     html = render_guide(load_chunks())
     assert "does not decide whether you qualify" in html
     # The excellence bar's specific hazard: no field inviting rider attributes.
+    # Structural proof that no field exists at all is
+    # `test_no_input_fields_anywhere_in_the_page`; this is the copy half.
+    chrome = _guide_chrome(html).lower()
     for bait in ("enter your age", "what is your age", "your income is", "date of birth"):
-        assert bait not in html.lower()
+        assert bait not in chrome
 
 
 def test_every_category_carries_a_source_and_next_step():

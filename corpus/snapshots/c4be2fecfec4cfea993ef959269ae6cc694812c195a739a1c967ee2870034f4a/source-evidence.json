@@ -2,6 +2,26 @@
   "observations": [
     {
       "chunk_fetch_date": "2026-08-13",
+      "doc_id": "etran-fares",
+      "effective_format": "html",
+      "final_url": "https://www.sacrt.com/elk-grove-transit-fares/",
+      "http_status": 200,
+      "raw_bytes": 152096,
+      "raw_sha256": "f810a928fc8771ae67ad5df1a2351b2c7db7cfb54ba5e16607939b8f93b57013",
+      "requested_url": "https://www.sacrt.com/elk-grove-transit-fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-08-13",
+      "doc_id": "etran-senior-pass",
+      "effective_format": "html",
+      "final_url": "https://www.sacrt.com/egsenior/",
+      "http_status": 200,
+      "raw_bytes": 157701,
+      "raw_sha256": "2dbd624a2e44ed81452ef4230c744dd1da2f5762524ab5a0780244f7d08b286c",
+      "requested_url": "https://www.sacrt.com/egsenior/"
+    },
+    {
+      "chunk_fetch_date": "2026-08-13",
       "doc_id": "fax-fares",
       "effective_format": "html",
       "final_url": "https://www.fresno.gov/transportation/fares-passes/",

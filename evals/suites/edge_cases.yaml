@@ -419,7 +419,7 @@ cases:
   # *suspension* on fixed route only — the same rider still pays on paratransit
   # — so "your fare is free" is right and wrong in the same sentence depending
   # on which service the rider is asking about.
-  - id: edge-049
+  - id: edge-056
     question: "I have a FAX reduced fare ID and I ride the bus for free. Is Handy Ride free for me too?"
     agency_scope: FAX
     language: en
@@ -434,7 +434,7 @@ cases:
       disabled rider on a fixed income that a trip is free when it costs $1.25
       each way. Both the $1.25 and the fixed-route-only limit must appear.
 
-  - id: edge-050
+  - id: edge-057
     question: "I'm 60 and I have a Medicare card. Can I get the FAX reduced fare, or do I have to be 65?"
     agency_scope: FAX
     language: en
@@ -442,7 +442,7 @@ cases:
     required_facts: ["Medicare", "65"]
     rationale: "fax-fares lists Reduced Fare riders as seniors 65 or older with ID, people with disabilities with valid ID, OR Medicare card holders. Two independent paths (R1-6): age is not a precondition for the Medicare path, and the answer must not merge them or rule on the rider."
 
-  - id: edge-051
+  - id: edge-058
     question: "Where do I go in person to get the FAX reduced-fare ID card, and what hours?"
     agency_scope: FAX
     language: en
@@ -451,7 +451,7 @@ cases:
     requires_handoff: true
     rationale: "fax-reduced-fare-program: apply at the FAX Manchester Transit Center, 3590 N. Blackstone Ave.; ID cards are made Monday through Friday from 8:30 a.m. to 3:30 p.m. The next step is where and when, and both are in the passage (RR1, E6)."
 
-  - id: edge-052
+  - id: edge-059
     question: "I have a disability but no Medicare card. What else can I bring to qualify for the FAX reduced fare?"
     agency_scope: FAX
     language: en
@@ -459,7 +459,7 @@ cases:
     required_facts: ["re:SSI/SSDI|Social Security Disability", "re:[Pp]lacard"]
     rationale: "fax-reduced-fare-program lists three alternative eligibility documents alongside a federal or state photo ID: a Medicare card, a DMV Disabled Person Placard Receipt, or an SSI/SSDI award letter dated within 12 months. The document-alternatives boundary: naming only the Medicare card would send a qualifying rider away."
 
-  - id: edge-053
+  - id: edge-060
     question: "My personal care attendant rides with me on FAX. Do they pay?"
     agency_scope: FAX
     language: en
@@ -474,7 +474,7 @@ cases:
       condition sends someone to the curb with an attendant who has not been
       approved yet.
 
-  - id: edge-054
+  - id: edge-061
     question: "My 10-year-old rides FAX with me. Does she pay?"
     agency_scope: FAX
     language: en
@@ -482,7 +482,7 @@ cases:
     required_facts: ["12", "free"]
     rationale: "fax-fares: children age 12 and under ride free, children under 6 must be accompanied by an adult, and the table's note adds that children must be accompanied by a fare-paying family member. A 10-year-old is inside the free range; the accompaniment condition is what makes the answer complete."
 
-  - id: edge-055
+  - id: edge-062
     question: "I take classes at Fresno City College. What do I pay on FAX?"
     agency_scope: FAX
     language: en
@@ -495,3 +495,29 @@ cases:
       buy single fares at $0.75. Fresno City College is in the subsidized group,
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
+  # Elk Grove Transit Services (e-tran) boundaries. Each fact below is in the
+  # snapshot cited in its rationale; none is inferred.
+  - id: edge-049
+    question: "I only ride Elk Grove routes E110 through E116. Is the cheaper Elk Grove monthly pass enough for me?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:E110", "re:\\$\\s?80"]
+    rationale: "etran-fares publishes two 31-day passes with different route coverage: the Local Monthly Pass ($80.00) is valid only on routes E110-E116, while the Monthly Unrestricted Pass ($100.00) covers every route with an 'E' designation. A rider who names only E110-E116 is inside the Local pass's coverage, so the answer must distinguish the two rather than quoting one monthly price."
+
+  - id: edge-050
+    question: "I am boarding an Elk Grove bus with three children who are all under 5. What do I pay for them?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\btwo\\b|\\b2\\b", "re:\\$\\s?1\\.10"]
+    rationale: "etran-fares 'Free Fares': up to two children under 5 ride free with a paying adult, and 'Student fares apply for additional children' — the student single fare in the same document's table is $1.10. The boundary is the third child, which is exactly where an answer that stops at 'children under 5 ride free' goes wrong."
+
+  - id: edge-051
+    question: "I am 65 and I live in Elk Grove. How do I start riding the E routes for free?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    requires_handoff: true
+    rationale: "etran-senior-pass: the City-funded pilot is open to Elk Grove residents aged 62+, and a rider boards by showing either the Elk Grove Senior Transit Pass or a government-issued photo ID proving age. The passes are issued at Elk Grove City Hall, District 56, and SacRT's Customer Service Center at 1225 R Street, where Elk Grove residency and proof of age are required. The answer states the published criterion and routes the rider to whoever issues the pass; it never rules that this rider qualifies (RR4)."

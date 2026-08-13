@@ -1,6 +1,22 @@
 archive_schema: 2
 scope: web_policy
 documents:
+- id: etran-fares
+  agency: E-tran
+  agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional
+    Transit District
+  title: Elk Grove Transit Fares
+  url: https://www.sacrt.com/elk-grove-transit-fares/
+  format: html
+  language: en
+- id: etran-senior-pass
+  agency: E-tran
+  agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional
+    Transit District
+  title: Elk Grove Senior Pass
+  url: https://www.sacrt.com/egsenior/
+  format: html
+  language: en
 - id: fax-fares
   agency: FAX
   agency_full: Fresno Area Express (City of Fresno)

@@ -76,24 +76,19 @@ documents:
   url: https://hta.org/fares/
   format: null
   language: en
-- id: fax-fares
-  agency: FAX
-  agency_full: Fresno Area Express (City of Fresno)
-  title: Fares & Passes
-  url: https://www.fresno.gov/transportation/fares-passes/
+- id: etran-fares
+  agency: E-tran
+  agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional
+    Transit District
+  title: Elk Grove Transit Fares
+  url: https://www.sacrt.com/elk-grove-transit-fares/
   format: null
   language: en
-- id: fax-reduced-fare-program
-  agency: FAX
-  agency_full: Fresno Area Express (City of Fresno)
-  title: Reduced Fare Program Instructions
-  url: https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf
-  format: pdf
+- id: etran-senior-pass
+  agency: E-tran
+  agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional
+    Transit District
+  title: Elk Grove Senior Pass
+  url: https://www.sacrt.com/egsenior/
+  format: null
   language: en
-- id: fax-reduced-fare-program-es
-  agency: FAX
-  agency_full: Fresno Area Express (City of Fresno)
-  title: Programa de Tarifas Reducidas (Spanish reduced-fare instructions)
-  url: https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf
-  format: pdf
-  language: es

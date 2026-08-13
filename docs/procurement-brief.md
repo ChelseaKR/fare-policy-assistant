@@ -12,8 +12,9 @@ Last updated 2026-07-17.
 ## What it is in one paragraph
 
 A retrieval-augmented assistant that answers rider questions about published
-fare and reduced-fare policy for five California transit agencies (MST, SBMTD,
-Yolobus, SacRT, HTA), in English or Spanish, with a citation on every answer.
+fare and reduced-fare policy for seven California transit agencies (MST, SBMTD,
+Yolobus, SacRT, HTA, e-tran, FAX), in English or Spanish, with a citation on
+every answer.
 The headline deliverable is the evaluation harness around it: 118 graded cases,
 deterministic safety checks, an LLM judge held to a different model than the one
 being graded, and a second, blind harness that re-scores the recorded answers
@@ -120,7 +121,7 @@ implying a sign-off that has not happened.
   pass count is a band (about 113 of 118), not a fixed number. The deterministic
   safety checks (no determination language, citation present, PII not echoed) do
   not vary.
-- The corpus is six agencies and a fixed snapshot date. Fare policy goes stale;
+- The corpus is seven agencies and a fixed snapshot date. Fare policy goes stale;
   the answer says so, and snapshots must be refreshed and evals re-run before any
   renewed use.
 

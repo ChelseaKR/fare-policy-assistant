@@ -1,5 +1,6 @@
 {
   "agencies": [
+    "E-tran",
     "FAX",
     "HTA",
     "MST",
@@ -8,15 +9,31 @@
     "Yolobus"
   ],
   "archive_schema": 2,
-  "archived_at": "2026-08-13T03:29:11+00:00",
+  "archived_at": "2026-08-13T03:39:06+00:00",
   "artifacts": {
     "chunks.jsonl": {
-      "bytes": 110010,
-      "sha256": "75a4b957e95d3b6330673a660f32b97f5ee145a740a5785ef8d44ae9c3d3313b"
+      "bytes": 119994,
+      "sha256": "cd44b2e851ac864c57c29c2b6f0fd9a413e54ef750fa8c05c389febb72851309"
     },
     "manifest.snapshot.yaml": {
-      "bytes": 2834,
-      "sha256": "6f254d1bb93653a2bbfce07b88c93644048786363f899761e303ad7164db0360"
+      "bytes": 3337,
+      "sha256": "d7914b52aaf87986436d72e84e3a27bb975e23c54e3a3ff21a337815f881a67a"
+    },
+    "raw/etran-fares.html": {
+      "bytes": 152096,
+      "sha256": "f810a928fc8771ae67ad5df1a2351b2c7db7cfb54ba5e16607939b8f93b57013"
+    },
+    "raw/etran-fares.meta.yaml": {
+      "bytes": 272,
+      "sha256": "2809f9c2550149dbfe6bc7dfa82f457a3d8c8f08ad019ef84e8e3bcb116cf06f"
+    },
+    "raw/etran-senior-pass.html": {
+      "bytes": 157701,
+      "sha256": "2dbd624a2e44ed81452ef4230c744dd1da2f5762524ab5a0780244f7d08b286c"
+    },
+    "raw/etran-senior-pass.meta.yaml": {
+      "bytes": 248,
+      "sha256": "472f0952730dc04ea5898c93ea919e29268dd25c5b3a84088a2d0c4bc8ef65ac"
     },
     "raw/fax-fares.html": {
       "bytes": 93302,
@@ -131,22 +148,22 @@
       "sha256": "bc681eada92dae7b6952d4dc22a24377954ce379a9056f47272e3557d814cea5"
     },
     "source-evidence.json": {
-      "bytes": 5696,
-      "sha256": "80ffdf424d918d9cb6cbfdbbb7618f7a2365693b3256347849ae8ac8f6135325"
+      "bytes": 6472,
+      "sha256": "86da4ff6c6da01a49c0f2bad5c6b49f4c93d0a873b9bd7ab864f6467cb650595"
     }
   },
   "as_of": "2026-08-13",
-  "chunks": 101,
-  "content_version": "4a5310c5315540e1f538e763468b2168a746f5e9720210908f51401b1b138705",
-  "content_version_short": "4a5310c53155",
-  "corpus_version": "f459805469ef",
-  "documents": 14,
+  "chunks": 109,
+  "content_version": "5aeb3637ab7725b41b681f0f72734918c39f41c3fbe18800ae65183536477571",
+  "content_version_short": "5aeb3637ab77",
+  "corpus_version": "227cb2da65b0",
+  "documents": 16,
   "evidence": "raw_and_receipts_verified",
   "identity_schemas": {
     "content": "fare-assistant.content.v1",
     "snapshot": "fare-assistant.snapshot.v1"
   },
   "scope": "web_policy",
-  "snapshot_version": "8b6d6da7a8105256b214fbc2542187f18a8ff3cbbded1f6fe90f748c67f71d14",
-  "snapshot_version_short": "8b6d6da7a810"
+  "snapshot_version": "c4be2fecfec4cfea993ef959269ae6cc694812c195a739a1c967ee2870034f4a",
+  "snapshot_version_short": "c4be2fecfec4"
 }

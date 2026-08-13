@@ -5,10 +5,11 @@ project, and this project cannot give you permission to reuse it.
 
 ## What is here
 
-Twelve web pages and two PDF documents published by six California transit
+Fourteen web pages and two PDF documents published by seven California transit
 agencies, fetched once each (nine on 2026-06-12, one refetched on 2026-08-10
-after its site moved, one refetched on 2026-08-13 UTC for a new fare period,
-and three added on 2026-08-13 UTC), plus everything derived from them:
+after its site moved, and six on 2026-08-13 UTC — one Yolobus refetch for a new
+fare period, two Elk Grove pages, three FAX documents), plus everything derived
+from them:
 
 | Path | What it holds |
 |---|---|
@@ -28,7 +29,8 @@ excerpts inside the failure traces in `EVALS.md` and `docs/eval-report.*`.
 Each agency's. Monterey-Salinas Transit, Santa Barbara MTD, Yolo County
 Transportation District (Yolobus), Sacramento Regional Transit District,
 Humboldt Transit Authority, and the City of Fresno (Fresno Area Express) each
-publish these documents on their own sites. Seven of the fourteen snapshots
+publish these documents on their own sites; Elk Grove Transit Services (e-tran)
+fares are published by SacRT, on sacrt.com, since the 2021 annexation. Seven of the fourteen snapshots
 carry an explicit "all rights reserved" line in the page footer; the four MST
 pages and the FAX fares page carry a bare copyright notice ("©2026
 Monterey-Salinas Transit", "© 2026 | City of Fresno"), which reserves the same
@@ -88,10 +90,11 @@ place to check whether what is snapshotted here still holds:
 | Yolobus (Yolo County Transportation District) | <https://yolobus.com/fares/> | no terms-of-use page located (checked 2026-08-12); site publishes a privacy policy only: <https://yolobus.com/privacy-policy/> |
 | Sacramento Regional Transit (SacRT) | <https://www.sacrt.com/fares/> | no website terms-of-use page located (checked 2026-08-12); <https://www.sacrt.com/terms-conditions/> exists but is purchase-order terms for vendors |
 | Humboldt Transit Authority (HTA) | <https://hta.org/fares/> | no terms-of-use page located (checked 2026-08-12) |
+| Elk Grove Transit Services (e-tran) | <https://www.sacrt.com/elk-grove-transit-fares/> | published by SacRT; the SacRT row above governs, and no separate e-tran terms page exists (checked 2026-08-12) |
 | Fresno Area Express (FAX), City of Fresno | <https://www.fresno.gov/transportation/fares-passes/> | <https://www.fresno.gov/internet-policy/> ("Internet Policy", linked from the site footer; it has a section headed "Copy Restrictions") |
 
 Where the table says "none located", that is the finding, not a gap someone
-forgot to fill: three of these six agencies publish no website terms of use we
+forgot to fill: three of these seven agencies publish no website terms of use we
 could find, and the absence of stated terms is not permission. Where a terms
 page does exist, this table points at it and stops. Read the agency's own page;
 do not rely on anyone else's characterization of it, including this one.

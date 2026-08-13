@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for six California transit agencies, wrapped in a
+and reduced-fare policies for seven California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -356,8 +356,8 @@ make fetch && make ingest
 
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
-Authority (HTA), and Fresno Area Express (FAX),
-snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
+Authority (HTA), Elk Grove Transit Services (e-tran), and Fresno Area Express
+(FAX), snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
 document. MST and SBMTD are the two agencies live

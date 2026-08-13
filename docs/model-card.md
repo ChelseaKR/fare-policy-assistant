@@ -5,10 +5,11 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-six California transit agencies: Monterey-Salinas Transit (MST), Santa
+seven California transit agencies: Monterey-Salinas Transit (MST), Santa
 Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
-Transit Authority (HTA), and Fresno Area Express (FAX). It explains published
-policy. It does not decide anything about any person.
+Transit Authority (HTA), Elk Grove Transit Services (e-tran), and Fresno Area
+Express (FAX). It explains published policy. It does not decide anything about
+any person.
 
 ## Intended users and uses
 
@@ -68,10 +69,9 @@ available behind a config switch.
 
 ## Data
 
-Twelve public web pages fetched 2026-06-12 (HTA added 2026-06-16) with an
-identified user agent,
-honoring robots.txt and crawl delays; URLs, dates, and license notes in
-`corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
+Fourteen public web pages and two public PDF documents, fetched with an
+identified user agent between 2026-06-12 and 2026-08-13, honoring robots.txt and
+crawl delays; URLs, dates, and license notes in `corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
 in the system.
 
 ## Evaluation

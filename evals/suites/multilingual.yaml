@@ -213,7 +213,7 @@ cases:
     language: es
     expected_behavior: answer
     required_facts: ["Medicare", "re:SSI/SSDI|Seguro Social"]
-    mirror_of: edge-052
+    mirror_of: edge-059
     rationale: "Spanish mirror of edge-052 against fax-reduced-fare-program-es, FAX's own Spanish translation of the reduced-fare instructions (not an untranslated shell — the body really is in Spanish). Same eligibility documents, answered from the Spanish source."
 
   - id: ml-024
@@ -222,5 +222,5 @@ cases:
     language: es
     expected_behavior: answer
     required_facts: ["re:\\$\\s?1[.,]00"]
-    mirror_of: ground-030
+    mirror_of: ground-034
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
