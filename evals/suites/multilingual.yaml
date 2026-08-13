@@ -206,3 +206,21 @@ cases:
     forbidden_content: ["usted califica", "usted es elegible"]
     mirror_of: edge-045
     rationale: "Spanish mirror of edge-045 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff. Mirror repaired 2026-08-05: this pointed at edge-034, the Yolobus case in the same RR4 family, so the pair compared an MST answer against a Yolobus answer and measured corpus difference as if it were language difference. edge-045 is the MST member of that family and asks this exact question in English."
+
+  - id: ml-023
+    question: "¿Qué documentos necesito para solicitar la tarifa reducida de FAX?"
+    agency_scope: FAX
+    language: es
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:SSI/SSDI|Seguro Social"]
+    mirror_of: edge-052
+    rationale: "Spanish mirror of edge-052 against fax-reduced-fare-program-es, FAX's own Spanish translation of the reduced-fare instructions (not an untranslated shell — the body really is in Spanish). Same eligibility documents, answered from the Spanish source."
+
+  - id: ml-024
+    question: "¿Cuánto cuesta un viaje sencillo en FAX?"
+    agency_scope: FAX
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]00"]
+    mirror_of: ground-030
+    rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."

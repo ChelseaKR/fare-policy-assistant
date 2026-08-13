@@ -414,3 +414,84 @@ cases:
     required_facts: ["re:Pearl Street|Reservation Road|Salinas Street"]
     requires_handoff: true
     rationale: "mst-fares Courtesy Cards: obtain an application in person at the MST Bus Stop Shop (201 Pearl Street), Marina Transit Exchange (280 Reservation Road), or Salinas Transit Center (110 Salinas Street). The next step is the location (RR1, E6)."
+
+  # FAX boundaries. The distinctive one is that FAX's reduced fare is a fare
+  # *suspension* on fixed route only — the same rider still pays on paratransit
+  # — so "your fare is free" is right and wrong in the same sentence depending
+  # on which service the rider is asking about.
+  - id: edge-049
+    question: "I have a FAX reduced fare ID and I ride the bus for free. Is Handy Ride free for me too?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.25", "re:not included|does not (apply|cover|include)|only.{0,30}fixed[- ]route|excluded"]
+    rationale: >
+      fax-fares: "Qualifying Reduced Fare riders can board any FAX Fixed Route
+      bus at no cost to the rider... Handy Ride is not included," and the Handy
+      Ride table charges the ADA-eligible rider $1.25 per ride. This is the case
+      that fails if the assistant answers from the headline fare alone: the
+      free reduced fare is real, and quoting it for a paratransit trip tells a
+      disabled rider on a fixed income that a trip is free when it costs $1.25
+      each way. Both the $1.25 and the fixed-route-only limit must appear.
+
+  - id: edge-050
+    question: "I'm 60 and I have a Medicare card. Can I get the FAX reduced fare, or do I have to be 65?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "65"]
+    rationale: "fax-fares lists Reduced Fare riders as seniors 65 or older with ID, people with disabilities with valid ID, OR Medicare card holders. Two independent paths (R1-6): age is not a precondition for the Medicare path, and the answer must not merge them or rule on the rider."
+
+  - id: edge-051
+    question: "Where do I go in person to get the FAX reduced-fare ID card, and what hours?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:3590 N\\.? Blackstone|Manchester Transit Center", "re:8:30"]
+    requires_handoff: true
+    rationale: "fax-reduced-fare-program: apply at the FAX Manchester Transit Center, 3590 N. Blackstone Ave.; ID cards are made Monday through Friday from 8:30 a.m. to 3:30 p.m. The next step is where and when, and both are in the passage (RR1, E6)."
+
+  - id: edge-052
+    question: "I have a disability but no Medicare card. What else can I bring to qualify for the FAX reduced fare?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:SSI/SSDI|Social Security Disability", "re:[Pp]lacard"]
+    rationale: "fax-reduced-fare-program lists three alternative eligibility documents alongside a federal or state photo ID: a Medicare card, a DMV Disabled Person Placard Receipt, or an SSI/SSDI award letter dated within 12 months. The document-alternatives boundary: naming only the Medicare card would send a qualifying rider away."
+
+  - id: edge-053
+    question: "My personal care attendant rides with me on FAX. Do they pay?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:note|letterhead|provider|verified"]
+    rationale: >
+      Two passages have to be held together. fax-fares prices a Personal Care
+      Attendant to an ADA certified individual at Free, and
+      fax-reduced-fare-program conditions it: the rider brings a note from their
+      healthcare provider on the provider's letterhead to Manchester Transit
+      Center, and the PCA rides free once MTC verifies it. "Free" without the
+      condition sends someone to the curb with an attendant who has not been
+      approved yet.
+
+  - id: edge-054
+    question: "My 10-year-old rides FAX with me. Does she pay?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["12", "free"]
+    rationale: "fax-fares: children age 12 and under ride free, children under 6 must be accompanied by an adult, and the table's note adds that children must be accompanied by a fare-paying family member. A 10-year-old is inside the free range; the accompaniment condition is what makes the answer complete."
+
+  - id: edge-055
+    question: "I take classes at Fresno City College. What do I pay on FAX?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:\\.75"]
+    rationale: >
+      fax-fares: students, faculty, and staff at Fresno State, Fresno City
+      College, and Clovis Community College swipe their ID for a free ride
+      because their institutions subsidize the fare, while "all other students"
+      buy single fares at $0.75. Fresno City College is in the subsidized group,
+      so the honest answer names the free path and the $0.75 path and says which
+      one the college falls in, without asserting the rider is enrolled.

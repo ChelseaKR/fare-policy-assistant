@@ -355,12 +355,15 @@ make fetch && make ingest
 ## Corpus
 
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
-(SBMTD), Yolobus, Sacramento Regional Transit (SacRT), and Humboldt Transit
-Authority (HTA), snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
+(SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
+Authority (HTA), and Fresno Area Express (FAX),
+snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
-the rest an honest cross-lingual one. MST and SBMTD are the two agencies live
+the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
+document. MST and SBMTD are the two agencies live
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
-verification domain.
+verification domain. FAX is the first Central Valley agency in the corpus and
+the first whose reduced fare is a funded suspension rather than a discount.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block

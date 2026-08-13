@@ -120,7 +120,7 @@ implying a sign-off that has not happened.
   pass count is a band (about 113 of 118), not a fixed number. The deterministic
   safety checks (no determination language, citation present, PII not echoed) do
   not vary.
-- The corpus is five agencies and a fixed snapshot date. Fare policy goes stale;
+- The corpus is six agencies and a fixed snapshot date. Fare policy goes stale;
   the answer says so, and snapshots must be refreshed and evals re-run before any
   renewed use.
 

@@ -5,10 +5,10 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-five California transit agencies: Monterey-Salinas Transit (MST), Santa
-Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), and
-Humboldt Transit Authority (HTA). It explains published policy. It does not
-decide anything about any person.
+six California transit agencies: Monterey-Salinas Transit (MST), Santa
+Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
+Transit Authority (HTA), and Fresno Area Express (FAX). It explains published
+policy. It does not decide anything about any person.
 
 ## Intended users and uses
 

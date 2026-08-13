@@ -41,7 +41,7 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA"),
+    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "FAX"),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -60,6 +60,10 @@ TRANSIT = DomainProfile(
         "eureka": "HTA",
         "arcata": "HTA",
         "redwood transit": "HTA",
+        "fax": "FAX",
+        "fresno": "FAX",
+        "fresno area express": "FAX",
+        "handy ride": "FAX",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

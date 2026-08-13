@@ -14,6 +14,14 @@
 #   unitrans.ucdavis.edu was in the original pilot list but its WAF returns 403 to
 #   non-browser clients; per the "polite fetching only" rule it was dropped and
 #   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
+#   www.fresno.gov (FAX) robots.txt checked 2026-08-12: "User-agent: * /
+#                Disallow: /wp-admin/ / Allow: /wp-admin/admin-ajax.php /
+#                Crawl-delay: 10", plus a Sitemap line. Nothing under
+#                /transportation/ or /wp-content/uploads/ is disallowed. The host
+#                is behind Cloudflare but served every page and PDF below with
+#                HTTP 200 to this project's identified user agent on the first
+#                try; no Content-Signal header and no Content-Signal line in
+#                robots.txt. Crawl-delay 10 honored.
 #
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
@@ -37,6 +45,10 @@
 #            https://www.sacrt.com/terms-conditions/ exists but is purchase-order
 #            terms for vendors, not site or content terms. Footer: "© 2026
 #            Sacramento Regional Transit District. All rights reserved."
+#   FAX      site terms: https://www.fresno.gov/internet-policy/ ("Internet
+#            Policy", linked from every page footer; it carries a section headed
+#            "Copy Restrictions" — read it there, not here). Footer: "© 2026 |
+#            City of Fresno". Checked 2026-08-12.
 #   HTA      terms of use: none located, checked 2026-08-12 (the site returns its
 #            home page with HTTP 200 for unknown paths, so a 200 on a guessed
 #            /terms/ URL is not evidence a terms page exists; the footer links no
@@ -157,6 +169,105 @@ documents:
     url: https://hta.org/fares/
     language: en
     license_note: "Public agency fare information."
+
+  # ── Fresno Area Express (City of Fresno) ──────────────────────────────────
+  # Added as the sixth agency (2026-08-12). First Central Valley agency in the
+  # corpus; every other one is coastal or Sacramento-region.
+  #
+  # FARE PERIOD (checked 2026-08-12). FAX publishes no effective-date range, so
+  # there is no expiry to compare today against. What the pages do carry:
+  #   * The $1.00 base fare is the fare the current page shows, and the page's
+  #     own site metadata reports it last modified 2026-03-25.
+  #   * The reduced fare is $0.00 — not a discount, a suspension. Both the page
+  #     ("For a Limited Time, Reduced Fares are Free") and the program PDF
+  #     ("Reduced Fare riders can ride free at this time while subsidy funding
+  #     is available", Rev. 03/2026) condition it on funding rather than on a
+  #     date. An answer that quotes the free reduced fare without that condition
+  #     is quoting a price that has no published end and no published guarantee.
+  #     The condition is in the ingested text, so the assistant can cite it.
+  # There is no fare capping and no account-based fare product here: no page on
+  # www.fresno.gov mentions a cap, and a site-wide search for "fare capping"
+  # returns nothing (checked 2026-08-12). FAX is flat-fare cash/pass with free
+  # 90-minute unlimited transfers, so a single-ride price is a complete answer
+  # for fixed route — which is why the transfer rule is ingested with it.
+  - id: fax-fares
+    agency: FAX
+    agency_full: Fresno Area Express (City of Fresno)
+    title: "Fares & Passes"
+    url: https://www.fresno.gov/transportation/fares-passes/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.fresno.gov/internet-policy/"
+  # The corpus's first PDF documents (ADR 0008 shipped the capability and left
+  # the first real one as a follow-up; this is it). Both are born-digital with a
+  # text layer, so no OCR extra is needed. The Spanish one is a real translation,
+  # not an untranslated shell — compare the mst-fares-benefits note above.
+  - id: fax-reduced-fare-program
+    agency: FAX
+    agency_full: Fresno Area Express (City of Fresno)
+    title: "Reduced Fare Program Instructions"
+    url: https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf
+    language: en
+    format: pdf
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.fresno.gov/internet-policy/"
+  - id: fax-reduced-fare-program-es
+    agency: FAX
+    agency_full: Fresno Area Express (City of Fresno)
+    title: "Programa de Tarifas Reducidas (Spanish reduced-fare instructions)"
+    url: https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf
+    language: es
+    format: pdf
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.fresno.gov/internet-policy/"
+  # Excluded FAX pages, and why. All five fetch fine; each would put a wrong
+  # fare, a dead product, or non-fare bulk into retrieval — the SBMTD /reduced/
+  # mistake (see above), mostly with a price attached.
+  #   /transportation/fax/handy-ride/ — fetched and ingested during this work,
+  #     then dropped. It chunks to 13 sections of which 8 are the ADA
+  #     reasonable-modification policy (request process, denial grounds,
+  #     complaint routing), which repeats "Fresno Area Express" often enough to
+  #     outrank the fare table: with the page in the corpus, "What does a 31-day
+  #     pass cost on Fresno Area Express?" returned two reasonable-modification
+  #     sections above fax-fares#3. Every Handy Ride fare it carries ($1.25 per
+  #     ride, $1.25 companion, PCA free, $36 31-day pass) is already on the
+  #     fares page. Its unique content — who is ADA-eligible for Handy Ride and
+  #     the number to call for an application — is a real corpus gap, but it is
+  #     eligibility for a *service*, not a fare, and it costs 13 chunks of
+  #     verbatim third-party text on the /offline reference to carry.
+  #   /transportation/fax/rider-tools/bus-riding-basics/ — carries "NOTICE TO
+  #     RIDERS WHO HAVE MEDICARE CARDS – Riders who possess a Medicare Card and
+  #     proper identification are eligible for a 50¢ one-way fare at all times."
+  #     Medicare cardholders currently ride free, which the same page says a few
+  #     paragraphs earlier ("At this time, eligible reduced fare riders can ride
+  #     free"). A page that contradicts itself on price is not a source.
+  #   /transportation/fax/frequently-asked-questions/ — two stale facts. Its
+  #     transfer rule ("transfer to two additional FAX buses ... not valid for
+  #     layover or return trips") was superseded on 2022-01-03 by unlimited
+  #     90-minute transfers, per FAX's own announcement of the change. It also
+  #     still sells a "10-Ride Card"; the current fares page sells 20- and
+  #     50-ride prepaid cards and no 10-ride product.
+  #   /transportation/attention-fax-reduced-fare-riders/ — the 2022-06-23 news
+  #     post announcing that the Kaiser Permanente grant made reduced fares free
+  #     from 2022-07-01. Useful history for why the fare is $0.00, but it is a
+  #     four-year-old announcement and reads as current if retrieved.
+  #   The "Current Fare Structure – English" PDF linked from the fares page
+  #     (wp-content/uploads/2026/03/2024_1206_NewStudentFareDecal_Farebox_O.pdf)
+  #     is a farebox decal image with no text layer. Extracting it needs the OCR
+  #     path, which ADR 0008 deliberately keeps out of CI. Its prices are on the
+  #     HTML fares page anyway. Worth knowing that the link the agency labels
+  #     "Current Fare Structure" resolves to a file named for December 2024.
+  # Oddities inside the text we DID ingest, found while writing the eval cases
+  # and left as-is because editing an agency's words would break the point of
+  # snapshotting them:
+  #   * fax-fares#1 prices the non-subsidized student single fare as ".75 cents"
+  #     where the fare table on the same page says $0.75. The table is right.
+  #   * fax-fares#4 says pass outlets may add a fee "for passes and tokens";
+  #     nothing else on the page sells a token, and the bulk products are
+  #     prepaid ride cards.
+  #   * fax-fares#5's legend defines key 4 (31 Day Student Fare), but no outlet
+  #     row in the table above it carries that key.
+  #   * fax-fares#6 contains "[email protected]" — Cloudflare's email-obfuscation
+  #     placeholder, which survives because ingest strips the <script> that
+  #     would rewrite it in a browser. Pre-existing, not FAX-specific:
+  #     mst-veterans-resource#1 has carried the same placeholder all along.
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents
