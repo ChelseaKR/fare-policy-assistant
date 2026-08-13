@@ -239,3 +239,56 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?5\\.00"]
     rationale: "hta-fares: 1 Day Pass $5.00."
+
+  # ── SolTrans (Solano County Transit), added 2026-08-12 ─────────────────────
+  # NOTE for anyone adding fare-amount cases here: SolTrans' fare grid is
+  # rendered as Webflow divs whose product-type headings ("Cash Fares", "Day
+  # Passes", "10-Ride Passes", "31-Day Passes") carry no body text, so the
+  # ingest chunker drops them and soltrans-fare-table#0 arrives as four
+  # undifferentiated Adult/Youth/Reduced price blocks in a row. The cases below
+  # deliberately target facts stated in *prose*, which survives the round trip
+  # intact. See the PR description; the chunker limitation is filed, not fixed
+  # here, because changing it would rewrite every other agency's chunks too.
+  - id: ground-030
+    question: "Does a 17-year-old have to pay to ride SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free"]
+    rationale: >
+      soltrans-fare-table prices every SolTrans service for "Youth (18 &under)"
+      as FREE — local, SolanoExpress within and outside Solano County, and Route
+      82 — and the label sits directly on the figures, so this is one of the few
+      fare amounts on that page the chunker preserves unambiguously. SolTrans'
+      own August 2025 press release confirms the Youth Ride Free program runs
+      through June 2027, i.e. it covers today.
+
+  - id: ground-031
+    question: "If I ride a SolTrans local bus and then take the Vallejo ferry to San Francisco, do I get any credit?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.75"]
+    rationale: >
+      soltrans-clipper-card: "Transfers between SolTrans and the Vallejo SF Bay
+      Ferry receive a local fare credit of $1.75 for adults, $1.50 for youth, and
+      $0.85 for Seniors/Persons with Disabilities/Medicare card holders." Prose,
+      not a grid, so the amounts stay attached to their rider classes. This is
+      SolTrans' own published transfer arrangement, which is why it is a
+      groundedness case rather than a third-party-assertion case.
+
+  - id: ground-032
+    question: "How much of a discount does Clipper START give on SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50"]
+    rationale: >
+      soltrans-clipper-card: "The Clipper START Program allows lower-income
+      adults age 19-64 to receive a 50 percent fare discount on SolTrans with a
+      valid Clipper START Card." Note the corpus deliberately excludes
+      soltrans.org/fares/ticket-office-location, a stale near-duplicate of this
+      page that says 20 percent; the 50 percent figure is the one corroborated by
+      SolTrans' June 2024 paperless press release and its "Get 50% Adult Fares
+      with Clipper START" news item. If a future refetch ever reintroduces the 20
+      percent text, this case is the tripwire.

@@ -104,3 +104,58 @@ cases:
       "based on policies published as of 2026-08-10" over a two-month-older MST
       citation — and did so even when the fresh HTA passage was retrieved but never
       cited at all.
+
+  # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
+  - id: fresh-014
+    question: "Can I buy a paper 31-day pass for SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["July 1, 2024"]
+    forbidden_content:
+      - "you can buy a paper pass"
+      - "purchase a paper pass at"
+    rationale: >
+      A retired product still advertised on a live page. SolTrans' fare table is
+      stamped "Effective Sunday, December 5, 2021" and still tells riders to
+      "use cash or a paper pass", still prices 31-Day Passes, and still carries
+      paper-pass handling rules ("do not laminate or punch holes in passes").
+      SolTrans eliminated paper passes on all Local Routes and Express Lines
+      effective Monday, July 1, 2024 (soltrans-paperless-fares, ingested
+      alongside the fare table for exactly this reason), with paper surviving
+      only on Paratransit. The right answer surfaces the 2024-07-01 elimination
+      and points the rider at the digital options SolTrans actually offers
+      (Clipper, Clipper START, Token Transit) plus exact cash for one-way fares
+      and day passes — it must not read the price off the older page and tell the
+      rider to go buy one.
+
+  - id: fresh-015
+    question: "How old is the SolTrans fare information you're using?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      SolTrans' fare table carries an open-ended effective date — "Effective
+      Sunday, December 5, 2021", with no end date — so unlike Yolobus (whose
+      committed period expired 2026-06-30) it has not lapsed on its own terms and
+      remains the agency's current published table. It is nonetheless the oldest
+      effective stamp in the corpus and predates two changes SolTrans itself
+      announced afterwards: the 2024-07-01 paper-pass elimination and the
+      2026-08-02 Systemwide Redesign of routes and schedules. The assistant must
+      disclose a date rather than presenting the figures as timeless.
+
+  - id: fresh-016
+    question: "Is the SolTrans Youth Ride Free program still running?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: partial
+    required_facts: []
+    rationale: >
+      Deliberately expected `partial`. The corpus prices Youth (18 and under) as
+      FREE across every SolTrans service, so the assistant can answer that youth
+      currently ride free. What the corpus does *not* contain is the program's
+      end date: SolTrans' August 2025 press release extending the pilot through
+      June 2027 is a news item that was not ingested, so "through June 2027" is
+      not a claim this corpus can support. The honest answer gives the published
+      free fare with its as-of date and does not invent or promise an end date.

@@ -41,7 +41,7 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA"),
+    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "SolTrans"),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -60,6 +60,19 @@ TRANSIT = DomainProfile(
         "eureka": "HTA",
         "arcata": "HTA",
         "redwood transit": "HTA",
+        "soltrans": "SolTrans",
+        "sol trans": "SolTrans",
+        "solano": "SolTrans",
+        "solano county transit": "SolTrans",
+        "solanoexpress": "SolTrans",
+        "vallejo": "SolTrans",
+        "benicia": "SolTrans",
+        # Deliberately NOT aliased: "clipper". Clipper is a regional fare card
+        # operated by MTC and accepted by many Bay Area agencies, most of which
+        # are not in this corpus. Mapping the word to SolTrans would make the
+        # assistant answer agency-specific Clipper questions as if they were
+        # SolTrans questions — the exact over-generalization the
+        # soltrans-clipper-scope eval cases exist to prevent.
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

@@ -131,6 +131,12 @@ def _serialized(payload: object) -> bytes:
     return (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
+# The three goldens below rebind whenever the hashed release config changes, and the
+# domain profile is part of that config (`_resolved_config_payload` hashes
+# `_domain_payload`). Adding SolTrans as the sixth agency on 2026-08-12 therefore
+# moved config_version 56ef528a -> e105f5fc, and the two digests derived from it.
+# That is the mechanism working: a deployed release's identity is supposed to record
+# which agencies it can answer for. Re-derive these, never loosen the assertion.
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
     first = _descriptor(config_case)
     reversed_environment = dict(reversed(list(config_case.environment.items())))
@@ -145,14 +151,14 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
 
     assert first == second
     assert (
-        first.config_version == "56ef528a02ed9cb6c4600034536eeaaffe0acaf031119d0a87b5df54ba74d337"
+        first.config_version == "e105f5fc8146ddbaed80bbd63489c952137d5c889c3a1edb6b5722427a5980d2"
     )
     assert (
-        first.release_version == "fbc9799c85ab29f908aab7196624138e85e6c1fdd23896f1c74635bf9c1eb675"
+        first.release_version == "b75db9321768d1b97db6591b0b98c5b37daba71f2a4afa5f9cc2b0fa290d2c4a"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "249b0835404dcbd2c338e05bed8f48a0d50ca143712e3ac82185ff859044907a"
+        == "172977b5b20999af16c9d4bfe7b21f52c286f59cce6efb00d48f243ee4ba41f7"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

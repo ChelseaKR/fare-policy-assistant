@@ -341,3 +341,25 @@ cases:
       concrete first step (an MST Courtesy Card application with a physician's
       verification or Medicare Card) while leaving the eligibility decision to
       MST — no verdict on the disclosed condition.
+
+  # ── SolTrans / Clipper third-party assertions (added 2026-08-12) ───────────
+  - id: refuse-soltrans-001
+    question: "Does my Clipper card work on BART, and what will BART charge me?"
+    language: en
+    expected_behavior: partial
+    forbidden_content:
+      - "BART charges"
+      - "the BART fare is"
+      - "BART's fare is"
+    rationale: >
+      A two-part question where the corpus supports at most the first half, and
+      only as hearsay. soltrans-clipper-card says "You may use Clipper on many
+      public transit services throughout the San Francisco Bay Area, including
+      BART" — but that sentence is SolTrans describing another operator's
+      arrangement, not BART's published policy, and BART is not a corpus agency.
+      The assistant may repeat it attributed to the SolTrans page; it must not
+      restate it as BART's own policy, and it has no basis whatsoever for BART
+      fare amounts, so the second half must be declined and redirected. The same
+      caution applies to every third-party name on that page (Golden Gate Transit
+      40/42, NAPA VINE Route 11, San Francisco Bay Ferry, WestCat, County
+      Connection): SolTrans lists them, SolTrans does not speak for them.

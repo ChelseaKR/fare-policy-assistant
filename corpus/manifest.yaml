@@ -15,6 +15,21 @@
 #   non-browser clients; per the "polite fetching only" rule it was dropped and
 #   SacRT (the planned stretch agency) substituted. See docs/decisions/0002.
 #
+# Robots/permissions note for the sixth agency (checked 2026-08-12):
+#   soltrans.org  Apex redirects 301 to www.soltrans.org (Webflow behind
+#                 Cloudflare). https://www.soltrans.org/robots.txt is 45 bytes and
+#                 contains exactly one line, `Sitemap: https://www.soltrans.org/
+#                 sitemap.xml` — no User-agent group, no Disallow, so nothing is
+#                 excluded for any agent. No Cloudflare Content-Signal header was
+#                 served on robots.txt or on any of the four fare pages, and no
+#                 `x-robots-tag` on the content pages (robots.txt itself carries
+#                 `x-robots-tag: noindex`, which governs indexing that file, not
+#                 the site). All pages returned HTTP 200 to this project's
+#                 identified research user agent on the first try — no WAF
+#                 challenge, no `cf-mitigated`, no browser-UA workaround needed or
+#                 attempted. Crawl-delay is unspecified; the manifest's 10-second
+#                 default was honored anyway.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
@@ -41,6 +56,11 @@
 #            home page with HTTP 200 for unknown paths, so a 200 on a guessed
 #            /terms/ URL is not evidence a terms page exists; the footer links no
 #            legal pages). Footer: "© 2026 HTA. All rights reserved".
+#   SolTrans terms of use: none located, checked 2026-08-12. The published
+#            sitemap enumerates the whole site and lists exactly one legal page,
+#            https://www.soltrans.org/about/policies/privacy-policy; there is no
+#            terms-of-use entry. Footer: "© 2024 SolTrans" (a bare copyright line,
+#            and note the footer year is 2024, not the current year).
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -157,6 +177,115 @@ documents:
     url: https://hta.org/fares/
     language: en
     license_note: "Public agency fare information."
+
+  # ── SolTrans (Solano County Transit) ──────────────────────────────────────
+  # Added as the sixth agency (2026-08-12). Vallejo/Benicia, plus SolanoExpress
+  # lines reaching Fairfield, Vacaville, Dixon, Davis, and the SF Ferry Building.
+  #
+  # WHY THIS AGENCY: it is the first Clipper participant in the corpus. Every
+  # other agency's fare media is agency-local, so until now the corpus could not
+  # answer "does my Clipper card work here" for anyone.
+  #
+  # THE CLIPPER HAZARD, AND IT CUTS BOTH WAYS. Clipper is a *regional* card, so a
+  # rider will reasonably read a Clipper answer as generalizing. It does not, and
+  # the corpus cannot support that reading:
+  #   (a) None of MST, SBMTD, Yolobus, SacRT, or HTA is a Clipper agency, and no
+  #       document in this corpus says anything about Clipper acceptance at any of
+  #       them. An answer that infers "Clipper is regional, so it works on SacRT
+  #       too" is ungrounded. Cased as soltrans-clipper-scope in cross_agency.
+  #   (b) SolTrans' own Clipper page makes assertions about THIRD PARTIES that are
+  #       not SolTrans policy and that SolTrans does not control. Specifically:
+  #       "You may use Clipper on many public transit services throughout the San
+  #       Francisco Bay Area, including BART"; the list of connecting agencies
+  #       Clipper supports transfers with (Golden Gate Transit 40/42, NAPA VINE
+  #       Route 11, San Francisco Bay Ferry, WestCat, County Connection); and "the
+  #       Ferry Monthly Pass is not currently available on Clipper". Those are
+  #       SolTrans' characterizations of other operators' and MTC's arrangements,
+  #       dated to whenever the page was last edited. What is genuinely SolTrans
+  #       policy on the same pages: the Clipper START 50% discount *on SolTrans*,
+  #       the Vallejo-SF Bay Ferry transfer credits ($1.75 adult / $1.50 youth /
+  #       $0.85 senior-disabled-Medicare), "there are no transfers within the
+  #       SolTrans system", and "Clipper charges the Outside County fare on all
+  #       SolTrans SolanoExpress lines".
+  #
+  # FARE PERIOD (verified 2026-08-12): the fare table is stamped "Effective
+  # Sunday, December 5, 2021" with NO end date, so it is an open-ended effective-
+  # from, not an expired committed range like Yolobus's. It is live and current by
+  # the agency's own labeling, and its Day Pass prices ($4.50 / $5.50 / $10.00
+  # adult) are independently corroborated by the site-wide navigation fare summary
+  # rendered on every page. But see the staleness note on soltrans-fare-table:
+  # the page predates two later changes SolTrans itself announced.
+  #
+  # EXCLUDED, deliberately:
+  #   https://www.soltrans.org/fares/ticket-office-location — despite the title it
+  #   contains no ticket-office content; it is a stale duplicate of the Clipper
+  #   Card page that states the Clipper START discount as "20 percent" where the
+  #   live /fares/clipper-card page, the June 2024 paperless press release, and
+  #   SolTrans' own "Get 50% Adult Fares with Clipper START" news item all say 50
+  #   percent. Ingesting it would put two different discount rates for one program
+  #   into retrieval with nothing to break the tie. Same reasoning as the
+  #   sbmtd.gov/reduced/ exclusion in docs/decisions/0002.
+  #   https://www.soltrans.org/fares — a hub page; its body is only links to the
+  #   four sub-pages, no policy text of its own.
+  #   https://www.soltrans.org/help-center — its Fares/Clipper/Token Transit FAQ is
+  #   relevant, but the same page carries parking-permit, Lyft-subsidy, and
+  #   trip-planning content that would pollute fare retrieval, and several answers
+  #   are collapsed accordions whose bodies do not render into the static HTML.
+  - id: soltrans-fare-table
+    agency: SolTrans
+    agency_full: Solano County Transit
+    title: "Fare Table"
+    url: https://www.soltrans.org/fares/fare-table
+    language: en
+    # STALENESS WARNING — this page is live and is SolTrans' canonical fare table,
+    # but it is stamped "Effective Sunday, December 5, 2021" and predates two
+    # changes SolTrans announced afterwards, so parts of it are wrong on the day it
+    # was fetched:
+    #   1. RETIRED PRODUCT. It tells riders "Please use cash or a paper pass for
+    #      travel within Solano County or locally on SolanoExpress lines" and
+    #      carries a block of paper-pass handling rules ("do not laminate or punch
+    #      holes in passes"). SolTrans eliminated paper passes on all Local Routes
+    #      and Express Lines effective 2024-07-01; paper passes survive only on
+    #      Paratransit. The corrective source is ingested as
+    #      soltrans-paperless-fares below, and pinned by eval case fresh-soltrans.
+    #   2. It predates the 2026-08-02 Systemwide Redesign of routes and schedules.
+    #      Route 82, which the table prices separately, still exists.
+    # Kept rather than dropped because it is the only page publishing the fare
+    # amounts and the reduced-fare eligibility list, and because the assistant's
+    # "as of" disclosure plus the paired paperless document is the project's
+    # intended handling of a dated page — not silent omission.
+    license_note: "Public agency fare information; no Content-Signal served. Page stamped effective 2021-12-05; see the staleness note above."
+  - id: soltrans-clipper-card
+    agency: SolTrans
+    agency_full: Solano County Transit
+    title: "Clipper Card"
+    url: https://www.soltrans.org/fares/clipper-card
+    language: en
+    # Mixed provenance by design: SolTrans policy AND SolTrans' assertions about
+    # other operators. See the Clipper hazard note above before writing any eval
+    # case against this document.
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (BART, Golden Gate Transit, NAPA VINE, SF Bay Ferry, WestCat, County Connection) that are SolTrans' characterization, not those agencies' own published policy."
+  - id: soltrans-ways-to-pay
+    agency: SolTrans
+    agency_full: Solano County Transit
+    title: "Ways to Pay"
+    url: https://www.soltrans.org/fares/ways-to-pay
+    language: en
+    # Also partly stale: its "Passes" paragraph still describes buying paper
+    # passes at retail locations and feeding them into the farebox arrow-down.
+    # Token Transit and Clipper, the two digital options it lists, are both still
+    # live (both are documented in SolTrans' current Help Center FAQ).
+    license_note: "Public agency fare information; no Content-Signal served. Paper-pass purchase text predates the 2024-07-01 paperless change."
+  - id: soltrans-paperless-fares
+    agency: SolTrans
+    agency_full: Solano County Transit
+    title: "Service Alert: Paper Pass Elimination"
+    url: https://www.soltrans.org/news/service-alert-paper-pass-elimination
+    language: en
+    # The dated correction to the two documents above, ingested for the same
+    # reason sbmtd-farechange is: a fare-change announcement the assistant must be
+    # able to cite when a rider asks about a product the fare table still lists.
+    license_note: "Public agency fare-change announcement; no Content-Signal served."
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

@@ -25,3 +25,26 @@ Initial recorded version. Five agencies, 11 documents, 90 chunks: Monterey-Salin
 Transit (MST), Santa Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit
 (SacRT), and Humboldt Transit Authority (HTA). Fetch dates per document are in
 `corpus/manifest.yaml` and the per-snapshot `corpus/raw/<id>.meta.yaml` files.
+
+## a68e77ff4673 (2026-08-12)
+
+Sixth agency: Solano County Transit (SolTrans), Vallejo/Benicia plus the
+SolanoExpress lines. Four documents, 20 chunks (110 total). Added because it is
+the corpus's first Clipper participant — until now every agency's fare media was
+agency-local, so the assistant had no grounding at all for "does my Clipper card
+work here".
+
+Added: `soltrans-fare-table`, `soltrans-clipper-card`, `soltrans-ways-to-pay`,
+`soltrans-paperless-fares`. Fetched 2026-08-12 (receipts stamp 2026-08-13 UTC).
+
+Two corpus-hygiene findings recorded with the addition:
+
+- `soltrans-fare-table` is stamped "Effective Sunday, December 5, 2021" with no
+  end date — current by the agency's own labeling, not lapsed — but it predates
+  SolTrans' 2024-07-01 elimination of paper passes and still tells riders to use
+  one. `soltrans-paperless-fares` is ingested as the dated correction, the same
+  role `sbmtd-farechange` plays for SBMTD, and eval case fresh-014 pins the
+  behavior.
+- `soltrans.org/fares/ticket-office-location` was excluded: it is a stale
+  near-duplicate of the Clipper Card page stating the Clipper START discount as
+  20 percent where the live page and two SolTrans announcements say 50 percent.

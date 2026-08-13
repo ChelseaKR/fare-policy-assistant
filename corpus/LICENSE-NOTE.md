@@ -5,9 +5,9 @@ project, and this project cannot give you permission to reuse it.
 
 ## What is here
 
-Eleven web pages published by five California transit agencies, fetched once
-each (ten on 2026-06-12, one refetched on 2026-08-10 after its site moved), plus
-everything derived from them:
+Fifteen web pages published by six California transit agencies, fetched once
+each (ten on 2026-06-12, one refetched on 2026-08-10 after its site moved, and
+four SolTrans pages on 2026-08-12), plus everything derived from them:
 
 | Path | What it holds |
 |---|---|
@@ -25,11 +25,12 @@ excerpts inside the failure traces in `EVALS.md` and `docs/eval-report.*`.
 ## Whose it is
 
 Each agency's. Monterey-Salinas Transit, Santa Barbara MTD, Yolo County
-Transportation District (Yolobus), Sacramento Regional Transit District, and
-Humboldt Transit Authority each publish these pages on their own sites. Seven of
-the eleven snapshots carry an explicit "all rights reserved" line in the page
-footer; the four MST pages carry a bare copyright notice ("©2026
-Monterey-Salinas Transit"), which reserves the same rights by default.
+Transportation District (Yolobus), Sacramento Regional Transit District,
+Humboldt Transit Authority, and Solano County Transit (SolTrans) each publish
+these pages on their own sites. Seven of the fifteen snapshots carry an explicit
+"all rights reserved" line in the page footer; the four MST pages and the four
+SolTrans pages carry a bare copyright notice ("©2026 Monterey-Salinas Transit",
+"© 2024 SolTrans"), which reserves the same rights by default.
 Publishing something on a public agency website makes it publicly readable. It
 does not place it in the public domain, and California's Public Records Act
 governs disclosure, not copyright.
@@ -85,8 +86,9 @@ place to check whether what is snapshotted here still holds:
 | Yolobus (Yolo County Transportation District) | <https://yolobus.com/fares/> | no terms-of-use page located (checked 2026-08-12); site publishes a privacy policy only: <https://yolobus.com/privacy-policy/> |
 | Sacramento Regional Transit (SacRT) | <https://www.sacrt.com/fares/> | no website terms-of-use page located (checked 2026-08-12); <https://www.sacrt.com/terms-conditions/> exists but is purchase-order terms for vendors |
 | Humboldt Transit Authority (HTA) | <https://hta.org/fares/> | no terms-of-use page located (checked 2026-08-12) |
+| Solano County Transit (SolTrans) | <https://www.soltrans.org/fares/fare-table> | no terms-of-use page located (checked 2026-08-12); the site's own sitemap enumerates one legal page only: <https://www.soltrans.org/about/policies/privacy-policy> |
 
 Where the table says "none located", that is the finding, not a gap someone
-forgot to fill: three of these five agencies publish no website terms of use we
+forgot to fill: four of these six agencies publish no website terms of use we
 could find, and the absence of stated terms is not permission. Read each
 agency's own page rather than this summary of where to find it.

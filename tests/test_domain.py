@@ -19,7 +19,18 @@ def test_reexports_match_the_profile():
     # The isolation did not change any value: the modules now read from the
     # profile, and the profile holds exactly what used to be hardcoded.
     p = domain.TRANSIT
-    assert config.KNOWN_AGENCIES == p.scopes == ("MST", "SBMTD", "Yolobus", "SacRT", "HTA")
+    assert (
+        config.KNOWN_AGENCIES
+        == p.scopes
+        == (
+            "MST",
+            "SBMTD",
+            "Yolobus",
+            "SacRT",
+            "HTA",
+            "SolTrans",
+        )
+    )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact
     assert AGENCY_ALIASES == p.aliases
     assert guards.OUT_OF_SCOPE_PATTERNS == p.scope_topics
@@ -29,6 +40,21 @@ def test_reexports_match_the_profile():
 def test_detect_agencies_uses_the_active_aliases():
     assert detect_agencies("senior fare on SBMTD?") == ["SBMTD"]
     assert detect_agencies("Monterey to Salinas") == ["MST"]
+    assert detect_agencies("day pass in Vallejo") == ["SolTrans"]
+
+
+def test_clipper_is_not_an_agency_alias():
+    """A regional fare card must not resolve to the one agency that takes it.
+
+    SolTrans is the corpus's only Clipper participant, so mapping "clipper" to
+    SolTrans would silently turn "does Clipper work on <other agency>?" into a
+    SolTrans question and invite an answer the corpus cannot support. The word
+    is deliberately absent from the alias table; eval cases xagency-004/005 and
+    refuse-soltrans-001 cover the answer-side behavior.
+    """
+    p = domain.TRANSIT
+    assert "clipper" not in p.aliases
+    assert detect_agencies("does my Clipper card work?") == []
 
 
 def test_a_new_domain_is_just_a_new_profile():
