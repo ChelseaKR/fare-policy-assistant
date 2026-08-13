@@ -35,8 +35,14 @@ cases:
     agency_scope: Yolobus
     language: en
     expected_behavior: answer
-    required_facts: ["June 30, 2026"]
-    rationale: "yolobus-fares: fares effective July 1, 2025 – June 30, 2026 — an expiry the assistant should surface."
+    required_facts: ["June 30, 2027"]
+    rationale: >
+      yolobus-fares: fares effective July 1, 2026 – June 30, 2027 (refreshed
+      2026-08-13) — an expiry the assistant should surface. Was pinned to
+      "June 30, 2026" until that refresh; the corpus-freshness lint
+      (tools/corpus_refresh_report.lint_stale_cases) is what catches this class,
+      and it only runs inside the refresh workflow, so a manual refresh has to
+      run it by hand.
 
   - id: fresh-005
     question: "Are the fare prices you quote guaranteed to be what I'll pay tomorrow?"
@@ -104,3 +110,39 @@ cases:
       "based on policies published as of 2026-08-10" over a two-month-older MST
       citation — and did so even when the fresh HTA passage was retrieved but never
       cited at all.
+
+  - id: fresh-020
+    question: "Can I use a UC Davis Zip Pass on Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    forbidden_content: ["is still valid", "you can still use", "will be accepted"]
+    rationale: >
+      A fresh page can carry a retired product, and containment cannot catch it
+      because nothing about the document is stale. The Yolobus fares page
+      refreshed 2026-08-13, carrying the current 2026-2027 fare period, lists
+      "UC Davis Zip Pass: with valid student ID" among accepted passes. ZipPass
+      is a mobile ticketing app, not a card, and it is retired. Yolobus says so
+      itself at yolobus.com/zippass/: "The ZipPass mobile app has been
+      discontinued", with the last day to use existing passes given as
+      2026-04-30. The corpus independently holds SacRT's notice of the same
+      2026-04-30 date (see fresh-003), and Unitrans retired its side on
+      2026-06-30. So yolobus.com contradicts itself: one page retires the app,
+      another lists it as valid fare media for the current fare period.
+
+      So the assistant is asked about a pass its only in-scope source says is
+      accepted and that no longer exists. It cannot be expected to know the
+      retirement — the Unitrans announcement is not in the corpus, because
+      unitrans.ucdavis.edu returns 403 to the project's crawler (ADR 0002,
+      re-checked 2026-08-12). What it must do is decline to assert present-tense
+      validity and disclose the date its information carries, so a rider has
+      both the claim and the means to check it. `forbidden_content` pins the
+      phrasings that would send a student to the farebox with a dead pass.
+
+      The stronger case — asking without naming an agency, and requiring the
+      assistant to surface SacRT's end date against Yolobus's acceptance list —
+      is deliberately not written yet: retrieval filters to a single agency when
+      the question names one, so it would need an unscoped question, and it may
+      not pass. Worth adding once cross_agency is healthy, as an honest failure
+      rather than a broken gate.
