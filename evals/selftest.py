@@ -10,10 +10,11 @@ Three different questions, three different tools:
 
 It takes an otherwise-clean, grounded answer, plants one known defect (a fare
 that contradicts the corpus, a determination phrase, a dropped citation, a
-missing date, the wrong agency, an asserted forbidden claim, a missing required
-fact), and asserts that the specific check meant to catch it flips from pass to
-fail — and only that check's family. No model calls; the deterministic gate is
-pure, so CI can enforce this.
+missing date, a date borrowed from a passage the answer never cited, the wrong
+agency, an asserted forbidden claim, a missing required fact), and asserts that
+the specific check meant to catch it flips from pass to fail — and only that
+check's family. No model calls; the deterministic gate is pure, so CI can
+enforce this.
 
 Every check `evals/checks.py` emits has a scenario here, and
 `tests/test_selftest.py::test_every_check_the_grader_can_emit_has_a_planted_defect`
@@ -44,6 +45,7 @@ from assistant import config
 from assistant import facts as facts_module
 from assistant.answer import AnswerResult, Citation
 from assistant.ingest import load_chunks
+from assistant.retrieve import ScoredChunk
 from evals.checks import CheckResult, run_checks
 
 AS_OF = "2026-06-12"
@@ -72,10 +74,14 @@ def _priced_fact(by_doc: dict[str, list[facts_module.FareFact]]) -> facts_module
 
 
 def _clean(doc_id: str, answer: str, *, agency: str = "MST") -> AnswerResult:
+    # `as_of_date` mirrors the single citation's fetch date, which is what the
+    # answer pipeline now produces (assistant.answer._as_of_cited) and what
+    # `as_of_matches_oldest_citation` requires of a clean answer.
     return AnswerResult(
         question="q",
         answer=answer,
         kind="answered",
+        as_of_date=AS_OF,
         citations=[
             Citation(
                 doc_id=doc_id,
@@ -86,6 +92,25 @@ def _clean(doc_id: str, answer: str, *, agency: str = "MST") -> AnswerResult:
             )
         ],
     )
+
+
+def _mixed_freshness_passages(cited_doc_id: str) -> list[ScoredChunk]:
+    """A retrieved set spanning two fetch dates: the cited document at `AS_OF`
+    and the corpus's most recently refetched document alongside it.
+
+    Built from the real corpus so the scenario stays honest about the shape that
+    produces the defect — documents are refetched one at a time, so a top-k that
+    mixes fetch dates is routine. Falls back to a synthetic fresher chunk if the
+    corpus ever becomes uniformly dated, which would otherwise make this
+    scenario silently untestable.
+    """
+    chunks = load_chunks()
+    cited = next(c for c in chunks if c.doc_id == cited_doc_id)
+    cited = replace(cited, fetch_date=AS_OF)
+    fresher = max(chunks, key=lambda c: c.fetch_date)
+    if fresher.fetch_date <= AS_OF:
+        fresher = replace(fresher, fetch_date="2026-08-10")
+    return [ScoredChunk(chunk=cited, score=10.0), ScoredChunk(chunk=fresher, score=9.0)]
 
 
 @dataclass
@@ -287,6 +312,20 @@ def _scenarios() -> list[Scenario]:
             # A kind outside the contract's enum: the UI would silently fall
             # back to prose, which this check exists to count rather than hide.
             mutate=lambda r: replace(r, kind="answered_partial"),
+        ),
+        Scenario(
+            name="dated by the freshest passage retrieved, not the one cited",
+            check="as_of_matches_oldest_citation",
+            case={"expected_behavior": "answer", "language": "en"},
+            # A realistic mixed-freshness top-k: the answer cites a passage
+            # fetched on AS_OF, and retrieval also surfaced (but the answer
+            # never used) a passage refetched two months later.
+            clean=replace(_clean(doc_id, base_answer), passages=_mixed_freshness_passages(doc_id)),
+            # The mutation *is* the pre-fix expression, verbatim: the headline
+            # date taken as max(fetch_date) over everything retrieved. The rider
+            # was told the policy was current as of a page the answer does not
+            # rest on, while the citation under it was months older.
+            mutate=lambda r: replace(r, as_of_date=max(sc.chunk.fetch_date for sc in r.passages)),
         ),
     ]
 

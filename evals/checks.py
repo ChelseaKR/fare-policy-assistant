@@ -269,6 +269,30 @@ def run_checks(
             )
         )
 
+        # 6b. …and the date it discloses is the *oldest passage the answer
+        # cites*, not the newest passage retrieval happened to surface.
+        # Check 6 only proves a date was stated; nothing proved it was the
+        # right one. `AnswerResult.as_of_date` was `max(fetch_date)` over the
+        # whole retrieved top-k, so one recently refetched document anywhere
+        # in the top 8 — a document the answer may never have used — dated the
+        # whole response to its fetch date. With HTA refetched 2026-08-10 and
+        # every other agency still on 2026-06-12, cross-agency and
+        # near-miss-retrieval questions rendered "based on policies published
+        # as of 2026-08-10" over a citation fetched two months earlier. That is
+        # the one claim this assistant makes about its own limits, so it gets a
+        # deterministic check rather than the judge's opinion.
+        if result.kind == "answered" and result.citations:
+            oldest_cited = min(c.fetch_date for c in result.citations)
+            cited_dates = sorted({c.fetch_date for c in result.citations})
+            out.append(
+                CheckResult(
+                    "as_of_matches_oldest_citation",
+                    result.as_of_date == oldest_cited,
+                    f"as_of_date={result.as_of_date or 'none'}, "
+                    f"oldest cited={oldest_cited}, cited dates={cited_dates}",
+                )
+            )
+
         # 7. Required facts (verbatim or regex with re: prefix) appear.
         missing = []
         for fact in case.get("required_facts", []):

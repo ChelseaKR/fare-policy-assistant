@@ -43,6 +43,12 @@ class AnswerResult:
     passages: list[ScoredChunk] = field(default_factory=list)
     guard_flags: list[str] = field(default_factory=list)
     model: str = ""
+    # The rider-facing freshness claim, rendered verbatim as "Based on policies
+    # published as of <date>" (web/index.html, web/embed.py) and mirrored into
+    # the typed contract (docs/answer-contract.schema.json). On an *answered*
+    # response this is `_as_of_cited(citations)` — the oldest passage the answer
+    # actually stands on — not the newest passage retrieval happened to surface.
+    # See `_as_of_cited` for why the oldest is the honest one.
     as_of_date: str = ""
     # Retrieval confidence, an operational signal for staff and integrators
     # (persona research F-16). `retrieval_score` is the top passage's score;
@@ -62,6 +68,33 @@ class AnswerResult:
     # kept here so eval traces show what was actually blocked. Never shown
     # to riders.
     raw_model_answer: str = ""
+
+
+def _as_of_cited(citations: list[Citation]) -> str:
+    """The rider-facing snapshot date for an answered response: the *oldest*
+    fetch date among the passages the answer actually cites.
+
+    Freshness is this assistant's core trust claim — every answer is a dated
+    snapshot the rider can go and verify — so the headline date has to describe
+    the evidence the answer rests on, not the retrieval that produced it. The
+    retrieved set is up to `top_k` passages and only some of them are cited;
+    dating the answer by the newest *retrieved* passage lets one recently
+    refetched chunk, which the answer may never have used, certify a citation
+    that is months older. (Corpus snapshots are refetched per document, so a
+    mixed-age top-k is the normal case, not an edge case.)
+
+    Oldest rather than newest among the cited passages for the same reason a
+    chain is as strong as its weakest link: an answer that quotes a page fetched
+    in June and another fetched in August is only verified as of June, because
+    the June page could have changed in the interim without anyone looking. The
+    per-citation "(fetched …)" lines still give the rider the exact date behind
+    each individual claim.
+
+    Fetch dates are ISO ``YYYY-MM-DD``, so lexicographic min is chronological
+    min. Empty string when there are no citations, which the UI renders as no
+    freshness line at all rather than a bare or invented date.
+    """
+    return min((c.fetch_date for c in citations), default="")
 
 
 def _format_passages(results: list[ScoredChunk]) -> str:
@@ -186,7 +219,18 @@ def answer_question(
             retrieval_score=usable_results[0].score if usable_results else 0.0,
             confidence="low",
         )
-    as_of = max((sc.chunk.fetch_date for sc in results), default="")
+    # Newest fetch date across the retrieved set. This is a statement about the
+    # *corpus*, not about any one answer, and it is deliberately not the value
+    # the rider sees on an answered response (see `_as_of_cited`). Two uses:
+    #
+    #  * the prompt's "corpus snapshot date", which the model reasons against to
+    #    decide whether a published deadline has already passed
+    #    (prompts/answer_user.txt, prompts/system.txt) — that comparison wants
+    #    the most recent thing we know, so the newest date is correct there;
+    #  * the `as_of_date` of results that carry no citations at all (a decline,
+    #    or an answer the output/citation guard replaced), where there is no
+    #    cited evidence to date and the value describes the corpus consulted.
+    as_of_retrieved = max((sc.chunk.fetch_date for sc in results), default="")
     top_score = results[0].score if results else 0.0
     # Band from the same signals confident() decides on, so an answered
     # response is never labeled "low".
@@ -200,7 +244,7 @@ def answer_question(
             answer=_no_support_message(detect_agency(question), lang),
             kind="refused_no_support",
             passages=results,
-            as_of_date=as_of,
+            as_of_date=as_of_retrieved,
             retrieval_score=top_score,
             confidence=band,
         )
@@ -212,7 +256,7 @@ def answer_question(
     )
     user = _history_block(history) + prompt.format(
         passages=_format_passages(results),
-        as_of_date=as_of,
+        as_of_date=as_of_retrieved,
         question=question,
     )
     completion = model.complete(
@@ -245,7 +289,7 @@ def answer_question(
             passages=results,
             guard_flags=post.flags,
             model=completion.model,
-            as_of_date=as_of,
+            as_of_date=as_of_retrieved,
             input_tokens=completion.input_tokens,
             output_tokens=completion.output_tokens,
             cache_creation_input_tokens=completion.cache_creation_input_tokens,
@@ -275,7 +319,7 @@ def answer_question(
             passages=results,
             guard_flags=guard_flags + citation_flags,
             model=completion.model,
-            as_of_date=as_of,
+            as_of_date=as_of_retrieved,
             input_tokens=completion.input_tokens,
             output_tokens=completion.output_tokens,
             cache_creation_input_tokens=completion.cache_creation_input_tokens,
@@ -303,7 +347,10 @@ def answer_question(
         passages=results,
         guard_flags=guard_flags,
         model=completion.model,
-        as_of_date=as_of,
+        # Dated by the evidence, not by the retrieval: `citations` is the exact
+        # set validated against `by_id` just above, so the freshness the rider
+        # is shown is the freshness of the passages the answer stands on.
+        as_of_date=_as_of_cited(citations),
         input_tokens=completion.input_tokens,
         output_tokens=completion.output_tokens,
         cache_creation_input_tokens=completion.cache_creation_input_tokens,

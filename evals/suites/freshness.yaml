@@ -82,3 +82,25 @@ cases:
     expected_behavior: answer
     required_facts: ["2009"]
     rationale: "sbmtd-farechange FAQ: fares had been unchanged since January 1, 2009 — 16 years before the August 18, 2025 adjustment."
+
+  # Mixed-freshness retrieval. Documents are refetched one at a time, so the
+  # top-k routinely spans fetch dates: hta-fares was refetched 2026-08-10 while
+  # every other agency still sits at 2026-06-12. This question retrieves both
+  # sides of that gap, so the snapshot date the assistant publishes must be the
+  # OLDEST page the answer cites, never the freshest page retrieval surfaced.
+  # Scored by `as_of_matches_oldest_citation` (evals/checks.py), which is
+  # deterministic and therefore runs on this case with or without a live key.
+  - id: fresh-011
+    question: "How much is the senior fare on Humboldt Transit and on MST?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["62", "65"]
+    rationale: >
+      HTA's reduced fare is 62+ (hta-fares, fetched 2026-08-10); MST's discount
+      is 65+ (mst-fares/mst-fares-benefits, fetched 2026-06-12). An answer citing
+      both is only verified as of the older page, because the June page could have
+      changed since without anyone looking. Until 2026-08-12 `as_of_date` was
+      max(fetch_date) over the whole retrieved set, so this question told the rider
+      "based on policies published as of 2026-08-10" over a two-month-older MST
+      citation — and did so even when the fresh HTA passage was retrieved but never
+      cited at all.
