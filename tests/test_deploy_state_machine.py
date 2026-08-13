@@ -185,6 +185,13 @@ def role_policy():
                     ),
                 ],
             },
+            {
+                "Effect": "Allow",
+                "Action": ["dynamodb:UpdateItem", "dynamodb:GetItem"],
+                "Resource": (
+                    f"arn:aws:dynamodb:{region}:{account}:table/{function_name}-limits"
+                ),
+            },
         ],
     }
 
@@ -816,11 +823,25 @@ if args[:2] == ["logs", "test-metric-filter"]:
     )
     finish({"matches": matches})
 
+# The per-caller limiter table (ADR 0025) is operational state, not release
+# state: the deploy creates it idempotently and never compares it against a
+# candidate. These stubs put it in the steady state a second deploy meets --
+# already present, TTL already enabled -- so the release state machine under
+# test is exercised without the one-time creation path in the way.
+if args[:2] == ["dynamodb", "describe-table"]:
+    record("dynamodb.describe-table", table=value("--table-name"))
+    finish({"Table": {"TableName": value("--table-name"), "TableStatus": "ACTIVE"}})
+
+if args[:2] == ["dynamodb", "describe-time-to-live"]:
+    record("dynamodb.describe-time-to-live", table=value("--table-name"))
+    finish("ENABLED", text=True)
+
 allowed_noop_operations = {
     ("logs", "create-log-group"),
     ("logs", "put-retention-policy"),
     ("cloudwatch", "put-metric-alarm"),
     ("cloudwatch", "put-dashboard"),
+    ("dynamodb", "tag-resource"),
 }
 if tuple(args[:2]) in allowed_noop_operations:
     operation = ".".join(args[:2])
@@ -1271,6 +1292,7 @@ def fixture_entries():
         "web/guide.py",
         "web/embed.py",
         "web/csp.py",
+        "web/ratelimit.py",
     ):
         selected.append(pathlib.Path(name))
 

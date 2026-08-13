@@ -56,6 +56,8 @@ generic:
   - web/embed.py
   - web/offline.py
   - web/csp.py
+  - web/ratelimit.py
+  - web/spend_breaker.py
   - web/__init__.py
   - .github/workflows/ci.yml
   - .github/workflows/security.yml

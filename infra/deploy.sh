@@ -101,6 +101,30 @@ RESERVED_CONCURRENCY=2
 THROTTLE_RATE_LIMIT="$RESERVED_CONCURRENCY"
 THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
 
+# Everything above is an AGGREGATE ceiling: it bounds what the service spends in
+# total but says nothing about who spends it, so one actor sustaining 2 rps
+# starves every real rider at no cost to itself. The table below is the shared
+# state behind the per-caller limiter and the spend breaker that fix that
+# (web/ratelimit.py, ADR 0025). Quotas themselves are release inputs in
+# src/assistant/config.py, not deploy-time settings, so a change to them is a
+# reviewed release with a new config version rather than a console edit.
+#
+# Why a table and not AWS WAF, which is the usual answer: WAF cannot attach to
+# an API Gateway *HTTP* API at all. It protects CloudFront, ALB, AppSync,
+# Cognito, App Runner, Verified Access, Amplify, and API Gateway REST APIs --
+# HTTP APIs are absent from the list, and the REST-vs-HTTP comparison table
+# says so outright. Buying WAF here would mean first putting CloudFront in
+# front of the API or migrating to a REST API, and would cost a $5/month web
+# ACL plus $1/month per rule before serving a single request: roughly 30% of
+# this project's entire $20/month budget, to protect a service whose model
+# spend rounds to a few dollars. See ADR 0025 for the full comparison.
+#
+# The table is deliberately outside the immutable-release boundary: it holds
+# operational counters and one operator-flippable breaker row, never release
+# state. Nothing in it survives its TTL, and losing the whole table degrades
+# the service to exactly the posture it had before this existed.
+RATE_LIMIT_TABLE="${FPA_RATE_LIMIT_TABLE:-$FN-limits}"
+
 # CloudWatch JSON metric contracts. Keep the legacy handler/call/feedback
 # filters through one rollback-compatible release; the additive v2 filters
 # consume structured application events emitted by JSON/INFO Lambda logging.
@@ -362,6 +386,7 @@ print(values.get(os.environ["FPA_DEPLOY_ENV_KEY"], ""))
 
 EXISTING_DISABLED_DOC_IDS="$(lambda_env_value FPA_DISABLED_DOC_IDS)"
 EXISTING_HISTORY_HMAC_KEY="$(lambda_env_value FPA_HISTORY_HMAC_KEY)"
+EXISTING_RATE_LIMIT_HMAC_KEY="$(lambda_env_value FPA_RATE_LIMIT_HMAC_KEY)"
 
 # Production evidence controls. The currently reviewed bundle is pinned by its
 # deterministic corpus identity. ``yolobus-fares`` is contained by default
@@ -382,6 +407,22 @@ elif [[ -n "$EXISTING_HISTORY_HMAC_KEY" ]]; then
 else
   HISTORY_HMAC_KEY="$(openssl rand -hex 32)"
 fi
+# The secret that keys every caller digest. It is inherited across deploys, the
+# same way the history key is, so a release does not silently reset every
+# in-flight counter -- but unlike the history key it is safe to rotate at any
+# moment: the worst case is that one 60-second window's counters are abandoned
+# and callers start a fresh window early. Rotating it is also the fastest way to
+# make an existing table's contents permanently unlinkable to any address.
+# It is NOT recorded in the release descriptor, deliberately: the descriptor is
+# public release identity, and the identity of a secret that protects rider
+# addresses does not belong in it even as a digest.
+if [[ ${FPA_RATE_LIMIT_HMAC_KEY+x} ]]; then
+  RATE_LIMIT_HMAC_KEY="$FPA_RATE_LIMIT_HMAC_KEY"
+elif [[ -n "$EXISTING_RATE_LIMIT_HMAC_KEY" ]]; then
+  RATE_LIMIT_HMAC_KEY="$EXISTING_RATE_LIMIT_HMAC_KEY"
+else
+  RATE_LIMIT_HMAC_KEY="$(openssl rand -hex 32)"
+fi
 if [[ ! "$PINNED_CORPUS_VERSION" =~ ^[0-9a-f]{12}$ ]]; then
   echo "invalid corpus pin: expected a 12-character lowercase hex digest" >&2
   exit 2
@@ -392,6 +433,14 @@ if [[ -n "$DISABLED_DOC_IDS" && ! "$DISABLED_DOC_IDS" =~ ^[a-z0-9-]+(,[a-z0-9-]+
 fi
 if [[ ! "$HISTORY_HMAC_KEY" =~ ^[0-9a-f]{64}$ ]]; then
   echo "invalid history signing key: expected a 64-character lowercase hex secret" >&2
+  exit 2
+fi
+if [[ ! "$RATE_LIMIT_HMAC_KEY" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "invalid caller-digest key: expected a 64-character lowercase hex secret" >&2
+  exit 2
+fi
+if [[ ! "$RATE_LIMIT_TABLE" =~ ^[A-Za-z0-9._-]{3,255}$ ]]; then
+  echo "invalid rate-limit table name: expected a valid DynamoDB table name" >&2
   exit 2
 fi
 if [[ -n "$DISABLED_DOC_IDS" ]]; then
@@ -416,6 +465,8 @@ LAMBDA_ENV="$(
     FPA_DEPLOY_PINNED_CORPUS_VERSION="$PINNED_CORPUS_VERSION" \
     FPA_DEPLOY_DISABLED_DOC_IDS="$DISABLED_DOC_IDS" \
     FPA_DEPLOY_HISTORY_HMAC_KEY="$HISTORY_HMAC_KEY" \
+    FPA_DEPLOY_RATE_LIMIT_TABLE="$RATE_LIMIT_TABLE" \
+    FPA_DEPLOY_RATE_LIMIT_HMAC_KEY="$RATE_LIMIT_HMAC_KEY" \
     uv run python -c '
 import hashlib
 import json
@@ -442,6 +493,8 @@ values.update(
         "FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"],
         "FPA_HISTORY_HMAC_KEY": history_key,
         "FPA_HISTORY_HMAC_KEY_ID": history_key_id,
+        "FPA_RATE_LIMIT_TABLE": os.environ["FPA_DEPLOY_RATE_LIMIT_TABLE"],
+        "FPA_RATE_LIMIT_HMAC_KEY": os.environ["FPA_DEPLOY_RATE_LIMIT_HMAC_KEY"],
     }
 )
 print(json.dumps({"Variables": values}, separators=(",", ":")))
@@ -1524,7 +1577,8 @@ uv pip install --quiet --target "$BUNDLE" \
     --file web/offline.py \
     --file web/guide.py \
     --file web/embed.py \
-    --file web/csp.py
+    --file web/csp.py \
+    --file web/ratelimit.py
 )
 
 DESCRIPTOR_BUILD_ARGS=(
@@ -1597,7 +1651,17 @@ LAMBDA_ENV="$(
     '.Variables.FPA_ARTIFACT_CODE_SHA256 = $artifact' <<<"$LAMBDA_ENV"
 )"
 
-# ── IAM role: logs plus InvokeModel on the pinned answer model only ──────────
+# ── IAM role: logs, InvokeModel on the pinned answer model, limiter counters ──
+# The DynamoDB grant is deliberately two actions on one table: the rider may
+# increment its own counter and read the breaker row, and nothing else. No
+# PutItem (it cannot forge or clear a breaker), no DeleteItem (it cannot erase
+# its own limiting), no Scan or Query (a compromised handler cannot enumerate
+# the digests of everyone else currently being counted).
+#
+# NOTE FOR THE FIRST DEPLOY OF THIS CHANGE: this is a shared-IAM edit, so the
+# drift guard below will refuse the release until you review it and re-run with
+# FPA_ALLOW_SHARED_IAM_CHANGE=1. That is working as intended -- an alias
+# rollback cannot undo a policy change. See infra/README.md.
 TRUST='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
 POLICY=$(cat <<EOF
 {
@@ -1615,6 +1679,11 @@ POLICY=$(cat <<EOF
         "arn:aws:bedrock:$REGION:$ACCOUNT:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
       ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["dynamodb:UpdateItem", "dynamodb:GetItem"],
+      "Resource": "arn:aws:dynamodb:$REGION:$ACCOUNT:table/$RATE_LIMIT_TABLE"
     }
   ]
 }
@@ -1682,6 +1751,52 @@ else
   fi
 fi
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
+
+# ── per-caller limiter state (ADR 0025) ──────────────────────────────────────
+# One table, two rows' worth of purpose: short-lived per-caller counters keyed
+# by an opaque rotating digest, and one well-known breaker row an operator or
+# the cost alarm can flip. Created before candidate verification so the numbered
+# candidate is checked against the same limiter public traffic will meet.
+#
+# On-demand billing, because the access pattern is a handful of tiny writes a
+# minute and provisioning capacity for that would cost more than the writes. At
+# this project's traffic the table's own bill is under a cent a month: in
+# us-west-2 on-demand writes are $0.625 per million write units, one UpdateItem
+# under 1 KB is one unit, and TTL deletes consume no units at all.
+#
+# The table holds no release state, so it is created idempotently here and never
+# versioned, rolled back, or compared against a candidate. If it is deleted, the
+# handler fails open and the service returns to its pre-ADR-0025 posture.
+if ! aws dynamodb describe-table --table-name "$RATE_LIMIT_TABLE" --region "$REGION" \
+  >/dev/null 2>&1; then
+  aws dynamodb create-table --region "$REGION" \
+    --table-name "$RATE_LIMIT_TABLE" \
+    --attribute-definitions AttributeName=pk,AttributeType=S \
+    --key-schema AttributeName=pk,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST \
+    --tags "$PROJECT_TAG_LIST" >/dev/null
+  aws dynamodb wait table-exists --table-name "$RATE_LIMIT_TABLE" --region "$REGION"
+  echo "created per-caller limiter table $RATE_LIMIT_TABLE"
+fi
+# TTL is the mechanism that keeps a counter from outliving the window it counts.
+# Enabling it twice is an error rather than a no-op, so read the state first.
+# The digest rotation, not this TTL, is what bounds linkability: DynamoDB
+# deletes expired items on its own schedule, which can lag by hours.
+RATE_LIMIT_TTL_STATUS="$(
+  aws dynamodb describe-time-to-live --region "$REGION" \
+    --table-name "$RATE_LIMIT_TABLE" \
+    --query 'TimeToLiveDescription.TimeToLiveStatus' --output text 2>/dev/null \
+    || echo UNKNOWN
+)"
+if [[ "$RATE_LIMIT_TTL_STATUS" != "ENABLED" && "$RATE_LIMIT_TTL_STATUS" != "ENABLING" ]]; then
+  aws dynamodb update-time-to-live --region "$REGION" \
+    --table-name "$RATE_LIMIT_TABLE" \
+    --time-to-live-specification "Enabled=true,AttributeName=expires_at" >/dev/null || {
+    echo "WARNING: could not enable TTL on $RATE_LIMIT_TABLE; counters will not self-delete" >&2
+    echo "enable it manually: aws dynamodb update-time-to-live --table-name $RATE_LIMIT_TABLE \\" >&2
+    echo "  --time-to-live-specification Enabled=true,AttributeName=expires_at" >&2
+  }
+fi
 
 # Create the reviewed log destination and metric filters before candidate
 # verification. The paid numeric-version check must produce a real structured
@@ -2873,6 +2988,10 @@ _tag "http api $API_ID" \
 _tag "sns topic $FN-alerts" \
   aws sns tag-resource --region "$REGION" \
   --resource-arn "$TOPIC_ARN" --tags "$PROJECT_TAG_LIST"
+_tag "dynamodb table $RATE_LIMIT_TABLE" \
+  aws dynamodb tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:dynamodb:$REGION:$ACCOUNT:table/$RATE_LIMIT_TABLE" \
+  --tags "$PROJECT_TAG_LIST"
 for alarm_suffix in handler-errors lambda-errors lambda-throttles \
   unpriced-model-calls latency-p99 bedrock-surge; do
   _tag "alarm $FN-$alarm_suffix" \
@@ -2886,9 +3005,14 @@ else
   echo "cost allocation: project=$PROJECT_TAG applied to this deployment's resources"
 fi
 
-# An account-level AWS Budget is the spend backstop beneath these; it needs
-# billing permissions this role may lack, so it stays a one-time manual step:
+# A tag-scoped AWS Budget is the billing-authoritative spend backstop beneath
+# these; it needs billing permissions this role may lack, so it stays a one-time
+# manual step:
 #   aws budgets create-budget --account-id <id> --budget '{...}'  (see infra/README.md)
+# Budgets data lags actual usage by 8-12 hours, so it is a backstop and not a
+# circuit breaker. The control that stops spend in minutes is the breaker in
+# infra/deploy-cutoff.sh, driven by this deployment's own token-derived cost
+# metric. Deploy it once; it is not part of a routine release.
 
 echo "deployed: https://$API_ID.execute-api.$REGION.amazonaws.com/"
 echo "live Lambda version: $NEW_VERSION"
@@ -2909,5 +3033,6 @@ echo "promotion attestation sha256: $PROMOTION_ATTESTATION_SHA"
 echo "promotion evidence: $PROMOTION_ARCHIVE"
 echo "promotion evidence pointer: $EVAL_BUNDLE_POINTER"
 echo "disabled documents pending review: $DISABLED_DOC_IDS"
+echo "per-caller limiter table: $RATE_LIMIT_TABLE (TTL $RATE_LIMIT_TTL_STATUS at start of run)"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
 echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

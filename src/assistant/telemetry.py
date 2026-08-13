@@ -135,6 +135,49 @@ def log_handler_error(*, route: str, error_type: str) -> None:
     )
 
 
+def log_caller_rate_limited(*, route: str, limit: int) -> None:
+    """Record that one caller exceeded its per-window quota.
+
+    Deliberately carries no caller key. The limiter works on a keyed, rotating
+    digest of the source address (``web.ratelimit``), and even that digest stays
+    out of the logs: emitting it would hand CloudWatch a pseudonymous identifier
+    that requests could be correlated on within a window, which is exactly the
+    property ADR 0019 keeps this service free of. The route and the quota that
+    was hit are enough to tell whether the limiter is working or misconfigured.
+    """
+    _emit(
+        logging.INFO,
+        "caller_rate_limited",
+        {
+            "route": route,
+            "limit": limit,
+        },
+    )
+
+
+def log_rate_limit_unavailable(*, route: str, error_type: str) -> None:
+    """Record that the per-caller limiter failed open on a backend fault."""
+    _emit(
+        logging.WARNING,
+        "rate_limit_unavailable",
+        {
+            "route": route,
+            "error_type": error_type,
+        },
+    )
+
+
+def log_spend_cutoff_served(*, route: str) -> None:
+    """Record one request answered without a model call because spend is cut off."""
+    _emit(
+        logging.WARNING,
+        "spend_cutoff_served",
+        {
+            "route": route,
+        },
+    )
+
+
 def log_corpus_version_mismatch(*, serving: str, pinned: str) -> None:
     """Surface a non-sensitive deployment-integrity warning as structured data."""
     _emit(

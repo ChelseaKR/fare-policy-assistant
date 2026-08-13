@@ -3,6 +3,10 @@
 Date: 2026-06-12. Status: amended 2026-06-12 (the public endpoint is an HTTP
 API, not a Function URL) and 2026-07-08 (the gateway throttle is now the
 documented, tuned, tested cross-container rate limit; see bottom).
+**Partially superseded 2026-08-12 by
+[ADR 0025](0025-per-caller-limiting-and-spend-cutoff.md):** the rejection of
+per-caller rate limiting below, and the reasoning repeated in the 2026-07-08
+amendment, no longer hold. The rest of this record stands.
 
 ## Decision
 
