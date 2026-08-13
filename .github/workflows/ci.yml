@@ -92,10 +92,20 @@ jobs:
         run: make i18n
 
   a11y-browser:
-    # Blocking axe/pa11y pass over the served page — the cross-check the
+    # Blocking axe/pa11y pass over the served pages — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
-    # Graduated from advisory to merge-blocking (BL-12): the page is
+    # Graduated from advisory to merge-blocking (BL-12): the pages are
     # violation-free, so any new finding is a real regression.
+    #
+    # Until 2026-08-12 this ran over `web/index.html` alone, while three other
+    # pages are served publicly: `/embed` (what an agency puts on its own fare
+    # page), `/offline`, and `/guide` (built for riders with no signal at the
+    # stop or who would rather browse than type). The structural gate was
+    # widened to all four on 2026-08-05; the browser gate was not, so the pages
+    # whose audience is least able to route around a problem had never been
+    # loaded in a real browser by any check. All four pass both runners as of
+    # the day this was widened — the point is that a regression on any of them
+    # now fails a build instead of shipping.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
@@ -105,10 +115,35 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: "20"
-      - name: Run pa11y on the static page (WCAG2AA)
+      - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
+      - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
+        run: uv sync --frozen --all-groups
+      # `/offline`, `/guide`, and `/embed` are generated from the committed
+      # corpus and a module constant — no network, no model call, no
+      # credentials — so they render here exactly as they are served. Emitting
+      # them from `web.a11y` means both gates read one definition of "every
+      # public page" and neither can silently fall out of coverage.
+      - name: Render every public page
+        run: uv run python -m web.a11y --emit /tmp/a11y-pages
+      # Two runners, because they catch different rules: axe covers ARIA
+      # semantics and computed contrast, HTML CodeSniffer covers WCAG
+      # techniques axe does not implement. Neither is a substitute for the
+      # manual screen-reader walkthrough (docs/audits/a11y-walkthrough.md).
+      - name: Run pa11y on every public page (WCAG2AA, axe + htmlcs)
         run: |
           printf '%s\n' '{"chromeLaunchConfig":{"args":["--no-sandbox"]}}' > /tmp/pa11y-ci.json
-          npx --yes pa11y@9.1.1 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html
+          a11y_status=0
+          for page in /tmp/a11y-pages/*.html; do
+            for runner in axe htmlcs; do
+              echo "::group::pa11y $runner $(basename "$page")"
+              npx --yes pa11y@9.1.1 --standard WCAG2AA --runner "$runner" \
+                --config /tmp/pa11y-ci.json "$page" || a11y_status=1
+              echo "::endgroup::"
+            done
+          done
+          exit $a11y_status
 
   smoke-evals:
     # Pull-request code is untrusted until merge. Keep this job explicitly
