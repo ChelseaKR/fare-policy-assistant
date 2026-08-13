@@ -463,16 +463,24 @@ if [[ "$CHECK_EVIDENCE" == "true" ]]; then
   echo "smoke: ok: evidence /report.html"
 fi
 
+# A sentence unique to yolobus-fares, so its absence really does prove the
+# document is contained. Both wordings are checked because the deployed corpus
+# and the corpus at HEAD can legitimately differ: 2025 is the fare period in the
+# snapshot deployed before 2026-08-13, 2026 the one in the snapshot after it. A
+# marker that only matched the retired wording would pass by never matching.
+yolobus_fare_period_exposed() {
+  grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY" \
+    || grep -Fq "All below fares are effective July 1, 2026" "$LAST_BODY"
+}
+
 # Every public, read-only rider entrypoint.
 check_assistant_html "/" "Transit Fare Policy Assistant"
 check_assistant_html "/offline" "Offline fare reference"
-if requires_disabled_document "yolobus-fares" \
-  && grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
+if requires_disabled_document "yolobus-fares" && yolobus_fare_period_exposed; then
   fail "assistant /offline exposes the contained Yolobus fare period"
 fi
 check_assistant_html "/guide" "Which fare applies to me?"
-if requires_disabled_document "yolobus-fares" \
-  && grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
+if requires_disabled_document "yolobus-fares" && yolobus_fare_period_exposed; then
   fail "assistant /guide exposes the contained Yolobus fare period"
 fi
 check_assistant_html "/embed" "Transit fare policy assistant" true

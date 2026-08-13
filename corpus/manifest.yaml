@@ -114,6 +114,16 @@ documents:
     license_note: "Public agency fare information."
 
   # ── Yolobus (Yolo County Transportation District) ─────────────────────────
+  # Re-snapshotted 2026-08-13, all three documents together. The committed
+  # 2026-06-12 snapshot of yolobus-fares carried the fare period "July 1, 2025
+  # – June 30, 2026", which has expired; the page now publishes "July 1, 2026 –
+  # June 30, 2027" and every fare amount is unchanged. The two sibling pages
+  # moved in the same pass because they restate the Yolo Transportation
+  # District customer service center address, phone and hours, all three of
+  # which changed; refreshing only the fares page would have left the same
+  # agency contradicting itself inside one retrieval scope. No other agency was
+  # refetched. Per-document fetch dates, digests and byte counts live in
+  # corpus/raw/<id>.meta.yaml, not here.
   - id: yolobus-fares
     agency: Yolobus
     agency_full: Yolo County Transportation District

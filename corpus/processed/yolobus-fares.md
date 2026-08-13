@@ -1,11 +1,11 @@
 # Fares — Yolobus
-Source: https://yolobus.com/fares/ (fetched 2026-06-12)
+Source: https://yolobus.com/fares/ (fetched 2026-08-13)
 
 ## Yolobus Fixed Route Bus Fares
 
-Yolobus fixed route bus fares vary depending on which type of service you ride. All below fares are effective July 1, 2025 – June 30, 2026 .
+Yolobus fixed route bus fares vary depending on which type of service you ride. All below fares are effective July 1, 2026 – June 30, 2027 .
 
-## Youth ages 0-18 ride free!
+## Youth ages 18 and under ride free!
 
 Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
 Single Ride Tickets
@@ -42,7 +42,7 @@ ADA Paratransit Intercity Fare | $4.50
 ADA Paratransit Premium Fare* | $6.00
 * Premium service is available to medical facilities only in portions of Sacramento and Vacaville that are beyond ¾ miles of Yolobus fixed routes. Destinations within ¾ mile of a Yolobus fixed route are charged the Local or Intercity fare, whichever is applicable
 How to purchase a ticket or a pass
-More information on how to purchase a ticket or a pass is available here
+More information on how to purchase a ticket or a pass is available below.
 
 ## How to Pay
 
@@ -51,10 +51,8 @@ Riders have many choices when paying their fares. Fares may be paid on board the
 ## Connect Card
 
 Connect Card is the Sacramento region’s electronic transit fare payment system and is accepted by most transit agencies in the Sacramento region. Connect Card readers are installed on all Yolobus vehicles. To pay, tag the Connect Card reader with your card upon boarding the bus.
-
-## Transit Connect
-
-The Transit Connect mobile fare app allows you to pre-purchase, store and activate tickets and passes instantly on your smartphone. Accepted on Yolobus and SacRT, with Unitrans joining in summer 2026.
+Transit Connect
+The Transit Connect mobile fare app allows you to pre-purchase, store and activate tickets and passes instantly on your smartphone. Accepted on Yolobus and SacRT, with Unitrans joining in 2026.
 
 ## Cash
 
@@ -62,7 +60,8 @@ All Yolobus vehicles have fareboxes to accept cash payments. Exact change is req
 In-Person Ticket and Pass Sales
 The Yolobus Customer Service Center in Woodland offers transit fare sales and Connect Card services:
 Business Hours
-Monday through Thursday, excluding holidays 9am – 12pm; 1pm – 4pm
+Monday through Friday, excluding holidays 7:00 am – 7:00 pm
+Saturday 9:00 am – 3:00 pm
 Connect Card Services Offered
 Issue New or Replacement Connect Cards for all riders, including eligible Discount Riders (Seniors, Persons with Disabilities)
 Load Cash Value, Tickets and/or Passes onto Connect Cards
@@ -86,7 +85,7 @@ If you are planning to connect with another Yolobus route to complete your trip,
 ## Other Fare Media
 
 The following passes are good for unlimited rides on Yolobus, including Express routes.
-All fares are effective July 1, 2025 – June 30, 2026.
+All fares are effective July 1, 2026 – June 30, 2027.
 UC Davis Aggie Card | UC Davis Zip Pass | UC Davis Extension International Program ID | Sacramento State Student ID | Los Rios Student Access Card | South Natomas TMA Pass | Sacramento County DHA Pass
 Undergraduate or UCDE Global Study Only | with valid student ID | with valid expiration date | with valid commuter sleeve | with valid sticker | with valid expiration date | with valid sticker
 UC Davis Aggie Card: Undergraduate or UCDE Global Study Only

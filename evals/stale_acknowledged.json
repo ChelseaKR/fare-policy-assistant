@@ -1,20 +1,20 @@
 {
-  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated. Current entries: 2026-08-10 hta.org domain move, pending the next promoted eval run.",
+  "_comment": "Loud, documented staleness waivers for the provenance gate (evals/provenance.py). Every entry needs a non-empty reason; remove an entry the moment the artifact is regenerated. Current entries: 2026-08-10 hta.org domain move plus the 2026-08-13 Yolobus fare-period refresh, both pending the next promoted eval run.",
   "acknowledged": [
     {
       "artifact": "EVALS.md",
       "field": "corpus_version",
-      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+      "reason": "Two corpus refreshes have landed since these artifacts were generated, neither of them evaluated yet. (1) 2026-08-10: hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org); that refetch rebound corpus_version 0938fff0539a to 35ec70d6359d with no policy-text change, only the source URL and fetch metadata. (2) 2026-08-13: the three Yolobus documents were re-snapshotted to pick up the replacement fare page, which publishes the July 1, 2026 - June 30, 2027 period in place of the expired July 1, 2025 - June 30, 2026 one; corpus_version 35ec70d6359d to 500e2b8c6090. No fare figure changed in that refresh, but the corpus text and dates did, so these artifacts describe a corpus HEAD no longer serves. Regenerate them at the next promoted eval run and remove these entries."
     },
     {
       "artifact": "baseline.json",
       "field": "corpus_version",
-      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+      "reason": "Two corpus refreshes have landed since these artifacts were generated, neither of them evaluated yet. (1) 2026-08-10: hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org); that refetch rebound corpus_version 0938fff0539a to 35ec70d6359d with no policy-text change, only the source URL and fetch metadata. (2) 2026-08-13: the three Yolobus documents were re-snapshotted to pick up the replacement fare page, which publishes the July 1, 2026 - June 30, 2027 period in place of the expired July 1, 2025 - June 30, 2026 one; corpus_version 35ec70d6359d to 500e2b8c6090. No fare figure changed in that refresh, but the corpus text and dates did, so these artifacts describe a corpus HEAD no longer serves. Regenerate them at the next promoted eval run and remove these entries."
     },
     {
       "artifact": "golden.jsonl",
       "field": "corpus_version",
-      "reason": "hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org). The 2026-08-10 refetch rebound corpus_version 0938fff0539a to 35ec70d6359d; the refresh report confirmed no policy-text change, only the source URL and fetch metadata. Regenerate these artifacts at the next promoted eval run and remove these entries."
+      "reason": "Two corpus refreshes have landed since these artifacts were generated, neither of them evaluated yet. (1) 2026-08-10: hta-fares source domain moved (humboldttransit.org now 404s; site relocated to hta.org); that refetch rebound corpus_version 0938fff0539a to 35ec70d6359d with no policy-text change, only the source URL and fetch metadata. (2) 2026-08-13: the three Yolobus documents were re-snapshotted to pick up the replacement fare page, which publishes the July 1, 2026 - June 30, 2027 period in place of the expired July 1, 2025 - June 30, 2026 one; corpus_version 35ec70d6359d to 500e2b8c6090. No fare figure changed in that refresh, but the corpus text and dates did, so these artifacts describe a corpus HEAD no longer serves. Regenerate them at the next promoted eval run and remove these entries."
     }
   ]
 }

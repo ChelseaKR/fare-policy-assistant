@@ -297,7 +297,12 @@ class TestVersion:
         ]
 
     def test_disabled_documents_are_removed_from_offline_and_guide(self, monkeypatch):
-        marker = "All fares are effective July 1, 2025"
+        # A sentence that appears in exactly one document (yolobus-fares), so the
+        # assertions below really do track that document's presence. Rebound from
+        # "July 1, 2025" when the 2026-08-13 Yolobus refresh moved the published
+        # fare period to July 1, 2026 - June 30, 2027; the behavior asserted is
+        # unchanged.
+        marker = "All fares are effective July 1, 2026"
         monkeypatch.delenv("FPA_DISABLED_DOC_IDS", raising=False)
         web_handler._OFFLINE_HTML = None
         web_handler._GUIDE_HTML = None
