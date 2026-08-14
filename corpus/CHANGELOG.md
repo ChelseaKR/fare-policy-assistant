@@ -205,3 +205,30 @@ This id was recomputed at merge time: the branch derived 21251137e67b against
 FAX's 95794539d1d0; County Connection, San Joaquin RTD, AC Transit, and
 WestCAT landed first, and `make ingest` over the union re-stamped this
 heading, the same way 95794539d1d0 itself was recomputed.
+## cbc07c922784 (2026-08-14 UTC)
+
+Added VTA (Santa Clara Valley Transportation Authority): 15 agencies, 44
+documents, 264 chunks. Three documents, all fetched 2026-08-14 UTC:
+`vta-fares`, `vta-regional-transfers`, and `vta-rtc-card`.
+
+The addition that documents its own limit: VTA's fare table renders its four
+rider-category tables (Adult, Adult Express, Senior/Disabled, Youth) in a tab
+widget whose labels are UI furniture the ingester drops, so the four price
+blocks land category-blind and THE CATEGORY-TO-PRICE TABLE IS NOT FAITHFULLY
+REPRESENTABLE in this pipeline — recorded at length in the manifest, and
+pinned by eval case refuse-vta-001 (the honest partial for an amount-by-
+category question) rather than flattened into labeled prices the source text
+does not contain. What VTA does publish as prose — the Day Pass Accumulator
+cap, 2-hour Clipper transfers with the express carve-out, the $2.50 express
+surcharge and its exemptions, the discount ages and document alternatives,
+the calendar-month pass window, the full Clipper START criteria, the
+Paratransit ID exclusions — is in the corpus and cased.
+
+One page fetched and excluded with its reason in the manifest:
+/go/fares/clipper (card-purchase and TVM mechanics, the METRO
+splash-pass-faqs precedent).
+
+This id was recomputed at merge time: the branch derived 491751588366 against
+the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
+WestCAT, and SLO RTA landed first, and `make ingest` over the union
+re-stamped this heading, as the 2026-08-12/13 additions did.

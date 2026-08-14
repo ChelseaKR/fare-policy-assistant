@@ -56,6 +56,7 @@ TRANSIT = DomainProfile(
         "AC Transit",
         "WestCAT",
         "SLORTA",
+        "VTA",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -173,6 +174,16 @@ TRANSIT = DomainProfile(
         "morro bay": "SLORTA",
         "paso robles": "SLORTA",
         "runabout": "SLORTA",
+        # Santa Clara Valley Transportation Authority. Riders say "VTA";
+        # "san jose" and "santa clara" are single-operator geographies within
+        # this corpus (the "vallejo"->SolTrans pattern). Deliberately NOT
+        # aliased: "valley" alone, and "light rail" — Sacramento's SacRT runs
+        # light rail too, so the mode name must not resolve to one operator.
+        "vta": "VTA",
+        "santa clara": "VTA",
+        "san jose": "VTA",
+        "valley transportation": "VTA",
+        "smartpass": "VTA",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

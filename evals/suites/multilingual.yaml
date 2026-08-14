@@ -373,3 +373,16 @@ cases:
       Spanish. The product name stays in English because that is how the
       agency sells it, which also keeps retrieval honest about what the
       passage says.
+  - id: ml-vta-001
+    question: "Si pago mi viaje en VTA con Clipper, ¿tengo transbordos gratis?"
+    agency_scope: VTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:2 horas|dos horas", "re:[Ee]xpr[eé]s|[Ee]xpress"]
+    mirror_of: ground-vta-002
+    rationale: >
+      Cross-lingual: VTA publishes no Spanish fare pages (a Google Translate
+      widget serves the site's other languages), so the Spanish question
+      must be answered from English passages and returned in Spanish — the
+      FAX ml-027 pattern. Mirrors ground-vta-002 including the express
+      carve-out.

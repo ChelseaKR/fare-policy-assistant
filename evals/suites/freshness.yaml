@@ -385,3 +385,20 @@ cases:
       must carry, deterministically, is the cash path that works under either
       reading. The manifest records the self-contradiction, the same class as
       SolTrans's retired paper passes (fresh-016) but on a live product.
+  # VTA's Summer Youth Pass is a season, not a fare: published as "June
+  # through August" with no year and no cutoff day. Asked in mid-August, the
+  # honest answer is the published window plus the as-of date, not a bare
+  # yes or an invented end date.
+  - id: fresh-vta-001
+    question: "Can I still get a VTA Summer Youth Pass in mid-August?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:June|August", "18"]
+    rationale: >
+      vta-fares: "Youth 18 and under enjoy unlimited rides on VTA bus and
+      light rail with the Summer Youth Pass from June through August" —
+      three months for the price of two Youth Monthly passes. On 2026-08-13
+      the window is still open but nearly closed; the honest answer gives
+      the published season and the as-of date rather than a bare yes, and
+      does not invent a sale-end day the page never states.

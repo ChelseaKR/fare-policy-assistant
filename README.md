@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for fourteen California transit agencies, wrapped
+and reduced-fare policies for fifteen California transit agencies, wrapped
 in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
@@ -360,7 +360,8 @@ Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
 Solano County Transit (SolTrans), Fresno Area Express (FAX), County
 Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, WestCAT (Western
-Contra Costa Transit Authority), and San Luis Obispo RTA (SLORTA),
+Contra Costa Transit Authority), San Luis Obispo RTA (SLORTA), and the Santa
+Clara Valley Transportation Authority (VTA),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
@@ -376,6 +377,13 @@ across San Joaquin County), which is the boundary its edge cases exist to pin.
 SLO RTA fills the Central Coast gap between SBMTD and MST, and is the only
 corpus agency with an age-tiered senior fare: 65-79 pay half, 80 and over
 ride free with a VIP Card.
+VTA is the largest system in the corpus and the one whose fare table did not
+survive ingestion: its rider-category tab labels are UI furniture the chunker
+drops, so the category-to-price bindings are honestly absent from the corpus
+(the manifest documents the gap and an eval case pins the honest partial
+answer), while the structures VTA states in prose — the Day Pass Accumulator
+cap, the express surcharge and its exemptions, the Clipper START criteria —
+are cased like any other agency's.
 
 AC Transit is the first accumulator-capped structure: its Day, Weekly, and
 Monthly passes are "fare maximums" that apply automatically once

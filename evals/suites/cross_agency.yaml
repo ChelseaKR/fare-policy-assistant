@@ -286,3 +286,22 @@ cases:
       true, and the half that differs is worth real money to an 80-year-old.
       A correct answer gives each agency's own structure with its own
       citation and does not export the VIP tier to SBMTD.
+  - id: xagency-vta-001
+    question: "I'm 81. Do seniors my age ride free on VTA or on SolTrans?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:80\\+?|80 or older", "65"]
+    rationale: >
+      A free tier that exists at exactly one of the two agencies.
+      soltrans-fare-table: "Seniors 80+ ride FREE on SolTrans and FAST local
+      routes and SolanoExpress lines." VTA publishes no free-senior tier:
+      its senior category starts at 65 with documented alternatives
+      (vta-fares), and its senior PRICE sits in the category-blind table the
+      manifest's representational-gap note describes, so the honest VTA half
+      states the 65+ criterion and the free Senior Clipper card path without
+      asserting a dollar amount. A correct answer keeps the two programs
+      apart with a citation each, gives SolTrans' 80+ free rule, and does
+      not extend it to VTA. Retrieval for this exact wording was checked to
+      surface both answer-bearing chunks. Deterministic checks and no
+      determination: the answer describes the tiers, it does not tell the
+      rider "you ride free."

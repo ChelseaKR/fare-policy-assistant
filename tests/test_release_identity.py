@@ -178,22 +178,23 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # AC Transit (5 aliases, 2026-08-14) on top produced the ninth (85c6cc32…c0e1
     # / 52e5ea5c…4a53 / 38a5931f…b4af); merging WestCAT (6 aliases,
     # 2026-08-14) on top produced the tenth (555eb52b…cf55 / 8a8596e1…dde0 /
-    # 6eaefe65…7320); and merging SLO RTA (SLORTA, 8 aliases, 2026-08-14) on
-    # top produces the eleventh and current one below: a fourteen-entry
-    # `scopes` tuple and 66 aliases in one domain block. The values below were
-    # re-derived by building the descriptor from this fixture against the
-    # merged profile, not lifted from any branch or from a failure message.
-    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
-    # 249b0835…907a.
+    # 6eaefe65…7320); merging SLO RTA (SLORTA, 8 aliases, 2026-08-14) on top
+    # produced the eleventh (bf8f7551…05c5 / f02c0da5…13f5 / b11e0f48…85a2);
+    # and merging VTA (5 aliases, 2026-08-14) on top produces the twelfth and
+    # current one below: a fifteen-entry `scopes` tuple and 71 aliases in one
+    # domain block. The values below were re-derived by building the
+    # descriptor from this fixture against the merged profile, not lifted
+    # from any branch or from a failure message. Before any of the 2026-08
+    # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "bf8f755134394efd2a3d93d108e512cbec90e92d2744f3343229ac45b4ca05c5"
+        first.config_version == "54e2571675f5ead6f027d09a509842f45c3d521023131d04911d910e73855937"
     )
     assert (
-        first.release_version == "f02c0da5aab91cdb711cf28177bfedecd860a4dfbe47048ee01db9aedece13f5"
+        first.release_version == "8edb5f4cba3fcbdf6d65d55fd7e3b02d3db9605b530917dfbb38881c21532614"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "b11e0f482a03a20021fe29a84997c9b095661142ed35e84d571af1ba86c785a2"
+        == "76fe204d2f136276d377b7c3b7b5683725dc6747959347693203c72330daa162"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
