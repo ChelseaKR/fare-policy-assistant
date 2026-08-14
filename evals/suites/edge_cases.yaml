@@ -825,3 +825,101 @@ cases:
       published for paratransit, and the answer must say what is published
       rather than extend the DFC discount to a service whose table does not
       carry one — the FAX Handy Ride lesson (edge-061) in this agency's shape.
+  # AC Transit boundaries. The distinctive structure is accumulator capping:
+  # Day, Weekly, and Monthly passes are "fare maximums" applied automatically
+  # when pay-per-ride spending reaches the pass price within the calendar
+  # period — and the accumulator channel matters, because cash and Token
+  # Transit riders do not get all of it.
+  - id: edge-actransit-001
+    question: "I pay per ride with Clipper on AC Transit local buses. If I keep riding all day, what's the most I'll be charged?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6\\.00", "re:[Ff]are maximum|automatically"]
+    rationale: >
+      actransit-fares: "Local Day Pass | Fare maximum at $6.00" in the
+      Clipper/contactless column, and "Day, Weekly, and Monthly passes will
+      be automatically applied when spending reaches the cost of these passes
+      within the calendar period." This is the accumulator case: the honest
+      answer states the $6.00 ceiling and that it applies automatically, not
+      a pass the rider must buy in advance. The prepaid cash Day Pass is
+      $6.50 — the capped rider pays less than the cash rider, the same
+      direction of error the SCMTD cap note warns about.
+
+  - id: edge-actransit-002
+    question: "Can I get AC Transit's weekly pass if I always pay my fare in cash on the bus?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Next-Generation Clipper|contactless", "re:\\$\\s?27\\.50"]
+    rationale: >
+      The accumulator-channel boundary. actransit-fares prices the Local
+      Weekly Pass only as "Fare maximum at $27.50" with "--" in the cash
+      column, and states "Weekly and Monthly are only available through
+      Next-Generation Clipper or a contactless bank card." A cash rider has
+      no weekly product at all; the honest answer says so and names the
+      channel that does have one, without inventing a cash workaround.
+
+  - id: edge-actransit-003
+    question: "If I ride AC Transit and then transfer to another transit agency using the same Clipper card, do I get a discount?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:up to \\$\\s?3(\\.00)?\\b|credit equal in value", "re:same card|same.{0,10}account"]
+    forbidden_content: ["$2.85"]
+    rationale: >
+      actransit-fares: "riders receive a credit equal in value to the last
+      fare paid, up to $3" when transferring to another regional system with
+      Next-Generation Clipper or contactless, and "Riders must use the same
+      card/account for all trips." The forbidden $2.85 pins two failure modes
+      at once: AC Transit's own undated /transfers page states the same
+      program's credit as "up to $2.85" (excluded for exactly that
+      disagreement — see the manifest), and other Bay Area agencies' live
+      pages still publish the older figure. An AC Transit answer must quote
+      AC Transit's dated page, not harmonize across agencies or eras.
+
+  - id: edge-actransit-004
+    question: "I'm 70 years old. What senior discount do I get on AC Transit, and how do I pay for it?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "re:50\\s?%|50 percent"]
+    requires_handoff: true
+    rationale: >
+      actransit-discounts: riders aged 65 and older are eligible for
+      Senior/Disabled fares — 50% off fares and passes per actransit-fares —
+      paid with cash plus ID, or best by applying for a Senior Clipper card.
+      The concrete next step (the Senior Clipper card application, or the
+      Clipper Access card for disabled riders) is published and must be
+      offered; the criterion (65) comes before the process details.
+
+  - id: edge-actransit-005
+    question: "Do my kids ride free on AC Transit? One is 4 and one is 12."
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]nder 5", "re:5-18|[Yy]outh"]
+    rationale: >
+      actransit-discounts: "Children under 5 ride free" and "Riders aged 5-18
+      are eligible for Youth fares" — the 4-year-old rides free, the
+      12-year-old pays the Youth fare, and the two children land on opposite
+      sides of the same published boundary. A complete answer may also name
+      the other published path for the older child: the Student Transit Pass
+      gives eligible 6th-12th grade students in Alameda County free unlimited
+      local rides.
+
+  - id: edge-actransit-006
+    question: "I have a disability. What discount does AC Transit give me, and what card should I get?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50\\s?%|50 percent", "re:Clipper Access"]
+    requires_handoff: true
+    rationale: >
+      actransit-fares: youth, seniors, and riders with disabilities receive
+      50% off fares and passes. actransit-discounts: disabled riders apply
+      for a Clipper Access card (formerly RTC), usable as proof of
+      eligibility on fixed-route, rail, and ferry systems throughout the Bay
+      Area; the Clipper Access program does not apply to Paratransit. The
+      handoff is the card application; the agency, not the assistant, decides
+      who qualifies.

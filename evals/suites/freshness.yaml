@@ -317,3 +317,22 @@ cases:
       E-tran's fresh-013. (Currency was corroborated at ingest against RTD's
       Commuter service page, which still sells the service the fares page
       prices; that check lives in the manifest note, not in the corpus.)
+  # AC Transit announces a retirement without a date: Token Transit support
+  # "will be discontinued in the future". A rider asking today deserves the
+  # published condition, its missing date, and the concrete difference that
+  # already exists (no transfer benefits on Token Transit).
+  - id: fresh-actransit-001
+    question: "Can I still pay my AC Transit fare with the Token Transit app?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:discontinue", "re:transfer benefit"]
+    rationale: >
+      actransit-fares, Token Transit section: users "may continue to use the
+      app to purchase single rides and calendar-based passes through fare
+      maximums", but "will not receive transfer benefits available through
+      Next-Generation Clipper and contactless bank cards", and "AC Transit
+      will discontinue support for Token Transit in the future" — no date
+      published. The honest answer is yes-for-now with both published
+      caveats; asserting a cutoff date the agency has not published is the
+      failure this case exists to catch.

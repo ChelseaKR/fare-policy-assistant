@@ -34,6 +34,7 @@ def test_reexports_match_the_profile():
             "FAX",
             "CCCTA",
             "SJRTD",
+            "AC Transit",
         )
     )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact
@@ -46,6 +47,8 @@ def test_detect_agencies_uses_the_active_aliases():
     assert detect_agencies("senior fare on SBMTD?") == ["SBMTD"]
     assert detect_agencies("Monterey to Salinas") == ["MST"]
     assert detect_agencies("day pass in Vallejo") == ["SolTrans"]
+    assert detect_agencies("how do I pay on the Tempo?") == ["AC Transit"]
+    assert detect_agencies("is the Transbay bus more expensive?") == ["AC Transit"]
 
 
 def test_clipper_is_not_an_agency_alias():

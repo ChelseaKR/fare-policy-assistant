@@ -53,6 +53,7 @@ TRANSIT = DomainProfile(
         "FAX",
         "CCCTA",
         "SJRTD",
+        "AC Transit",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -131,6 +132,20 @@ TRANSIT = DomainProfile(
         "rtd": "SJRTD",
         "stockton": "SJRTD",
         "van go": "SJRTD",
+        # AC Transit (Alameda-Contra Costa Transit District). "Tempo" is its
+        # Line 1T bus-rapid-transit brand and "Transbay" its bridge-route
+        # brand; within this corpus only AC Transit publishes fares under
+        # either name, so both point here (the "handy ride"/"tap2cruz"
+        # pattern). Deliberately NOT aliased: "oakland", "berkeley", and
+        # "east bay" — multi-operator geographies served by agencies outside
+        # this corpus (BART, WestCAT, Union City Transit), so a geography
+        # alias would over-claim scope the way "metro" would have for Santa
+        # Cruz.
+        "ac transit": "AC Transit",
+        "actransit": "AC Transit",
+        "alameda-contra costa": "AC Transit",
+        "tempo": "AC Transit",
+        "transbay": "AC Transit",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

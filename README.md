@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for eleven California transit agencies, wrapped in a
+and reduced-fare policies for twelve California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -358,11 +358,11 @@ Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
 Solano County Transit (SolTrans), Fresno Area Express (FAX), County
-Connection (CCCTA), and San Joaquin RTD (SJRTD),
+Connection (CCCTA), San Joaquin RTD (SJRTD), and AC Transit,
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
-the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
-document. MST and SBMTD are the two agencies live
+the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
+document and AC Transit's Spanish fares page. MST and SBMTD are the two agencies live
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
@@ -370,11 +370,18 @@ San Joaquin RTD is the second Central Valley agency and the only one whose
 senior discount age depends on the rider's city of residence (60, 62, or 65
 across San Joaquin County), which is the boundary its edge cases exist to pin.
 
-SolTrans and County Connection are the corpus's two Clipper participants.
-That is the point of including them and also the main hazard: Clipper is a
-regional card, so a rider
-reads a Clipper answer as generalizing across the Bay Area, while the corpus
-holds two agencies' sides of it. The `xagency-009` / `xagency-010` cases
+AC Transit is the first accumulator-capped structure: its Day, Weekly, and
+Monthly passes are "fare maximums" that apply automatically once
+pay-per-ride spending reaches the pass price, and both the rule and the
+amounts are published as HTML text the pipeline can quote — unlike Santa
+Cruz METRO's cap amounts, which live in an image and stay honestly out of
+the corpus.
+
+SolTrans, County Connection, and AC Transit are the corpus's three Clipper
+participants. That is the point of including them and also the main hazard:
+Clipper is a regional card, so a rider reads a Clipper answer as generalizing
+across the Bay Area, while the corpus holds only each named agency's side of
+it. The `xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,

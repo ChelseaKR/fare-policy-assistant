@@ -121,3 +121,32 @@ FAX's 95794539d1d0, County Connection's 60033300dc49 (#126) landed first, and
 `make ingest` over the union re-stamped this heading — the same treatment
 95794539d1d0 itself got. Further sibling agency merges will re-stamp their own
 headings, not this one.
+## 5db0d6a4bfbd (2026-08-14 UTC)
+
+Added AC Transit (Alameda-Contra Costa Transit District): 12 agencies, 33
+documents, 214 chunks. Three documents, all fetched 2026-08-14 UTC:
+`actransit-fares` (Fares, stamped "Effective July 1, 2026"),
+`actransit-fares-es` (a genuine Spanish translation — the corpus's second real
+Spanish fares page, after MST's), and `actransit-discounts`.
+
+AC Transit is the corpus's first accumulator-capped fare structure: Day,
+Weekly, and Monthly passes are "fare maximums" applied automatically when
+pay-per-ride spending reaches the pass price within the calendar period, and
+both the rule and the amounts are published as HTML text, so the capping
+structure is representable and cased (edge-actransit-001/002,
+ml-actransit-002) rather than flattened.
+
+Two corpus-hygiene findings recorded with the addition:
+- `actransit.org/transfers` was excluded: undated, it states the
+  Next-Generation Clipper interagency credit as "up to $2.85" and local
+  transfers as "one free" where the dated fares page says "up to $3" and
+  "unlimited" — the SolTrans ticket-office-location reasoning, applied to the
+  page that lost the date contest. edge-actransit-003 forbids the $2.85.
+- The fares page's Adult and Discounted tables arrive without their tab-widget
+  labels bound to them (label order is the only binding); recorded in the
+  manifest as a representational hazard for any discounted-figure case.
+
+This id was recomputed at merge time: the branch derived 02c3bb15a506 against
+the nine-agency 95794539d1d0, County Connection (60033300dc49) and San
+Joaquin RTD (d113659adda8) landed first, and `make ingest` over the union
+re-stamped this heading, as the 2026-08-12/13 additions did.

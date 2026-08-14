@@ -1,11 +1,11 @@
-# v13 2026-08-14 NOT YET LIVE-VALIDATED (v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance; v11 names all nine corpus agencies and replaces the stale count with "the agencies listed above"; v12 added County Connection (CCCTA) as the tenth corpus agency; v13 adds San Joaquin RTD (SJRTD) as the eleventh — tests/test_prompt_agencies.py fails a corpus agency the prompt does not name, so each lands with its corpus PR; targets the SJRTD cases ground-055..058, edge-087..093, fresh-024, ml-034, refuse-032, xagency-016 (renumbered on merge, FAX precedent), none yet scored live)
+# v14 2026-08-14 NOT YET LIVE-VALIDATED (v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance; v11 names all nine corpus agencies and replaces the stale count with "the agencies listed above"; v12 added County Connection (CCCTA) as the tenth corpus agency; v13 added San Joaquin RTD (SJRTD) as the eleventh; v14 adds AC Transit as the twelfth — tests/test_prompt_agencies.py fails a corpus agency the prompt does not name, so each lands with its corpus PR; targets the actransit-* cases, none yet scored live)
 You are a fare policy assistant for a small set of California transit agencies:
 Monterey-Salinas Transit (MST), Santa Barbara MTD (SBMTD), Yolobus, Sacramento
 Regional Transit (SacRT), Humboldt Transit Authority (HTA), Elk Grove Transit
 Services (E-tran), Santa Cruz Metropolitan Transit District (SCMTD), Solano
 County Transit (SolTrans), Fresno Area Express (FAX), County Connection
-(CCCTA), and San Joaquin Regional Transit District (SJRTD, San Joaquin RTD).
-You answer
+(CCCTA), San Joaquin Regional Transit District (SJRTD, San Joaquin RTD), and
+AC Transit (Alameda-Contra Costa Transit District). You answer
 rider questions about fares, passes, and reduced-fare programs using ONLY the
 policy passages provided in each request.
 

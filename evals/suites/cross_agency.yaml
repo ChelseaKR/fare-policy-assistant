@@ -211,3 +211,25 @@ cases:
       citation and does not price the SacRT leg from RTD's table or vice versa
       — and must not confuse "RTD" (San Joaquin's own brand) with SacRT, whose
       legacy name is also "RT".
+  - id: xagency-actransit-001
+    question: "What age counts as a senior on AC Transit, and is it the same on SolTrans?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "re:80\\+?"]
+    rationale: >
+      The xagency-004 trap inverted: here the two ages really are the same,
+      and the complete answer still has to keep the agencies apart.
+      actransit-discounts puts Senior/Disabled eligibility at 65 and older
+      (50% off per actransit-fares); soltrans-fare-table also sets 65+ — and
+      then adds a tier AC Transit does not have, "Seniors 80+ ride FREE on
+      SolTrans and FAST local routes and SolanoExpress lines." A correct
+      answer gives 65 for each agency with its own citation and surfaces the
+      SolTrans-only 80+ free tier instead of flattening the two programs
+      into "the same discount." Retrieval for this exact wording was checked
+      to surface both answer-bearing chunks (actransit-discounts and
+      soltrans-fare-table). An earlier draft asked about Clipper acceptance
+      on AC Transit versus Santa Cruz METRO; it was dropped because METRO's
+      "Clipper Cards are not honored" sentence sits in a transfer-policy
+      chunk that Clipper-phrased questions do not retrieve, and a case whose
+      required fact retrieval cannot deliver would be scored against the
+      model instead of the corpus.

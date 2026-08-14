@@ -173,22 +173,23 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
     # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
     # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
-    # and merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top
-    # produces the eighth and current one below: an eleven-entry `scopes`
-    # tuple and 47 aliases in one domain block. The values below were
-    # re-derived by building the descriptor from this fixture against the
-    # merged profile, not lifted from any branch or from a failure message.
-    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
-    # 249b0835…907a.
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produces the ninth and current
+    # one below: a twelve-entry `scopes` tuple and 52 aliases in one domain
+    # block. The values below were re-derived by building the descriptor from
+    # this fixture against the merged profile, not lifted from any branch or
+    # from a failure message. Before any of the 2026-08 additions:
+    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "fb4d057e000a30434a93e516b24137099630ce841ae742d53134e24b4187caf4"
+        first.config_version == "85c6cc32c6c64009fd2adfb97bd68ebd006eb101ac76d11fe09085df05a2c0e1"
     )
     assert (
-        first.release_version == "6becd6052ad7fd6bb95b32ab8fd120963c60f8e3d9711d42fc2c9232e781e787"
+        first.release_version == "52e5ea5c8b25f3f06ee0c21fb89c73a0b2671db99548b834cb33e7515e724a53"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "5a86bf97e94d501ef3a7f3d19f8e1d4b575411b96dba9ccd6fb81b29200c630a"
+        == "38a5931f37b490ac230b72e2c74e53ea527396a98642dca33fed070520cbb4af"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
