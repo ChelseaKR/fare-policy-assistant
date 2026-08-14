@@ -68,3 +68,35 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## 21251137e67b (2026-08-14 UTC)
+
+Added SLO RTA (San Luis Obispo Regional Transit Authority): 10 agencies, 27
+documents, 174 chunks. Four documents, all fetched 2026-08-14 UTC (checked
+2026-08-13 Pacific): `slorta-fares` (the cash fare table, headed "New cash
+fares as of April 6, 2026"), `slorta-discounts` (eligibility categories and
+the RTA Discount Eligibility Card), `slorta-passes` (pass products, the VIP
+Pass, ADA free fixed-route), and `slorta-contactless` (Tap2Ride, Token
+Transit, and the full fare-capping table).
+
+Central Coast, filling the gap between SBMTD and MST, and the only corpus
+agency with an age-tiered senior fare: 65-79 pay half, 80 and over ride free
+with a VIP Card. Unlike Santa Cruz METRO, whose cap amounts exist only inside
+a PNG, RTA publishes its fare-capping amounts as HTML, so they are citable.
+
+Two corpus-hygiene findings recorded with the addition:
+
+- The fares page and the discounts page disagree about whether the child free
+  fare (44 inches and under) applies on the South County routes; both are
+  ingested as published, the manifest records the conflict, and eval case
+  edge-081 pins the honest behavior (state the rule, surface the
+  disagreement, decide nothing).
+- The contactless page disagrees with itself about whether the disabled
+  discount is available on Tap2Ride ("not available ... yet" in one section,
+  "now available" in its FAQ). Eval case fresh-023 requires the cash path,
+  which works under either reading.
+
+Written on a branch where FAX's 95794539d1d0 (23 documents, 152 chunks) is
+what HEAD ships; two sibling batches are adding other agencies in parallel, so
+if one of them merges first this id needs another `make ingest` and a re-stamp
+of this heading, the same way 95794539d1d0 itself was recomputed.

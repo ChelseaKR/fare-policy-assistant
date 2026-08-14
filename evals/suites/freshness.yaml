@@ -284,3 +284,36 @@ cases:
       an end date, so the honest answer is the published condition, not a
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
+
+  # SLO RTA. Ids start at fresh-022: fresh-021 is held by the sibling San
+  # Joaquin RTD branch (see the ground-047 note in groundedness.yaml).
+  - id: fresh-022
+    question: "Did SLO RTA change its fares recently?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["April 6, 2026"]
+    rationale: >
+      slorta-fares is headed "New cash fares as of April 6, 2026" — an
+      open-ended effective-from stamp, and the corpus's freshest one. The
+      answer should surface the date the agency itself published, the
+      sbmtd-farechange shape (fresh-002).
+
+  - id: fresh-023
+    question: "Can I get my disabled discount automatically when I tap a contactless card on RTA?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)cash|farebox"]
+    rationale: >
+      A page that disagrees with itself, asked at the seam. slorta-contactless
+      says in its Tap2Ride Discounts section that ADA Disabled and K-12
+      discounts "are not available on Tap2Ride yet" and those riders "can pay
+      the discount fare with cash", while the same page's FAQ says discounted
+      contactless fares are "now available for older adults (ages 65+),
+      Disabled and Medicare cardholders" via Cal-ITP registration
+      (benefits.calitp.org). The corpus cannot settle which sentence is
+      current. What the answer must not do is give a flat yes or no; what it
+      must carry, deterministically, is the cash path that works under either
+      reading. The manifest records the self-contradiction, the same class as
+      SolTrans's retired paper passes (fresh-016) but on a live product.

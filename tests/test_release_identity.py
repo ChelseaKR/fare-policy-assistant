@@ -170,22 +170,27 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
     # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produces the sixth and current one below: a
-    # nine-entry `scopes` tuple and 37 aliases in one domain block. None of the
-    # branch values is what HEAD ships, because HEAD carries all four additions
-    # and no branch did. The values below were re-derived by building the
-    # descriptor from this fixture against the merged profile, not lifted from
-    # any branch or from a failure message. Before any of the four additions:
+    # merging FAX on top of that produced the sixth
+    # (50fb01a9…4999 / 816ff402…cb94 / df00d694…3626), a nine-entry `scopes`
+    # tuple and 37 aliases. This branch adds SLO RTA (SLORTA, 8 aliases,
+    # 2026-08-13) and rebinds them to the values below: a ten-entry `scopes`
+    # tuple and 45 aliases in one domain block. Two sibling agency branches
+    # are in flight as this is written, so if this branch is not the last to
+    # merge, HEAD's values will differ from these and must be re-derived at
+    # merge, the way the E-tran/SCMTD/SolTrans/FAX merges were. The values
+    # below were re-derived by building the descriptor from this fixture
+    # against this branch's profile, not lifted from any other branch or from
+    # a failure message. Before any of the five additions:
     # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "50fb01a990c29bad1d20b64a371c9f6c4e76f173717338153383eb05ce124999"
+        first.config_version == "62bc6ad8cf8fb209d1f92ad55d693fb184e0875fbc9d77812f337862fb72386d"
     )
     assert (
-        first.release_version == "816ff4028414386422d426ba55e218c2eb981e2006dd7fc9e1fb471e4fa4cb94"
+        first.release_version == "cdc611155ba213874a621a053655270691404952477cb31839068c4ad0cf0a15"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "df00d69422d7034c46271580a7a44cdbf3c629e0be6d5e3d583fb1a27183b626"
+        == "201243c6f9ba7fb3a9fc2b3b161fe2f8a8dacb0c3f51c202265b86c90388cff4"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

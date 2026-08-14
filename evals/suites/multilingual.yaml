@@ -268,3 +268,20 @@ cases:
     required_facts: ["re:\\$\\s?1[.,]00"]
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
+
+  # SLO RTA: ml-029, not ml-028, which is held by the sibling San Joaquin RTD
+  # branch (see the ground-047 note in groundedness.yaml).
+  - id: ml-029
+    question: "¿Cuánto cuesta el Regional Day Pass de SLO RTA?"
+    agency_scope: SLORTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5[.,]50"]
+    mirror_of: ground-048
+    rationale: >
+      Cross-lingual mirror of ground-048: slorta.org publishes no /es/ pages
+      (Spanish is served through a translate widget), so the Spanish question
+      must be answered from the English slorta-passes section and returned in
+      Spanish. The product name stays in English because that is how the
+      agency sells it, which also keeps retrieval honest about what the
+      passage says.

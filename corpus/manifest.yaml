@@ -111,6 +111,26 @@
 #                 attempted. Crawl-delay is unspecified; the manifest's 10-second
 #                 default was honored anyway.
 #
+# Robots/permissions note for SLO RTA (checked 2026-08-13) — read the server
+# headers before trusting the robots file, because they disagree about what
+# the site is:
+#   www.slorta.org  robots.txt returns HTTP 200 but is a stock JOOMLA file,
+#                 last-modified 2015-09-17, while the site itself is WordPress
+#                 (X-Pingback: .../wordpress/xmlrpc.php) — a robots file that
+#                 survived at least one platform migration unedited. Its
+#                 `User-agent: *` group disallows only Joomla internals
+#                 (/administrator/, /cache/, /components/, /images/, /media/,
+#                 /modules/, /plugins/, /templates/, and the rest of the stock
+#                 list); every document below lives under /fares/, which is not
+#                 excluded. Two of the disallowed paths (/images/, /media/)
+#                 would matter if fare PDFs lived there, but every document
+#                 below is HTML. No Crawl-delay directive; the manifest's
+#                 10-second default was honored anyway. No Content-Signal
+#                 header and no Content-Signal line in robots.txt on any
+#                 response. All four pages returned HTTP 200 to this project's
+#                 identified research user agent on the first try — plain
+#                 Apache, no WAF challenge.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
@@ -157,6 +177,20 @@
 #            https://www.soltrans.org/about/policies/privacy-policy; there is no
 #            terms-of-use entry. Footer: "© 2024 SolTrans" (a bare copyright line,
 #            and note the footer year is 2024, not the current year).
+#   SLORTA   terms of use: https://www.slorta.org/terms-use/ (footer-linked,
+#            checked 2026-08-13). Read it there, not here; what a maintainer
+#            must know before trusting this corpus entry: its Copyright Notice
+#            grants personal, non-commercial copying and states that other
+#            reproduction requires RTA's prior written permission. That is more
+#            license than SBMTD's terms grant (SBMTD's "Reservation of rights"
+#            reserves all rights and grants none), and this project's posture is
+#            unchanged from corpus/LICENSE-NOTE.md: snapshots are committed
+#            solely so the dated evaluation can be re-run, and no redistribution
+#            right is claimed or granted. A maintainer who reads RTA's terms as
+#            forbidding committed snapshots should drop this agency the way
+#            Unitrans was dropped — and should apply the same reading to SBMTD,
+#            whose terms grant strictly less. Footer: "© 1989–2026 San Luis
+#            Obispo Regional Transit Authority. All Rights Reserved."
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -618,6 +652,86 @@ documents:
     # reason sbmtd-farechange is: a fare-change announcement the assistant must be
     # able to cite when a rider asks about a product the fare table still lists.
     license_note: "Public agency fare-change announcement; no Content-Signal served."
+
+  # ── SLO RTA (San Luis Obispo Regional Transit Authority) ──────────────────
+  # Added as the tenth agency (2026-08-13; two sibling agency branches are in
+  # flight as this is written, so the ordinal is merge-dependent, the FAX
+  # renumbering precedent). Central Coast, filling the geographic gap between
+  # SBMTD and MST. RTA operates the regional routes, South County Transit,
+  # Paso Express (Routes A & B), and Morro Bay Transit; its regional passes are
+  # also honored on SLO Transit — the City of San Luis Obispo's SEPARATE
+  # system, which is NOT in this corpus. Deliberately not aliased: the bare
+  # string "slo" (it names the city system as often as the RTA) — see
+  # domain.py.
+  #
+  # FARE PERIOD (checked 2026-08-13): the fares page is headed "New cash fares
+  # as of April 6, 2026" — an open-ended effective-from stamp, current today.
+  # The passes and contactless pages carry no date of their own, but their
+  # prices agree with the fares page and with each other (the fare-capping
+  # example on the contactless page reprices the same $47 / $68 / $5.50 passes
+  # the passes page sells), which is the cross-page corroboration Yolobus
+  # never had.
+  #
+  # THE DISAGREEMENT, recorded before anyone finds it the hard way: the fares
+  # page's cash table prices "Children 44″ and under" as "Free with adult
+  # rider" in BOTH columns, including the South County/A&B/Morro Bay column,
+  # while the discounts page's Free Fare row says children 44″ and smaller
+  # ride free "(Not available on the South County routes)". Two live pages,
+  # one question, opposite answers, and no third page to break the tie. Both
+  # are ingested as published; eval case edge-081 pins the honest behavior
+  # (surface both, decide nothing), and no other case rests on the contested
+  # South County child fare.
+  #
+  # The contactless page also disagrees with itself about the disabled
+  # discount: its "Tap2Ride Discounts" section says ADA Disabled and K-12
+  # discounts are "not available on Tap2Ride yet" (pay cash), while its FAQ
+  # says discounted contactless fares are "now available for older adults
+  # (ages 65+), Disabled and Medicare cardholders". Left as published; eval
+  # case fresh-023 requires the cash path and the Cal-ITP registration path to
+  # be stated rather than a flat yes or no.
+  #
+  # Also noteworthy, in the direction that helps riders: unlike Santa Cruz
+  # METRO, whose Tap2Cruz cap amounts exist only inside a PNG, RTA publishes
+  # its full fare-capping table (single ride, daily, weekly, and monthly caps
+  # per bus system) as HTML on the contactless page, so the cap amounts are in
+  # the corpus and citable.
+  - id: slorta-fares
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Fares"
+    url: https://www.slorta.org/fares/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  - id: slorta-discounts
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Discounts (eligibility and verification)"
+    url: https://www.slorta.org/fares/discounts/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  - id: slorta-passes
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Passes"
+    url: https://www.slorta.org/fares/passes/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  - id: slorta-contactless
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Contactless Fares (Tap2Ride and fare capping)"
+    url: https://www.slorta.org/fares/contactless/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  # No Spanish counterpart: slorta.org serves Spanish through a translate
+  # widget ("Translate »" in every footer) rather than published /es/ pages,
+  # so there is no Spanish source document to catalogue — the same deliberate
+  # multilingual gap as SacRT, E-tran, and SJRTD. The multilingual eval case
+  # for this agency is an honest cross-lingual one.
+  # Excluded, deliberately: /fares/outlets/ and /fares/purchase-passes/ (pass
+  # sales furniture, no policy of their own); the per-route pages under
+  # /schedules-fares/ (their cash fares repeat the fares page's table row by
+  # row); and /fares/privacy-policy/ (not fare policy).
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

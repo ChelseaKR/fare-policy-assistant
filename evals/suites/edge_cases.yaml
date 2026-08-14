@@ -622,3 +622,116 @@ cases:
       buy single fares at $0.75. Fresno City College is in the subsidized group,
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
+
+  # SLO RTA. Ids start at edge-075 on purpose: the sibling San Joaquin RTD
+  # branch holds edge-068..074 (see the ground-047 note). The boundary this
+  # agency contributes is the senior split at 80: seniors 65-79 pay half fare,
+  # seniors 80+ ride free with a VIP Card — the only age-tiered senior fare in
+  # the corpus. edge-081 pins a genuine cross-page disagreement; the manifest
+  # records it and no other case rests on the contested fact.
+  - id: edge-075
+    question: "I'm 81. Do I still pay the senior fare on RTA buses?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["80", "re:(?i)free"]
+    requires_handoff: true
+    rationale: >
+      slorta-discounts Free Fare: "VIP Seniors who are 80+ years of age ride
+      for free on all SLO County fixed routes", and slorta-passes VIP Pass:
+      unlimited free rides for seniors 80 or older, obtained in person (SLO
+      Regional Rideshare, 1114 Marsh Street) or by showing valid ID. An answer
+      that quotes the 65-79 half fare for an 81-year-old charges a rider the
+      agency says rides free; the handoff is where the VIP Pass is issued.
+
+  - id: edge-076
+    question: "I'm 64. Do I get the senior discount on SLO RTA?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    rationale: >
+      slorta-fares and slorta-discounts both bound the senior half fare at
+      65-79; 64 is below the published floor. The answer states the criterion
+      without ruling on the rider, and the discounts page's other paths
+      (disabled, Medicare cardholder — neither age-gated) belong in a complete
+      answer, because missing the senior floor by a year does not close them.
+
+  - id: edge-077
+    question: "My daughter is in 8th grade in Grover Beach. Does she get the K-12 student discount on the Route 21 bus?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)south county"]
+    rationale: >
+      slorta-discounts Half-Priced row: the K-12 student discount "applies to
+      RTA and Paso Robles routes A & B only. The Student Discount does not
+      apply on the South County routes 21,24,27 and 28 or Morro Bay Transit."
+      Route 21 is a South County route, so the honest answer is that the
+      published discount excludes exactly the bus this rider named — and the
+      passes page's South County 31-Day and Day Pass discount tiers
+      (Seniors/Disabled, no student tier) corroborate. An answer that quotes
+      the half fare here invents a discount the agency withholds.
+
+  - id: edge-078
+    question: "I have an ADA paratransit ID card. Do I pay to ride the regular RTA bus, and does the person helping me ride free too?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free", "re:(?i)full fare"]
+    rationale: >
+      slorta-discounts: ADA passengers ride fixed route free with a Certificate
+      of Eligibility or ADA Paratransit Service ID card, and "Care attendants
+      and companions must pay full fare." Both halves are published and they
+      point opposite ways; an answer that extends the free fare to the
+      attendant gives away a fare the agency charges (compare FAX, where the
+      PCA rides free once verified — edge-065 — which is exactly why the
+      assistant must not carry one agency's attendant rule to another).
+
+  - id: edge-079
+    question: "Does the money on an RTA Stored Value Pass expire?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)one year|1 year"]
+    requires_handoff: true
+    rationale: >
+      slorta-passes RTA & South County Stored Value Pass: "Stored value passes
+      will deactivate one year from the date that they were created," and
+      remaining value can be moved to a new pass by contacting the
+      administrative office at (805) 781-4833. The deactivation is the fact;
+      the recovery path is the handoff, and it is in the passage.
+
+  - id: edge-080
+    question: "I tap my phone on some RTA trips and my watch on others. Will I still hit the fare cap?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)same"]
+    rationale: >
+      slorta-contactless Fare Capping: "you must always use the same payment
+      method each time you tap. For example: Don't use your iPhone to tap on
+      for one trip, and then tap for your next trip with your Apple Watch.
+      Even though the same bank card may be linked via both devices, you will
+      lose the benefit of fare capping." The question is the page's own
+      example asked back; the answer must carry the same-method condition, not
+      just "yes there is a cap."
+
+  - id: edge-081
+    question: "My daughter is 40 inches tall. Does she ride free with me on the Route 21 bus?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:44"]
+    rationale: >
+      The disagreement case, pinned on purpose. slorta-fares' cash table prices
+      "Children 44″ and under" as "Free with adult rider" in BOTH columns,
+      including South County/A&B/Morro Bay — Route 21's column — while
+      slorta-discounts' Free Fare row says children 44″ and smaller ride free
+      "(Not available on the South County routes)". Two live pages, opposite
+      answers, no third page to break the tie (the manifest records the
+      conflict). The honest answer states the 44-inch rule and that RTA's own
+      two pages disagree about the South County routes, and points the rider
+      at RTA — it must not silently pick a side. Deterministically we can only
+      require the 44-inch criterion; whether both sides are surfaced is the
+      live judge's call.

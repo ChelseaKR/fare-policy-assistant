@@ -179,3 +179,20 @@ cases:
       discount, not a suspension (hta-fares). Two agencies, two ages, and two
       different kinds of answer — one a price, one the absence of a price with a
       condition attached. A correct answer keeps them separate and cites each.
+
+  # SLO RTA: xagency-013, not xagency-012, which is held by the sibling San
+  # Joaquin RTD branch (see the ground-047 note in groundedness.yaml).
+  - id: xagency-013
+    question: "Is the senior fare age the same on SLO RTA and Santa Barbara MTD?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "80"]
+    rationale: >
+      Central Coast neighbors a rider can plausibly use in one day, and the
+      shared number is the trap: both systems start their senior fare at 65
+      (slorta-fares Senior 65-79; sbmtd-fares-passes Seniors age 65+ $1.25),
+      but RTA's tier ends at 79 because seniors 80 and over ride RTA free with
+      a VIP Card, while SBMTD publishes no such upper tier. "Same age" is half
+      true, and the half that differs is worth real money to an 80-year-old.
+      A correct answer gives each agency's own structure with its own
+      citation and does not export the VIP tier to SBMTD.
