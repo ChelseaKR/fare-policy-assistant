@@ -186,6 +186,47 @@ rather than tied to a published tag.
   `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
 
 ### Added
+- **Nine agencies in one coordinated expansion (2026-08-13/14).** County
+  Connection (CCCTA), San Joaquin RTD, AC Transit, WestCAT, SLO RTA, VTA, Napa
+  Valley Vine Transit (VINE), SamTrans, and Marin Transit take the corpus from
+  nine agencies to eighteen: 52 documents, 301 chunks, `corpus_version`
+  `3dd8b7bd757e`, and the eval suites from 258 cases to 385. The nine branches
+  were written in parallel against the same base, so each merge re-derived what
+  the previous one moved — the system prompt one version per agency (v11 to
+  v20, each bump landing with its own corpus PR because
+  `tests/test_prompt_agencies.py` fails any corpus agency the prompt does not
+  name), `corpus_version` from a fresh offline ingest, the release-identity
+  goldens from the test's own fixture, and the doc counts and coverage matrix.
+  Two batches had allocated colliding numeric case ids; the later branch
+  renumbered on merge, the FAX precedent, and nothing but ids moved.
+  **Every one of these agencies is marked NOT YET LIVE-VALIDATED.** No live
+  eval has scored any of the 127 new cases, the published scores predate all
+  of them, and `evals/stale_acknowledged.json` records that per artifact and
+  per field rather than letting it pass quietly.
+- **Two candidate agencies recorded as NO-GO, with dated evidence, instead of
+  quietly skipped.** RABA (Redding) fails at `robots.txt` itself: its host
+  302s to a Revize CMS file whose allowlist admits four commercial crawlers
+  and ends `User-agent: * / Disallow: /`, and the City of Redding, its
+  administering publisher, serves the same shape. This project's fetcher falls
+  under `*`, so no content page was requested from either host. Golden Gate
+  Transit fails for the opposite reason: fetching is permitted and every page
+  returned HTTP 200, but the site wraps its entire body in a single ASP.NET
+  `<form>` that the cleaner strips as page furniture, so every page cleans to
+  zero sections. Un-stripping page-wrapper forms would change the ingested
+  text of agencies already in the corpus, which is a cleaner change needing
+  its own PR and eval justification, not a side effect of an agency addition.
+- **Cross-agency findings the expansion surfaced, attributed rather than
+  harmonized.** Three agencies publish three different windows for what a
+  rider experiences as the same inter-agency Clipper transfer: SolTrans says
+  60 minutes, WestCAT says 120, and Golden Gate's own transfers page (read
+  during the NO-GO check, never ingested) says three hours. `xagency-014`
+  fails any answer that quotes one agency's window as another's. The
+  Next-Generation Clipper interagency credit has the same shape: AC Transit's
+  dated fares page says "up to $3" where VTA's and Marin Transit's live pages
+  say "$2.85". `edge-actransit-003` forbids the $2.85 on AC Transit answers,
+  and the manifest's license notes mark each agency's description of another
+  operator's arrangement as that agency's characterization, not the other's
+  policy. The corpus reports the disagreement; it does not resolve it.
 - `corpus/LICENSE-NOTE.md`: a plain-English statement of what is in the corpus
   directory, whose copyright it is, why it is committed (re-running a dated
   evaluation), what a downstream reader may and may not assume, and each
