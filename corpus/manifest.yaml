@@ -170,6 +170,19 @@
 #                 ingested. Every page below returned HTTP 200 to the
 #                 identified user agent on the first try — no WAF challenge,
 #                 no workaround needed or attempted.
+# Robots/permissions note for WestCAT (checked 2026-08-13):
+#   westcat.org   publishes NO robots.txt at all: https://westcat.org/robots.txt
+#                 and https://www.westcat.org/robots.txt both return HTTP 404
+#                 (an IIS error page, not an empty allow file). Under RFC 9309
+#                 §2.3.1.3, a 404 on robots.txt means no crawl restrictions are
+#                 in place, and that is how this project read it — an absent
+#                 file is not a block, and nothing was worked around. IIS/Plesk
+#                 host, no Cloudflare, no WAF: every page below returned HTTP
+#                 200 to this project's identified research user agent on the
+#                 first try. No Content-Signal or x-robots-tag header on any
+#                 response. No Crawl-delay is published anywhere (there is no
+#                 robots.txt to publish one in); the manifest's 10-second
+#                 default was honored anyway.
 #
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
@@ -233,6 +246,12 @@
 #   AC Transit  site terms: https://www.actransit.org/disclaimer ("Disclaimer",
 #            linked from every page footer — read it there, not here). Footer
 #            carries a bare "© AC TRANSIT" with no year. Checked 2026-08-13.
+#   WestCAT  terms of use: none located, checked 2026-08-13. The site
+#            publishes a Privacy Policy at /Home/PrivacyPolicy (its page title
+#            reads "Privacy Polcy", sic) covering visitor data collection
+#            only; it says nothing about copying or republishing page content.
+#            No copyright line found in any page footer. Silence is not
+#            permission; same reading as MST and Yolobus above.
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -946,6 +965,91 @@ documents:
     url: https://www.actransit.org/discounts
     language: en
     license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.actransit.org/disclaimer"
+  # ── WestCAT (Western Contra Costa Transit Authority) ──────────────────────
+  # Added as the tenth agency (2026-08-13). Pinole/Hercules and western Contra
+  # Costa County, plus the LYNX Transbay service to San Francisco; a Clipper
+  # participant.
+  #
+  # WHY THIS AGENCY: SolTrans' Clipper Card page lists "WestCat" among the
+  # agencies Clipper supports transfers with — a third-party characterization
+  # the manifest's SolTrans block fences off because the corpus had nothing of
+  # WestCAT's own to check it against. What WestCAT's own Transfers page
+  # publishes: Clipper "automatically grants free or discounted transfers when
+  # transferring to another agency that accepts Clipper," with no agency list
+  # — so SolTrans' claim is neither corroborated by name nor contradicted —
+  # and a validity window of "120 minutes after boarding a bus," against
+  # SolTrans' "good for 60 minutes" for the same kind of inter-agency
+  # transfer. Two agencies, one arrangement, two published windows; eval case
+  # xagency-014 requires an answer to attribute each number to its own agency
+  # and blend nothing.
+  #
+  # FARE PERIOD (checked 2026-08-13): no page carries an effective date or an
+  # expiry. Cross-page corroboration in place of a date the agency does not
+  # publish: the East Bay Day Pass cap paragraph on westcat-fares-all ($3.75
+  # adult / $1.75 senior-Access, LYNX excluded) matches County Connection's
+  # Clipper page for the same regional product word for word on the figures,
+  # and westcat-clipper's boarding minimums ($1.75 adult/youth, $0.75
+  # senior/Access) are consistent with the fare table's local fares.
+  #
+  # CROSS-AGENCY FINDING, recorded here and pinned by xagency-013: WestCAT's
+  # Transfers page still honors PAPER transfers "from County Connection and
+  # Tri Delta Transit at shared stops in Martinez ... with a valid transfer."
+  # County Connection's own pages (in this corpus) say its bus-to-bus
+  # transfers exist "only ... when using Clipper" — i.e. County Connection no
+  # longer issues the paper transfer WestCAT's page describes honoring. That
+  # is one agency's current page describing another agency's apparently
+  # retired fare product; neither page is edited here, and the eval case
+  # requires an answer to cite each agency's own rule and recommend
+  # confirming.
+  - id: westcat-fares-all
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "All Fares"
+    url: https://www.westcat.org/home/FaresAll
+    language: en
+    # The one fare table for every WestCAT service: local/express, LYNX
+    # Transbay, ADA paratransit (local and regional), Senior Dial-a-Ride,
+    # transfer fares (including the $3.25/$1.25 local-to-LYNX upcharge), pass
+    # prices, the reduced-fare ID list ("Photo ID and Medicare card (not
+    # Medi-Cal)", DMV placard receipt, Disabled Veterans ID), and the note
+    # that WestCAT honors but does not certify Clipper Access (formerly RTC).
+    license_note: "Public agency fare information; no Content-Signal served. No site terms page located (see header note)."
+  - id: westcat-transfers
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "Transfers"
+    url: https://www.westcat.org/home/FaresTransfers
+    language: en
+    # Paper transfers: one hour, established transfer points only, no round
+    # trips, no reboarding the same route, no transfers to BART. Clipper
+    # transfers: 120 minutes. Contains third-party assertions (County
+    # Connection, Tri Delta Transit, Capitol Corridor, AC Transit, BART) that
+    # are WestCAT's characterization, not those agencies' own published
+    # policy — including the Martinez paper-transfer finding noted above.
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (County Connection, Tri Delta Transit, Capitol Corridor, AC Transit, BART) that are WestCAT's characterization, not those agencies' own published policy."
+  - id: westcat-clipper
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "Clipper Card"
+    url: https://www.westcat.org/home/FaresClipper
+    language: en
+    # Note the FAX-shaped condition with no date: "Virtual Adult cards: Free
+    # (limited time) with a $3 minimum load." Eval case fresh-022 requires an
+    # answer to keep the agency's own qualifier.
+    license_note: "Public agency fare information; no Content-Signal served."
+  - id: westcat-buying
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "Buying & Ordering Passes"
+    url: https://www.westcat.org/home/FaresBuying
+    language: en
+    # Where and how passes are sold (office address and hours, online store,
+    # mail order) — the yolobus-purchasing precedent, ingested so eligibility
+    # handoffs can name a concrete first step.
+    license_note: "Public agency fare information; no Content-Signal served."
+  # No Spanish counterpart: westcat.org publishes English-only pages (no /es/
+  # or translated fare pages located), so the multilingual gap is deliberate
+  # and both Spanish eval cases are cross-lingual.
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

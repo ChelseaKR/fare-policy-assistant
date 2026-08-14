@@ -150,3 +150,27 @@ This id was recomputed at merge time: the branch derived 02c3bb15a506 against
 the nine-agency 95794539d1d0, County Connection (60033300dc49) and San
 Joaquin RTD (d113659adda8) landed first, and `make ingest` over the union
 re-stamped this heading, as the 2026-08-12/13 additions did.
+## 8b119819d9c8 (2026-08-14 UTC)
+
+Added WestCAT (Western Contra Costa Transit Authority): 13 agencies, 37
+documents, 227 chunks. Four documents, all fetched 2026-08-14 UTC:
+`westcat-fares-all` (one table covering local/express, LYNX Transbay, ADA
+paratransit, and Senior Dial-a-Ride), `westcat-transfers`, `westcat-clipper`,
+and `westcat-buying`.
+
+WestCAT publishes no robots.txt at all — both hosts 404 — which RFC 9309 reads
+as no restrictions; the manifest's 10-second crawl delay was honored anyway.
+
+Two findings travel with this version. First, WestCAT's Transfers page still
+honors paper transfers "from County Connection and Tri Delta Transit at shared
+stops in Martinez", while County Connection's own pages describe its transfers
+as Clipper-only — one agency's current page describing another's apparently
+retired product (xagency-013). Second, WestCAT publishes a 120-minute window
+for inter-agency Clipper transfers where SolTrans' page says 60 minutes;
+xagency-014 requires an answer to attribute each number rather than blend
+them.
+
+This id was recomputed at merge time: the branch derived 69aab4ac6576 against
+the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, and AC
+Transit landed first, and `make ingest` over the union re-stamped this
+heading, the way 95794539d1d0's was.

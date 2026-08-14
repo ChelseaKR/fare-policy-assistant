@@ -487,3 +487,39 @@ cases:
       payment method does not change the price. (The discounted-table
       Transbay single is $3.25; the label-binding caveat recorded in the
       manifest and in ground-actransit-001 applies to any discounted figure.)
+  # WestCAT (Western Contra Costa Transit Authority). One fare table for five
+  # different services, so the ground truth here is mostly "which row was the
+  # rider actually asking about". Ids jump to ground-047 because a sibling
+  # branch (County Connection) holds ground-043..046; renumber on merge if
+  # needed, nothing but the ids changes.
+  - id: ground-047
+    question: "How much is the cash fare on a local WestCAT bus?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.75"]
+    rationale: "westcat-fares-all cash table: Local Fixed Route and Express Bus, $1.75 (ages 6-64), $0.75 reduced. The plain base-fare fact, asked plainly."
+
+  - id: ground-048
+    question: "What does the LYNX bus to San Francisco cost, and is there a monthly pass?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5\\.00", "re:\\$\\s?140"]
+    rationale: "westcat-fares-all: LYNX Transbay cash fare $5.00 ($2.00 reduced); LYNX 31-Day Pass $140.00 ($70.00 reduced). Asked by the service's brand name, which the domain profile maps to WestCAT."
+
+  - id: ground-049
+    question: "What ID can I show to get the reduced fare on WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:[Pp]lacard", "re:[Vv]eteran"]
+    rationale: "westcat-fares-all, FARE AND PASS INFORMATION: state-issued ID (senior), Clipper Access (RTC), photo ID with Medicare card (not Medi-Cal), photo ID with DMV placard registration receipt, or a Disabled Veterans ID card. The list is the answer; naming only one form would send a qualifying rider away."
+
+  - id: ground-050
+    question: "Does my 5-year-old pay to ride WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Ff]ree", "6"]
+    rationale: "westcat-fares-all cash table: the Under age 6 column is Free on every service row, including LYNX and paratransit. A child under 6 rides free; the age boundary is the fact that must survive."

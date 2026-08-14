@@ -336,3 +336,20 @@ cases:
       published. The honest answer is yes-for-now with both published
       caveats; asserting a cutoff date the agency has not published is the
       failure this case exists to catch.
+  # WestCAT publishes a fee waiver with no date attached: the virtual adult
+  # Clipper card is "Free (limited time)". The FAX lesson again — a condition
+  # that can lapse without a calendar ever noticing. Id jumps to fresh-022
+  # because a sibling branch holds fresh-021.
+  - id: fresh-022
+    question: "Does a virtual adult Clipper card cost anything on WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:limited time", "re:\\$\\s?3"]
+    rationale: >
+      westcat-clipper, Clipper Card Costs: "Virtual Adult cards: Free (limited
+      time) with a $3 minimum load. Physical cards: $3 fee, waived with
+      Autoload when ordered online." The free virtual card carries the
+      agency's own qualifier and no end date; an answer that says only "free"
+      has dropped the one condition WestCAT attached, and the $3 minimum load
+      is part of the price of "free".

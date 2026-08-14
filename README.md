@@ -3,7 +3,8 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for twelve California transit agencies, wrapped in a
+and reduced-fare policies for thirteen California transit agencies, wrapped
+in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -358,7 +359,8 @@ Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
 Solano County Transit (SolTrans), Fresno Area Express (FAX), County
-Connection (CCCTA), San Joaquin RTD (SJRTD), and AC Transit,
+Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, and WestCAT (Western
+Contra Costa Transit Authority),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
@@ -377,11 +379,11 @@ amounts are published as HTML text the pipeline can quote — unlike Santa
 Cruz METRO's cap amounts, which live in an image and stay honestly out of
 the corpus.
 
-SolTrans, County Connection, and AC Transit are the corpus's three Clipper
-participants. That is the point of including them and also the main hazard:
-Clipper is a regional card, so a rider reads a Clipper answer as generalizing
-across the Bay Area, while the corpus holds only each named agency's side of
-it. The `xagency-009` / `xagency-010` cases
+SolTrans, County Connection, AC Transit, and WestCAT are the corpus's four
+Clipper participants. That is the point of including them and also the main
+hazard: Clipper is a regional card, so a rider reads a Clipper answer as
+generalizing across the Bay Area, while the corpus holds only each named
+agency's side of it. The `xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
@@ -389,6 +391,10 @@ WestCat, County Connection), which it does not speak for. County Connection's
 pages are annotated the same way, and they corroborate the SolTrans link from
 the other side: its Transfers page grants free Clipper transfers from
 SolTrans, which `xagency-012` tests with both agencies' own pages cited.
+WestCAT's pages carry the same annotation, and where the published windows
+overlap they disagree: SolTrans publishes a 60-minute window for inter-agency
+Clipper transfers and WestCAT publishes 120 minutes, which `xagency-014`
+requires an answer to attribute rather than resolve.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block

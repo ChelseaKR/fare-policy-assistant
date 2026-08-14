@@ -54,6 +54,7 @@ TRANSIT = DomainProfile(
         "CCCTA",
         "SJRTD",
         "AC Transit",
+        "WestCAT",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -146,6 +147,16 @@ TRANSIT = DomainProfile(
         "alameda-contra costa": "AC Transit",
         "tempo": "AC Transit",
         "transbay": "AC Transit",
+        # WestCAT (Western Contra Costa Transit Authority), Pinole/Hercules.
+        # "LYNX" is its Transbay brand and riders name it without naming
+        # WestCAT; unlike "link" or "metro" it is not an everyday English word
+        # in a fare question, so the alias is safe to carry.
+        "westcat": "WestCAT",
+        "west cat": "WestCAT",
+        "western contra costa": "WestCAT",
+        "lynx": "WestCAT",
+        "pinole": "WestCAT",
+        "hercules": "WestCAT",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.
