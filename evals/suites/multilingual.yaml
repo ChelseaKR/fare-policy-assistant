@@ -269,6 +269,73 @@ cases:
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
 
+  # ── County Connection (added 2026-08-13) ──────────────────────────────────
+  # County Connection publishes no Spanish policy pages — the only Spanish on
+  # the fare pages is a set of RTC application-form PDF links — so both cases
+  # here are honest cross-lingual retrieval, the SolTrans pattern rather than
+  # the MST/FAX one.
+  - id: ml-028
+    question: "¿Cuánto cuesta un viaje sencillo en County Connection si pago con Clipper?"
+    agency_scope: CCCTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-043
+    rationale: "Cross-lingual mirror of ground-043: County Connection publishes its fare table only in English (cccta-fare-types-prices), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-029
+    question: "¿Mi hijo de 4 años viaja gratis en el autobús de County Connection?"
+    agency_scope: CCCTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:gratis|free", "6"]
+    mirror_of: edge-074
+    rationale: "Cross-lingual mirror of edge-074 (child free under 6, accompanied by an adult), answered from the English cccta-fare-types-prices passage. Parity matters here for the same reason as everywhere: a family that asks in Spanish must not be quoted a fare their child does not owe."
+  - id: ml-034
+    question: "¿Cuánto cuesta un viaje sencillo en San Joaquin RTD?"
+    agency_scope: SJRTD
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]50"]
+    mirror_of: ground-055
+    rationale: >
+      Cross-lingual mirror of ground-055: sanjoaquinrtd.com publishes no /es/
+      pages (Spanish is served through a translate widget, like SacRT), so the
+      Spanish question must be answered from the English sjrtd-fares table and
+      returned in Spanish. San Joaquin County's Spanish-speaking ridership makes
+      this the parity case that matters most for this agency. Phrasing note:
+      the question names the agency the way the corpus spells it ("San Joaquin
+      RTD") because the fare-table chunk itself never contains the bare string
+      "RTD" — a Stockton-flavored wording scored below the calibrated decline
+      threshold (ADR 0013) in the offline pipeline, and a case the pipeline
+      declines by design is not a useful mirror.
+  - id: ml-actransit-001
+    question: "¿Cuánto cuesta un viaje local sencillo para adultos en AC Transit?"
+    agency_scope: AC Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]75", "re:\\$\\s?3[.,]00"]
+    mirror_of: ground-actransit-001
+    rationale: >
+      Spanish mirror of ground-actransit-001, answerable same-language:
+      actransit-fares-es is a real translation ("Viaje único local | $2.75 |
+      $3.00"), not an untranslated /es/ shell. AC Transit is the corpus's
+      second agency with a genuine Spanish fares page, after MST.
+
+  - id: ml-actransit-002
+    question: "Si pago cada viaje con Clipper en los autobuses locales de AC Transit, ¿cuánto es lo máximo que pagaré en un día?"
+    agency_scope: AC Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6[.,]00", "re:[Tt]arifa máxima|automáticamente"]
+    mirror_of: edge-actransit-001
+    rationale: >
+      Spanish mirror of the accumulator case, and the reason the Spanish page
+      earns its ingestion: actransit-fares-es translates the capping
+      structure itself ("Pase Local Diario | Tarifa máxima de $6.00"; "se
+      aplicarán automáticamente cuando el gasto alcance el costo de dichos
+      pases"), so the hardest structure in this agency's fare policy is
+      answerable same-language in Spanish.
   # ── WestCAT (added 2026-08-13) ────────────────────────────────────────────
   # WestCAT publishes English-only pages, so both cases are honest
   # cross-lingual retrieval, the SolTrans pattern. Ids jump to ml-030 because

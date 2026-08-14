@@ -171,21 +171,27 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
     # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
     # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
-    # df00d694…b626); and adding WestCAT (6 aliases, 2026-08-13) produces the
-    # seventh and current one below: a ten-entry `scopes` tuple and 43 aliases
-    # in one domain block. The values below were re-derived by building the
-    # descriptor from this fixture against the updated profile, not lifted from
-    # any branch or from a failure message. Before any of the 2026-08
-    # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produced the ninth (85c6cc32…c0e1
+    # / 52e5ea5c…4a53 / 38a5931f…b4af); and merging WestCAT (6 aliases,
+    # 2026-08-14) on top produces the tenth and current one below: a
+    # thirteen-entry `scopes` tuple and 58 aliases in one domain block. The
+    # values below were re-derived by building the descriptor from this
+    # fixture against the merged profile, not lifted from any branch or from a
+    # failure message. Before any of the 2026-08 additions: 56ef528a…d337 /
+    # fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "2924b514695e04a597e2d51fdfb2f5eb77bac2b1548f85051ec48207965209f4"
+        first.config_version == "555eb52b41c32f12031dc9dbeeb3b54fea1688126dec439c5faf82652631cf55"
     )
     assert (
-        first.release_version == "0cf05b6e45f98a4430035befd9c10b2ba41fce61a56790555e0ede27ea86bda1"
+        first.release_version == "8a8596e1f0cd0bcd07134c89cf3513b186eba347a9e9d6170077536e4675dde0"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "71faf0f81e03ba15c05a08d7b779f4c43d733bab5ac2ef6229fb7c6019b6288a"
+        == "6eaefe6520a118c99817093a575c7b55a2a73774422d82a18a7586a12b587320"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

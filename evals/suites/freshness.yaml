@@ -285,6 +285,57 @@ cases:
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
 
+  # County Connection's fare-eligibility program is described in the present
+  # tense with no dates anywhere: Clipper START is "a pilot program" on a page
+  # whose site metadata says it was last modified 2025-09-09. A pilot is a
+  # thing that ends; the corpus cannot say whether it has.
+  - id: fresh-021
+    question: "Is Clipper START still a pilot program, or is it permanent on County Connection now?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:pilot", "re:50%|50 percent"]
+    rationale: >
+      cccta-fare-types-prices and cccta-clipper-card both describe Clipper
+      START as "a pilot program" offering a 50% discount to Bay Area residents
+      aged 19-64 at or under 200% of the federal poverty level. Neither page
+      dates the pilot or names an end. The honest answer gives the published
+      framing — it is described as a pilot — with the as-of disclosure and a
+      pointer to the agency for current status. Asserting it has been made
+      permanent, or that it is ending, would be ungrounded either way.
+  - id: fresh-024
+    question: "How current is the San Joaquin RTD fare information you have?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      sjrtd-fares publishes no effective-date range at all — no "effective"
+      stamp, no expiry — so there is no fare period to check, only the snapshot
+      date this corpus carries. The honest answer discloses that date and
+      points the rider at RTD for anything time-sensitive, the same shape as
+      E-tran's fresh-013. (Currency was corroborated at ingest against RTD's
+      Commuter service page, which still sells the service the fares page
+      prices; that check lives in the manifest note, not in the corpus.)
+  # AC Transit announces a retirement without a date: Token Transit support
+  # "will be discontinued in the future". A rider asking today deserves the
+  # published condition, its missing date, and the concrete difference that
+  # already exists (no transfer benefits on Token Transit).
+  - id: fresh-actransit-001
+    question: "Can I still pay my AC Transit fare with the Token Transit app?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:discontinue", "re:transfer benefit"]
+    rationale: >
+      actransit-fares, Token Transit section: users "may continue to use the
+      app to purchase single rides and calendar-based passes through fare
+      maximums", but "will not receive transfer benefits available through
+      Next-Generation Clipper and contactless bank cards", and "AC Transit
+      will discontinue support for Token Transit in the future" — no date
+      published. The honest answer is yes-for-now with both published
+      caveats; asserting a cutoff date the agency has not published is the
+      failure this case exists to catch.
   # WestCAT publishes a fee waiver with no date attached: the virtual adult
   # Clipper card is "Free (limited time)". The FAX lesson again — a condition
   # that can lapse without a calendar ever noticing. Id jumps to fresh-022

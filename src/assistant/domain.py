@@ -51,6 +51,9 @@ TRANSIT = DomainProfile(
         "SCMTD",
         "SolTrans",
         "FAX",
+        "CCCTA",
+        "SJRTD",
+        "AC Transit",
         "WestCAT",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
@@ -108,6 +111,42 @@ TRANSIT = DomainProfile(
         "fresno": "FAX",
         "fresno area express": "FAX",
         "handy ride": "FAX",
+        # County Connection (Central Contra Costa Transit Authority),
+        # Concord/Walnut Creek. Its paratransit brand is "LINK", which is
+        # deliberately NOT aliased: \blink\b is an ordinary English word ("send
+        # me the link") and would pull unrelated questions into this scope; a
+        # rider who says "County Connection LINK" already matches on the agency
+        # name. Same reasoning as the absent "metro" and "clipper" aliases above.
+        "cccta": "CCCTA",
+        "county connection": "CCCTA",
+        "central contra costa": "CCCTA",
+        "concord": "CCCTA",
+        # San Joaquin RTD. The agency brands itself "RTD", which is safe to
+        # alias here because no other corpus agency uses the string; "Van Go!"
+        # is its microtransit brand and riders name it without naming RTD (the
+        # same shape as "Handy Ride" for FAX). Deliberately NOT aliased:
+        # "vamos" — the Vamos Mobility fare app is a San Joaquin COG regional
+        # product, not an agency, and the word is common Spanish.
+        "sjrtd": "SJRTD",
+        "san joaquin": "SJRTD",
+        "san joaquin rtd": "SJRTD",
+        "rtd": "SJRTD",
+        "stockton": "SJRTD",
+        "van go": "SJRTD",
+        # AC Transit (Alameda-Contra Costa Transit District). "Tempo" is its
+        # Line 1T bus-rapid-transit brand and "Transbay" its bridge-route
+        # brand; within this corpus only AC Transit publishes fares under
+        # either name, so both point here (the "handy ride"/"tap2cruz"
+        # pattern). Deliberately NOT aliased: "oakland", "berkeley", and
+        # "east bay" — multi-operator geographies served by agencies outside
+        # this corpus (BART, WestCAT, Union City Transit), so a geography
+        # alias would over-claim scope the way "metro" would have for Santa
+        # Cruz.
+        "ac transit": "AC Transit",
+        "actransit": "AC Transit",
+        "alameda-contra costa": "AC Transit",
+        "tempo": "AC Transit",
+        "transbay": "AC Transit",
         # WestCAT (Western Contra Costa Transit Authority), Pinole/Hercules.
         # "LYNX" is its Transbay brand and riders name it without naming
         # WestCAT; unlike "link" or "metro" it is not an everyday English word
