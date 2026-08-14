@@ -111,6 +111,21 @@
 #                 attempted. Crawl-delay is unspecified; the manifest's 10-second
 #                 default was honored anyway.
 #
+# RABA (Redding Area Bus Authority), candidate check (2026-08-13): NO-GO at
+# robots.txt itself, before any page was fetched.
+#   www.rabaride.com  robots.txt 302s to the site's Revize CMS host
+#                 (cms3.revize.com/revize/reddingbusauthority/robots.txt),
+#                 which serves an allowlist: Googlebot, FacebookBot,
+#                 LinkedInBot, and Twitterbot may crawl, Bingbot may not, and
+#                 "User-agent: * / Disallow: /" closes the door on everyone
+#                 else — including this project's identified fetcher. No
+#                 content page was requested from the host.
+#   www.cityofredding.gov  (RABA's administering city, the Elk-Grove-style
+#                 fallback publisher) serves the same Revize-managed shape —
+#                 302 to files.cityofredding.gov/robots.txt, an allowlist,
+#                 then the same terminal "User-agent: * / Disallow: /". Also
+#                 not fetched. Evidence and reasoning in docs/decisions/0002.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
