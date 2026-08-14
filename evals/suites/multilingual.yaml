@@ -269,6 +269,28 @@ cases:
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
 
+  # ── County Connection (added 2026-08-13) ──────────────────────────────────
+  # County Connection publishes no Spanish policy pages — the only Spanish on
+  # the fare pages is a set of RTC application-form PDF links — so both cases
+  # here are honest cross-lingual retrieval, the SolTrans pattern rather than
+  # the MST/FAX one.
+  - id: ml-028
+    question: "¿Cuánto cuesta un viaje sencillo en County Connection si pago con Clipper?"
+    agency_scope: CCCTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-043
+    rationale: "Cross-lingual mirror of ground-043: County Connection publishes its fare table only in English (cccta-fare-types-prices), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-029
+    question: "¿Mi hijo de 4 años viaja gratis en el autobús de County Connection?"
+    agency_scope: CCCTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:gratis|free", "6"]
+    mirror_of: edge-074
+    rationale: "Cross-lingual mirror of edge-074 (child free under 6, accompanied by an adult), answered from the English cccta-fare-types-prices passage. Parity matters here for the same reason as everywhere: a family that asks in Spanish must not be quoted a fare their child does not owe."
   - id: ml-034
     question: "¿Cuánto cuesta un viaje sencillo en San Joaquin RTD?"
     agency_scope: SJRTD

@@ -169,28 +169,26 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
-    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produced the sixth
-    # (50fb01a9…4999 / 816ff402…cb94 / df00d694…3626), a nine-entry `scopes`
-    # tuple and 37 aliases. San Joaquin RTD (SJRTD, 6 aliases, 2026-08-13)
-    # rebinds them again to the seventh and current values below: a ten-entry
-    # `scopes` tuple and 43 aliases in one domain block. Two sibling agency
-    # branches are in flight as this is written, so if this branch is not the
-    # last to merge, HEAD's values will differ from these and must be
-    # re-derived at merge, the way the E-tran/SCMTD/SolTrans/FAX merges were.
-    # The values below were re-derived by building the descriptor from this
-    # fixture against this branch's profile, not lifted from any other branch
-    # or from a failure message. Before any of the five additions:
-    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
+    # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # and merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top
+    # produces the eighth and current one below: an eleven-entry `scopes`
+    # tuple and 47 aliases in one domain block. The values below were
+    # re-derived by building the descriptor from this fixture against the
+    # merged profile, not lifted from any branch or from a failure message.
+    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
+    # 249b0835…907a.
     assert (
-        first.config_version == "c48eda4ada90c264168283e2a76df843cb93211961262ce3a29d0f94f47fa5f7"
+        first.config_version == "fb4d057e000a30434a93e516b24137099630ce841ae742d53134e24b4187caf4"
     )
     assert (
-        first.release_version == "6a75fb6537193b5a3507fc58360ad8af4da29fd1b7a1f1befdee7b0b067c3ce6"
+        first.release_version == "6becd6052ad7fd6bb95b32ab8fd120963c60f8e3d9711d42fc2c9232e781e787"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "f19de1ddbb608b93597f6ff0ae4e6bae617f2e988d7031151a8c570681760d5f"
+        == "5a86bf97e94d501ef3a7f3d19f8e1d4b575411b96dba9ccd6fb81b29200c630a"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

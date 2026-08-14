@@ -378,6 +378,48 @@ cases:
     required_facts: ["free", "re:valid ID|identification"]
     rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."
 
+  # County Connection (CCCTA). The corpus's second Clipper agency, and the
+  # first where cash and Clipper price the same ride differently ($2.50 vs
+  # $2.00), so "how much is the bus" is incomplete without saying how the
+  # rider pays.
+  - id: ground-043
+    question: "How much is a single ride on County Connection if I pay with Clipper?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "cccta-fare-types-prices Clipper table: Adult (19-64) Single Ride $2.00. The plain base-fare fact, asked plainly — and distinct from the $2.50 cash fare on the same page."
+
+  - id: ground-044
+    question: "What does the East Bay Regional 31-Day Pass cost, and which buses accept it?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?60", "re:rolling|31 days"]
+    rationale: >
+      cccta-fare-types-prices prices the 31-Day Pass at $60 and
+      cccta-clipper-card explains it is valid for a rolling 31 days from first
+      tag and accepted on County Connection, Tri Delta Transit, Wheels, and
+      WestCAT (except LYNX) buses. The acceptance list is County Connection's
+      characterization of a regional product; a grounded answer can repeat it
+      with its citation but must not extend it to agencies the page does not
+      name.
+
+  - id: ground-045
+    question: "What ID can I show for the senior or disabled cash fare on County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:RTC|Regional Transit Connection", "re:[Vv]eteran"]
+    rationale: "cccta-fare-types-prices, Senior/Disabled Fares: the accepted IDs are an RTC card, state photo ID proving 65 or older, photo ID with a Medicare card, photo ID with a DMV placard registration receipt, Veterans Disability, or a Senior Clipper Card. The list is the answer; naming only one form would send a qualifying rider away."
+
+  - id: ground-046
+    question: "How much is a County Connection LINK paratransit trip, and does my personal care attendant pay?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5\\.00", "free"]
+    rationale: "cccta-link-fares, Regular Fare: a one-way LINK trip is $5.00, eligible personal care attendants ride free, and a companion pays the $5.00 fare. The attendant/companion split is the part riders get wrong, and both halves are in the same passage."
   # San Joaquin RTD (SJRTD), added 2026-08-13. The fares page prices four
   # different services (fixed route, Commuter, Paratransit, Van Go!) on one
   # page, so the cases below deliberately name the service they ask about.

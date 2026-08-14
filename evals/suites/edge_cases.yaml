@@ -623,6 +623,102 @@ cases:
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
 
+  # County Connection (CCCTA) boundaries. The distinctive ones: the Day Pass
+  # is an automatic fare cap rather than a purchased product; the youth
+  # discount exists on Clipper and not in cash; and the corpus text for the
+  # cash table is misgrouped by the ingest dedupe (see the manifest's CCCTA
+  # ingest-hazard note), so the youth-cash case below leans on the page's
+  # prose rule, which survives ingest intact.
+  - id: edge-068
+    question: "Do I need to buy a County Connection day pass before I ride?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.75", "re:cap|automatic"]
+    rationale: >
+      cccta-clipper-card, East Bay Day Pass: "The Day Pass discount is applied
+      automatically. Once you pay $3.75 in fares in a day ($1.75 for senior and
+      RTC customers) ... your rides will be free of charge for the rest of that
+      day." There is nothing to buy in advance; passes exist only on Clipper
+      and the cap applies itself. An answer that tells the rider to purchase a
+      day pass first has answered a different agency's product.
+
+  - id: edge-069
+    question: "My 16-year-old doesn't have a Clipper card. How much is her cash fare on County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.50", "re:not available when paying with cash|Youth Clipper"]
+    rationale: >
+      cccta-fare-types-prices, Youth Fares: "Youth (ages 6-18) can get a 50%
+      discount off Adult Clipper single-ride fares when using a Youth Clipper
+      card. The youth fare discount is not available when paying with cash."
+      Cash youth therefore pays the adult $2.50. This case deliberately does
+      not rely on the cash table region of the chunk: the ingest dedupe
+      dropped the youth "All Routes | $2.50" row (identical to the adult one),
+      leaving the Youth heading dangling above the Senior/Disabled $1.25 row —
+      an answer of $1.25 here is the failure this case exists to catch.
+
+  - id: edge-070
+    question: "I have Medi-Cal. Can I use it to get the RTC discount card from County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Medi-Cal is not accepted|not accepted", "Medicare"]
+    rationale: >
+      cccta-rtc-discount-card, Basic Eligibility: the Medicare card is
+      accepted "only for those under 65 years of age" and the same bullet
+      states "Medi-Cal is not accepted for eligibility." Medicare and Medi-Cal
+      are the boundary the sensitivity suite already probes at other agencies;
+      here the agency writes the distinction out itself. The honest answer
+      states the published documents that DO establish basic eligibility and
+      the medical-certification alternative, and rules on nobody.
+
+  - id: edge-071
+    question: "I'm 67 and disabled. Should I apply for an RTC card or a Senior Clipper card at County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["Senior Clipper", "65"]
+    rationale: >
+      cccta-rtc-discount-card: "People over 65 should apply for the Senior
+      Clipper card, which provides the same discounts and never expires," and
+      cccta-fare-types-prices accepts either card for the reduced fare. Two
+      published paths to the same discount (R1-6): the answer presents both
+      and the agency's own steer for riders over 65, without deciding for the
+      rider.
+
+  - id: edge-072
+    question: "I'm a veteran with a 30% VA disability rating. What does County Connection publish about getting the RTC card as a veteran?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50%|50 percent", "re:aid and attendance"]
+    rationale: >
+      cccta-rtc-discount-card, Basic Eligibility: proof of veterans disability
+      means "a Service Connected Disability ID card and your VA Certification
+      letter demonstrating a disability rating for aid and attendance, or for
+      a service-connected disability with a rating level of 50% or higher."
+      The rider's stated rating sits below the published threshold; the honest
+      answer states the exact criterion (R3: criterion before process), notes
+      the Medical Eligibility path also published on the page, and does not
+      tell the rider they are in or out.
+
+  - id: edge-073
+    question: "Coming off BART, what do I pay to board a County Connection bus as an adult using Clipper cash value?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "Clipper"]
+    rationale: "cccta-transfers, BART-to-Bus Transfer: the discount exists only on Clipper, and $1.00 (adult) or $0.50 (START/youth/senior/RTC) is deducted from stored cash value — no deduction for 31-Day Pass holders. The transfer price is a fare of its own, published only on this page."
+
+  - id: edge-074
+    question: "Does my 4-year-old ride free on County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:under 6|accompanied"]
+    rationale: "cccta-fare-types-prices: 'Children under 6 ride free when accompanied by an adult.' A 4-year-old is inside the free range; the accompaniment condition is what makes the answer complete, the same shape as FAX's edge-066."
   # San Joaquin RTD. The boundary this agency contributes is unique in the
   # corpus: the Discount Fare Card's senior age depends on the rider's city of
   # residence (62+ in Manteca/Lathrop, 65+ in Tracy/Escalon, 60+ in Stockton,

@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for ten California transit agencies, wrapped in a
+and reduced-fare policies for eleven California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -357,8 +357,8 @@ make fetch && make ingest
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
-Solano County Transit (SolTrans), Fresno Area Express (FAX), and San Joaquin
-RTD (SJRTD),
+Solano County Transit (SolTrans), Fresno Area Express (FAX), County
+Connection (CCCTA), and San Joaquin RTD (SJRTD),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
@@ -370,19 +370,27 @@ San Joaquin RTD is the second Central Valley agency and the only one whose
 senior discount age depends on the rider's city of residence (60, 62, or 65
 across San Joaquin County), which is the boundary its edge cases exist to pin.
 
-SolTrans is the only Clipper participant in the corpus. That is the point of
-including it and also its main hazard: Clipper is a regional card, so a rider
+SolTrans and County Connection are the corpus's two Clipper participants.
+That is the point of including them and also the main hazard: Clipper is a
+regional card, so a rider
 reads a Clipper answer as generalizing across the Bay Area, while the corpus
-holds exactly one agency's side of it. The `xagency-009` / `xagency-010` cases
+holds two agencies' sides of it. The `xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
-WestCat, County Connection), which it does not speak for.
+WestCat, County Connection), which it does not speak for. County Connection's
+pages are annotated the same way, and they corroborate the SolTrans link from
+the other side: its Transfers page grants free Clipper transfers from
+SolTrans, which `xagency-012` tests with both agencies' own pages cited.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`). Re-checked 2026-08-12: its robots.txt permits the fare
 pages, the WAF still returns 403 to this project's fetcher, and it remains out.
+RABA (Redding) was checked as a candidate on 2026-08-13 and is also out, for a
+cleaner reason: its robots.txt allows only a short list of named crawlers and
+disallows everyone else, this fetcher included, so nothing was fetched at all
+(`docs/decisions/0002`).
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored

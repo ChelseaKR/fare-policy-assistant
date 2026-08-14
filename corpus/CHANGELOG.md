@@ -69,10 +69,40 @@ all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
 
-## 47bc4ec2e419 (2026-08-14 UTC)
+## 60033300dc49 (2026-08-14 UTC)
 
-Added San Joaquin RTD (San Joaquin Regional Transit District): 10 agencies, 25
-documents, 163 chunks. Two documents, both fetched 2026-08-14 UTC (checked
+Added County Connection (CCCTA, Central Contra Costa Transit Authority): 10
+agencies, 28 documents, 177 chunks. Five documents, all fetched 2026-08-14 UTC:
+`cccta-fare-types-prices`, `cccta-clipper-card`, `cccta-transfers`,
+`cccta-rtc-discount-card`, and `cccta-link-fares` (LINK is the paratransit
+service). The agency's own "Fares & Passes" landing page was excluded: its
+entire rendered body is "Coming soon" and has been since its 2018-05-22
+modification stamp.
+
+County Connection is the corpus's second Clipper agency, which is the reason it
+was chosen: SolTrans' Clipper page asserts a transfer arrangement with "County
+Connection" that the manifest could previously only fence off as a third-party
+claim. County Connection's own Transfers and Clipper pages corroborate the
+arrangement (free transfers from SolTrans, Clipper only, at shared stops) while
+publishing a different window scope — 2 hours for its own bus-to-bus transfer,
+no published window for inter-operator transfers — against SolTrans' "good for
+60 minutes".
+
+One ingest hazard is recorded in the manifest rather than fixed silently: the
+pipeline's per-section line dedupe drops fare rows that price identically, so
+the cash table's Youth row ($2.50, identical to Adult) is missing from
+`cccta-fare-types-prices#0` and the Youth heading sits directly above the
+Senior/Disabled $1.25 row. The page's prose rule ("The youth fare discount is
+not available when paying with cash") survives ingest and eval case edge-069
+pins it.
+
+Written on a branch that adds only CCCTA. If another corpus change merges
+first, this id needs another `make ingest` and a re-stamp of this heading, the
+way 95794539d1d0's was.
+## d113659adda8 (2026-08-14 UTC)
+
+Added San Joaquin RTD (San Joaquin Regional Transit District): 11 agencies, 30
+documents, 188 chunks. Two documents, both fetched 2026-08-14 UTC (checked
 2026-08-13 Pacific): `sjrtd-fares` (the Fares page: fixed route, Commuter,
 Paratransit, and Van Go! tables plus where-to-buy) and `sjrtd-dfc` (the
 Discount Fare Card eligibility and application page under Access San Joaquin).
@@ -86,7 +116,8 @@ currency was corroborated against RTD's Commuter service page (modified
 2026-02-27, fetched for verification only), which still sells the Sacramento
 and Dublin BART service the fares page prices.
 
-Written on a branch where FAX's 95794539d1d0 (23 documents, 152 chunks) is what
-HEAD ships; two sibling batches are adding other agencies in parallel, so if
-one of them merges first this id needs another `make ingest` and a re-stamp of
-this heading, the same way 95794539d1d0 itself was recomputed.
+This id was recomputed at merge time: the branch derived 47bc4ec2e419 against
+FAX's 95794539d1d0, County Connection's 60033300dc49 (#126) landed first, and
+`make ingest` over the union re-stamped this heading — the same treatment
+95794539d1d0 itself got. Further sibling agency merges will re-stamp their own
+headings, not this one.

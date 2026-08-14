@@ -32,6 +32,7 @@ def test_reexports_match_the_profile():
             "SCMTD",
             "SolTrans",
             "FAX",
+            "CCCTA",
             "SJRTD",
         )
     )
