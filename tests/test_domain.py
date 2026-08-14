@@ -32,6 +32,13 @@ def test_reexports_match_the_profile():
             "SCMTD",
             "SolTrans",
             "FAX",
+            "CCCTA",
+            "SJRTD",
+            "AC Transit",
+            "WestCAT",
+            "SLORTA",
+            "VTA",
+            "VINE",
             "SamTrans",
         )
     )
@@ -45,6 +52,9 @@ def test_detect_agencies_uses_the_active_aliases():
     assert detect_agencies("senior fare on SBMTD?") == ["SBMTD"]
     assert detect_agencies("Monterey to Salinas") == ["MST"]
     assert detect_agencies("day pass in Vallejo") == ["SolTrans"]
+    assert detect_agencies("how do I pay on the Tempo?") == ["AC Transit"]
+    assert detect_agencies("is the Transbay bus more expensive?") == ["AC Transit"]
+    assert detect_agencies("light rail fare in San Jose") == ["VTA"]
     assert detect_agencies("bus fare in San Mateo") == ["SamTrans"]
     assert detect_agencies("does Redi-Wheels cost extra?") == ["SamTrans"]
 

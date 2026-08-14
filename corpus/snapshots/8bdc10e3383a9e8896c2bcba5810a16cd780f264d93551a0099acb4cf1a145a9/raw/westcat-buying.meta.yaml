@@ -1,0 +1,8 @@
+doc_id: westcat-buying
+url: https://www.westcat.org/home/FaresBuying
+final_url: https://www.westcat.org/home/FaresBuying
+fetch_date: '2026-08-14'
+http_status: 200
+format: html
+sha256: a1b0f2136784cebd7ff7aeba21995de6912cf3a57ecfc3b1aff208573c15b310
+bytes: 27109

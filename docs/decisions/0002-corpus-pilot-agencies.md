@@ -80,3 +80,47 @@ otherwise be lost, not because this ADR acts on them:
   Yolobus fares snapshot lists a "UC Davis Zip Pass" among the passes accepted
   for unlimited rides. That is a possible staleness in a document already in the
   corpus, not a Unitrans question, and someone should check it against Yolobus.
+
+## Candidate check (2026-08-13): RABA (Redding) is out — robots.txt disallows this fetcher
+
+Redding Area Bus Authority came up as a candidate agency: a North State city
+with no corpus neighbor, and deliberately outside the fare ecosystems the
+recent additions cluster in. It fails at step one, and unlike Unitrans it
+fails in robots.txt itself, not at a WAF.
+
+Evidence, gathered 2026-08-13 (server dates 2026-08-14 UTC) with the manifest's
+own user agent:
+
+- `www.rabaride.com/robots.txt` answers HTTP 302 to
+  `https://cms3.revize.com/revize/reddingbusauthority/robots.txt` (the site is
+  hosted on the Revize government-CMS platform). Following the redirect, as
+  RFC 9309 instructs, yields HTTP 200 `text/plain`, and the file is an
+  allowlist: `Googlebot` Allow all; `FacebookBot`, `LinkedInBot/1.0`, and
+  `Twitterbot` Allow all; `Bingbot` Disallow all; then `User-agent: *` /
+  `Disallow: /`.
+- This project's fetcher is `fare-policy-assistant-research/0.1`. It is none
+  of the named agents, so it falls under `User-agent: *`, which disallows
+  everything. No fare page, and no other page, was fetched from the host —
+  the check stopped at robots.txt, as it should.
+- The authoritative-publisher fallback that saved Elk Grove does not exist
+  here. RABA is administered by the City of Redding, and
+  `www.cityofredding.gov/robots.txt` is the same Revize-managed shape (302 to
+  `files.cityofredding.gov/robots.txt`, then an allowlist naming the same
+  crawlers plus Bingbot) ending in the same `User-agent: *` / `Disallow: /`.
+  Both candidate publishers close the same door. Nothing was fetched from
+  either host.
+
+This is a cleaner exclusion than Unitrans: there, a permissive robots.txt
+disagreed with a WAF and the project honored the stricter voice. Here the
+published robots.txt speaks directly, and what it says is no. The way in is to
+ask RABA (or Revize, whose platform default this allowlist appears to be) to
+allow an identified research crawler — not to present a browser's or
+Googlebot's name. Anyone re-litigating this should re-run the two robots
+fetches rather than trust this paragraph; the point of dating it is that it
+can expire.
+
+One thing noticed and recorded so it is not lost: the allowlist admits four
+commercial crawlers and blocks everything else — on the RABA host that
+includes Bingbot — which reads like a Revize platform default rather than a
+considered agency policy. That is an argument for making the allowlist
+request, not for treating the file as less binding.

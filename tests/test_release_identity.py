@@ -169,28 +169,36 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
-    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produced the sixth (50fb01a9…4999 /
-    # 816ff402…cb94 / df00d694…b626), the nine-agency base this branch starts
-    # from. Adding SamTrans (5 aliases, the tenth scope) rebinds them to the
-    # values below: a ten-entry `scopes` tuple and 42 aliases in one domain
-    # block. This branch was written alongside three sibling agency branches
-    # (the same expansion's batches), so as on 2026-08-12, none of the
-    # concurrent branch values will be what HEAD ships after the merges;
-    # whoever merges last re-derives against the combined profile. The values
-    # below were re-derived by building the descriptor from this fixture
-    # against this branch's profile, not lifted from any failure message.
-    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
-    # 249b0835…907a.
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
+    # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produced the ninth (85c6cc32…c0e1
+    # / 52e5ea5c…4a53 / 38a5931f…b4af); merging WestCAT (6 aliases,
+    # 2026-08-14) on top produced the tenth (555eb52b…cf55 / 8a8596e1…dde0 /
+    # 6eaefe65…7320); merging SLO RTA (SLORTA, 8 aliases, 2026-08-14) on top
+    # produced the eleventh (bf8f7551…05c5 / f02c0da5…13f5 / b11e0f48…85a2);
+    # merging VTA (5 aliases, 2026-08-14) on top produced the twelfth
+    # (54e25716…5937 / 8edb5f4c…2614 / 76fe204d…a162); merging Napa VINE (6
+    # aliases, 2026-08-14) produced the thirteenth (e3574bfd…4340 /
+    # 992bf97b…2238 / bdb59326…8c4f); and merging SamTrans (5 aliases,
+    # 2026-08-14) on top produces the fourteenth and current one below: a
+    # seventeen-entry `scopes` tuple and 82 aliases in one domain block. The
+    # values below were re-derived by building the descriptor from this
+    # fixture against the merged profile, not lifted from any branch or from
+    # a failure message. Before any of the 2026-08 additions: 56ef528a…d337 /
+    # fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "d77348cbf66ba1fe59ddf736f260f5aac6588bb11b625a29706e74d3f3d15347"
+        first.config_version == "1a4915b0f1a320f5901e2244572815e5e9869e800ca4f257a8c2d017422467a5"
     )
     assert (
-        first.release_version == "8a98c3b20337de7eb4d5447e49fdab627280486eaffba64463170801f92f2377"
+        first.release_version == "5911bac9cab6d0bf52cb6fe117b4e28e1eda6db28877f7ce9baf66293c3c3345"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "256f15b337b7afcbfc9466fe52788bd7b382f3d4b5caf7ab871253692f54604b"
+        == "86d8e55dfa2afd522725d4a98221c18dc16ebdc8ce9c7a01dc2d566ecedc056e"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
