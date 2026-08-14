@@ -180,6 +180,96 @@ cases:
       different kinds of answer — one a price, one the absence of a price with a
       condition attached. A correct answer keeps them separate and cites each.
 
+  - id: xagency-012
+    question: "I'm riding a SolTrans bus and transferring to County Connection with my Clipper card. Do I pay full fare again when I board?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["Clipper", "re:[Ff]ree transfer"]
+    rationale: >
+      The first cross-agency question both sides of which are now in the
+      corpus. County Connection's own page (cccta-transfers) says free
+      transfers from SolTrans are available only when using Clipper, at
+      designated shared stops; SolTrans' page (soltrans-clipper-card) lists
+      County Connection among the agencies Clipper supports transfers with and
+      says inter-agency bus transfers are good for 60 minutes. Each side must
+      be cited to its own agency's page. The windows do not match in scope —
+      SolTrans publishes 60 minutes for agency-to-agency transfers, County
+      Connection publishes a 2-hour window only for its own bus-to-bus
+      transfer — so a correct answer must not present either number as the
+      other agency's rule.
+  - id: xagency-016
+    question: "How much does the RTD Commuter bus from Stockton to Sacramento cost, and what is the basic single ride fare on SacRT once I'm there?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?7\\.00", "re:\\$\\s?2\\.50"]
+    rationale: >
+      The boundary crossing San Joaquin RTD was added for: its Route 163 runs
+      into Sacramento, where the rider steps onto SacRT's system, and each half
+      of the trip has its own published price. sjrtd-fares Commuter table:
+      Stockton to Sacramento $7.00 one-way. sacrt-fares: basic single ride
+      $2.50. A correct answer attributes each fare to its agency with its own
+      citation and does not price the SacRT leg from RTD's table or vice versa
+      — and must not confuse "RTD" (San Joaquin's own brand) with SacRT, whose
+      legacy name is also "RT".
+  - id: xagency-actransit-001
+    question: "What age counts as a senior on AC Transit, and is it the same on SolTrans?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "re:80\\+?"]
+    rationale: >
+      The xagency-004 trap inverted: here the two ages really are the same,
+      and the complete answer still has to keep the agencies apart.
+      actransit-discounts puts Senior/Disabled eligibility at 65 and older
+      (50% off per actransit-fares); soltrans-fare-table also sets 65+ — and
+      then adds a tier AC Transit does not have, "Seniors 80+ ride FREE on
+      SolTrans and FAST local routes and SolanoExpress lines." A correct
+      answer gives 65 for each agency with its own citation and surfaces the
+      SolTrans-only 80+ free tier instead of flattening the two programs
+      into "the same discount." Retrieval for this exact wording was checked
+      to surface both answer-bearing chunks (actransit-discounts and
+      soltrans-fare-table). An earlier draft asked about Clipper acceptance
+      on AC Transit versus Santa Cruz METRO; it was dropped because METRO's
+      "Clipper Cards are not honored" sentence sits in a transfer-policy
+      chunk that Clipper-phrased questions do not retrieve, and a case whose
+      required fact retrieval cannot deliver would be scored against the
+      model instead of the corpus.
+  # Ids jump to xagency-013 because a sibling branch holds xagency-012.
+  - id: xagency-013
+    question: "I got a paper transfer on a County Connection bus. Will WestCAT take it at a shared stop in Martinez?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["Martinez", "Clipper"]
+    rationale: >
+      Two agencies' current pages describe the same arrangement incompatibly,
+      and the corpus holds both. westcat-transfers: "All Transfers from County
+      Connection and Tri Delta Transit at shared stops in Martinez are free
+      with a valid transfer." County Connection's own pages (sibling branch;
+      cccta-transfers and cccta-fare-types-prices) say its bus-to-bus
+      transfers are "only available when using Clipper" — i.e. the paper
+      transfer WestCAT promises to honor is a product County Connection's site
+      no longer describes issuing. The honest answer states WestCAT's
+      published rule with its citation, states that the issuing agency's
+      published transfer channel is Clipper, and recommends confirming with
+      the agencies rather than resolving the conflict itself. Until the
+      County Connection branch merges, retrieval holds only WestCAT's side;
+      the case still requires the answer to name the Clipper condition, which
+      westcat-transfers itself carries for inter-agency transfers.
+
+  - id: xagency-014
+    question: "With Clipper, how long is my transfer good for between a SolTrans bus and a WestCAT bus?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["60", "120"]
+    rationale: >
+      The corpus holds two published numbers for the same kind of transfer,
+      and neither agency speaks for the other. soltrans-clipper-card:
+      inter-agency bus transfers, WestCAT named in the list, "good for 60
+      minutes". westcat-transfers: Clipper transfers "are good for 120
+      minutes after boarding a bus". A grounded answer attributes each window
+      to the agency that published it, cites both pages, does not average or
+      pick one, and recommends confirming with the agencies for the trip in
+      question. Blending the two into a single confident number is the
+      failure this case exists to catch.
   # SLO RTA: xagency-017, not xagency-012, which is held by the sibling San
   # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
   - id: xagency-017

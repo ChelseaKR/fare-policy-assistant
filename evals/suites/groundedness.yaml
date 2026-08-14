@@ -378,6 +378,151 @@ cases:
     required_facts: ["free", "re:valid ID|identification"]
     rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."
 
+  # County Connection (CCCTA). The corpus's second Clipper agency, and the
+  # first where cash and Clipper price the same ride differently ($2.50 vs
+  # $2.00), so "how much is the bus" is incomplete without saying how the
+  # rider pays.
+  - id: ground-043
+    question: "How much is a single ride on County Connection if I pay with Clipper?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "cccta-fare-types-prices Clipper table: Adult (19-64) Single Ride $2.00. The plain base-fare fact, asked plainly — and distinct from the $2.50 cash fare on the same page."
+
+  - id: ground-044
+    question: "What does the East Bay Regional 31-Day Pass cost, and which buses accept it?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?60", "re:rolling|31 days"]
+    rationale: >
+      cccta-fare-types-prices prices the 31-Day Pass at $60 and
+      cccta-clipper-card explains it is valid for a rolling 31 days from first
+      tag and accepted on County Connection, Tri Delta Transit, Wheels, and
+      WestCAT (except LYNX) buses. The acceptance list is County Connection's
+      characterization of a regional product; a grounded answer can repeat it
+      with its citation but must not extend it to agencies the page does not
+      name.
+
+  - id: ground-045
+    question: "What ID can I show for the senior or disabled cash fare on County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:RTC|Regional Transit Connection", "re:[Vv]eteran"]
+    rationale: "cccta-fare-types-prices, Senior/Disabled Fares: the accepted IDs are an RTC card, state photo ID proving 65 or older, photo ID with a Medicare card, photo ID with a DMV placard registration receipt, Veterans Disability, or a Senior Clipper Card. The list is the answer; naming only one form would send a qualifying rider away."
+
+  - id: ground-046
+    question: "How much is a County Connection LINK paratransit trip, and does my personal care attendant pay?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5\\.00", "free"]
+    rationale: "cccta-link-fares, Regular Fare: a one-way LINK trip is $5.00, eligible personal care attendants ride free, and a companion pays the $5.00 fare. The attendant/companion split is the part riders get wrong, and both halves are in the same passage."
+  # San Joaquin RTD (SJRTD), added 2026-08-13. The fares page prices four
+  # different services (fixed route, Commuter, Paratransit, Van Go!) on one
+  # page, so the cases below deliberately name the service they ask about.
+  - id: ground-055
+    question: "How much is a single ride on an RTD bus in Stockton if I pay cash?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.50"]
+    rationale: "sjrtd-fares 'Express, Local, and Hopper' table: Full (ages 18 to 59) 1-Ride $1.50. The plain base-fare fact, asked with the agency's own brand ('RTD') and its city."
+
+  - id: ground-056
+    question: "What does the discounted 31-day pass cost on San Joaquin RTD?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?30"]
+    rationale: "sjrtd-fares 'Express, Local, and Hopper' table: Discount 31-Day $30.00, against the full-fare 31-Day at $65.00. Also checks that the agency's full name resolves to the SJRTD scope."
+
+  - id: ground-057
+    question: "How much does the RTD Commuter bus from Stockton to Sacramento cost one way?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?7\\.00"]
+    rationale: "sjrtd-fares Commuter table: Route 163, Stockton to Sacramento, $7.00 one-way ($176 monthly). The Commuter table prices five origin-destination pairs at different monthly rates, so the answer must come from the row the rider asked about."
+
+  - id: ground-058
+    question: "What does Van Go! cost for a short trip?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?4\\.00", "re:\\$\\s?0\\.50|50 cents"]
+    rationale: "sjrtd-fares Van Go! table: full base fare $4.00 per passenger for the first 5 miles, then $0.50 per additional mile. The only per-mile fare structure in the corpus; quoting the base without the per-mile term understates any trip over five miles."
+  # AC Transit (Alameda-Contra Costa Transit District). The corpus's first
+  # accumulator-capped fare structure: Day/Weekly/Monthly passes are "fare
+  # maximums" applied automatically. Case ids use the agency-named form
+  # (refuse-soltrans-001 precedent) so parallel agency additions cannot
+  # collide on numbers.
+  - id: ground-actransit-001
+    question: "How much is a regular adult local single ride on AC Transit?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.75", "re:\\$\\s?3\\.00"]
+    rationale: >
+      actransit-fares, Current Fares (Effective July 1, 2026): Local Single
+      Ride $2.75 with Clipper or a contactless bank card, $3.00 cash. Both
+      figures are required because the page prices the same ride two ways and
+      a cash rider pays more. One hazard is on the record in the manifest:
+      the Adult and Discounted tables come from a tab widget whose labels
+      land together above both tables, so the Adult binding is positional —
+      corroborated by actransit-discounts, which puts the discounted classes
+      at 50% off, matching the $1.50/$3.00 cash pair.
+
+  - id: ground-actransit-002
+    question: "What does a Transbay single ride cost on AC Transit?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6\\.50"]
+    rationale: >
+      actransit-fares: Transbay Single Ride $6.50, and the same $6.50 whether
+      paid with Clipper, contactless, or cash — the one adult row where the
+      payment method does not change the price. (The discounted-table
+      Transbay single is $3.25; the label-binding caveat recorded in the
+      manifest and in ground-actransit-001 applies to any discounted figure.)
+  # WestCAT (Western Contra Costa Transit Authority). One fare table for five
+  # different services, so the ground truth here is mostly "which row was the
+  # rider actually asking about". Ids jump to ground-047 because a sibling
+  # branch (County Connection) holds ground-043..046; renumber on merge if
+  # needed, nothing but the ids changes.
+  - id: ground-047
+    question: "How much is the cash fare on a local WestCAT bus?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.75"]
+    rationale: "westcat-fares-all cash table: Local Fixed Route and Express Bus, $1.75 (ages 6-64), $0.75 reduced. The plain base-fare fact, asked plainly."
+
+  - id: ground-048
+    question: "What does the LYNX bus to San Francisco cost, and is there a monthly pass?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5\\.00", "re:\\$\\s?140"]
+    rationale: "westcat-fares-all: LYNX Transbay cash fare $5.00 ($2.00 reduced); LYNX 31-Day Pass $140.00 ($70.00 reduced). Asked by the service's brand name, which the domain profile maps to WestCAT."
+
+  - id: ground-049
+    question: "What ID can I show to get the reduced fare on WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:[Pp]lacard", "re:[Vv]eteran"]
+    rationale: "westcat-fares-all, FARE AND PASS INFORMATION: state-issued ID (senior), Clipper Access (RTC), photo ID with Medicare card (not Medi-Cal), photo ID with DMV placard registration receipt, or a Disabled Veterans ID card. The list is the answer; naming only one form would send a qualifying rider away."
+
+  - id: ground-050
+    question: "Does my 5-year-old pay to ride WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Ff]ree", "6"]
+    rationale: "westcat-fares-all cash table: the Under age 6 column is Free on every service row, including LYNX and paratransit. A child under 6 rides free; the age boundary is the fact that must survive."
   # SLO RTA (SLORTA), added 2026-08-13. Ids start at ground-059 on purpose:
   # the sibling San Joaquin RTD branch holds ground-043..046, and numbering
   # above it keeps the two in-flight Batch C branches from colliding with each

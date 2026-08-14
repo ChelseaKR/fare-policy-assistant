@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en-US">
+    <head>
+        <meta charset="UTF-8">
+<script>
+var gform;gform||(document.addEventListener("gform_main_scripts_loaded",function(){gform.scriptsLoaded=!0}),document.addEventListener("gform/theme/scripts_loaded",function(){gform.themeScriptsLoaded=!0}),window.addEventListener("DOMContentLoaded",function(){gform.domLoaded=!0}),gform={domLoaded:!1,scriptsLoaded:!1,themeScriptsLoaded:!1,isFormEditor:()=>"function"==typeof InitializeEditor,callIfLoaded:function(o){return!(!gform.domLoaded||!gform.scriptsLoaded||!gform.themeScriptsLoaded&&!gform.isFormEditor()||(gform.isFormEditor()&&console.warn("The use of gform.initializeOnLoaded() is deprecated in the form editor context and will be removed in Gravity Forms 3.1."),o(),0))},initializeOnLoaded:function(o){gform.callIfLoaded(o)||(document.addEventListener("gform_main_scripts_loaded",()=>{gform.scriptsLoaded=!0,gform.callIfLoaded(o)}),document.addEventListener("gform/theme/scripts_loaded",()=>{gform.themeScriptsLoaded=!0,gform.callIfLoaded(o)}),window.addEventListener("DOMContentLoaded",()=>{gform.domLoaded=!0,gform.callIfLoaded(o)}))},hooks:{action:{},filter:{}},addAction:function(o,r,e,t){gform.addHook("action",o,r,e,t)},addFilter:function(o,r,e,t){gform.addHook("filter",o,r,e,t)},doAction:function(o){gform.doHook("action",o,arguments)},applyFilters:function(o){return gform.doHook("filter",o,arguments)},removeAction:function(o,r){gform.removeHook("action",o,r)},removeFilter:function(o,r,e){gform.removeHook("filter",o,r,e)},addHook:function(o,r,e,t,n){null==gform.hooks[o][r]&&(gform.hooks[o][r]=[]);var d=gform.hooks[o][r];null==n&&(n=r+"_"+d.length),gform.hooks[o][r].push({tag:n,callable:e,priority:t=null==t?10:t})},doHook:function(r,o,e){var t;if(e=Array.prototype.slice.call(e,1),null!=gform.hooks[r][o]&&((o=gform.hooks[r][o]).sort(function(o,r){return o.priority-r.priority}),o.forEach(function(o){"function"!=typeof(t=o.callable)&&(t=window[t]),"action"==r?t.apply(null,e):e[0]=t.apply(null,e)})),"filter"==r)return e[0]},removeHook:function(o,r,t,n){var e;null!=gform.hooks[o][r]&&(e=(e=gform.hooks[o][r]).filter(function(o,r,e){return!!(null!=n&&n!=o.tag||null!=t&&t!=o.priority)}),gform.hooks[o][r]=e)}});
+</script>
+
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <link rel="profile" href="http://gmpg.org/xfn/11" />
+        <link rel="pingback" href="https://yolobus.com/xmlrpc.php" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		
+		
+
+        <!--wordpress head-->
+        <meta name='robots' content='index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' />
+
+	<!-- This site is optimized with the Yoast SEO plugin v28.2 - https://yoast.com/product/yoast-seo-wordpress/ -->
+	<title>Yolobus Fares - Yolobus</title>
+<link data-rocket-prefetch href="https://connect.facebook.net" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.gstatic.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://fonts.googleapis.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.google.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://cdn.userway.org" rel="dns-prefetch">
+<link data-rocket-preload as="style" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&#038;family=Catamaran:wght@100;200;300;400;500;600;700;800;900&#038;display=swap" rel="preload">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&#038;family=Catamaran:wght@100;200;300;400;500;600;700;800;900&#038;display=swap" media="print" onload="this.media=&#039;all&#039;" rel="stylesheet">
+<noscript data-wpr-hosted-gf-parameters=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&#038;family=Catamaran:wght@100;200;300;400;500;600;700;800;900&#038;display=swap"></noscript><link rel="preload" data-rocket-preload as="image" href="https://yolobus.com/wp-content/themes/yctd-child/assets/img/circle2.png" fetchpriority="high">
+	<link rel="canonical" href="https://yolobus.com/fares/" />
+	<meta property="og:locale" content="en_US" />
+	<meta property="og:type" content="article" />
+	<meta property="og:title" content="Yolobus Fares - Yolobus" />
+	<meta property="og:description" content="Read More &gt;" />
+	<meta property="og:url" content="https://yolobus.com/fares/" />
+	<meta property="og:site_name" content="Yolobus" />
+	<meta property="article:modified_time" content="2026-08-03T16:26:49+00:00" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<script type="application/ld+json" class="yoast-schema-graph">{"@context":"https:\/\/schema.org","@graph":[{"@type":"WebPage","@id":"https:\/\/yolobus.com\/fares\/","url":"https:\/\/yolobus.com\/fares\/","name":"Yolobus Fares - Yolobus","isPartOf":{"@id":"https:\/\/yolobus.com\/#website"},"datePublished":"2021-11-11T03:42:43+00:00","dateModified":"2026-08-03T16:26:49+00:00","breadcrumb":{"@id":"https:\/\/yolobus.com\/fares\/#breadcrumb"},"inLanguage":"en-US","potentialAction":[{"@type":"ReadAction","target":["https:\/\/yolobus.com\/fares\/"]}]},{"@type":"BreadcrumbList","@id":"https:\/\/yolobus.com\/fares\/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https:\/\/yolobus.com\/"},{"@type":"ListItem","position":2,"name":"Yolobus Fares"}]},{"@type":"WebSite","@id":"https:\/\/yolobus.com\/#website","url":"https:\/\/yolobus.com\/","name":"Yolobus","description":"","publisher":{"@id":"https:\/\/yolobus.com\/#organization"},"potentialAction":[{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https:\/\/yolobus.com\/?s={search_term_string}"},"query-input":{"@type":"PropertyValueSpecification","valueRequired":true,"valueName":"search_term_string"}}],"inLanguage":"en-US"},{"@type":"Organization","@id":"https:\/\/yolobus.com\/#organization","name":"Yolobus","url":"https:\/\/yolobus.com\/","logo":{"@type":"ImageObject","inLanguage":"en-US","@id":"https:\/\/yolobus.com\/#\/schema\/logo\/image\/","url":"https:\/\/yolobus.com\/wp-content\/uploads\/2022\/12\/Logo-Yolobus-BLUE-002.png","contentUrl":"https:\/\/yolobus.com\/wp-content\/uploads\/2022\/12\/Logo-Yolobus-BLUE-002.png","width":230,"height":86,"caption":"Yolobus"},"image":{"@id":"https:\/\/yolobus.com\/#\/schema\/logo\/image\/"}}]}</script>
+	<!-- / Yoast SEO plugin. -->
+
+
+<link href='https://fonts.gstatic.com' crossorigin rel='preconnect' />
+<link rel="alternate" type="application/rss+xml" title="Yolobus &raquo; Feed" href="https://yolobus.com/feed/" />
+<link rel="alternate" type="application/rss+xml" title="Yolobus &raquo; Comments Feed" href="https://yolobus.com/comments/feed/" />
+<link rel="alternate" type="text/calendar" title="Yolobus &raquo; iCal Feed" href="https://yolobus.com/calendar/?ical=1" />
+<link rel="alternate" title="oEmbed (JSON)" type="application/json+oembed" href="https://yolobus.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fyolobus.com%2Ffares%2F" />
+<link rel="alternate" title="oEmbed (XML)" type="text/xml+oembed" href="https://yolobus.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fyolobus.com%2Ffares%2F&#038;format=xml" />
+<style id="wp-img-auto-sizes-contain-inline-css">
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<style id="wp-emoji-styles-inline-css">
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+/*# sourceURL=wp-emoji-styles-inline-css */
+</style>
+
+
+<link rel='stylesheet' id='bootstrap4-css' href='https://yolobus.com/wp-content/themes/yctd/assets/css/bootstrap.min.css?ver=4.6.0' media='all' />
+<link data-minify="1" rel='stylesheet' id='bootstrap-basic4-font-awesome5-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd/assets/fontawesome/css/all.min.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='bootstrap-basic4-main-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd/assets/css/main.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='parent-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd/style.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='child-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/style.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='main-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/css/main.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='fontawesome-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/css/font-awesome.min.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='scroll-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/css/scroll.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='aos-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/css/aos.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='slick-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/css/slick.css?ver=1782892496' media='all' />
+<link data-minify="1" rel='stylesheet' id='slick-theme-style-css' href='https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/css/slick-theme.css?ver=1782892496' media='all' />
+<script id="jquery-core-js" src="https://yolobus.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+<script id="jquery-migrate-js" src="https://yolobus.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1"></script>
+<link rel="https://api.w.org/" href="https://yolobus.com/wp-json/" /><link rel="alternate" title="JSON" type="application/json" href="https://yolobus.com/wp-json/wp/v2/pages/726" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://yolobus.com/xmlrpc.php?rsd" />
+<link rel='shortlink' href='https://yolobus.com/?p=726' />
+<script data-minify="1" async src="https://yolobus.com/wp-content/cache/min/1/docbox.js?ver=1782892496"></script><meta name="tec-api-version" content="v1"><meta name="tec-api-origin" content="https://yolobus.com"><link rel="alternate" href="https://yolobus.com/wp-json/tribe/events/v1/" /><link rel="icon" href="https://yolobus.com/wp-content/uploads/2021/10/cropped-logo-1-32x32.png" sizes="32x32" />
+<link rel="icon" href="https://yolobus.com/wp-content/uploads/2021/10/cropped-logo-1-192x192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://yolobus.com/wp-content/uploads/2021/10/cropped-logo-1-180x180.png" />
+<meta name="msapplication-TileImage" content="https://yolobus.com/wp-content/uploads/2021/10/cropped-logo-1-270x270.png" />
+<noscript><style id="rocket-lazyload-nojs-css">.rll-youtube-player, [data-lazy-src]{display:none !important;}</style></noscript> 
+        <!--end wordpress head-->
+		<script>
+			var ajaxurl = "https://yolobus.com/wp-admin/admin-ajax.php";
+		</script>
+		<meta name="google-site-verification" content="xocnZU6VDvSz26EpqitYAkx3dv4MpOKksIDugr-OW5w" />
+    <link rel='stylesheet' id='gforms_reset_css-css' href='https://yolobus.com/wp-content/plugins/gravityforms/legacy/css/formreset.min.css?ver=3.0.2' media='all' />
+<link rel='stylesheet' id='gforms_formsmain_css-css' href='https://yolobus.com/wp-content/plugins/gravityforms/legacy/css/formsmain.min.css?ver=3.0.2' media='all' />
+<link rel='stylesheet' id='gforms_ready_class_css-css' href='https://yolobus.com/wp-content/plugins/gravityforms/legacy/css/readyclass.min.css?ver=3.0.2' media='all' />
+<link rel='stylesheet' id='gforms_browsers_css-css' href='https://yolobus.com/wp-content/plugins/gravityforms/legacy/css/browsers.min.css?ver=3.0.2' media='all' />
+
+<style id="rocket-lazyrender-inline-css">[data-wpr-lazyrender] {content-visibility: auto;}</style><meta name="generator" content="WP Rocket 3.23.1.1" data-wpr-features="wpr_minify_js wpr_lazyload_images wpr_preconnect_external_domains wpr_automatic_lazy_rendering wpr_oci wpr_minify_css wpr_cdn wpr_preload_links wpr_desktop" /></head>
+    <body class="wp-singular page-template page-template-page-templates page-template-fares page-template-page-templatesfares-php page page-id-726 wp-embed-responsive wp-theme-yctd wp-child-theme-yctd-child tribe-no-js inner-page">
+	    <div  id="fb-root"></div>
+		<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_GB/sdk.js#xfbml=1&version=v12.0" nonce="7bnda0On"></script>
+        <header  class="site-header page-header page-header-sitebrand-topbar">
+            <div  class="top-header"><div  class="flex-box align-middle"><div class="info-bar top-bar-cell flex-grow-1">
+				<a href="https://yolobus.com" class="btn active">Yolobus</a>
+				<a href="https://yolotd.org" class="btn" target="_blank" class="btn">YoloTD</a>
+				<a href="https://www.yolocommute.net/" target="_blank" class="btn">Yolo Commute</a> 
+			</div><div class="social top-bar-cell flex-grow-1 text-right"><span class="translate"><img src="https://yolobus.com/wp-content/themes/yctd-child/assets/img/globe.png" alt="Global"/><div class="gtranslate_wrapper" id="gt-wrapper-72239628"></div></span><a href="javascript:void(0);" class="mobile-search"><img src="https://yolobus.com/wp-content/themes/yctd-child/assets/img/search.png" alt="Search" /></a>                            <form method="get" action="https://yolobus.com/">
+                                <div class="input-group">
+                                    <input class="form-control" type="search" name="s" value="" placeholder="Search" title="Search &hellip;">
+                                    <span class="input-group-append">
+                                        <button class="btn btn-outline-secondary" type="submit"><img src="https://yolobus.com/wp-content/themes/yctd-child/assets/img/search.png" alt="Search" /></button>
+                                    </span>
+                                </div>
+                            </form><!--to override this search form, it is in /nas/content/live/yolobus/wp-content/themes/yctd-child/template-parts/partial-search-form.php --></div></div></div>			<div  class="main-header">
+				<div  class="site-branding px-0">
+					<h2 class="site-title-heading">
+												<a href="https://yolobus.com/" title="Yolobus" rel="home"><img src="https://yolobus.com/wp-content/uploads/2022/12/Logo-Yolobus-BLUE-002.png" alt="Yolobus"/></a>
+					</h2>
+				</div><!--.site-branding-->
+				 
+				<div  class="main-navigation">
+					<nav class="navbar navbar-expand-lg navbar-light bg-light">
+						<!--<a href="https://yolotd.org/resources/agendas/" target="_blank" class="agenda d-none d-md-block d-lg-block"><img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%200%200'%3E%3C/svg%3E" alt="meetinglink" data-lazy-src="https://yolobus.com/wp-content/themes/yctd-child/assets/img/icon-ajanda-2.png" /><noscript><img src="https://yolobus.com/wp-content/themes/yctd-child/assets/img/icon-ajanda-2.png" alt="meetinglink" /></noscript></a>--->
+					
+					    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#bootstrap-basic4-topnavbar" aria-controls="bootstrap-basic4-topnavbar" aria-expanded="false" aria-label="Toggle navigation">
+							<span class="navbar-toggler-icon"></span>
+						</button>
+						<div id="bootstrap-basic4-topnavbar" class="collapse navbar-collapse">
+							<ul id="bb4-primary-menu" class="navbar-nav mr-auto"><li id="menu-item-107" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-107 nav-item dropdown"><a href="#" class="dropdown-toggle nav-link  menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Our Services</a>
+<div class="dropdown-menu">
+	<a href="https://yolobus.com/routes/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Yolobus Fixed Routes</a>
+	<a href="https://yolobus.com/beeline/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">BeeLine: On-Demand Transit</a>
+	<a href="https://yolobus.com/paratransit/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Yolobus Special (Paratransit)</a>
+</div>
+</li>
+<li id="menu-item-112" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-112 nav-item dropdown"><a href="#" class="dropdown-toggle nav-link  menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Routes &#038; Schedules</a>
+<div class="dropdown-menu">
+	<a href="https://yolobus.com/routes/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Routes</a>
+	<a href="https://yolobus.com/holiday-schedule/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Holiday Schedule</a>
+</div>
+</li>
+<li id="menu-item-114" class="menu-item menu-item-type-custom menu-item-object-custom current-menu-ancestor current-menu-parent menu-item-has-children menu-item-114 nav-item dropdown active"><a href="#" class="dropdown-toggle nav-link  menu-item menu-item-type-custom menu-item-object-custom current-menu-ancestor current-menu-parent menu-item-has-children" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Fares &#038; Passes</a>
+<div class="dropdown-menu">
+	<a href="https://yolobus.com/fares/" class="dropdown-item active  menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-726 current_page_item">Fares</a>
+	<a href="https://yolobus.com/transfers/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Transfers</a>
+	<a href="https://yolobus.com/reducedfareid/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Reduced Fare ID</a>
+	<a href="https://yolobus.com/connect-card/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Connect Card</a>
+	<a href="https://yolobus.com/transitconnect/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Transit Connect</a>
+	<a href="https://yolobus.com/zippass/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">ZipPass</a>
+</div>
+</li>
+<li id="menu-item-115" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-115 nav-item dropdown"><a href="#" class="dropdown-toggle nav-link  menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Rider Resources</a>
+<div class="dropdown-menu">
+	<a href="https://yolobus.com/how-to-ride-yolobus/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">How To Ride</a>
+	<a target="_blank" href="https://avl.yctd.org/" class="dropdown-item  menu-item menu-item-type-custom menu-item-object-custom">Live Bus Tracker</a>
+	<a href="https://yolobus.com/getalerts/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Get Alerts!</a>
+	<a href="https://yolobus.com/bikes/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Bikes on Buses</a>
+	<a href="https://yolobus.com/pet-policy/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Pet Policy</a>
+	<a href="https://yolobus.com/passenger-safety/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Passenger Safety Policies</a>
+	<a href="https://yolotd.org/title-vi/" class="dropdown-item  menu-item menu-item-type-custom menu-item-object-custom">Title VI Procedures</a>
+</div>
+</li>
+<li id="menu-item-116" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-116 nav-item dropdown"><a href="#" class="dropdown-toggle nav-link  menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Contact</a>
+<div class="dropdown-menu">
+	<a href="https://yolobus.com/advertising/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Advertise With Us!</a>
+	<a href="https://yolobus.com/contact/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Contact Us</a>
+	<a href="https://yolotd.org" class="dropdown-item  menu-item menu-item-type-custom menu-item-object-custom">About YoloTD</a>
+</div>
+</li>
+<li id="menu-item-2657" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2657 nav-item"><a href="https://yolobus.com/alerts/" class="nav-link  menu-item menu-item-type-post_type menu-item-object-page">Rider Alerts</a></li>
+<li id="menu-item-5094" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-5094 nav-item dropdown"><a href="#" class="dropdown-toggle nav-link  menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Destinations</a>
+<div class="dropdown-menu">
+	<a href="https://yolobus.com/baseball/" class="dropdown-item  menu-item menu-item-type-custom menu-item-object-custom">Sutter Health Park</a>
+	<a href="https://yolobus.com/airport/" class="dropdown-item  menu-item menu-item-type-post_type menu-item-object-page">Take Yolobus to the Sacramento Airport</a>
+</div>
+</li>
+<li id="menu-item-2647" class="agenta-btn menu-item menu-item-type-custom menu-item-object-custom menu-item-2647 nav-item"><a target="_blank" href="https://yolotd.org/resources/agendas/" class="nav-link agenta-btn menu-item menu-item-type-custom menu-item-object-custom">Agenda Packets</a></li>
+</ul> 
+							<div class="float-md-right">
+								<div class="inside-right-sidebar"></div> 
+							</div>
+							<div class="clearfix"></div>
+						</div><!--.navbar-collapse-->
+						<div class="clearfix"></div>
+					</nav>
+				</div><!--.main-navigation-->
+				 
+			</div>
+			        </header><!--.page-header--><div  class="page-title-bar">
+		<h1>Yolobus Fares</h1>
+</div><!-- .entry-header -->
+<div  class=" page-container">
+	<div  id="content" class="site-content">
+		<div  class="container-fluid">
+			<div class="row">
+				 
+                <div id="sidebar-left" class="col-md-3">
+                     
+                    <div class="inside-right-sidebar"><div id="nav_menu-46" class="widget widget_nav_menu"><div class="menu-fares-passes-transfers-container"><ul id="menu-fares-passes-transfers" class="menu"><li id="menu-item-729" class="menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-726 current_page_item menu-item-729"><a href="https://yolobus.com/fares/" aria-current="page">Fares</a></li>
+<li id="menu-item-884" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-884"><a href="https://yolobus.com/transfers/">Transfers</a></li>
+<li id="menu-item-734" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-734"><a href="https://yolobus.com/reducedfareid/">Reduced Fare ID</a></li>
+<li id="menu-item-750" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-750"><a href="https://yolobus.com/connect-card/">Connect Card</a></li>
+<li id="menu-item-5271" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-5271"><a href="https://yolobus.com/transitconnect/">Transit Connect</a></li>
+<li id="menu-item-2114" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2114"><a href="https://yolobus.com/zippass/">ZipPass</a></li>
+</ul></div></div></div> 
+                </div>
+ 
+				<div id="main-column" class="col-md-9 content-area">
+					<main id="main" class="site-main" role="main">
+						<!-- banner section -->
+						<div class="banner-section">
+							<div class="page-banner layout-small header-overlay" style="background-color: #efefef;background-image: url(https://yolobus.com/wp-content/uploads/2021/11/fares-1.png); background-position: center center;"></div>						</div>
+						
+												<section class="route-and-fares">
+						    
+														<h2 class="pcb__mcr-title h2title h2title-underline-lg-left h2title-underline">Yolobus Fixed Route Bus Fares</h2>
+														
+							<p>Yolobus fixed route bus fares vary depending on which type of service you ride. All below <strong>fares are effective July 1, 2026 – June 30, 2027</strong>.</p>
+<h3>Youth ages 18 and under ride free!</h3>
+							
+								<div class="table-wrapper table-responsive">
+		<table class="table table-bordered table-curved fares">
+							<thead>
+					<tr>
+					  <th scope="col"></th>
+					  						<th scope="col">Regular <span>Adult (19-61)</span></th>
+					  						<th scope="col">Senior/Disabled <span>Senior/Disabled (62+/Disabled*)</span></th>
+					  					</tr>
+				</thead>
+										<tbody>
+											<tr style="background-color:#0a51a1;color:#fff;" class="heading">
+						  <td  scope="row" class="row-right">Single Ride Tickets</td>
+						  <td  colspan="2" class="row-left">
+														<img src="https://yolobus.com/wp-content/uploads/2026/07/Yolobus-Horizontal-White-LG-scaled-e1784580416718.png" />
+													  </td>
+						</tr>
+					
+													<tr class="rows ">
+								<th scope="row">Local Fare		</th>
+								<td>$2.00</td>
+								<td>$1.00</td>
+							</tr>
+													<tr class="rows ">
+								<th scope="row">Intercity Fare	</th>
+								<td>$2.25</td>
+								<td>$1.00</td>
+							</tr>
+													<tr class="rows ">
+								<th scope="row">Express</th>
+								<td>$3.25</td>
+								<td>$1.50</td>
+							</tr>
+													<tr class="rows ">
+								<th scope="row">Express Upgrade</th>
+								<td>$1.00</td>
+								<td>N/A†</td>
+							</tr>
+																	<tr style="background-color:#0a51a1;color:#fff;" class="heading">
+						  <td  scope="row" class="row-right">Monthly Passes </td>
+						  <td  colspan="2" class="row-left">
+														<img src="https://yolobus.com/wp-content/uploads/2026/07/Yolobus-Horizontal-White-LG-scaled-e1784580416718.png" />
+													  </td>
+						</tr>
+					
+													<tr class="rows ">
+								<th scope="row">Local Routes	</th>
+								<td>$84.00</td>
+								<td>$42.00+</td>
+							</tr>
+													<tr class="rows ">
+								<th scope="row">Intercity Routes	</th>
+								<td>$93.50</td>
+								<td>$42.00+</td>
+							</tr>
+													<tr class="rows ">
+								<th scope="row">Express Routes		</th>
+								<td>$121.00</td>
+								<td>$42.00+</td>
+							</tr>
+																	<tr style="background-color:#0a51a1;color:#fff;" class="heading">
+						  <td  scope="row" class="row-right">Transfers</td>
+						  <td  colspan="2" class="row-left">
+														<img src="https://yolobus.com/wp-content/uploads/2026/07/Yolobus-Horizontal-White-LG-scaled-e1784580416718.png" />
+													  </td>
+						</tr>
+					
+													<tr class="rows ">
+								<th scope="row">Between Yolobus (Non-Express) </th>
+								<td>$0.25</td>
+								<td>$0.25</td>
+							</tr>
+													<tr class="rows ">
+								<th scope="row">Between Yolobus (Express) 	</th>
+								<td>$1.00</td>
+								<td>$0.50</td>
+							</tr>
+																	<tr style="background-color:#dcb824;color:#fff;" class="heading">
+						  <td  scope="row" class="row-right">Yolobus + SacRT Shared Passes</td>
+						  <td  colspan="2" class="row-left">
+														<img src="https://yolobus.com/wp-content/uploads/2026/07/Yolobus-Horizontal-White-LG-scaled-e1784580416718.png" />
+														<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%200%200'%3E%3C/svg%3E" data-lazy-src="https://yolobus.com/wp-content/uploads/2021/11/regional-1.png" /><noscript><img src="https://yolobus.com/wp-content/uploads/2021/11/regional-1.png" /></noscript>
+													  </td>
+						</tr>
+					
+													<tr class="rows last-row">
+								<th scope="row">Daily Pass SacRT + Yolobus</th>
+								<td>$7.00</td>
+								<td>$3.50</td>
+							</tr>
+													<tr class="rows last-row">
+								<th scope="row">Monthly SacRT + Yolobus</th>
+								<td>$100.00</td>
+								<td>$50.00</td>
+							</tr>
+															</tbody>
+			  
+					</table>
+	</div>
+							
+															<div class="table-term"><p>* To meet senior/disabled criteria, must possess one of the following as valid proof of identification upon boarding Yolobus: SacRT Senior or Disabled Photo ID; Medicare Card (NOT Medi-Cal); DMV Driver&#8217;s License or government-issued ID Card; Any other discount ID issued by another transit agency<br />
+† Senior/disabled monthly pass works on express routes already, does not require upgrade)<br />
+‡ Senior/Disabled monthly pass is valid on all routes, including local, intercity and express routes</p>
+</div>
+														
+							<!--BeeLine Price details-->
+							
+														<h2 class="pcb__mcr-title h2title h2title-underline-lg-left h2title-underline bel_title">BeeLine On-Demand Transit Fares</h2>
+														
+							<p>BeeLine on-demand microtransit fares are a one-way, flat-fee that is the same for all riders.</p>
+							
+							
+																<div class="table-wrapper table-responsive" style="padding-top:0.5rem">
+										<table class="table table-bordered table-curved fares">
+																							<thead>
+													<tr>
+													  <th scope="col"></th>
+													  														<th scope="col">Regular</th>
+													  														<th scope="col">Seniors (62+)/Disabled & Youth (0-18)</th>
+													  													</tr>
+												</thead>
+																																		<tbody>
+																											<tr style="background-color:#e15a25;color:#fff;" class="heading">
+														  <td  scope="row" class="row-right"></td>
+														  <td  colspan="2" class="row-left">
+																														<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%200%200'%3E%3C/svg%3E" data-lazy-src="https://yolobus.com/wp-content/uploads/2023/08/Beeline-ride.png" /><noscript><img src="https://yolobus.com/wp-content/uploads/2023/08/Beeline-ride.png" /></noscript>
+																													  </td>
+														</tr>
+													
+																													<tr class="rows last-row">
+																<th scope="row">Knights Landing</th>
+																<td>$2.00</td>
+																<td>$1.50</td>
+															</tr>
+																													<tr class="rows last-row">
+																<th scope="row">Winters</th>
+																<td>$2.00</td>
+																<td>$1.50</td>
+															</tr>
+																													<tr class="rows last-row">
+																<th scope="row">Woodland</th>
+																<td>$3.00</td>
+																<td>$1.50</td>
+															</tr>
+																																							</tbody>
+											  
+																					</table>
+									</div>
+															
+																<div class="table-wrapper">
+										
+																				<h2 class="pcb__mcr-title h2title h2title-underline-lg-left h2title-underline">ADA Paratransit (“Yolobus Special”) Fares</h2>
+																				
+										<p>ADA-eligible riders can use ADA paratransit (“Yolobus Special”) service. The Yolobus Special fares vary by distance (local vs. intercity).</p>
+										
+																					<div class="table-responsive">
+												<table class="table table-bordered table-curved fares">
+													<tbody>
+														<tr style="background-color:#33a02b;" class="heading">
+															<td scope="row">ADA Paratransit ("Yolobus Special") Products</td>
+															<td >
+																															</td>
+														</tr>
+																												<tr class="rows ">
+															<th scope="row">ADA Paratransit Local Fare</th>
+															<td>$4.00</td>
+														</tr>
+																												<tr class="rows ">
+															<th scope="row">ADA Paratransit Intercity Fare</th>
+															<td>$4.50</td>
+														</tr>
+																												<tr class="rows ">
+															<th scope="row">ADA Paratransit Premium Fare*</th>
+															<td>$6.00</td>
+														</tr>
+																											</tbody>
+												</table>
+											</div>
+																			</div>
+																							<div class="table-term"><p>* Premium service is available to medical facilities only in portions of Sacramento and Vacaville that are beyond ¾ miles of Yolobus fixed routes. Destinations within ¾ mile of a Yolobus fixed route are charged the Local or Intercity fare, whichever is applicable</p>
+</div>
+														
+						</section>
+						
+						 
+<article id="post-726" class="post-726 page type-page status-publish hentry">
+    <!-- <header class="entry-header">
+        <h1 class="entry-title">Yolobus Fares</h1>
+    </header> --><!-- .entry-header -->
+
+    <div class="entry-content">
+         
+        <div class="clearfix"></div>
+            </div><!-- .entry-content -->
+
+    <footer class="entry-meta">
+         
+    </footer>
+</article><!-- #post-## -->
+	<section class="section section-1 pcb__contact-us">
+		<div class="text-center">
+							<h2 class="pcb__cu-title h2title h2title-underline-center">How to purchase a ticket or a pass</h2>
+							<div class="pcb__cu-content rte fw-300"><p>More information on how to purchase a ticket or a pass is available below.</p>
+</div>
+							<div class="pcb__cu-btn-group">
+												<a href="https://yolobus.com/purchasing-a-ticket-or-pass/" target="" class="yctd__btn yctd__btn-primary-outline">
+								<span>Purchasing a Ticket</span>							</a>
+										</div>
+					</div>
+	</section>
+	<section class="section section-2" style="height:30px;">
+	</section>
+	<section class="section section-3 pcb__richtext">
+		<div class="pcb__rtc-container">
+							<h2 class="h2title h2title-underline">How to Pay</h2>
+							<div class="pcb__rtc-content rte fw-300"><p>Riders have many choices when paying their fares. Fares may be paid on board the bus with cash, but contactless payment is more efficient and reduces bus boarding times—getting riders to their destinations faster. Contactless fare payment options include Connect Card and the Transit Connect mobile app.</p>
+</div>
+					</div>
+	</section>
+
+	<section class="section section-4 grid-listings">
+		<div class="row">
+		    				<div class="col-lg-4 col-sm-12 col-md-6 col-xs-12">
+					<div class="grid-wrapper">
+						
+													<div data-bg="https://yolobus.com/wp-content/uploads/2021/11/connect-bg-1.png" class="grid-image-wrapper rocket-lazyload" style=""></div>
+												
+						<div class="grid-content-wrapper">
+															<h3>Connect Card</h3>
+														
+															<p dir="ltr">Connect Card is the Sacramento region’s electronic transit fare payment system and is accepted by most transit agencies in the Sacramento region. Connect Card readers are installed on all Yolobus vehicles. To pay, tag the Connect Card reader with your card upon boarding the bus.</p>
+													</div>
+						
+													<div class="grid-button-wrapper">
+								<a class="yctd__btn yctd__btn-primary yctd__btn-block" href="https://yolobus.com/connect-card/" >Get to Know Connect Card</a>
+							</div>
+												
+					</div>
+				</div>
+							<div class="col-lg-4 col-sm-12 col-md-6 col-xs-12">
+					<div class="grid-wrapper">
+						
+													<div data-bg="https://yolobus.com/wp-content/uploads/2026/02/Transit-Connect-bg-1.png" class="grid-image-wrapper rocket-lazyload" style=""></div>
+												
+						<div class="grid-content-wrapper">
+															<h3>Transit Connect</h3>
+														
+															<p>The Transit Connect mobile fare app allows you to pre-purchase, store and activate tickets and passes instantly on your smartphone. Accepted on Yolobus and SacRT, with Unitrans joining in 2026.</p>
+													</div>
+						
+													<div class="grid-button-wrapper">
+								<a class="yctd__btn yctd__btn-primary yctd__btn-block" href="https://yolobus.com/transitconnect/" >Discover the App</a>
+							</div>
+												
+					</div>
+				</div>
+							<div class="col-lg-4 col-sm-12 col-md-6 col-xs-12">
+					<div class="grid-wrapper">
+						
+													<div data-bg="https://yolobus.com/wp-content/uploads/2021/11/cash-bg-1.png" class="grid-image-wrapper rocket-lazyload" style=""></div>
+												
+						<div class="grid-content-wrapper">
+															<h3>Cash</h3>
+														
+															<p dir="ltr">All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required as our bus operators don’t carry change or provide refunds. Passes on Connect Card can be purchased with cash at the <a href="https://yolobus.com/contact/">Yolobus Customer Service Center</a>.</p>
+													</div>
+						
+												
+					</div>
+				</div>
+					</div>
+	</section>
+	<section class="section section-5" style="height:50px;">
+	</section>
+	<section class="section section-6 pcb__richtext">
+		<div class="pcb__rtc-container">
+							<h2 class="h2title h2title-underline">In-Person Ticket and Pass Sales</h2>
+							<div class="pcb__rtc-content rte fw-300"><p>The Yolobus Customer Service Center in Woodland offers transit fare sales and Connect Card services:</p>
+<h4>Location</h4>
+<p>352 Industrial Way, Woodland, CA 95776</p>
+<h4>Business Hours</h4>
+<p>Monday through Friday, excluding holidays<br />
+7:00 am &#8211; 7:00 pm</p>
+<p>Saturday<br />
+9:00 am &#8211; 3:00 pm</p>
+<h4>Connect Card Services Offered</h4>
+<ul class="yctd_ul">
+<li>Issue New or Replacement Connect Cards for all riders, including eligible Discount Riders (Seniors, Persons with Disabilities)</li>
+<li>Load Cash Value, Tickets and/or Passes onto Connect Cards</li>
+</ul>
+<h4>Alternative ticket and pass sales location in Sacramento</h4>
+<p>Tickets, passes and Connect Card services are also available in Sacramento at the Sacramento Regional Transit District (SacRT) Customer Service and Sales Center, 1225 R St., Sacramento (916) 321-2877</p>
+</div>
+					</div>
+	</section>
+	<section class="section section-7 pcb__richtext">
+		<div class="pcb__rtc-container">
+							<h2 class="h2title h2title-underline">Types of Tickets or Passes</h2>
+							<div class="pcb__rtc-content rte fw-300"><h4>Single Ride</h4>
+<p>Tickets are for a one-way trip. A ticket can be purchased individually on Yolobus or by using Connect Card or Transit Connect.</p>
+<h4>Daily Pass</h4>
+<p>A Daily Pass is valid for unlimited rides until 1:30am the day after purchase on Yolobus and Sacramento Regional Transportation (SacRT). A Daily Pass can be purchased individually on board a Yolobus or by using Connect Card or Transit Connect.</p>
+<h4>Monthly Passes</h4>
+<p>Yolobus-only and Sacramento Regional Transit Monthly Passes are valid for unlimited rides for the month shown, and through the first business day of the following month.<br />
+Monthly passes can be purchased on the Connect Card website or the Transit Connect mobile app, but not onboard a Yolobus.</p>
+<h4>Transfer</h4>
+<p>If you are planning to connect with another Yolobus route to complete your trip, ask the driver for a transfer slip. You may also purchase a single fare + transfer in the Transit Connect app. <a href="https://yolobus.com/transfers/">Learn more about transfers &gt;</a></p>
+<h4>Other Fare Media</h4>
+<p>The following passes are good for unlimited rides on Yolobus, including Express routes.</p>
+<p><em>All fares are effective July 1, 2026 &#8211; June 30, 2027.</em></p>
+</div>
+					</div>
+	</section>
+	<section class="section section-8 simple_table_block">		 <div class="table-responsive">
+		<table class="table table-bordered table-curved">
+						<thead>
+				<tr style="background-color:#f5f7fb">
+											<th scope="col">UC Davis Aggie Card</th>
+											<th scope="col">UC Davis Zip Pass</th>
+											<th scope="col">UC Davis Extension International Program ID</th>
+											<th scope="col">Sacramento State Student ID</th>
+											<th scope="col">Los Rios Student Access Card</th>
+											<th scope="col">South Natomas TMA Pass</th>
+											<th scope="col">Sacramento County DHA Pass</th>
+									</tr>
+			</thead>
+						<tbody>
+			    					<tr style="background-color:#ffffff" class="heading">
+												<td scope="row" class="row-right">Undergraduate or UCDE Global Study Only</td>
+												<td scope="row" class="row-right">with valid student ID</td>
+												<td scope="row" class="row-right">with valid expiration date</td>
+												<td scope="row" class="row-right">with valid commuter sleeve </td>
+												<td scope="row" class="row-right">with valid sticker</td>
+												<td scope="row" class="row-right">with valid expiration date</td>
+												<td scope="row" class="row-right">with valid sticker</td>
+											</tr>
+							</tbody>
+		</table>
+		</div>
+	</section>
+					</main>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+		        <!-- customize the floating cta links here -->
+<div data-wpr-lazyrender="1" class="newsletter">
+	<div  class="container">
+                <div class='gf_browser_gecko gform_wrapper gform_legacy_markup_wrapper gform-theme--no-framework' data-form-theme='legacy' data-form-index='0' id='gform_wrapper_1' ><div id='gf_1' class='gform_anchor' tabindex='-1'></div>
+                        <div class='gform_heading'>
+                            <h3 class="gform_title">Keep up-to-date with all our services and alerts</h3>
+                            <p class='gform_description'>Subscribe to our newsletter</p>
+                        </div><form method='post' enctype='multipart/form-data' target='gform_ajax_frame_1' id='gform_1'  action='/fares/#gf_1' data-formid='1' novalidate>
+                        <div class='gform-body gform_body'><ul id='gform_fields_1' class='gform_fields top_label form_sublabel_below description_below validation_below'><li id="field_1_1" class="gfield gfield--type-email gfield--input-type-email gfield_contains_required field_sublabel_below gfield--no-description field_description_below field_validation_below gfield_visibility_visible"  ><label class='gfield_label gform-field-label' for='input_1_1'><span class='gform-field-label__text'>Email</span><span class="gfield_required"><span class="gfield_required gfield_required_asterisk">*</span></span></label><div class='ginput_container ginput_container_email'>
+                            <input name='input_1' id='input_1_1' type='email' value='' class='large'   placeholder='Your Email ID' aria-required="true" aria-invalid="false"  />
+                        </div></li><li id="field_1_2" class="gfield gfield--type-radio gfield--type-choice gfield--input-type-radio subscribe field_sublabel_below gfield--no-description field_description_below field_validation_below gfield_visibility_visible gfield--choice-align-vertical"  ><label class='gfield_label gform-field-label' ><span class='gform-field-label__text'>Subscribe</span></label><div class='ginput_container ginput_container_radio'><ul class='gfield_radio' id='input_1_2'>
+			<li class='gchoice gchoice_1_2_0'>
+				<input name='input_2' type='radio' value='Subscribe' checked='checked' id='choice_1_2_0'    />
+				<label for='choice_1_2_0' id='label_1_2_0' class='gform-field-label gform-field-label--type-inline'>Subscribe</label>
+			</li>
+			<li class='gchoice gchoice_1_2_1'>
+				<input name='input_2' type='radio' value='Unsubscribe'  id='choice_1_2_1'    />
+				<label for='choice_1_2_1' id='label_1_2_1' class='gform-field-label gform-field-label--type-inline'>Unsubscribe</label>
+			</li></ul></div></li><li id="field_1_3" class="gfield gfield--type-captcha gfield--input-type-captcha gfield--width-full field_sublabel_below gfield--no-description field_description_below field_validation_below gfield_visibility_visible"  ><label class='gfield_label gform-field-label' for='input_1_3'><span class='gform-field-label__text'>CAPTCHA</span></label><div id='input_1_3' class='ginput_container ginput_recaptcha' data-sitekey='6LeS27weAAAAAEnrgHlDyoR1f7coWC-47mEl_JTO'  data-theme='light' data-tabindex='0'  data-badge=''></div></li></ul></div>
+        <div class='gform-footer gform_footer top_label'> <button type='submit' id='gform_submit_button_1' class='gform_button button' onclick='gform.submission.handleButtonClick(this);' data-submission-type='submit' >Subscribe</button> <input type='hidden' name='gform_ajax' value='form_id=1&amp;title=1&amp;description=1&amp;tabindex=0&amp;theme=legacy&amp;styles=[]&amp;hash=0d1b1ae156065aa72279f3c8fa501a57' />
+            <input type='hidden' class='gform_hidden' name='gform_submission_method' data-js='gform_submission_method_1' value='iframe' />
+            <input type='hidden' class='gform_hidden' name='gform_theme' data-js='gform_theme_1' id='gform_theme_1' value='legacy' />
+            <input type='hidden' class='gform_hidden' name='gform_style_settings' data-js='gform_style_settings_1' id='gform_style_settings_1' value='[]' />
+            <input type='hidden' class='gform_hidden' name='is_submit_1' value='1' />
+            <input type='hidden' class='gform_hidden' name='gform_submit' value='1' />
+            
+            <input type='hidden' class='gform_hidden' name='gform_currency' data-currency='USD' value='tJtf87Kj8U5Q4tqi80ufCE9iWpM5MA+R7MwMYqG5c8hNFj4M9gOfrjTDEvi3mWArey4McpKdtjF+T0HjTSrHdlivF9DrwM+pOVv8hPLaRFUP1nM=' />
+            <input type='hidden' class='gform_hidden' name='gform_unique_id' value='' />
+            <input type='hidden' class='gform_hidden' name='state_1' value='WyJ7XCJnZm9ybV9zdWJtaXNzaW9uX21ldGhvZFwiOltcImExNGQwMGNhNDVlNjljMjJmZmU4MjcwNDBjYTk5MTY5XCIsXCJiN2YxZmIyZmU2MjM0NjkyNjgzMjEyNjAwMDY2M2NiYVwiLFwiY2Q0MWRkMDBjMDE2ZWIyNDk1ZjA1MjBiYjEyODI0ZjRcIl0sXCJnZm9ybV90aGVtZVwiOlwiMWU0NGVhYzMzNTNmY2ZkYzBlMjZiYjkxMDUzZDQ0YzJcIixcImdmb3JtX3N0eWxlX3NldHRpbmdzXCI6XCJjMDkyNWUyN2ZjNjQ2MDEwMjAxZDI0ZGZjOTZiMzg3NlwiLFwiZm9ybV9pZFwiOlwiZmE3NjJkYjE3MGRmNTk2YTM3ZWMzZTA2NDY4NDk4YWZcIixcInVybFwiOlwiMWM3M2UwYjZlNmE3NzE5YTE5NjVhODE0YjBkNjk0ZmJcIixcInN0YXRlX3RpbWVzdGFtcFwiOlwiODcwYzlhMTM0ZmUyZWNmMGFhYzY4ZTgwNTY5Y2EwNWJcIn0iLCI2NmNkZmQyZWU1N2ZlNmIxODRmMWI3YzU1NzZmNTk5OSIsMTc4NjU4MjI4OF0=' />
+            <input type='hidden' autocomplete='off' class='gform_hidden' name='gform_target_page_number_1' id='gform_target_page_number_1' value='0' />
+            <input type='hidden' autocomplete='off' class='gform_hidden' name='gform_source_page_number_1' id='gform_source_page_number_1' value='1' />
+            <input type='hidden' name='gform_field_values' value='' />
+            
+        </div>
+                        </form>
+                        </div>
+		                <iframe style='display:none;width:0px;height:0px;' src='about:blank' name='gform_ajax_frame_1' id='gform_ajax_frame_1' title='This iframe contains the logic required to handle Ajax powered Gravity Forms.'></iframe>
+		                <script>
+gform.initializeOnLoaded( function() {jQuery('#gform_ajax_frame_1').on('load',function(){var contents = jQuery(this).contents().find('*').html();var is_postback = contents.indexOf('GF_AJAX_POSTBACK') >= 0;if(!is_postback){return;}var form_content = jQuery(this).contents().find('#gform_wrapper_1');var is_confirmation = jQuery(this).contents().find('#gform_confirmation_wrapper_1').length > 0;var is_redirect = contents.indexOf('gformRedirect(){') >= 0;var is_form = form_content.length > 0 && ! is_redirect && ! is_confirmation;var mt = parseInt(jQuery('html').css('margin-top'), 10) + parseInt(jQuery('body').css('margin-top'), 10) + 100;if(is_form){jQuery('#gform_wrapper_1').html(form_content.html());if(form_content.hasClass('gform_validation_error')){jQuery('#gform_wrapper_1').addClass('gform_validation_error');} else {jQuery('#gform_wrapper_1').removeClass('gform_validation_error');}setTimeout( function() { /* delay the scroll by 50 milliseconds to fix a bug in chrome */ jQuery(document).scrollTop(jQuery('#gform_wrapper_1').offset().top - mt); }, 50 );var current_page = jQuery('#gform_source_page_number_1').val();jQuery(document).trigger('gform_page_loaded', [1, current_page]);window['gf_submitting_1'] = false;}else if(!is_redirect){var confirmation_content = jQuery(this).contents().find('.GF_AJAX_POSTBACK').html();if(!confirmation_content){confirmation_content = contents;}jQuery('#gform_wrapper_1').replaceWith(confirmation_content);jQuery(document).scrollTop(jQuery('#gf_1').offset().top - mt);jQuery(document).trigger('gform_confirmation_loaded', [1]);window['gf_submitting_1'] = false;wp.a11y.speak(jQuery('#gform_confirmation_message_1').text());}else{jQuery('#gform_1').append(contents);if(window['gformRedirect']) {gformRedirect();}}jQuery(document).trigger("gform_pre_post_render", [{ formId: "1", currentPage: "current_page", abort: function() { this.preventDefault(); } }]);        if (event && event.defaultPrevented) {                return;        }        const gformWrapperDiv = document.getElementById( "gform_wrapper_1" );        if ( gformWrapperDiv ) {            const visibilitySpan = document.createElement( "span" );            visibilitySpan.id = "gform_visibility_test_1";            gformWrapperDiv.insertAdjacentElement( "afterend", visibilitySpan );        }        const visibilityTestDiv = document.getElementById( "gform_visibility_test_1" );        let postRenderFired = false;        function triggerPostRender() {            if ( postRenderFired ) {                return;            }            postRenderFired = true;            gform.core.triggerPostRenderEvents( 1, current_page );            if ( visibilityTestDiv ) {                visibilityTestDiv.parentNode.removeChild( visibilityTestDiv );            }        }        function debounce( func, wait, immediate ) {            var timeout;            return function() {                var context = this, args = arguments;                var later = function() {                    timeout = null;                    if ( !immediate ) func.apply( context, args );                };                var callNow = immediate && !timeout;                clearTimeout( timeout );                timeout = setTimeout( later, wait );                if ( callNow ) func.apply( context, args );            };        }        const debouncedTriggerPostRender = debounce( function() {            triggerPostRender();        }, 200 );        if ( visibilityTestDiv && visibilityTestDiv.offsetParent === null ) {            const observer = new MutationObserver( ( mutations ) => {                mutations.forEach( ( mutation ) => {                    if ( mutation.type === 'attributes' && visibilityTestDiv.offsetParent !== null ) {                        debouncedTriggerPostRender();                        observer.disconnect();                    }                });            });            observer.observe( document.body, {                attributes: true,                childList: false,                subtree: true,                attributeFilter: [ 'style', 'class' ],            });        } else {            triggerPostRender();        }    } );} );
+</script>
+</div>
+</div>		
+        <footer data-wpr-lazyrender="1" id="site-footer" class="">
+            <div  class="top-footer">
+                <div  class="container">
+                    <div class="row">
+                        <div class="col-sm-6 col-md-3 footer-top-1">
+                                                        <div class="footer-logo">
+                                <a href="https://yolobus.com/" title="Yolobus" rel="home" class="logo"><img src="https://yolobus.com/wp-content/uploads/2022/12/Logo-Yolobus-BLUE-002.png" alt="Yolo Transportation District"/></a>
+								
+                            </div>
+                            <div class="footer-description"><div class="inside-right-sidebar"><div id="block-2" class="widget widget_block"><h4 class="wg-title">Connect with Us</h4></div><div id="block-3" class="widget widget_block"><p><ul class="social-links Array"><li><a href="https://www.facebook.com/Yolobus/" class="link" target="_blank"><span class="icon"><i class="fa fa-facebook" aria-hidden="true"></i></span></a></li><li><a href="https://www.x.com/yolobusYCTD" class="link" target="_blank"><span class="icon"><i class="fa fa-twitter" aria-hidden="true"></i></span></a></li><li><a href="https://www.instagram.com/yolobusyctd/" class="link" target="_blank"><span class="icon"><i class="fa fa-instagram" aria-hidden="true"></i></span></a></li><li><a href="https://www.youtube.com/@YoloTD" class="link" target="_blank"><span class="icon"><i class="fa fa-youtube" aria-hidden="true"></i></span></a></li></ul></p>
+</div></div></div>
+                        </div>
+                        <div class="col-sm-6 col-md-3 yctd-widget footer-top-2">
+                            <div class="inside-right-sidebar"><div id="block-4" class="widget widget_block"><h4 class="wg-title">Contact Us</h4></div><div id="block-5" class="widget widget_block"><p><div class="info-bar top-bar-cell flex-grow-1"><span class="info--item"><span class="location"></span><span class="txt">352 Industrial Way, Woodland, CA 95776</span></span><a class="info--item" href="mailto:custserv@yctd.org"><span class="email"></span><span class="txt">custserv@yctd.org</span></a><div class="info--item"><span class="phone"></span><a class="p" href="tel:5306662877"><span class="txt">(530) 666-BUSS (2877)</span></a> | <a class="m" href="tel:5306610816"><span class="txt">(530) 661-0816</span></a></div></div></p>
+</div></div>                        </div>
+                        <div class="col-sm-6 col-md-3 yctd-widget footer-top-3">
+                            <div class="inside-right-sidebar"><div id="block-6" class="widget widget_block"><h4 class="wg-title">Quick Links</h4></div><div id="nav_menu-44" class="widget widget_nav_menu"><div class="menu-quick-links-container"><ul id="menu-quick-links" class="menu"><li id="menu-item-134" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-home menu-item-134"><a href="https://yolobus.com/">Home</a></li>
+<li id="menu-item-2481" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2481"><a href="https://yolobus.com/alerts/">Rider Info</a></li>
+<li id="menu-item-139" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-139"><a href="https://yolotd.org/about-us/">About YoloTD</a></li>
+<li id="menu-item-985" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-985"><a href="https://yolobus.com/purchasing-a-ticket-or-pass/">Ticket &#038; Passes</a></li>
+<li id="menu-item-986" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-986"><a href="https://yolobus.com/routes/">Bus Routes</a></li>
+<li id="menu-item-4763" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-4763"><a href="https://yolotd.org/news/">News &#038; Events</a></li>
+<li id="menu-item-1133" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-1133"><a href="https://yolobus.com/sitemap_index.xml">Site map</a></li>
+<li id="menu-item-4603" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-4603"><a href="https://yolobus.com/advertising/">Advertise With Us!</a></li>
+</ul></div></div></div>                        </div>
+                        <div class="col-sm-6 col-md-3 yctd-widget footer-top-4">
+                            <div class="inside-right-sidebar"><div id="block-7" class="widget widget_block"><h4 class="wg-title">Translate this webpage</h4></div><div id="block-8" class="widget widget_block"><p><div class="gtranslate_wrapper" id="gt-wrapper-38024492"></div></p>
+</div></div>                        </div>
+                    </div>
+										<div class="row">
+						<div class="col-sm-12 col-md-12 "><div class="about-yolo"><p>Yolo Transportation District is committed to operating its programs and services without regard to disability, race, color or national origin, and encourage diversity on our committees and advisory boards, in the accordance with applicable federal statutes:</p>
+<p>Title II of the Americans with Disabilities Act | <a href="https://yolobus.com/wp-content/uploads/2021/12/YCTD_ADA_Plan_Complete.pdf" target="blank">ADA Public Notice/Policy Statement</a> | <a href="https://yolobus.com/wp-content/uploads/2021/12/YCTD-ADA_Complaint_Procedures.pdf" target="blank">ADA Complaint Process</a><br />
+Title VI of the Civil Rights Act | <a href="https://yolobus.com/wp-content/uploads/2026/02/Title-VI-Program-Update-Attachment-A-v2-Final.pdf" target="_blank" rel="noopener">Title VI Public Notice/Policy Statement</a> | <a href="https://yolotd.org/title-vi/" target="_blank" rel="noopener">Title VI Complaint Process</a></p>
+</div></div>
+					</div>
+					                 </div>
+            </div>
+            <div  id="colophon" class="bottom-footer">
+                <div  class="container">
+                    <div class="row">
+                        <div class="col-sm-6 footer-left copyrights">
+                            <p>© Copyright 2026 Yolo Transportation District</p>
+                        </div>
+                        <div class="col-sm-6 footer-right text-right website-by">
+                            <p>All Rights Reserved</p>
+							<ul id="bb4-primary-menu" class="navbar-nav"><li id="menu-item-133" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-privacy-policy menu-item-133 nav-item"><a href="https://yolobus.com/privacy-policy/" class="nav-link  menu-item menu-item-type-post_type menu-item-object-page menu-item-privacy-policy">Privacy Policy</a></li>
+</ul>                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer><!--.page-footer-->
+        
+                <!--wordpress footer-->
+        <script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/yctd-child/*","/wp-content/themes/yctd/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+<script>
+              (function(e){
+                  var el = document.createElement('script');
+                  el.setAttribute('data-account', 'OM4hGNQynx');
+                  el.setAttribute('src', 'https://cdn.userway.org/widget.js');
+                  document.body.appendChild(el);
+                })();
+              </script>		<script>
+		( function ( body ) {
+			'use strict';
+			body.className = body.className.replace( /\btribe-no-js\b/, 'tribe-js' );
+		} )( document.body );
+		</script>
+		<script> /* <![CDATA[ */var tribe_l10n_datatables = {"aria":{"sort_ascending":": activate to sort column ascending","sort_descending":": activate to sort column descending"},"length_menu":"Show _MENU_ entries","empty_table":"No data available in table","info":"Showing _START_ to _END_ of _TOTAL_ entries","info_empty":"Showing 0 to 0 of 0 entries","info_filtered":"(filtered from _MAX_ total entries)","zero_records":"No matching records found","search":"Search:","all_selected_text":"All items on this page were selected. ","select_all_link":"Select all pages","clear_selection":"Clear Selection.","pagination":{"all":"All","next":"Next","previous":"Previous"},"select":{"rows":{"0":"","_":": Selected %d rows","1":": Selected 1 row"}},"datepicker":{"dayNames":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"dayNamesShort":["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],"dayNamesMin":["S","M","T","W","T","F","S"],"monthNames":["January","February","March","April","May","June","July","August","September","October","November","December"],"monthNamesShort":["January","February","March","April","May","June","July","August","September","October","November","December"],"monthNamesMin":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"nextText":"Next","prevText":"Prev","currentText":"Today","closeText":"Done","today":"Today","clear":"Clear"}};/* ]]> */ </script><script data-minify="1" id="tec-user-agent-js" src="https://yolobus.com/wp-content/cache/min/1/wp-content/plugins/the-events-calendar/common/build/js/user-agent.js?ver=1782892496"></script>
+<script id="rocket-browser-checker-js-after">
+"use strict";var _createClass=function(){function defineProperties(target,props){for(var i=0;i<props.length;i++){var descriptor=props[i];descriptor.enumerable=descriptor.enumerable||!1,descriptor.configurable=!0,"value"in descriptor&&(descriptor.writable=!0),Object.defineProperty(target,descriptor.key,descriptor)}}return function(Constructor,protoProps,staticProps){return protoProps&&defineProperties(Constructor.prototype,protoProps),staticProps&&defineProperties(Constructor,staticProps),Constructor}}();function _classCallCheck(instance,Constructor){if(!(instance instanceof Constructor))throw new TypeError("Cannot call a class as a function")}var RocketBrowserCompatibilityChecker=function(){function RocketBrowserCompatibilityChecker(options){_classCallCheck(this,RocketBrowserCompatibilityChecker),this.passiveSupported=!1,this._checkPassiveOption(this),this.options=!!this.passiveSupported&&options}return _createClass(RocketBrowserCompatibilityChecker,[{key:"_checkPassiveOption",value:function(self){try{var options={get passive(){return!(self.passiveSupported=!0)}};window.addEventListener("test",null,options),window.removeEventListener("test",null,options)}catch(err){self.passiveSupported=!1}}},{key:"initRequestIdleCallback",value:function(){!1 in window&&(window.requestIdleCallback=function(cb){var start=Date.now();return setTimeout(function(){cb({didTimeout:!1,timeRemaining:function(){return Math.max(0,50-(Date.now()-start))}})},1)}),!1 in window&&(window.cancelIdleCallback=function(id){return clearTimeout(id)})}},{key:"isDataSaverModeOn",value:function(){return"connection"in navigator&&!0===navigator.connection.saveData}},{key:"supportsLinkPrefetch",value:function(){var elem=document.createElement("link");return elem.relList&&elem.relList.supports&&elem.relList.supports("prefetch")&&window.IntersectionObserver&&"isIntersecting"in IntersectionObserverEntry.prototype}},{key:"isSlowConnection",value:function(){return"connection"in navigator&&"effectiveType"in navigator.connection&&("2g"===navigator.connection.effectiveType||"slow-2g"===navigator.connection.effectiveType)}}]),RocketBrowserCompatibilityChecker}();
+//# sourceURL=rocket-browser-checker-js-after
+</script>
+<script id="rocket-preload-links-js-extra">
+var RocketPreloadLinksConfig = {"excludeUris":"/(?:.+/)?feed(?:/(?:.+/?)?)?$|/(?:.+/)?embed/|/(index.php/)?(.*)wp-json(/.*|$)|/refer/|/go/|/recommend/|/recommends/","usesTrailingSlash":"1","imageExt":"jpg|jpeg|gif|png|tiff|bmp|webp|avif|pdf|doc|docx|xls|xlsx|php","fileExt":"jpg|jpeg|gif|png|tiff|bmp|webp|avif|pdf|doc|docx|xls|xlsx|php|html|htm","siteUrl":"https://yolobus.com","onHoverDelay":"100","rateThrottle":"3"};
+//# sourceURL=rocket-preload-links-js-extra
+</script>
+<script id="rocket-preload-links-js-after">
+(function() {
+"use strict";var r="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(e){return typeof e}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==Symbol.prototype?"symbol":typeof e},e=function(){function i(e,t){for(var n=0;n<t.length;n++){var i=t[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(e,i.key,i)}}return function(e,t,n){return t&&i(e.prototype,t),n&&i(e,n),e}}();function i(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}var t=function(){function n(e,t){i(this,n),this.browser=e,this.config=t,this.options=this.browser.options,this.prefetched=new Set,this.eventTime=null,this.threshold=1111,this.numOnHover=0}return e(n,[{key:"init",value:function(){!this.browser.supportsLinkPrefetch()||this.browser.isDataSaverModeOn()||this.browser.isSlowConnection()||(this.regex={excludeUris:RegExp(this.config.excludeUris,"i"),images:RegExp(".("+this.config.imageExt+")$","i"),fileExt:RegExp(".("+this.config.fileExt+")$","i")},this._initListeners(this))}},{key:"_initListeners",value:function(e){-1<this.config.onHoverDelay&&document.addEventListener("mouseover",e.listener.bind(e),e.listenerOptions),document.addEventListener("mousedown",e.listener.bind(e),e.listenerOptions),document.addEventListener("touchstart",e.listener.bind(e),e.listenerOptions)}},{key:"listener",value:function(e){var t=e.target.closest("a"),n=this._prepareUrl(t);if(null!==n)switch(e.type){case"mousedown":case"touchstart":this._addPrefetchLink(n);break;case"mouseover":this._earlyPrefetch(t,n,"mouseout")}}},{key:"_earlyPrefetch",value:function(t,e,n){var i=this,r=setTimeout(function(){if(r=null,0===i.numOnHover)setTimeout(function(){return i.numOnHover=0},1e3);else if(i.numOnHover>i.config.rateThrottle)return;i.numOnHover++,i._addPrefetchLink(e)},this.config.onHoverDelay);t.addEventListener(n,function e(){t.removeEventListener(n,e,{passive:!0}),null!==r&&(clearTimeout(r),r=null)},{passive:!0})}},{key:"_addPrefetchLink",value:function(i){return this.prefetched.add(i.href),new Promise(function(e,t){var n=document.createElement("link");n.rel="prefetch",n.href=i.href,n.onload=e,n.onerror=t,document.head.appendChild(n)}).catch(function(){})}},{key:"_prepareUrl",value:function(e){if(null===e||"object"!==(void 0===e?"undefined":r(e))||!1 in e||-1===["http:","https:"].indexOf(e.protocol))return null;var t=e.href.substring(0,this.config.siteUrl.length),n=this._getPathname(e.href,t),i={original:e.href,protocol:e.protocol,origin:t,pathname:n,href:t+n};return this._isLinkOk(i)?i:null}},{key:"_getPathname",value:function(e,t){var n=t?e.substring(this.config.siteUrl.length):e;return n.startsWith("/")||(n="/"+n),this._shouldAddTrailingSlash(n)?n+"/":n}},{key:"_shouldAddTrailingSlash",value:function(e){return this.config.usesTrailingSlash&&!e.endsWith("/")&&!this.regex.fileExt.test(e)}},{key:"_isLinkOk",value:function(e){return null!==e&&"object"===(void 0===e?"undefined":r(e))&&(!this.prefetched.has(e.href)&&e.origin===this.config.siteUrl&&-1===e.href.indexOf("?")&&-1===e.href.indexOf("#")&&!this.regex.excludeUris.test(e.href)&&!this.regex.images.test(e.href))}}],[{key:"run",value:function(){"undefined"!=typeof RocketPreloadLinksConfig&&new n(new RocketBrowserCompatibilityChecker({capture:!0,passive:!0}),RocketPreloadLinksConfig).init()}}]),n}();t.run();
+}());
+
+//# sourceURL=rocket-preload-links-js-after
+</script>
+<script id="wpfront-scroll-top-js-extra">
+var wpfront_scroll_top_data = {"data":{"css":"#wpfront-scroll-top-container{position:fixed;cursor:pointer;z-index:9999;border:none;outline:none;background-color:rgba(0,0,0,0);box-shadow:none;outline-style:none;text-decoration:none;opacity:0;display:none;align-items:center;justify-content:center;margin:0;padding:0}#wpfront-scroll-top-container.show{display:flex;opacity:1}#wpfront-scroll-top-container .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}#wpfront-scroll-top-container .text-holder{padding:3px 10px;-webkit-border-radius:3px;border-radius:3px;-webkit-box-shadow:4px 4px 5px 0px rgba(50,50,50,.5);-moz-box-shadow:4px 4px 5px 0px rgba(50,50,50,.5);box-shadow:4px 4px 5px 0px rgba(50,50,50,.5)}#wpfront-scroll-top-container{right:15px;bottom:15px;}#wpfront-scroll-top-container img{width:auto;height:auto;}#wpfront-scroll-top-container .text-holder{color:#ffffff;background-color:#000000;width:auto;height:auto;;}#wpfront-scroll-top-container .text-holder:hover{background-color:#000000;}#wpfront-scroll-top-container i{color:#000000;}","html":"\u003Cbutton id=\"wpfront-scroll-top-container\" aria-label=\"\" title=\"\" \u003E\u003Cimg src=\"https://yolobus.com/wp-content/uploads/2021/11/scroll.png\" alt=\"Back to top\" title=\"\"\u003E\u003C/button\u003E","data":{"hide_iframe":true,"button_fade_duration":200,"auto_hide":false,"auto_hide_after":2,"scroll_offset":100,"button_opacity":0.8,"button_action":"top","button_action_element_selector":"","button_action_container_selector":"html, body","button_action_element_offset":0,"scroll_duration":400}}};
+//# sourceURL=wpfront-scroll-top-js-extra
+</script>
+<script id="wpfront-scroll-top-js" src="https://yolobus.com/wp-content/plugins/wpfront-scroll-top/includes/assets/wpfront-scroll-top.min.js?ver=3.0.1.09211"></script>
+<script id="bootstrap4-bundle-js" src="https://yolobus.com/wp-content/themes/yctd/assets/js/bootstrap.bundle.min.js?ver=4.6.0"></script>
+<script data-minify="1" id="bootstrap-basic4-main-js" src="https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd/assets/js/main.js?ver=1782892496"></script>
+<script data-minify="1" id="AOS-script-js" src="https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/js/aos.js?ver=1782892496"></script>
+<script data-minify="1" id="jquery.main-js" src="https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/js/main.js?ver=1782892496"></script>
+<script data-minify="1" id="jquery.scroll-js" src="https://yolobus.com/wp-content/cache/min/1/wp-content/themes/yctd-child/assets/js/scroll.js?ver=1782892496"></script>
+<script id="jquery.slick-js" src="https://yolobus.com/wp-content/themes/yctd-child/assets/js/slick.min.js?ver=7.0.3"></script>
+<script id="gt_widget_script_72239628-js-before">
+window.gtranslateSettings = /* document.write */ window.gtranslateSettings || {};window.gtranslateSettings['72239628'] = {"default_language":"en","languages":["af","sq","am","ar","hy","az","eu","be","bn","bs","bg","ca","ceb","ny","zh-CN","zh-TW","co","hr","cs","da","nl","en","eo","et","tl","fi","fr","fy","gl","ka","de","el","gu","ht","ha","haw","iw","hi","hmn","hu","is","ig","id","ga","it","ja","jw","kn","kk","km","ko","ku","ky","lo","la","lv","lt","lb","mk","mg","ms","ml","mt","mi","mr","mn","my","ne","no","ps","fa","pl","pt","pa","ro","ru","sm","gd","sr","st","sn","sd","si","sk","sl","so","es","su","sw","sv","tg","ta","te","th","tr","uk","ur","uz","vi","cy","xh","yi","yo","zu"],"url_structure":"none","detect_browser_language":1,"wrapper_selector":"#gt-wrapper-72239628","select_language_label":"Select Language","horizontal_position":"inline","flags_location":"\/wp-content\/plugins\/gtranslate\/flags\/"};
+//# sourceURL=gt_widget_script_72239628-js-before
+</script><script src="https://yolobus.com/wp-content/plugins/gtranslate/js/dropdown.js?ver=3.1.1" data-no-optimize="1" data-no-minify="1" data-gt-orig-url="/fares/" data-gt-orig-domain="yolobus.com" data-gt-widget-id="72239628" defer></script><script id="wp-dom-ready-js" src="https://yolobus.com/wp-includes/js/dist/dom-ready.min.js?ver=a06281ae5cf5500e9317"></script>
+<script id="wp-hooks-js" src="https://yolobus.com/wp-includes/js/dist/hooks.min.js?ver=7496969728ca0f95732d"></script>
+<script id="wp-i18n-js" src="https://yolobus.com/wp-includes/js/dist/i18n.min.js?ver=781d11515ad3d91786ec"></script>
+<script id="wp-i18n-js-after">
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+//# sourceURL=wp-i18n-js-after
+</script>
+<script id="wp-a11y-js" src="https://yolobus.com/wp-includes/js/dist/a11y.min.js?ver=af934e5259bc51b8718e"></script>
+<script id="gform_json-js" defer='defer' src="https://yolobus.com/wp-content/plugins/gravityforms/js/jquery.json.min.js?ver=3.0.2"></script>
+<script id="gform_gravityforms-js-extra">
+var gform_i18n = {"datepicker":{"helpTextShort":"Press F1 for help","helpText":"Press the arrow keys to navigate by day, PageUp and PageDown to navigate by month, Alt+PageUp and Alt+PageDown to navigate by year, or Escape to cancel.","openOnFocusHelpText":"Press Down arrow to browse the calendar, or Escape to close.","tooltipTxt":"Press Escape to cancel","disabledTxt":"Disabled","markedTxt":"Selected","prevTxt":"Previous","nextTxt":"Next","monthTxt":"Month","yearTxt":"Year","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"days":[{"s":"S","l":"Sunday"},{"s":"M","l":"Monday"},{"s":"T","l":"Tuesday"},{"s":"W","l":"Wednesday"},{"s":"T","l":"Thursday"},{"s":"F","l":"Friday"},{"s":"S","l":"Saturday"}]}};
+var gf_legacy_multi = [];
+var gform_gravityforms = {"strings":{"invalid_file_extension":"This type of file is not allowed. Must be one of the following:","file_uploaded":"File uploaded","delete_file":"Delete this file","in_progress":"in progress","file_exceeds_limit":"File exceeds size limit","illegal_extension":"This type of file is not allowed.","max_reached":"Maximum number of files reached","unknown_error":"There was a problem while saving the file on the server","currently_uploading":"Please wait for the uploading to complete","cancel":"Cancel","cancel_upload":"Cancel this upload","cancelled":"Cancelled","error":"Error","message":"Message"},"vars":{"images_url":"https://yolobus.com/wp-content/plugins/gravityforms/images"}};
+var gf_global = {"gf_currency_config":{"name":"U.S. Dollar","symbol_left":"$","symbol_right":"","symbol_padding":"","thousand_separator":",","decimal_separator":".","decimals":2,"code":"USD"},"base_url":"https://yolobus.com/wp-content/plugins/gravityforms","number_formats":[],"version_hash":"191bff26868d91af598b07feca94e26b","strings":{"newRowAdded":"New row added.","rowRemoved":"Row removed","formSaved":"The form has been saved.  The content contains the link to return and complete the form."}};
+//# sourceURL=gform_gravityforms-js-extra
+</script>
+<script id="gform_gravityforms-js" defer='defer' src="https://yolobus.com/wp-content/plugins/gravityforms/js/gravityforms.min.js?ver=3.0.2"></script>
+<script id="gform_recaptcha-js" defer='defer' src="https://www.google.com/recaptcha/api.js?hl=en&#038;&#038;ver=7.0.3#038;render=explicit"></script>
+<script id="gform_placeholder-js" defer='defer' src="https://yolobus.com/wp-content/plugins/gravityforms/js/placeholders.jquery.min.js?ver=3.0.2"></script>
+<script id="gform_gravityforms_utils-js" defer='defer' src="https://yolobus.com/wp-content/plugins/gravityforms/assets/js/dist/utils.min.js?ver=3f278756f0a3032bed328ff6a9f6c01d"></script>
+<script id="gform_gravityforms_theme_vendors-js" defer='defer' src="https://yolobus.com/wp-content/plugins/gravityforms/assets/js/dist/vendor-theme.min.js?ver=b1d32e3bcae548735f8a8c723e228edd"></script>
+<script id="gform_gravityforms_theme-js-extra">
+var gform_theme_config = {"common":{"form":{"honeypot":{"version_hash":"191bff26868d91af598b07feca94e26b"},"ajax":{"ajaxurl":"https://yolobus.com/wp-admin/admin-ajax.php","ajax_submission_nonce":"86a5ab5c6a","i18n":{"step_announcement":"Step %1$s of %2$s, %3$s","unknown_error":"There was an unknown error processing your request. Please try again.","error_403":"The request was blocked (403 error) for unknown security reasons. Remove any code-like text (scripts or DB queries) and try again."}},"logging":{"is_enabled":false}}},"hmr_dev":"","public_path":"https://yolobus.com/wp-content/plugins/gravityforms/assets/js/dist/","config_nonce":"c6d798247f"};
+//# sourceURL=gform_gravityforms_theme-js-extra
+</script>
+<script id="gform_gravityforms_theme-js" defer='defer' src="https://yolobus.com/wp-content/plugins/gravityforms/assets/js/dist/scripts-theme.min.js?ver=a47d2ddc45fa71f5303d9c5936ccd281"></script>
+<script id="gt_widget_script_38024492-js-before">
+window.gtranslateSettings = /* document.write */ window.gtranslateSettings || {};window.gtranslateSettings['38024492'] = {"default_language":"en","languages":["af","sq","am","ar","hy","az","eu","be","bn","bs","bg","ca","ceb","ny","zh-CN","zh-TW","co","hr","cs","da","nl","en","eo","et","tl","fi","fr","fy","gl","ka","de","el","gu","ht","ha","haw","iw","hi","hmn","hu","is","ig","id","ga","it","ja","jw","kn","kk","km","ko","ku","ky","lo","la","lv","lt","lb","mk","mg","ms","ml","mt","mi","mr","mn","my","ne","no","ps","fa","pl","pt","pa","ro","ru","sm","gd","sr","st","sn","sd","si","sk","sl","so","es","su","sw","sv","tg","ta","te","th","tr","uk","ur","uz","vi","cy","xh","yi","yo","zu"],"url_structure":"none","detect_browser_language":1,"wrapper_selector":"#gt-wrapper-38024492","select_language_label":"Select Language","horizontal_position":"inline","flags_location":"\/wp-content\/plugins\/gtranslate\/flags\/"};
+//# sourceURL=gt_widget_script_38024492-js-before
+</script><script src="https://yolobus.com/wp-content/plugins/gtranslate/js/dropdown.js?ver=3.1.1" data-no-optimize="1" data-no-minify="1" data-gt-orig-url="/fares/" data-gt-orig-domain="yolobus.com" data-gt-widget-id="38024492" defer></script><script>
+gform.initializeOnLoaded( function() { jQuery(document).on('gform_post_render', function(event, formId, currentPage){if(formId == 1) {if(typeof Placeholders != 'undefined'){
+                        Placeholders.enable();
+                    }} } );jQuery(document).on('gform_post_conditional_logic', function(event, formId, fields, isInit){} ) } );
+</script>
+<script>
+gform.initializeOnLoaded( function() {jQuery(document).trigger("gform_pre_post_render", [{ formId: "1", currentPage: "1", abort: function() { this.preventDefault(); } }]);        if (event && event.defaultPrevented) {                return;        }        const gformWrapperDiv = document.getElementById( "gform_wrapper_1" );        if ( gformWrapperDiv ) {            const visibilitySpan = document.createElement( "span" );            visibilitySpan.id = "gform_visibility_test_1";            gformWrapperDiv.insertAdjacentElement( "afterend", visibilitySpan );        }        const visibilityTestDiv = document.getElementById( "gform_visibility_test_1" );        let postRenderFired = false;        function triggerPostRender() {            if ( postRenderFired ) {                return;            }            postRenderFired = true;            gform.core.triggerPostRenderEvents( 1, 1 );            if ( visibilityTestDiv ) {                visibilityTestDiv.parentNode.removeChild( visibilityTestDiv );            }        }        function debounce( func, wait, immediate ) {            var timeout;            return function() {                var context = this, args = arguments;                var later = function() {                    timeout = null;                    if ( !immediate ) func.apply( context, args );                };                var callNow = immediate && !timeout;                clearTimeout( timeout );                timeout = setTimeout( later, wait );                if ( callNow ) func.apply( context, args );            };        }        const debouncedTriggerPostRender = debounce( function() {            triggerPostRender();        }, 200 );        if ( visibilityTestDiv && visibilityTestDiv.offsetParent === null ) {            const observer = new MutationObserver( ( mutations ) => {                mutations.forEach( ( mutation ) => {                    if ( mutation.type === 'attributes' && visibilityTestDiv.offsetParent !== null ) {                        debouncedTriggerPostRender();                        observer.disconnect();                    }                });            });            observer.observe( document.body, {                attributes: true,                childList: false,                subtree: true,                attributeFilter: [ 'style', 'class' ],            });        } else {            triggerPostRender();        }    } );
+</script>
+<script>window.lazyLoadOptions=[{elements_selector:"img[data-lazy-src],.rocket-lazyload",data_src:"lazy-src",data_srcset:"lazy-srcset",data_sizes:"lazy-sizes",class_loading:"lazyloading",class_loaded:"lazyloaded",threshold:300,callback_loaded:function(element){if(element.tagName==="IFRAME"&&element.dataset.rocketLazyload=="fitvidscompatible"){if(element.classList.contains("lazyloaded")){if(typeof window.jQuery!="undefined"){if(jQuery.fn.fitVids){jQuery(element).parent().fitVids()}}}}}},{elements_selector:".rocket-lazyload",data_src:"lazy-src",data_srcset:"lazy-srcset",data_sizes:"lazy-sizes",class_loading:"lazyloading",class_loaded:"lazyloaded",threshold:300,}];window.addEventListener('LazyLoad::Initialized',function(e){var lazyLoadInstance=e.detail.instance;if(window.MutationObserver){var observer=new MutationObserver(function(mutations){var image_count=0;var iframe_count=0;var rocketlazy_count=0;mutations.forEach(function(mutation){for(var i=0;i<mutation.addedNodes.length;i++){if(typeof mutation.addedNodes[i].getElementsByTagName!=='function'){continue}
+if(typeof mutation.addedNodes[i].getElementsByClassName!=='function'){continue}
+images=mutation.addedNodes[i].getElementsByTagName('img');is_image=mutation.addedNodes[i].tagName=="IMG";iframes=mutation.addedNodes[i].getElementsByTagName('iframe');is_iframe=mutation.addedNodes[i].tagName=="IFRAME";rocket_lazy=mutation.addedNodes[i].getElementsByClassName('rocket-lazyload');image_count+=images.length;iframe_count+=iframes.length;rocketlazy_count+=rocket_lazy.length;if(is_image){image_count+=1}
+if(is_iframe){iframe_count+=1}}});if(image_count>0||iframe_count>0||rocketlazy_count>0){lazyLoadInstance.update()}});var b=document.getElementsByTagName("body")[0];var config={childList:!0,subtree:!0};observer.observe(b,config)}},!1)</script><script data-no-minify="1" async src="https://yolobus.com/wp-content/plugins/wp-rocket/assets/js/lazyload/17.8.3/lazyload.min.js"></script> 
+        <!--end wordpress footer-->
+		
+		<section  class="full-width-search"><div  class="full-wrapper"><div  class="container">                            <form method="get" action="https://yolobus.com/">
+                                <div class="input-group">
+                                    <input class="form-control" type="search" name="s" value="" placeholder="Search" title="Search &hellip;">
+                                    <span class="input-group-append">
+                                        <button class="btn btn-outline-secondary" type="submit"><img src="https://yolobus.com/wp-content/themes/yctd-child/assets/img/search.png" alt="Search" /></button>
+                                    </span>
+                                </div>
+                            </form><!--to override this search form, it is in /nas/content/live/yolobus/wp-content/themes/yctd-child/template-parts/partial-search-form.php --></div></div><i class="fa fa-close full-search-close" ></i></section>		
+    <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2a429869b0f7587',t:'MTc4NjU4NjgwNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+<!-- This website is like a Rocket, isn't it? Performance optimized by WP Rocket. Learn more: https://wp-rocket.me -->

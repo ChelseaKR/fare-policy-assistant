@@ -169,28 +169,31 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
-    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produced the sixth
-    # (50fb01a9…4999 / 816ff402…cb94 / df00d694…3626), a nine-entry `scopes`
-    # tuple and 37 aliases. This branch adds SLO RTA (SLORTA, 8 aliases,
-    # 2026-08-13) and rebinds them to the values below: a ten-entry `scopes`
-    # tuple and 45 aliases in one domain block. Two sibling agency branches
-    # are in flight as this is written, so if this branch is not the last to
-    # merge, HEAD's values will differ from these and must be re-derived at
-    # merge, the way the E-tran/SCMTD/SolTrans/FAX merges were. The values
-    # below were re-derived by building the descriptor from this fixture
-    # against this branch's profile, not lifted from any other branch or from
-    # a failure message. Before any of the five additions:
-    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
+    # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produced the ninth (85c6cc32…c0e1
+    # / 52e5ea5c…4a53 / 38a5931f…b4af); merging WestCAT (6 aliases,
+    # 2026-08-14) on top produced the tenth (555eb52b…cf55 / 8a8596e1…dde0 /
+    # 6eaefe65…7320); and merging SLO RTA (SLORTA, 8 aliases, 2026-08-14) on
+    # top produces the eleventh and current one below: a fourteen-entry
+    # `scopes` tuple and 66 aliases in one domain block. The values below were
+    # re-derived by building the descriptor from this fixture against the
+    # merged profile, not lifted from any branch or from a failure message.
+    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
+    # 249b0835…907a.
     assert (
-        first.config_version == "62bc6ad8cf8fb209d1f92ad55d693fb184e0875fbc9d77812f337862fb72386d"
+        first.config_version == "bf8f755134394efd2a3d93d108e512cbec90e92d2744f3343229ac45b4ca05c5"
     )
     assert (
-        first.release_version == "cdc611155ba213874a621a053655270691404952477cb31839068c4ad0cf0a15"
+        first.release_version == "f02c0da5aab91cdb711cf28177bfedecd860a4dfbe47048ee01db9aedece13f5"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "201243c6f9ba7fb3a9fc2b3b161fe2f8a8dacb0c3f51c202265b86c90388cff4"
+        == "b11e0f482a03a20021fe29a84997c9b095661142ed35e84d571af1ba86c785a2"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
