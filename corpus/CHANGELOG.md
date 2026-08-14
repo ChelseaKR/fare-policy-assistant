@@ -68,3 +68,33 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## af0feed6c742 (2026-08-14 UTC)
+
+Added SamTrans (San Mateo County Transit District): 10 agencies, 26
+documents, 161 chunks. Three documents, all fetched 2026-08-14 UTC:
+`samtrans-fares`, `samtrans-fare-types`, and `samtrans-clipper`.
+
+The structures that earn the disk space: a merged discount row (Youth and
+the senior/disabled/Medicare "Eligible Discount" class share one price
+line), a two-children-age-4-or-younger-free-per-paying-adult rule, the
+Youth Unlimited free-fare program for Socioeconomically Disadvantaged
+students, a 19th-birthday cliff that cancels an active Youth Monthly Pass
+mid-month, and fare waivers with two simultaneous conditions (uniform AND
+unexpired military ID). And one named-but-unpublished structure, recorded
+in the manifest rather than invented: SamTrans says open-payment fare
+capping "is calculated separately from Monthly Pass usage" and publishes no
+cap amounts, period, or rule anywhere in the fetched pages — the corpus
+carries that one sentence, and refuse-samtrans-001 pins the honest partial
+answer.
+
+Two pages fetched and excluded with reasons in the manifest:
+/fares/fare-structure (a pointer hub to the codified-tariff PDF, itself the
+only dated fare-period statement SamTrans publishes — a PDF-ingest
+candidate for a follow-up) and /rider-info/youth-riders (a 60-row
+school-route table, the FAX Handy Ride lesson).
+
+This id was computed on a branch based on the nine-agency corpus
+(95794539d1d0). Three sibling agency branches were in flight at the same
+time; whichever merges after this one re-runs `make ingest` and re-stamps
+its own heading, as the 2026-08-12/13 additions did.

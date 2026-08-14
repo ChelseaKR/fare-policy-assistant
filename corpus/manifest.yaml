@@ -111,6 +111,19 @@
 #                 attempted. Crawl-delay is unspecified; the manifest's 10-second
 #                 default was honored anyway.
 #
+# Robots/permissions note for the tenth agency, SamTrans (checked 2026-08-13
+# PT / 2026-08-14 UTC):
+#   www.samtrans.com  robots.txt is stock Drupal (HTTP 200, Pantheon/nginx,
+#                 Last-Modified 2026-08-13): `User-agent: *` disallows only
+#                 CMS internals (/core/, /profiles/, /admin/, /search/,
+#                 /user/*, README and composer files) — nothing under /fares
+#                 or /rider-info. No Crawl-delay (the manifest's 10-second
+#                 default was honored anyway), no Content-Signal line in
+#                 robots.txt, and no Content-Signal or x-robots-tag header on
+#                 any fetched page. All three pages below returned HTTP 200
+#                 to this project's identified user agent on the first try —
+#                 no WAF challenge, no workaround needed or attempted.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
@@ -157,6 +170,10 @@
 #            https://www.soltrans.org/about/policies/privacy-policy; there is no
 #            terms-of-use entry. Footer: "© 2024 SolTrans" (a bare copyright line,
 #            and note the footer year is 2024, not the current year).
+#   SamTrans site terms: https://www.samtrans.com/service-info/terms-use
+#            ("Terms of Use", linked from every page footer — read it there,
+#            not here). Footer: "© 2026 San Mateo County Transit District."
+#            Checked 2026-08-13.
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -618,6 +635,80 @@ documents:
     # reason sbmtd-farechange is: a fare-change announcement the assistant must be
     # able to cite when a rider asks about a product the fare table still lists.
     license_note: "Public agency fare-change announcement; no Content-Signal served."
+
+  # ── SamTrans (San Mateo County Transit District) ──────────────────────────
+  # Added as the tenth agency (2026-08-13 PT). San Mateo County local/express
+  # bus; a Clipper agency in the middle of the Next-Generation rollout its
+  # own pages describe. Distinctive published structures worth casing: the
+  # merged discount row (Youth 18-and-under and "Eligible Discount" — senior
+  # 65+/disabled/Medicare cardholder — share one price line: $1.10 cash,
+  # $1.00 Clipper, $2.00 Day Pass, $27.00 monthly); the two-children-age-4-
+  # or-younger-free-per-paying-adult rule; the Youth Unlimited program (free
+  # fares for Socioeconomically Disadvantaged students, as defined by the
+  # California Department of Education); a hard birthday cliff (a Youth
+  # Clipper card converts to Adult on the 19th birthday and an active Youth
+  # Monthly Pass is cancelled even mid-month); and fare waivers for uniformed
+  # active military, sworn peace officers, and ADA-paratransit-certified
+  # riders with their personal care attendants.
+  #
+  # FARE CAPPING, MENTIONED BUT NOT PUBLISHED — the SCMTD lesson in a new
+  # form. samtrans-clipper says "Fare capping for Open Payment is calculated
+  # separately from Monthly Pass usage" and that riders should keep tapping
+  # every trip "to receive transfer discounts and proper fare calculations".
+  # No SamTrans page fetched for this work publishes the cap amounts, the
+  # cap period, or the cap rule itself — the agency names the feature and
+  # stops. So the corpus can cite that open-payment fare capping exists and
+  # is separate from monthly passes, and nothing more; eval case
+  # refuse-samtrans-001 pins the honest partial answer. Re-check on any
+  # refetch: if SamTrans publishes the cap schedule as text, ingest it and
+  # rewrite that case.
+  #
+  # FARE PERIOD: no effective-date banner on any HTML page above. The
+  # authoritative legal fare structure is a PDF the (excluded) fare-structure
+  # hub page links, titled "Fare Structure Effective 1/1/2025" — the only
+  # dated fare-period statement SamTrans publishes. That codified tariff is
+  # not ingested in this pass; it is a candidate for the ADR 0008 PDF path
+  # in a follow-up, and the HTML pages carry the rider-facing figures.
+  #
+  # Fetched and excluded, so the choice is on the record:
+  #   /fares/fare-structure — two paragraphs of pointers to the codified
+  #     tariff PDF and the fare-history PDF; a hub page in the SolTrans
+  #     /fares sense, no rider-facing policy text of its own.
+  #   /rider-info/youth-riders — its unique bulk is a school-by-school route
+  #     table (60+ rows naming individual schools); the FAX Handy Ride
+  #     lesson: bulk rows outrank the fare table in retrieval. Its two fare
+  #     facts (free Youth Clipper cards, Youth Unlimited) are already on the
+  #     pages ingested below.
+  #
+  # No Spanish counterpart: samtrans.com serves Spanish through a Google
+  # Translate widget rather than published /es/ pages (checked 2026-08-13),
+  # so there is no Spanish source document to catalogue. The multilingual
+  # gap is deliberate (the e-tran precedent); ml-samtrans-001 is an honest
+  # cross-lingual case.
+  - id: samtrans-fares
+    agency: SamTrans
+    agency_full: San Mateo County Transit District (SamTrans)
+    title: "Fares"
+    url: https://www.samtrans.com/fares
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.samtrans.com/service-info/terms-use"
+  - id: samtrans-fare-types
+    agency: SamTrans
+    agency_full: San Mateo County Transit District (SamTrans)
+    title: "Fare Types (passes, day passes, waived fares, Youth Unlimited)"
+    url: https://www.samtrans.com/fares/fare-types
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.samtrans.com/service-info/terms-use"
+  - id: samtrans-clipper
+    agency: SamTrans
+    agency_full: San Mateo County Transit District (SamTrans)
+    title: "Clipper on SamTrans (Next Generation Clipper FAQ)"
+    url: https://www.samtrans.com/fares/clipper
+    language: en
+    # Names open-payment fare capping without publishing its amounts or
+    # rule; see the header note before writing any eval case against a cap
+    # figure.
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.samtrans.com/service-info/terms-use"
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

@@ -13,7 +13,8 @@ Cells: number of eval cases touching that agency x program. `-` means the corpus
 | SBMTD | 8 | 4 | 1 | - | 4 | 3 | 11 |
 | SCMTD | 5 | 4 | 2 | 1 | 3 | 1 | 7 |
 | SacRT | 10 | 3 | - | - | 4 | - | 9 |
-| SolTrans | 3 | 3 | 3 | - | 4 | **0** | 3 |
+| SamTrans | 1 | 2 | 1 | - | 5 | 1 | 6 |
+| SolTrans | 3 | 3 | 3 | - | 4 | **0** | 4 |
 | Yolobus | 9 | 5 | 4 | - | 13 | - | 5 |
 
 ## Blind spots (1)

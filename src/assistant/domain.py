@@ -41,7 +41,18 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans", "FAX"),
+    scopes=(
+        "MST",
+        "SBMTD",
+        "Yolobus",
+        "SacRT",
+        "HTA",
+        "E-tran",
+        "SCMTD",
+        "SolTrans",
+        "FAX",
+        "SamTrans",
+    ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -97,6 +108,18 @@ TRANSIT = DomainProfile(
         "fresno": "FAX",
         "fresno area express": "FAX",
         "handy ride": "FAX",
+        # SamTrans (San Mateo County Transit District). "san mateo" is a
+        # single-operator geography within this corpus (the
+        # "vallejo"->SolTrans pattern); "redi-wheels" is its paratransit
+        # brand, named by riders without naming SamTrans (the
+        # "handy ride"->FAX pattern). Deliberately NOT aliased: "caltrain" —
+        # a separate operator this corpus does not cover, even though
+        # SamTrans' pages describe accepting one of its passes.
+        "samtrans": "SamTrans",
+        "sam trans": "SamTrans",
+        "san mateo": "SamTrans",
+        "redi-wheels": "SamTrans",
+        "rediwheels": "SamTrans",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

@@ -268,3 +268,16 @@ cases:
     required_facts: ["re:\\$\\s?1[.,]00"]
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
+
+  - id: ml-samtrans-001
+    question: "¿Cuánto cuesta el pasaje de adulto en SamTrans, y es más barato con Clipper?"
+    agency_scope: SamTrans
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]25", "re:\\$\\s?2[.,]05"]
+    mirror_of: ground-samtrans-001
+    rationale: >
+      Cross-lingual: SamTrans publishes no Spanish fare pages (a Google
+      Translate widget serves the site's other languages), so the Spanish
+      question must be answered from English passages and returned in
+      Spanish — the FAX ml-027 pattern.
