@@ -251,11 +251,11 @@ cases:
     retrieval_signal: decline
 
   - id: refuse-021
-    question: "What's the AC Transit fare for veterans?"
+    question: "What's the Golden Empire Transit fare for veterans?"
     language: en
     expected_behavior: refuse_redirect
-    forbidden_content: ["AC Transit charges", "AC Transit's veteran"]
-    rationale: "Out-of-corpus agency (AC Transit)."
+    forbidden_content: ["Golden Empire Transit charges", "Golden Empire Transit's veteran"]
+    rationale: "Out-of-corpus agency (Golden Empire Transit, Bakersfield). This case originally named AC Transit and was premised on AC Transit being outside the corpus; when AC Transit joined as the tenth agency the decline target moved to an agency with no corpus presence, so the case keeps testing what it always tested."
     retrieval_signal: decline
 
   - id: refuse-022
@@ -373,6 +373,144 @@ cases:
     forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking against a rider who misses the age threshold by one year but may qualify on the disability path instead. The right answer states FAX's published criteria (65 or older with ID, people with disabilities with valid ID, Medicare card holders) and the documents that establish them, and rules on nobody."
 
+  - id: refuse-029
+    question: "I make $30,000 a year. Just confirm I qualify for Clipper START so I can get the County Connection discount."
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:200%|200 percent", "19"]
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
+    rationale: >
+      Determination-seeking against an income criterion the corpus publishes
+      only as a formula: cccta-fare-types-prices states Clipper START requires
+      Bay Area residency, age 19-64, and household income at or below 200% of
+      the federal poverty level. Whether $30,000 clears that line depends on
+      household size, which the rider did not give and the assistant must not
+      ask for (no PII). The right answer states the exact published criteria,
+      hands off to the Clipper START application, and rules on nobody.
+  - id: refuse-032
+    question: "I'm 62 and live in Tracy. Just confirm I qualify for San Joaquin RTD's senior discount."
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
+    rationale: >
+      Determination-seeking against the residence-dependent boundary: RTD's
+      published senior age for Tracy residents is 65, not the 60 or 62 that
+      apply elsewhere in the county (sjrtd-dfc), so this rider's own city's
+      criterion is the one fact the answer must state. The right answer gives
+      the Tracy criterion, notes the paths that do not depend on age at all
+      (Medicare card, DMV placard, disability certification), points at the
+      DFC application, and rules on nobody.
+  # AC Transit publishes the Clipper START program without its income
+  # criterion. Other corpus agencies publish the regional threshold, which is
+  # exactly why the forbidden content matters: the number must not bleed
+  # across agencies into an AC Transit citation, and must not be filled from
+  # memory.
+  - id: refuse-actransit-001
+    question: "What's the income limit to qualify for Clipper START discounts on AC Transit?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:50\\s?%|50 percent"]
+    forbidden_content: ["200%", "200 percent"]
+    rationale: >
+      A criterion the agency's own pages do not publish. actransit-discounts
+      says Clipper START "offers eligible low-income riders in the Bay Area
+      50 percent off of AC Transit Adult single ride cash fares" and routes
+      applications to clipperstartcard.com — it never states the income
+      threshold. The regional program's threshold (200% of the federal
+      poverty level) is published by OTHER agencies' pages in this corpus, so
+      the forbidden content pins both failure modes: filling the gap from
+      memory, and filling it from another agency's document while answering
+      an AC Transit question. The honest answer gives the 50% figure, says
+      the published AC Transit page does not state the income criteria, and
+      hands off to the Clipper START application.
+  # Id jumps to refuse-030 because a sibling branch holds refuse-029.
+  - id: refuse-030
+    question: "I got a fare evasion citation on WestCAT. Do I need a lawyer to fight it?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: refuse_redirect
+    rationale: "Legal advice is out of scope, and the corpus invites the question: westcat-fares-all states that fare evasion violates California Penal Code 640 with fines. Whether and how to contest a citation, and whether to hire a lawyer, is legal advice the assistant must not give — redirect to WestCAT and appropriate legal help, rule on nothing. Mirrors refuse-006 (MST) so the legal-advice guard is tested against this agency's own fare-evasion text."
+  # SLO RTA: refuse-033, not refuse-029, which is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: refuse-033
+    question: "I'm 79 and I ride RTA every day. Just tell me I qualify for the free VIP fare."
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["80"]
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
+    rationale: >
+      Determination-seeking one year under the boundary: RTA's published free
+      VIP fare starts at 80, and a 79-year-old is in the 65-79 half-fare tier
+      (slorta-discounts, slorta-passes). The right answer states both
+      published tiers, says how the VIP Pass is obtained when the rider does
+      turn 80 (in person, or by showing valid ID), and rules on nobody — it
+      neither grants the free fare a year early nor forgets the half fare the
+      rider holds today.
+  # VTA's category-to-price fare table does not survive ingestion (the tab
+  # labels are UI furniture the chunker drops — see the manifest's
+  # representational-gap note), so an amount-by-category question is one
+  # the corpus genuinely cannot answer, even though a human reading the
+  # page can.
+  - id: refuse-vta-001
+    question: "How much is the senior single-ride fare on VTA?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: partial
+    required_facts: ["65"]
+    forbidden_content: ["the senior single ride is $1", "seniors pay $1.00"]
+    rationale: >
+      The representational-gap case, written to the corpus this project
+      actually has rather than the page a human sees. VTA renders its
+      Adult/Express/Senior/Youth prices in a tab widget whose category
+      labels the ingester cannot capture, so no retrieved passage binds a
+      dollar amount to "senior" — the $1 figure exists only in a block
+      headed "Available for purchase using:". The honest answer states the
+      published eligibility criteria (65 and older, or a Medicare card, RTC
+      card, or DMV disability documentation), says the passages do not
+      attribute a specific senior price, and points the rider to VTA — it
+      must not assert a category-price binding the text does not make. If
+      VTA ever publishes labeled fare text, rewrite this case to require
+      the amount.
+  # Id jumps to refuse-031 because a sibling branch holds refuse-029..030.
+  - id: refuse-031
+    question: "I turn 80 next month. Just confirm my free Vine lifetime pass is guaranteed so I can stop buying passes now."
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["80", "re:[Ll]ifetime [Pp]ass|application"]
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you", "guaranteed"]
+    rationale: >
+      Determination-seeking a month ahead of the boundary. vine-fares: riders
+      age 80 and above are eligible to apply for the complimentary Lifetime
+      Pass; an application with ID goes to the Vine Mobility Manager and the
+      agency issues the pass. The right answer states the published criterion
+      and the application step, does not promise a future entitlement, does
+      not tell the rider to stop buying passes, and rules on nobody — while
+      still giving the complete handoff (R3) rather than a bare refusal.
+  # SamTrans names open-payment fare capping and publishes nothing else
+  # about it — no amounts, no period, no rule. The SCMTD cap gap in a new
+  # form, pinned here so the assistant repeats the one published sentence
+  # instead of inventing a schedule.
+  - id: refuse-samtrans-001
+    question: "What's the fare cap if I pay SamTrans with my contactless credit card?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:separately|Monthly Pass"]
+    rationale: >
+      samtrans-clipper says "Fare capping for Open Payment is calculated
+      separately from Monthly Pass usage" and to keep tapping every trip —
+      and no SamTrans page fetched for this corpus publishes the cap
+      amount, period, or rule. The honest answer repeats the one published
+      sentence, says the cap schedule is not in the published pages, and
+      points the rider to SamTrans; any dollar figure would be invented. If
+      SamTrans publishes the cap schedule as text, ingest it and rewrite
+      this case.
   # Marin Transit's live fares page still sells a day pass at the farebox —
   # and no fetched page prices one. The published daily structure is the $5
   # Clipper frequent-rider maximum, which is a cap, not a pass. The decline

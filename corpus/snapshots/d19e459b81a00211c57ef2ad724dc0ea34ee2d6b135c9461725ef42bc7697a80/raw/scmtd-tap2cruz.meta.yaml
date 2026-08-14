@@ -1,0 +1,8 @@
+doc_id: scmtd-tap2cruz
+url: https://scmetro.org/tap2cruz/
+final_url: https://scmetro.org/tap2cruz/
+fetch_date: '2026-08-13'
+http_status: 200
+format: html
+sha256: 98a49a103418bd98eeba79a3022c86041bb2a5c5dabd0cf6c78e9d41bec88a92
+bytes: 84793

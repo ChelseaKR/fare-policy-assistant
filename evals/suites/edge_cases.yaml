@@ -623,6 +623,724 @@ cases:
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
 
+  # County Connection (CCCTA) boundaries. The distinctive ones: the Day Pass
+  # is an automatic fare cap rather than a purchased product; the youth
+  # discount exists on Clipper and not in cash; and the corpus text for the
+  # cash table is misgrouped by the ingest dedupe (see the manifest's CCCTA
+  # ingest-hazard note), so the youth-cash case below leans on the page's
+  # prose rule, which survives ingest intact.
+  - id: edge-068
+    question: "Do I need to buy a County Connection day pass before I ride?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.75", "re:cap|automatic"]
+    rationale: >
+      cccta-clipper-card, East Bay Day Pass: "The Day Pass discount is applied
+      automatically. Once you pay $3.75 in fares in a day ($1.75 for senior and
+      RTC customers) ... your rides will be free of charge for the rest of that
+      day." There is nothing to buy in advance; passes exist only on Clipper
+      and the cap applies itself. An answer that tells the rider to purchase a
+      day pass first has answered a different agency's product.
+
+  - id: edge-069
+    question: "My 16-year-old doesn't have a Clipper card. How much is her cash fare on County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.50", "re:not available when paying with cash|Youth Clipper"]
+    rationale: >
+      cccta-fare-types-prices, Youth Fares: "Youth (ages 6-18) can get a 50%
+      discount off Adult Clipper single-ride fares when using a Youth Clipper
+      card. The youth fare discount is not available when paying with cash."
+      Cash youth therefore pays the adult $2.50. This case deliberately does
+      not rely on the cash table region of the chunk: the ingest dedupe
+      dropped the youth "All Routes | $2.50" row (identical to the adult one),
+      leaving the Youth heading dangling above the Senior/Disabled $1.25 row —
+      an answer of $1.25 here is the failure this case exists to catch.
+
+  - id: edge-070
+    question: "I have Medi-Cal. Can I use it to get the RTC discount card from County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Medi-Cal is not accepted|not accepted", "Medicare"]
+    rationale: >
+      cccta-rtc-discount-card, Basic Eligibility: the Medicare card is
+      accepted "only for those under 65 years of age" and the same bullet
+      states "Medi-Cal is not accepted for eligibility." Medicare and Medi-Cal
+      are the boundary the sensitivity suite already probes at other agencies;
+      here the agency writes the distinction out itself. The honest answer
+      states the published documents that DO establish basic eligibility and
+      the medical-certification alternative, and rules on nobody.
+
+  - id: edge-071
+    question: "I'm 67 and disabled. Should I apply for an RTC card or a Senior Clipper card at County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["Senior Clipper", "65"]
+    rationale: >
+      cccta-rtc-discount-card: "People over 65 should apply for the Senior
+      Clipper card, which provides the same discounts and never expires," and
+      cccta-fare-types-prices accepts either card for the reduced fare. Two
+      published paths to the same discount (R1-6): the answer presents both
+      and the agency's own steer for riders over 65, without deciding for the
+      rider.
+
+  - id: edge-072
+    question: "I'm a veteran with a 30% VA disability rating. What does County Connection publish about getting the RTC card as a veteran?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50%|50 percent", "re:aid and attendance"]
+    rationale: >
+      cccta-rtc-discount-card, Basic Eligibility: proof of veterans disability
+      means "a Service Connected Disability ID card and your VA Certification
+      letter demonstrating a disability rating for aid and attendance, or for
+      a service-connected disability with a rating level of 50% or higher."
+      The rider's stated rating sits below the published threshold; the honest
+      answer states the exact criterion (R3: criterion before process), notes
+      the Medical Eligibility path also published on the page, and does not
+      tell the rider they are in or out.
+
+  - id: edge-073
+    question: "Coming off BART, what do I pay to board a County Connection bus as an adult using Clipper cash value?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "Clipper"]
+    rationale: "cccta-transfers, BART-to-Bus Transfer: the discount exists only on Clipper, and $1.00 (adult) or $0.50 (START/youth/senior/RTC) is deducted from stored cash value — no deduction for 31-Day Pass holders. The transfer price is a fare of its own, published only on this page."
+
+  - id: edge-074
+    question: "Does my 4-year-old ride free on County Connection?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["free", "re:under 6|accompanied"]
+    rationale: "cccta-fare-types-prices: 'Children under 6 ride free when accompanied by an adult.' A 4-year-old is inside the free range; the accompaniment condition is what makes the answer complete, the same shape as FAX's edge-066."
+  # San Joaquin RTD. The boundary this agency contributes is unique in the
+  # corpus: the Discount Fare Card's senior age depends on the rider's city of
+  # residence (62+ in Manteca/Lathrop, 65+ in Tracy/Escalon, 60+ in Stockton,
+  # Lodi, Ripon, and other San Joaquin County cities), while the fares page
+  # states only the 60+ floor. Cases edge-087..089 pin that split; the rest
+  # cover the boundaries the fares page itself publishes.
+  - id: edge-087
+    question: "I'm 61 and live in Manteca. Am I old enough for San Joaquin RTD's senior discount fare?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    requires_handoff: true
+    rationale: >
+      sjrtd-dfc: senior eligibility for the Discount Fare Card is 62 or older
+      for residents of Manteca or Lathrop — not the 60+ the fares page's
+      discount row leads with. The answer must state the published criterion
+      for the rider's own city (62), not the countywide floor, and route the
+      rider to the DFC application (Access San Joaquin responds within 21
+      working days) without ruling on the rider (RR4).
+
+  - id: edge-088
+    question: "What age does San Joaquin RTD's senior discount start? Does it matter where I live?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["60", "62", "65"]
+    rationale: >
+      The three-way residence split is the published rule, and the question asks
+      for it directly: 60+ in Stockton, Lodi, Ripon, or other San Joaquin County
+      cities; 62+ in Manteca or Lathrop; 65+ in Tracy or Escalon (sjrtd-dfc).
+      An answer that quotes one age as "the" senior age — including the fares
+      page's own "ages 60 and over" shorthand — has flattened a rule the agency
+      publishes as three.
+
+  - id: edge-089
+    question: "I'm 45 but I have a Medicare card. Do I pay full fare on RTD buses?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)medicare", "re:\\$\\s?0\\.75|half"]
+    rationale: >
+      Two passages, one answer: sjrtd-dfc says "Any person, regardless of age or
+      condition, may ride for a discount fare when displaying a Medicare Card or
+      a placard registration form from DMV and a photo ID (under federal law)",
+      and the sjrtd-fares discount row prices that ride at $0.75. Age is not a
+      precondition for the Medicare path (R1-6): the answer must not merge the
+      senior and Medicare paths or imply the rider is too young to qualify.
+
+  - id: edge-090
+    question: "I'm boarding an RTD bus in Stockton with my four kids, all age 3. What do I pay for them?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\bthree\\b|\\b3\\b", "re:\\$\\s?1\\.50"]
+    rationale: >
+      sjrtd-fares children's rule: up to three children ages 4 and under ride
+      free with a fare-paying adult, and "the fare for each additional child
+      costs $1.50." The boundary is the fourth child, which is exactly where an
+      answer that stops at "children 4 and under ride free" goes wrong — the
+      same shape as E-tran's two-child rule (edge-050), with different numbers
+      on both sides.
+
+  - id: edge-091
+    question: "I'm a veteran. How do I get the discount fare on San Joaquin RTD, and what proof do I need?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:DD[ -]?[Ff]orm 214|DD[ -]?214"]
+    requires_handoff: true
+    rationale: >
+      sjrtd-dfc: a veteran with a valid Department of Defense DD Form 214 or a
+      San Joaquin County Health Department Veteran's Discount Card needs no
+      medical certification to be issued a Discount Fare Card — the veteran path
+      is a document path, not a medical one. The answer names the accepted
+      documents and where the application goes (Access San Joaquin, response
+      within 21 working days), and rules on nobody.
+
+  - id: edge-092
+    question: "I'm a 10th grader at a Stockton Unified school. Do I ride RTD for free, or do I pay the student fare?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free", "re:(?i)student ID"]
+    rationale: >
+      Two published paths that must not be merged: sjrtd-fares Special Programs
+      gives SUSD 9th-12th graders (and SJCOE 7th-12th graders) free rides with a
+      valid student ID, while the fare table separately prices a Student single
+      ride at $1.50 for ages 5 to 17 generally. A 10th grader at a Stockton
+      Unified school is inside the free program's published terms; the answer
+      states the free path with its ID condition rather than defaulting to the
+      paid student fare, and does not assert the rider is enrolled.
+
+  - id: edge-093
+    question: "I have an RTD Discount Fare Card. Does it make my paratransit rides cheaper too?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.00"]
+    rationale: >
+      sjrtd-fares publishes a Discount row for Express/Local/Hopper ($0.75) and
+      for Van Go! ($3.00 base), but the Paratransit table has exactly one fare:
+      Full, $3.00 one-way, for ADA-eligible riders. No discount tier is
+      published for paratransit, and the answer must say what is published
+      rather than extend the DFC discount to a service whose table does not
+      carry one — the FAX Handy Ride lesson (edge-061) in this agency's shape.
+  # AC Transit boundaries. The distinctive structure is accumulator capping:
+  # Day, Weekly, and Monthly passes are "fare maximums" applied automatically
+  # when pay-per-ride spending reaches the pass price within the calendar
+  # period — and the accumulator channel matters, because cash and Token
+  # Transit riders do not get all of it.
+  - id: edge-actransit-001
+    question: "I pay per ride with Clipper on AC Transit local buses. If I keep riding all day, what's the most I'll be charged?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6\\.00", "re:[Ff]are maximum|automatically"]
+    rationale: >
+      actransit-fares: "Local Day Pass | Fare maximum at $6.00" in the
+      Clipper/contactless column, and "Day, Weekly, and Monthly passes will
+      be automatically applied when spending reaches the cost of these passes
+      within the calendar period." This is the accumulator case: the honest
+      answer states the $6.00 ceiling and that it applies automatically, not
+      a pass the rider must buy in advance. The prepaid cash Day Pass is
+      $6.50 — the capped rider pays less than the cash rider, the same
+      direction of error the SCMTD cap note warns about.
+
+  - id: edge-actransit-002
+    question: "Can I get AC Transit's weekly pass if I always pay my fare in cash on the bus?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Next-Generation Clipper|contactless", "re:\\$\\s?27\\.50"]
+    rationale: >
+      The accumulator-channel boundary. actransit-fares prices the Local
+      Weekly Pass only as "Fare maximum at $27.50" with "--" in the cash
+      column, and states "Weekly and Monthly are only available through
+      Next-Generation Clipper or a contactless bank card." A cash rider has
+      no weekly product at all; the honest answer says so and names the
+      channel that does have one, without inventing a cash workaround.
+
+  - id: edge-actransit-003
+    question: "If I ride AC Transit and then transfer to another transit agency using the same Clipper card, do I get a discount?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:up to \\$\\s?3(\\.00)?\\b|credit equal in value", "re:same card|same.{0,10}account"]
+    forbidden_content: ["$2.85"]
+    rationale: >
+      actransit-fares: "riders receive a credit equal in value to the last
+      fare paid, up to $3" when transferring to another regional system with
+      Next-Generation Clipper or contactless, and "Riders must use the same
+      card/account for all trips." The forbidden $2.85 pins two failure modes
+      at once: AC Transit's own undated /transfers page states the same
+      program's credit as "up to $2.85" (excluded for exactly that
+      disagreement — see the manifest), and other Bay Area agencies' live
+      pages still publish the older figure. An AC Transit answer must quote
+      AC Transit's dated page, not harmonize across agencies or eras.
+
+  - id: edge-actransit-004
+    question: "I'm 70 years old. What senior discount do I get on AC Transit, and how do I pay for it?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "re:50\\s?%|50 percent"]
+    requires_handoff: true
+    rationale: >
+      actransit-discounts: riders aged 65 and older are eligible for
+      Senior/Disabled fares — 50% off fares and passes per actransit-fares —
+      paid with cash plus ID, or best by applying for a Senior Clipper card.
+      The concrete next step (the Senior Clipper card application, or the
+      Clipper Access card for disabled riders) is published and must be
+      offered; the criterion (65) comes before the process details.
+
+  - id: edge-actransit-005
+    question: "Do my kids ride free on AC Transit? One is 4 and one is 12."
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]nder 5", "re:5-18|[Yy]outh"]
+    rationale: >
+      actransit-discounts: "Children under 5 ride free" and "Riders aged 5-18
+      are eligible for Youth fares" — the 4-year-old rides free, the
+      12-year-old pays the Youth fare, and the two children land on opposite
+      sides of the same published boundary. A complete answer may also name
+      the other published path for the older child: the Student Transit Pass
+      gives eligible 6th-12th grade students in Alameda County free unlimited
+      local rides.
+
+  - id: edge-actransit-006
+    question: "I have a disability. What discount does AC Transit give me, and what card should I get?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50\\s?%|50 percent", "re:Clipper Access"]
+    requires_handoff: true
+    rationale: >
+      actransit-fares: youth, seniors, and riders with disabilities receive
+      50% off fares and passes. actransit-discounts: disabled riders apply
+      for a Clipper Access card (formerly RTC), usable as proof of
+      eligibility on fixed-route, rail, and ferry systems throughout the Bay
+      Area; the Clipper Access program does not apply to Paratransit. The
+      handoff is the card application; the agency, not the assistant, decides
+      who qualifies.
+  # WestCAT boundaries. The distinctive ones: a local-to-LYNX transfer is an
+  # upcharge, not free; paper and Clipper transfers carry different windows
+  # (one hour vs 120 minutes); and WestCAT honors but does not certify the
+  # regional Clipper Access (RTC) card. Ids jump to edge-075 because a sibling
+  # branch holds edge-068..074.
+  - id: edge-075
+    question: "I paid cash on a local WestCAT bus. Can I transfer to the LYNX for free?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.25"]
+    rationale: "westcat-fares-all transfer table: From WestCAT Local Fixed Route Buses to WestCAT LYNX is $3.25 ($1.25 reduced) — an upcharge to the Transbay fare, not a free transfer. Local-to-local is free with a transfer slip at shared stops only. An answer that extends the free local transfer to LYNX undercharges the rider by the price of the bridge."
+
+  - id: edge-076
+    question: "Can I use a WestCAT paper transfer to ride back home on the same route?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:one hour|1 hour", "re:not (be )?(valid|accepted)|no round trip"]
+    rationale: "westcat-transfers: transfers are valid for up to one hour, at established transfer points only, 'not valid to return to original boarding location (no round trip)' and not valid to reboard the same route after a stopover. The rider's plan is the exact excluded case; the honest answer says so and gives the one-hour window."
+
+  - id: edge-077
+    question: "Can WestCAT certify me for the Clipper Access (RTC) discount card?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:honor", "re:certif"]
+    rationale: "westcat-fares-all: 'Currently, we honor but do not certify Clipper Access (formerly known as the Regional Transit Connection card- RTC).' The card works on WestCAT but the certification happens elsewhere; the answer must keep the honor/certify split and point the rider at the Clipper Access process rather than a WestCAT office."
+
+  - id: edge-078
+    question: "If I pay with Clipper cash value all day on WestCAT, do I hit a day-pass cap? Does the LYNX count toward it?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.75", "re:LYNX[^.]{0,60}(do not|not) apply|do not apply toward"]
+    rationale: "westcat-fares-all: pay $3.75 in Clipper fares in a day ($1.75 senior/Clipper Access) across County Connection, Tri Delta, WestCAT and Wheels and the rest of the day is free — but 'Free rides and fares paid on WestCAT LYNX Transbay service do not apply toward a Day Pass.' Both halves must appear: the cap is real and LYNX sits outside it."
+
+  - id: edge-079
+    question: "I have a Medi-Cal card and a photo ID. Is that enough for WestCAT's reduced fare?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:Medi-Cal"]
+    rationale: "westcat-fares-all lists 'Photo ID and Medicare card (not Medi-Cal)' among the accepted reduced-fare documents. Medicare and Medi-Cal are the boundary the sensitivity suite probes at other agencies; here the agency writes the exclusion into the ID list itself. The honest answer states the accepted alternatives (state ID at 65+, Clipper Access, DMV placard receipt, Disabled Veterans ID) and rules on nobody."
+
+  - id: edge-080
+    question: "How much is ADA paratransit on WestCAT? Is a regional trip the same price as a local one?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.25", "re:\\$\\s?3\\.00"]
+    rationale: "westcat-fares-all: ADA Paratransit Local $1.25, ADA Paratransit Regional $3.00, and both charge the same figure in the reduced column — paratransit is priced by distance class, not rider class. The FAX Handy Ride lesson in the other direction: here the paratransit fare is LOWER than the local cash fare, and an answer built from the fixed-route row overcharges a disabled rider."
+
+  - id: edge-081
+    question: "My 15-year-old has a Youth Clipper card. What balance does she need on it to board a WestCAT bus?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.75"]
+    rationale: "westcat-clipper, Boarding Requirements: Adult / Youth cards must hold at least $1.75 in cash value or a valid pass; Senior / Access cards $0.75. The youth minimum equals the adult one — WestCAT publishes no youth fare discount of its own on this page, and the answer must not invent one."
+  # SLO RTA. Ids start at edge-094 on purpose: the sibling San Joaquin RTD
+  # branch holds edge-068..074 (see the ground-059 note). The boundary this
+  # agency contributes is the senior split at 80: seniors 65-79 pay half fare,
+  # seniors 80+ ride free with a VIP Card — the only age-tiered senior fare in
+  # the corpus. edge-100 pins a genuine cross-page disagreement; the manifest
+  # records it and no other case rests on the contested fact.
+  - id: edge-094
+    question: "I'm 81. Do I still pay the senior fare on RTA buses?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["80", "re:(?i)free"]
+    requires_handoff: true
+    rationale: >
+      slorta-discounts Free Fare: "VIP Seniors who are 80+ years of age ride
+      for free on all SLO County fixed routes", and slorta-passes VIP Pass:
+      unlimited free rides for seniors 80 or older, obtained in person (SLO
+      Regional Rideshare, 1114 Marsh Street) or by showing valid ID. An answer
+      that quotes the 65-79 half fare for an 81-year-old charges a rider the
+      agency says rides free; the handoff is where the VIP Pass is issued.
+
+  - id: edge-095
+    question: "I'm 64. Do I get the senior discount on SLO RTA?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["65"]
+    rationale: >
+      slorta-fares and slorta-discounts both bound the senior half fare at
+      65-79; 64 is below the published floor. The answer states the criterion
+      without ruling on the rider, and the discounts page's other paths
+      (disabled, Medicare cardholder — neither age-gated) belong in a complete
+      answer, because missing the senior floor by a year does not close them.
+
+  - id: edge-096
+    question: "My daughter is in 8th grade in Grover Beach. Does she get the K-12 student discount on the Route 21 bus?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)south county"]
+    rationale: >
+      slorta-discounts Half-Priced row: the K-12 student discount "applies to
+      RTA and Paso Robles routes A & B only. The Student Discount does not
+      apply on the South County routes 21,24,27 and 28 or Morro Bay Transit."
+      Route 21 is a South County route, so the honest answer is that the
+      published discount excludes exactly the bus this rider named — and the
+      passes page's South County 31-Day and Day Pass discount tiers
+      (Seniors/Disabled, no student tier) corroborate. An answer that quotes
+      the half fare here invents a discount the agency withholds.
+
+  - id: edge-097
+    question: "I have an ADA paratransit ID card. Do I pay to ride the regular RTA bus, and does the person helping me ride free too?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free", "re:(?i)full fare"]
+    rationale: >
+      slorta-discounts: ADA passengers ride fixed route free with a Certificate
+      of Eligibility or ADA Paratransit Service ID card, and "Care attendants
+      and companions must pay full fare." Both halves are published and they
+      point opposite ways; an answer that extends the free fare to the
+      attendant gives away a fare the agency charges (compare FAX, where the
+      PCA rides free once verified — edge-065 — which is exactly why the
+      assistant must not carry one agency's attendant rule to another).
+
+  - id: edge-098
+    question: "Does the money on an RTA Stored Value Pass expire?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)one year|1 year"]
+    requires_handoff: true
+    rationale: >
+      slorta-passes RTA & South County Stored Value Pass: "Stored value passes
+      will deactivate one year from the date that they were created," and
+      remaining value can be moved to a new pass by contacting the
+      administrative office at (805) 781-4833. The deactivation is the fact;
+      the recovery path is the handoff, and it is in the passage.
+
+  - id: edge-099
+    question: "I tap my phone on some RTA trips and my watch on others. Will I still hit the fare cap?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)same"]
+    rationale: >
+      slorta-contactless Fare Capping: "you must always use the same payment
+      method each time you tap. For example: Don't use your iPhone to tap on
+      for one trip, and then tap for your next trip with your Apple Watch.
+      Even though the same bank card may be linked via both devices, you will
+      lose the benefit of fare capping." The question is the page's own
+      example asked back; the answer must carry the same-method condition, not
+      just "yes there is a cap."
+
+  - id: edge-100
+    question: "My daughter is 40 inches tall. Does she ride free with me on the Route 21 bus?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:44"]
+    rationale: >
+      The disagreement case, pinned on purpose. slorta-fares' cash table prices
+      "Children 44″ and under" as "Free with adult rider" in BOTH columns,
+      including South County/A&B/Morro Bay — Route 21's column — while
+      slorta-discounts' Free Fare row says children 44″ and smaller ride free
+      "(Not available on the South County routes)". Two live pages, opposite
+      answers, no third page to break the tie (the manifest records the
+      conflict). The honest answer states the 44-inch rule and that RTA's own
+      two pages disagree about the South County routes, and points the rider
+      at RTA — it must not silently pick a side. Deterministically we can only
+      require the 44-inch criterion; whether both sides are surfaced is the
+      live judge's call.
+  # VTA boundaries. The category-to-price table is not representable (see
+  # the manifest), so every case here grounds on prose VTA actually
+  # publishes: the express surcharge and its exemptions, the document
+  # alternatives, the calendar-month pass window, and the Paratransit ID
+  # exclusion list.
+  - id: edge-vta-001
+    question: "I ride a VTA local bus and then transfer to an Express bus. What extra do I pay?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.50", "re:[Yy]outh|[Ss]enior"]
+    rationale: >
+      vta-fares: "Adult passengers traveling from a local bus to an Express
+      bus will have to pay a surcharge of $2.50", paid in Clipper cash only,
+      on the same card — and "Youth and Senior/Disabled/Medicare riders who
+      transfer from local to express service will not have a surcharge." The
+      exemption is the boundary: the surcharge is real for adults and absent
+      for the discount classes, and both halves are in prose.
+
+  - id: edge-vta-002
+    question: "I'm 66. What do I show to get the senior fare on VTA?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "Medicare"]
+    requires_handoff: true
+    rationale: >
+      vta-fares: "To qualify for the Senior/Disabled/Medicare fare, you must
+      present one of the following: Medicare Card; Regional Transit
+      Connection (RTC) Discount Card or a valid card from another California
+      transit provider; DMV Disabled License Plate registration; DMV
+      Disabled Parking Placard printout; Proof of age (65 and older)" — with
+      "a valid picture I.D. may be required." Document alternatives (R1-6,
+      the FAX edge-064 shape): naming only the age path would turn away a
+      Medicare cardholder under 65.
+
+  - id: edge-vta-003
+    question: "Is a VTA monthly pass good for 31 days from the day I buy it?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:calendar month", "re:16th|15th"]
+    rationale: >
+      vta-fares: "Monthly passes are valid for the calendar month purchased.
+      They are not 31-day passes," sold "from the 16th of the previous month
+      through the 15th of the pass month." The corpus's other agencies sell
+      activation-dated 31-day passes, so the calendar-month distinction is
+      exactly the boundary a rider will get wrong by analogy.
+
+  - id: edge-vta-004
+    question: "With my VTA Paratransit ID card, do I also ride the Highway 17 Express for free?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Ff]ree", "re:not honored|Highway 17"]
+    rationale: >
+      vta-fares: "Passengers with a valid Paratransit ID Card receive free
+      rides on VTA Local, Express bus service and Light Rail. The pass is
+      not honored on Highway 17 Express, Dumbarton Express, Caltrain and
+      Sports Service." The free ride is real and the exclusion list is where
+      the question actually lives — answering from the first sentence alone
+      strands a rider at the Highway 17 stop.
+
+  - id: edge-vta-005
+    question: "What are the income and age rules for Clipper START on VTA?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:200\\s?%|200 percent", "re:19-64|19 to 64"]
+    rationale: >
+      vta-fares publishes the full regional criteria: 50% off adult
+      single-ride eCash fares for riders 19-64 who live in the Bay Area, do
+      not hold an RTC Clipper Card, and have household income of 200% of the
+      federal poverty level or less. Here the corpus CAN state the
+      criterion, so the case requires it — the deliberate contrast is an
+      agency whose pages name the program but not the threshold, where the
+      honest answer is a partial.
+
+  - id: edge-vta-006
+    question: "Does my 4-year-old pay to ride VTA? What about my 15-year-old?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]nder five|under 5", "re:5-18|[Yy]outh"]
+    rationale: >
+      vta-fares: "Children under five ride free", and the FAQ on the same
+      page: "Youth must be age 5-18." The 4-year-old rides free; the
+      15-year-old is a Youth, with a free Youth Clipper card as the
+      published payment path (the youth PRICE sits in the category-blind
+      table and is deliberately not required here).
+  # VINE boundaries. The distinctive ones: an age-80+ complimentary Lifetime
+  # Pass (no other corpus agency publishes one), transfers that are free
+  # except between two named routes, and passes whose validity and ride-count
+  # rules vary by route tier. Ids jump to edge-082 because sibling branches
+  # hold edge-068..081.
+  - id: edge-082
+    question: "I'm 82. Do I ride the Vine for free?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["80", "re:[Ll]ifetime [Pp]ass"]
+    requires_handoff: true
+    rationale: >
+      vine-fares: "Riders age 80 and above are eligible for a complementary
+      Lifetime Pass, valid on all Vine Transit routes and services," with an
+      application sent with a copy of a valid ID to the Vine Mobility Manager,
+      625 Burnell St, Napa. The pass requires applying, not just being 80 —
+      so the complete answer states the criterion, the application step, and
+      that the agency issues the pass; a bare "yes, free" skips the process
+      that makes it true. Until the pass is in hand the rider's fare is the
+      $1.00 Half fare (65+), which the answer may add.
+
+  - id: edge-083
+    question: "Can I transfer free from Vine Route 10 to Route 11?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Nn]o free transfers", "90"]
+    rationale: >
+      vine-fares, Transfers: "Transfers on the Vine are free ... valid for 90
+      minutes after they are issued. No free transfers between Routes 10 and
+      11. There are no free transfers to the Route 29. Transfers cannot be
+      used on the same route." The rider's exact pair is the named exception.
+      The 90-minute figure is also this corpus's tripwire: the agency's FAQ
+      page (deliberately excluded, see the manifest) says "ONE hour" for the
+      same transfers, and if a refetch ever changes the fares page's window
+      this case is where it surfaces.
+
+  - id: edge-084
+    question: "Does a Vine Day Pass work on Route 29?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Nn]ot valid", "29"]
+    rationale: "vine-fares Passes table footnote: Day Pass and 31-Day Pass are '*Not valid on Route 29'; only the $125.00 BART 31-Day Pass is '***Valid on all Vine routes'. A day-pass holder boarding Route 29 owes the $6.00 fare; the answer must say the pass does not cover it and may name the pass that does."
+
+  - id: edge-085
+    question: "If I use a Vine 20-Ride Pass on Route 29, how many rides does one trip use up?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:three|3"]
+    rationale: "vine-fares Passes table footnote: '**Routes 10, 11 one \"ride,\" Route 21 two \"rides\", Route 29 three \"rides\"'. The 20-Ride Pass is not twenty trips everywhere: it is twenty local rides, ten Route 21 trips, or six-and-two-thirds Route 29 trips. The ride-count rule is the whole answer."
+
+  - id: edge-086
+    question: "How much is a VineGo paratransit trip from Calistoga to American Canyon?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?8\\.00"]
+    rationale: >
+      vine-go, VineGo One-Way Fares: the zone matrix prices Calistoga to
+      American Canyon (and to Kaiser Vallejo) at $8.00 where most in-county
+      pairs are $4.00 — paratransit priced by distance, the WestCAT pattern
+      rather than the flat FAX one. The eligible rider can also buy the $20
+      discount pass carrying $24 of value. An answer from the fixed-route
+      table ($2.00) misprices the trip fourfold.
+  # SamTrans boundaries. The published rules with teeth: a two-child cap on
+  # free little kids, a Medicare path independent of age, a birthday that
+  # cancels a pass mid-month, a means-tested free-fare program defined by a
+  # third party, and a fare waiver with two simultaneous conditions.
+  - id: edge-samtrans-001
+    question: "I'm riding SamTrans with my three kids, ages 2, 4, and 9. Who pays?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Tt]wo children", "re:4 or younger|age 4"]
+    rationale: >
+      samtrans-fares: "Two children age 4 or younger may travel free with
+      each Adult or Eligible Discount fare-paying passenger. Additional
+      children are subject to the Youth fare." The 2- and 4-year-old ride
+      free with a paying adult; the 9-year-old pays the Youth fare. The
+      two-per-adult count and the age-4 line are both boundaries, and both
+      are published.
+
+  - id: edge-samtrans-002
+    question: "I have a Medicare card. What fare do I pay on SamTrans and what do I need to show?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.10|\\$\\s?1\\.00", "Medicare"]
+    rationale: >
+      samtrans-fares: the Eligible Discount row (Senior / Disabled /
+      Medicare cardholder) is $1.10 cash, $1.00 Clipper, and the footnote
+      lists the accepted proof: 65 years or older, an RTC Discount Card, a
+      DMV Disabled Placard Identification card, an equivalent card from
+      another California transit agency, or a Medicare card. Medicare is its
+      own path, not an age path (R1-6).
+
+  - id: edge-samtrans-003
+    question: "My 19th birthday is next week. What happens to the Youth Monthly Pass on my Clipper card for SamTrans?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["19", "re:cancel"]
+    rationale: >
+      samtrans-clipper: "On your 19th birthday, your Youth Clipper card will
+      automatically change to an Adult Clipper card ... If you have a Youth
+      Monthly Pass on your card, it will be cancelled. This will happen even
+      if it is the beginning or middle of the month," with the published
+      mitigation (disable Autoload before the birthday) and the follow-on
+      path (Clipper START for 19-64 if income-eligible). A hard published
+      cliff with a date the rider named; the answer must state the
+      cancellation, not soften it.
+
+  - id: edge-samtrans-004
+    question: "Is there a way for low-income students to ride SamTrans free?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Socioeconomically Disadvantaged|SED", "re:[Ff]ree"]
+    requires_handoff: true
+    rationale: >
+      samtrans-fare-types, fare waivers: "Youth Unlimited. In partnership
+      with the San Mateo County Office of Education, SamTrans provides free
+      bus fares for Socioeconomically Disadvantaged (SED) students, as
+      defined by the California Department of Education, by swiping their
+      pass in the farebox." The criterion is a third party's definition; the
+      honest answer names the program, the defining authority, and where to
+      pursue it, and rules on nobody.
+
+  - id: edge-samtrans-005
+    question: "Do active-duty soldiers ride SamTrans for free?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:in uniform", "re:military identification|military ID"]
+    rationale: >
+      samtrans-fare-types waives fares for "Active military personnel in
+      uniform showing their non-expired military identification card." Both
+      conditions (uniform AND unexpired ID) are the published rule; an
+      answer that waives fares for veterans or out-of-uniform personnel
+      claims more than the page does.
+
+  - id: edge-samtrans-006
+    question: "Can I use my Caltrain monthly pass to ride SamTrans?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:2\\+? [Zz]one|two[- ]zone", "re:[Mm]onthly"]
+    rationale: >
+      samtrans-fares: "The Caltrain 2+ Zone Clipper Monthly Pass functions
+      as a SamTrans monthly bus pass for all Local/Express routes." This is
+      SamTrans' own acceptance rule for another operator's product — citable
+      as SamTrans policy because SamTrans is the accepting side; the zone
+      condition is the boundary (a 1-zone pass is not named).
   # Marin Transit boundaries. The distinctive structure is the frequent-
   # rider maximum ($5/day, $40/month, Clipper only) whose scope differs
   # from the same-priced 31-day pass — plus a transfer rule that changes

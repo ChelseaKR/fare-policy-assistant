@@ -12,8 +12,9 @@ Last updated 2026-07-17.
 ## What it is in one paragraph
 
 A retrieval-augmented assistant that answers rider questions about published
-fare and reduced-fare policy for ten California transit agencies (MST, SBMTD,
-Yolobus, SacRT, HTA, e-tran, SCMTD, SolTrans, FAX, Marin Transit), in English
+fare and reduced-fare policy for eighteen California transit agencies (MST,
+SBMTD, Yolobus, SacRT, HTA, e-tran, SCMTD, SolTrans, FAX, CCCTA, SJRTD, AC
+Transit, WestCAT, SLO RTA, VTA, VINE, SamTrans, Marin Transit), in English
 or Spanish, with a citation on every answer.
 The headline deliverable is the evaluation harness around it: 118 graded cases,
 deterministic safety checks, an LLM judge held to a different model than the one
@@ -54,7 +55,7 @@ them.
 
 Two independent layers, on purpose.
 
-1. **The project's own harness (white-box).** 270 cases across nine suites
+1. **The project's own harness (white-box).** 385 cases across nine suites
    (groundedness, refusal, edge cases, multilingual, freshness, multi-turn
    conversation, cross-agency, counterfactual sensitivity, and stretch-language
    Tagalog). Each case is a YAML record a non-engineer can read: the
@@ -122,7 +123,8 @@ implying a sign-off that has not happened.
   pass count is a band (about 113 of 118), not a fixed number. The deterministic
   safety checks (no determination language, citation present, PII not echoed) do
   not vary.
-- The corpus is ten agencies and a fixed snapshot date. Fare policy goes stale;
+- The corpus is eighteen agencies and a fixed snapshot date. Fare policy
+  goes stale;
   the answer says so, and snapshots must be refreshed and evals re-run before any
   renewed use.
 
