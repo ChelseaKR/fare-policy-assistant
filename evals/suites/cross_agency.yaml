@@ -179,3 +179,21 @@ cases:
       discount, not a suspension (hta-fares). Two agencies, two ages, and two
       different kinds of answer — one a price, one the absence of a price with a
       condition attached. A correct answer keeps them separate and cites each.
+
+  - id: xagency-012
+    question: "I'm riding a SolTrans bus and transferring to County Connection with my Clipper card. Do I pay full fare again when I board?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["Clipper", "re:[Ff]ree transfer"]
+    rationale: >
+      The first cross-agency question both sides of which are now in the
+      corpus. County Connection's own page (cccta-transfers) says free
+      transfers from SolTrans are available only when using Clipper, at
+      designated shared stops; SolTrans' page (soltrans-clipper-card) lists
+      County Connection among the agencies Clipper supports transfers with and
+      says inter-agency bus transfers are good for 60 minutes. Each side must
+      be cited to its own agency's page. The windows do not match in scope —
+      SolTrans publishes 60 minutes for agency-to-agency transfers, County
+      Connection publishes a 2-hour window only for its own bus-to-bus
+      transfer — so a correct answer must not present either number as the
+      other agency's rule.

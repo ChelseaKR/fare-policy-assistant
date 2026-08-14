@@ -284,3 +284,22 @@ cases:
       an end date, so the honest answer is the published condition, not a
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
+
+  # County Connection's fare-eligibility program is described in the present
+  # tense with no dates anywhere: Clipper START is "a pilot program" on a page
+  # whose site metadata says it was last modified 2025-09-09. A pilot is a
+  # thing that ends; the corpus cannot say whether it has.
+  - id: fresh-021
+    question: "Is Clipper START still a pilot program, or is it permanent on County Connection now?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:pilot", "re:50%|50 percent"]
+    rationale: >
+      cccta-fare-types-prices and cccta-clipper-card both describe Clipper
+      START as "a pilot program" offering a 50% discount to Bay Area residents
+      aged 19-64 at or under 200% of the federal poverty level. Neither page
+      dates the pilot or names an end. The honest answer gives the published
+      framing — it is described as a pilot — with the as-of disclosure and a
+      pointer to the agency for current status. Asserting it has been made
+      permanent, or that it is ending, would be ungrounded either way.

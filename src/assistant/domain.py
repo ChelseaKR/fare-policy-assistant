@@ -41,7 +41,18 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans", "FAX"),
+    scopes=(
+        "MST",
+        "SBMTD",
+        "Yolobus",
+        "SacRT",
+        "HTA",
+        "E-tran",
+        "SCMTD",
+        "SolTrans",
+        "FAX",
+        "CCCTA",
+    ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -97,6 +108,16 @@ TRANSIT = DomainProfile(
         "fresno": "FAX",
         "fresno area express": "FAX",
         "handy ride": "FAX",
+        # County Connection (Central Contra Costa Transit Authority),
+        # Concord/Walnut Creek. Its paratransit brand is "LINK", which is
+        # deliberately NOT aliased: \blink\b is an ordinary English word ("send
+        # me the link") and would pull unrelated questions into this scope; a
+        # rider who says "County Connection LINK" already matches on the agency
+        # name. Same reasoning as the absent "metro" and "clipper" aliases above.
+        "cccta": "CCCTA",
+        "county connection": "CCCTA",
+        "central contra costa": "CCCTA",
+        "concord": "CCCTA",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

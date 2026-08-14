@@ -68,3 +68,34 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## 60033300dc49 (2026-08-14 UTC)
+
+Added County Connection (CCCTA, Central Contra Costa Transit Authority): 10
+agencies, 28 documents, 177 chunks. Five documents, all fetched 2026-08-14 UTC:
+`cccta-fare-types-prices`, `cccta-clipper-card`, `cccta-transfers`,
+`cccta-rtc-discount-card`, and `cccta-link-fares` (LINK is the paratransit
+service). The agency's own "Fares & Passes" landing page was excluded: its
+entire rendered body is "Coming soon" and has been since its 2018-05-22
+modification stamp.
+
+County Connection is the corpus's second Clipper agency, which is the reason it
+was chosen: SolTrans' Clipper page asserts a transfer arrangement with "County
+Connection" that the manifest could previously only fence off as a third-party
+claim. County Connection's own Transfers and Clipper pages corroborate the
+arrangement (free transfers from SolTrans, Clipper only, at shared stops) while
+publishing a different window scope — 2 hours for its own bus-to-bus transfer,
+no published window for inter-operator transfers — against SolTrans' "good for
+60 minutes".
+
+One ingest hazard is recorded in the manifest rather than fixed silently: the
+pipeline's per-section line dedupe drops fare rows that price identically, so
+the cash table's Youth row ($2.50, identical to Adult) is missing from
+`cccta-fare-types-prices#0` and the Youth heading sits directly above the
+Senior/Disabled $1.25 row. The page's prose rule ("The youth fare discount is
+not available when paying with cash") survives ingest and eval case edge-069
+pins it.
+
+Written on a branch that adds only CCCTA. If another corpus change merges
+first, this id needs another `make ingest` and a re-stamp of this heading, the
+way 95794539d1d0's was.
