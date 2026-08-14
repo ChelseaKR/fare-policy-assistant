@@ -384,6 +384,10 @@ Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`). Re-checked 2026-08-12: its robots.txt permits the fare
 pages, the WAF still returns 403 to this project's fetcher, and it remains out.
+RABA (Redding) was checked as a candidate on 2026-08-13 and is also out, for a
+cleaner reason: its robots.txt allows only a short list of named crawlers and
+disallows everyone else, this fetcher included, so nothing was fetched at all
+(`docs/decisions/0002`).
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored
