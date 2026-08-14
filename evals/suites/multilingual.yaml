@@ -357,3 +357,19 @@ cases:
     required_facts: ["re:gratis|free", "6"]
     mirror_of: ground-050
     rationale: "Cross-lingual mirror of ground-050 (child free under age 6, from the fare table's Under age 6 column), answered from the English westcat-fares-all passage and returned in Spanish."
+  # SLO RTA: ml-035, not ml-028, which is held by the sibling San Joaquin RTD
+  # branch (see the ground-059 note in groundedness.yaml).
+  - id: ml-035
+    question: "¿Cuánto cuesta el Regional Day Pass de SLO RTA?"
+    agency_scope: SLORTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5[.,]50"]
+    mirror_of: ground-060
+    rationale: >
+      Cross-lingual mirror of ground-060: slorta.org publishes no /es/ pages
+      (Spanish is served through a translate widget), so the Spanish question
+      must be answered from the English slorta-passes section and returned in
+      Spanish. The product name stays in English because that is how the
+      agency sells it, which also keeps retrieval honest about what the
+      passage says.

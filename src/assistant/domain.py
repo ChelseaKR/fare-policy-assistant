@@ -55,6 +55,7 @@ TRANSIT = DomainProfile(
         "SJRTD",
         "AC Transit",
         "WestCAT",
+        "SLORTA",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -157,6 +158,21 @@ TRANSIT = DomainProfile(
         "lynx": "WestCAT",
         "pinole": "WestCAT",
         "hercules": "WestCAT",
+        # SLO RTA. "rta" is safe to alias the way FAX's "fax" is: no other
+        # corpus agency uses the string. "Runabout" is its paratransit brand
+        # and riders name it without naming RTA (the Handy Ride shape).
+        # Deliberately NOT aliased: the bare string "slo" — it names SLO
+        # Transit, the City of San Luis Obispo's separate bus system (not in
+        # this corpus, though RTA's regional passes are honored on it), at
+        # least as often as it names the RTA; the "metro" lesson from SCMTD.
+        "slorta": "SLORTA",
+        "slo rta": "SLORTA",
+        "rta": "SLORTA",
+        "san luis obispo": "SLORTA",
+        "south county transit": "SLORTA",
+        "morro bay": "SLORTA",
+        "paso robles": "SLORTA",
+        "runabout": "SLORTA",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

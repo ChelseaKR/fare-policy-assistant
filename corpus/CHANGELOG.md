@@ -174,3 +174,34 @@ This id was recomputed at merge time: the branch derived 69aab4ac6576 against
 the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, and AC
 Transit landed first, and `make ingest` over the union re-stamped this
 heading, the way 95794539d1d0's was.
+## b21d4e3b3c98 (2026-08-14 UTC)
+
+Added SLO RTA (San Luis Obispo Regional Transit Authority): 14 agencies, 41
+documents, 249 chunks. Four documents, all fetched 2026-08-14 UTC (checked
+2026-08-13 Pacific): `slorta-fares` (the cash fare table, headed "New cash
+fares as of April 6, 2026"), `slorta-discounts` (eligibility categories and
+the RTA Discount Eligibility Card), `slorta-passes` (pass products, the VIP
+Pass, ADA free fixed-route), and `slorta-contactless` (Tap2Ride, Token
+Transit, and the full fare-capping table).
+
+Central Coast, filling the gap between SBMTD and MST, and the only corpus
+agency with an age-tiered senior fare: 65-79 pay half, 80 and over ride free
+with a VIP Card. Unlike Santa Cruz METRO, whose cap amounts exist only inside
+a PNG, RTA publishes its fare-capping amounts as HTML, so they are citable.
+
+Two corpus-hygiene findings recorded with the addition:
+
+- The fares page and the discounts page disagree about whether the child free
+  fare (44 inches and under) applies on the South County routes; both are
+  ingested as published, the manifest records the conflict, and eval case
+  edge-100 pins the honest behavior (state the rule, surface the
+  disagreement, decide nothing).
+- The contactless page disagrees with itself about whether the disabled
+  discount is available on Tap2Ride ("not available ... yet" in one section,
+  "now available" in its FAQ). Eval case fresh-026 requires the cash path,
+  which works under either reading.
+
+This id was recomputed at merge time: the branch derived 21251137e67b against
+FAX's 95794539d1d0; County Connection, San Joaquin RTD, AC Transit, and
+WestCAT landed first, and `make ingest` over the union re-stamped this
+heading, the same way 95794539d1d0 itself was recomputed.

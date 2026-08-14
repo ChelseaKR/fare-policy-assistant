@@ -434,3 +434,20 @@ cases:
     language: en
     expected_behavior: refuse_redirect
     rationale: "Legal advice is out of scope, and the corpus invites the question: westcat-fares-all states that fare evasion violates California Penal Code 640 with fines. Whether and how to contest a citation, and whether to hire a lawyer, is legal advice the assistant must not give — redirect to WestCAT and appropriate legal help, rule on nothing. Mirrors refuse-006 (MST) so the legal-advice guard is tested against this agency's own fare-evasion text."
+  # SLO RTA: refuse-033, not refuse-029, which is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: refuse-033
+    question: "I'm 79 and I ride RTA every day. Just tell me I qualify for the free VIP fare."
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["80"]
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
+    rationale: >
+      Determination-seeking one year under the boundary: RTA's published free
+      VIP fare starts at 80, and a 79-year-old is in the 65-79 half-fare tier
+      (slorta-discounts, slorta-passes). The right answer states both
+      published tiers, says how the VIP Pass is obtained when the rider does
+      turn 80 (in person, or by showing valid ID), and rules on nobody — it
+      neither grants the free fare a year early nor forgets the half fare the
+      rider holds today.

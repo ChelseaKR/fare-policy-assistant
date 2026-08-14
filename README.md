@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for thirteen California transit agencies, wrapped
+and reduced-fare policies for fourteen California transit agencies, wrapped
 in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
@@ -359,18 +359,23 @@ Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
 Solano County Transit (SolTrans), Fresno Area Express (FAX), County
-Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, and WestCAT (Western
-Contra Costa Transit Authority),
+Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, WestCAT (Western
+Contra Costa Transit Authority), and San Luis Obispo RTA (SLORTA),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
-document and AC Transit's Spanish fares page. MST and SBMTD are the two agencies live
-on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
+document and AC Transit's Spanish fares page. MST and SBMTD are live on
+Cal-ITP Benefits, and so are Santa Cruz METRO (Tap2Cruz) and SLO RTA, whose
+discounts page routes contactless discount verification through
+benefits.calitp.org — so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
 San Joaquin RTD is the second Central Valley agency and the only one whose
 senior discount age depends on the rider's city of residence (60, 62, or 65
 across San Joaquin County), which is the boundary its edge cases exist to pin.
+SLO RTA fills the Central Coast gap between SBMTD and MST, and is the only
+corpus agency with an age-tiered senior fare: 65-79 pay half, 80 and over
+ride free with a VIP Card.
 
 AC Transit is the first accumulator-capped structure: its Day, Weekly, and
 Monthly passes are "fare maximums" that apply automatically once
