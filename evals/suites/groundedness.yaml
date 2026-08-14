@@ -377,3 +377,37 @@ cases:
     expected_behavior: answer
     required_facts: ["free", "re:valid ID|identification"]
     rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."
+
+  # AC Transit (Alameda-Contra Costa Transit District). The corpus's first
+  # accumulator-capped fare structure: Day/Weekly/Monthly passes are "fare
+  # maximums" applied automatically. Case ids use the agency-named form
+  # (refuse-soltrans-001 precedent) so parallel agency additions cannot
+  # collide on numbers.
+  - id: ground-actransit-001
+    question: "How much is a regular adult local single ride on AC Transit?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.75", "re:\\$\\s?3\\.00"]
+    rationale: >
+      actransit-fares, Current Fares (Effective July 1, 2026): Local Single
+      Ride $2.75 with Clipper or a contactless bank card, $3.00 cash. Both
+      figures are required because the page prices the same ride two ways and
+      a cash rider pays more. One hazard is on the record in the manifest:
+      the Adult and Discounted tables come from a tab widget whose labels
+      land together above both tables, so the Adult binding is positional —
+      corroborated by actransit-discounts, which puts the discounted classes
+      at 50% off, matching the $1.50/$3.00 cash pair.
+
+  - id: ground-actransit-002
+    question: "What does a Transbay single ride cost on AC Transit?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6\\.50"]
+    rationale: >
+      actransit-fares: Transbay Single Ride $6.50, and the same $6.50 whether
+      paid with Clipper, contactless, or cash — the one adult row where the
+      payment method does not change the price. (The discounted-table
+      Transbay single is $3.25; the label-binding caveat recorded in the
+      manifest and in ground-actransit-001 applies to any discounted figure.)

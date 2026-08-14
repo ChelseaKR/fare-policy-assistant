@@ -268,3 +268,31 @@ cases:
     required_facts: ["re:\\$\\s?1[.,]00"]
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
+
+  - id: ml-actransit-001
+    question: "¿Cuánto cuesta un viaje local sencillo para adultos en AC Transit?"
+    agency_scope: AC Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]75", "re:\\$\\s?3[.,]00"]
+    mirror_of: ground-actransit-001
+    rationale: >
+      Spanish mirror of ground-actransit-001, answerable same-language:
+      actransit-fares-es is a real translation ("Viaje único local | $2.75 |
+      $3.00"), not an untranslated /es/ shell. AC Transit is the corpus's
+      second agency with a genuine Spanish fares page, after MST.
+
+  - id: ml-actransit-002
+    question: "Si pago cada viaje con Clipper en los autobuses locales de AC Transit, ¿cuánto es lo máximo que pagaré en un día?"
+    agency_scope: AC Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6[.,]00", "re:[Tt]arifa máxima|automáticamente"]
+    mirror_of: edge-actransit-001
+    rationale: >
+      Spanish mirror of the accumulator case, and the reason the Spanish page
+      earns its ingestion: actransit-fares-es translates the capping
+      structure itself ("Pase Local Diario | Tarifa máxima de $6.00"; "se
+      aplicarán automáticamente cuando el gasto alcance el costo de dichos
+      pases"), so the hardest structure in this agency's fare policy is
+      answerable same-language in Spanish.

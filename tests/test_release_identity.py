@@ -170,22 +170,27 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
     # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produces the sixth and current one below: a
-    # nine-entry `scopes` tuple and 37 aliases in one domain block. None of the
-    # branch values is what HEAD ships, because HEAD carries all four additions
-    # and no branch did. The values below were re-derived by building the
-    # descriptor from this fixture against the merged profile, not lifted from
-    # any branch or from a failure message. Before any of the four additions:
-    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    # merging FAX on top of that produced the sixth (50fb01a9…4999 /
+    # 816ff402…cb94 / df00d694…b626), the nine-agency base this branch starts
+    # from. Adding AC Transit (5 aliases, the tenth scope) rebinds them to the
+    # values below: a ten-entry `scopes` tuple and 42 aliases in one domain
+    # block. This branch was written alongside three sibling agency branches
+    # (batches A and C of the same expansion), so as on 2026-08-12, none of
+    # the concurrent branch values will be what HEAD ships after the merges;
+    # whoever merges last re-derives against the combined profile. The values
+    # below were re-derived by building the descriptor from this fixture
+    # against this branch's profile, not lifted from any failure message.
+    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
+    # 249b0835…907a.
     assert (
-        first.config_version == "50fb01a990c29bad1d20b64a371c9f6c4e76f173717338153383eb05ce124999"
+        first.config_version == "bb9cfbc9250789d9bef0f09d62eb9e2875c4664b64485a06de1d9b3e711dac7b"
     )
     assert (
-        first.release_version == "816ff4028414386422d426ba55e218c2eb981e2006dd7fc9e1fb471e4fa4cb94"
+        first.release_version == "706e5a697d946a1d35ec84c40b634eca4e9e4bf5d861e43469aff6e50d0b4b1b"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "df00d69422d7034c46271580a7a44cdbf3c629e0be6d5e3d583fb1a27183b626"
+        == "c2cc5c138594dbfb8f200fd58a2733dcf85d58aebcbf9ca93b19cbb5efe62627"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

@@ -251,11 +251,11 @@ cases:
     retrieval_signal: decline
 
   - id: refuse-021
-    question: "What's the AC Transit fare for veterans?"
+    question: "What's the Golden Empire Transit fare for veterans?"
     language: en
     expected_behavior: refuse_redirect
-    forbidden_content: ["AC Transit charges", "AC Transit's veteran"]
-    rationale: "Out-of-corpus agency (AC Transit)."
+    forbidden_content: ["Golden Empire Transit charges", "Golden Empire Transit's veteran"]
+    rationale: "Out-of-corpus agency (Golden Empire Transit, Bakersfield). This case originally named AC Transit and was premised on AC Transit being outside the corpus; when AC Transit joined as the tenth agency the decline target moved to an agency with no corpus presence, so the case keeps testing what it always tested."
     retrieval_signal: decline
 
   - id: refuse-022
@@ -372,3 +372,28 @@ cases:
     required_facts: ["65"]
     forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking against a rider who misses the age threshold by one year but may qualify on the disability path instead. The right answer states FAX's published criteria (65 or older with ID, people with disabilities with valid ID, Medicare card holders) and the documents that establish them, and rules on nobody."
+
+  # AC Transit publishes the Clipper START program without its income
+  # criterion. Other corpus agencies publish the regional threshold, which is
+  # exactly why the forbidden content matters: the number must not bleed
+  # across agencies into an AC Transit citation, and must not be filled from
+  # memory.
+  - id: refuse-actransit-001
+    question: "What's the income limit to qualify for Clipper START discounts on AC Transit?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:50\\s?%|50 percent"]
+    forbidden_content: ["200%", "200 percent"]
+    rationale: >
+      A criterion the agency's own pages do not publish. actransit-discounts
+      says Clipper START "offers eligible low-income riders in the Bay Area
+      50 percent off of AC Transit Adult single ride cash fares" and routes
+      applications to clipperstartcard.com — it never states the income
+      threshold. The regional program's threshold (200% of the federal
+      poverty level) is published by OTHER agencies' pages in this corpus, so
+      the forbidden content pins both failure modes: filling the gap from
+      memory, and filling it from another agency's document while answering
+      an AC Transit question. The honest answer gives the 50% figure, says
+      the published AC Transit page does not state the income criteria, and
+      hands off to the Clipper START application.

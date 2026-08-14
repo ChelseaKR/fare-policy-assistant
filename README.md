@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for nine California transit agencies, wrapped in a
+and reduced-fare policies for ten California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -357,19 +357,26 @@ make fetch && make ingest
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
-Solano County Transit (SolTrans), and Fresno Area Express (FAX),
+Solano County Transit (SolTrans), Fresno Area Express (FAX), and AC Transit,
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
-the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
-document. MST and SBMTD are the two agencies live
+the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
+document and AC Transit's Spanish fares page. MST and SBMTD are the two agencies live
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
+AC Transit is the first accumulator-capped structure: its Day, Weekly, and
+Monthly passes are "fare maximums" that apply automatically once
+pay-per-ride spending reaches the pass price, and both the rule and the
+amounts are published as HTML text the pipeline can quote — unlike Santa
+Cruz METRO's cap amounts, which live in an image and stay honestly out of
+the corpus.
 
-SolTrans is the only Clipper participant in the corpus. That is the point of
-including it and also its main hazard: Clipper is a regional card, so a rider
-reads a Clipper answer as generalizing across the Bay Area, while the corpus
-holds exactly one agency's side of it. The `xagency-009` / `xagency-010` cases
+SolTrans was the first Clipper participant in the corpus, and AC Transit is
+the second. The hazard that came with the first still binds both: Clipper is
+a regional card, so a rider reads a Clipper answer as generalizing across the
+Bay Area, while the corpus holds only each named agency's side of it. The
+`xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
