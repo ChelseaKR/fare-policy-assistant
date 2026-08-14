@@ -284,3 +284,18 @@ cases:
       an end date, so the honest answer is the published condition, not a
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
+
+  - id: fresh-021
+    question: "How current is the San Joaquin RTD fare information you have?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      sjrtd-fares publishes no effective-date range at all — no "effective"
+      stamp, no expiry — so there is no fare period to check, only the snapshot
+      date this corpus carries. The honest answer discloses that date and
+      points the rider at RTD for anything time-sensitive, the same shape as
+      E-tran's fresh-013. (Currency was corroborated at ingest against RTD's
+      Commuter service page, which still sells the service the fares page
+      prices; that check lives in the manifest note, not in the corpus.)

@@ -111,6 +111,21 @@
 #                 attempted. Crawl-delay is unspecified; the manifest's 10-second
 #                 default was honored anyway.
 #
+# Robots/permissions note for San Joaquin RTD (checked 2026-08-13):
+#   sanjoaquinrtd.com  robots.txt returns HTTP 200 (Apache, WordPress site,
+#                 last-modified 2025-12-19) and reads: "User-Agent: * / Allow: /
+#                 / Disallow: /events/list/ / Disallow: /events/category/ /
+#                 Disallow: /events/month/" — the three excluded paths are The
+#                 Events Calendar plugin's listing views, nothing else. Neither
+#                 document below is under /events/. No Crawl-delay directive;
+#                 the manifest's 10-second default was honored anyway. No
+#                 Content-Signal header and no Content-Signal line in
+#                 robots.txt, on robots.txt or on either content page. The host
+#                 is not behind Cloudflare (plain Apache headers, no
+#                 `cf-mitigated`, no challenge); both pages returned HTTP 200
+#                 to this project's identified research user agent on the first
+#                 try.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
@@ -157,6 +172,13 @@
 #            https://www.soltrans.org/about/policies/privacy-policy; there is no
 #            terms-of-use entry. Footer: "© 2024 SolTrans" (a bare copyright line,
 #            and note the footer year is 2024, not the current year).
+#   SJRTD    terms of use: none located, checked 2026-08-13. The footer's only
+#            legal link, labeled "Legal & Policies", resolves to
+#            https://sanjoaquinrtd.com/privacy-policy/, which covers visitor
+#            data collection (personal and aggregated information, cookies,
+#            COPPA) and says nothing about copying or republishing the site's
+#            content. Footer: "© 2026 San Joaquin Regional Transit District |
+#            All Rights Reserved".
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -618,6 +640,65 @@ documents:
     # reason sbmtd-farechange is: a fare-change announcement the assistant must be
     # able to cite when a rider asks about a product the fare table still lists.
     license_note: "Public agency fare-change announcement; no Content-Signal served."
+
+  # ── San Joaquin RTD (San Joaquin Regional Transit District) ───────────────
+  # Added as the tenth agency (2026-08-13). Stockton and San Joaquin County —
+  # the corpus's second Central Valley agency after FAX, and a deliberate
+  # counterweight to the Bay-Area drift: RTD's fare media are agency-local
+  # (Vamos Mobility App, farebox cash, its own Discount Fare Card), with no
+  # Clipper and no Cal-ITP contactless product on either page.
+  #
+  # FARE PERIOD (checked 2026-08-13). RTD publishes no effective-date range on
+  # the fares page; the page's own site metadata reports it last modified
+  # 2026-03-05, and the DFC page 2026-05-21. Corroborating currency: the
+  # Commuter service page (modified 2026-02-27, fetched for verification, not
+  # ingested) still sells the same Sacramento and Dublin BART commuter service
+  # the fares page prices, through the same Vamos Mobility App the fares page
+  # names. Like FAX, treat this as a current page without a published period,
+  # not a committed range that can expire.
+  #
+  # THE BOUNDARY THAT MAKES THIS AGENCY WORTH ITS CASES: the senior age for the
+  # Discount Fare Card is not one number. The DFC page qualifies seniors at 62+
+  # in Manteca or Lathrop, 65+ in Tracy or Escalon, and 60+ in Stockton, Lodi,
+  # Ripon, or other San Joaquin County cities — the only agency in the corpus
+  # whose discount age depends on the rider's city of residence. The fares
+  # page, meanwhile, says only "seniors (ages 60 and over) ... with a valid
+  # Discount Fare Card", which is true as the floor but not the whole rule.
+  # Eval cases edge-068..070 pin the split.
+  #
+  # Oddities in the ingested text, left as-is because editing an agency's words
+  # would break the point of snapshotting them:
+  #   * The paratransit fare table's only column is headed "1-Ride Online Only"
+  #     with a footnote "*10 physical passes will be mail to your home
+  #     address" — the $3.00 fare is per one-way ride, and the "Online Only"
+  #     wording concerns where the 10-pass product is sold, not where a ride
+  #     can be paid.
+  #   * The DFC page's application form (names, Medicare number, disability
+  #     details) is stripped at ingest with the rest of the <form> furniture;
+  #     the eligibility criteria and process text above it are what the corpus
+  #     carries.
+  - id: sjrtd-fares
+    agency: SJRTD
+    agency_full: San Joaquin Regional Transit District (San Joaquin RTD)
+    title: "Fares"
+    url: https://sanjoaquinrtd.com/fares/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. No terms-of-use page located; footer links a visitor-data privacy policy only."
+  # The Discount Fare Card page lives under the Access San Joaquin section
+  # (RTD's consolidated-transportation brand) rather than under /fares/, the
+  # same way SCMTD's discount eligibility lives on its Accessibility page.
+  - id: sjrtd-dfc
+    agency: SJRTD
+    agency_full: San Joaquin Regional Transit District (San Joaquin RTD)
+    title: "Discount Fare Card (Access San Joaquin)"
+    url: https://sanjoaquinrtd.com/access-sj/dfc/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. No terms-of-use page located; footer links a visitor-data privacy policy only."
+  # No Spanish counterpart: sanjoaquinrtd.com serves Spanish through a
+  # Google-Translate-style widget ("Translate »" in every footer) rather than
+  # published /es/ pages, so there is no Spanish source document to catalogue —
+  # the same deliberate multilingual gap as SacRT and E-tran. The multilingual
+  # eval case for this agency is an honest cross-lingual one.
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

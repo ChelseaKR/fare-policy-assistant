@@ -68,3 +68,25 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## 47bc4ec2e419 (2026-08-14 UTC)
+
+Added San Joaquin RTD (San Joaquin Regional Transit District): 10 agencies, 25
+documents, 163 chunks. Two documents, both fetched 2026-08-14 UTC (checked
+2026-08-13 Pacific): `sjrtd-fares` (the Fares page: fixed route, Commuter,
+Paratransit, and Van Go! tables plus where-to-buy) and `sjrtd-dfc` (the
+Discount Fare Card eligibility and application page under Access San Joaquin).
+
+The corpus's second Central Valley agency, and the first whose senior discount
+age depends on the rider's city of residence: the DFC page qualifies seniors at
+62+ in Manteca or Lathrop, 65+ in Tracy or Escalon, and 60+ in Stockton, Lodi,
+Ripon, and other San Joaquin County cities, while the fares page's discount row
+says only "ages 60 and over". Neither page publishes an effective-date range;
+currency was corroborated against RTD's Commuter service page (modified
+2026-02-27, fetched for verification only), which still sells the Sacramento
+and Dublin BART service the fares page prices.
+
+Written on a branch where FAX's 95794539d1d0 (23 documents, 152 chunks) is what
+HEAD ships; two sibling batches are adding other agencies in parallel, so if
+one of them merges first this id needs another `make ingest` and a re-stamp of
+this heading, the same way 95794539d1d0 itself was recomputed.

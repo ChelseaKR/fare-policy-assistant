@@ -622,3 +622,110 @@ cases:
       buy single fares at $0.75. Fresno City College is in the subsidized group,
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
+
+  # San Joaquin RTD. The boundary this agency contributes is unique in the
+  # corpus: the Discount Fare Card's senior age depends on the rider's city of
+  # residence (62+ in Manteca/Lathrop, 65+ in Tracy/Escalon, 60+ in Stockton,
+  # Lodi, Ripon, and other San Joaquin County cities), while the fares page
+  # states only the 60+ floor. Cases edge-068..070 pin that split; the rest
+  # cover the boundaries the fares page itself publishes.
+  - id: edge-068
+    question: "I'm 61 and live in Manteca. Am I old enough for San Joaquin RTD's senior discount fare?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["62"]
+    requires_handoff: true
+    rationale: >
+      sjrtd-dfc: senior eligibility for the Discount Fare Card is 62 or older
+      for residents of Manteca or Lathrop — not the 60+ the fares page's
+      discount row leads with. The answer must state the published criterion
+      for the rider's own city (62), not the countywide floor, and route the
+      rider to the DFC application (Access San Joaquin responds within 21
+      working days) without ruling on the rider (RR4).
+
+  - id: edge-069
+    question: "What age does San Joaquin RTD's senior discount start? Does it matter where I live?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["60", "62", "65"]
+    rationale: >
+      The three-way residence split is the published rule, and the question asks
+      for it directly: 60+ in Stockton, Lodi, Ripon, or other San Joaquin County
+      cities; 62+ in Manteca or Lathrop; 65+ in Tracy or Escalon (sjrtd-dfc).
+      An answer that quotes one age as "the" senior age — including the fares
+      page's own "ages 60 and over" shorthand — has flattened a rule the agency
+      publishes as three.
+
+  - id: edge-070
+    question: "I'm 45 but I have a Medicare card. Do I pay full fare on RTD buses?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)medicare", "re:\\$\\s?0\\.75|half"]
+    rationale: >
+      Two passages, one answer: sjrtd-dfc says "Any person, regardless of age or
+      condition, may ride for a discount fare when displaying a Medicare Card or
+      a placard registration form from DMV and a photo ID (under federal law)",
+      and the sjrtd-fares discount row prices that ride at $0.75. Age is not a
+      precondition for the Medicare path (R1-6): the answer must not merge the
+      senior and Medicare paths or imply the rider is too young to qualify.
+
+  - id: edge-071
+    question: "I'm boarding an RTD bus in Stockton with my four kids, all age 3. What do I pay for them?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\bthree\\b|\\b3\\b", "re:\\$\\s?1\\.50"]
+    rationale: >
+      sjrtd-fares children's rule: up to three children ages 4 and under ride
+      free with a fare-paying adult, and "the fare for each additional child
+      costs $1.50." The boundary is the fourth child, which is exactly where an
+      answer that stops at "children 4 and under ride free" goes wrong — the
+      same shape as E-tran's two-child rule (edge-050), with different numbers
+      on both sides.
+
+  - id: edge-072
+    question: "I'm a veteran. How do I get the discount fare on San Joaquin RTD, and what proof do I need?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:DD[ -]?[Ff]orm 214|DD[ -]?214"]
+    requires_handoff: true
+    rationale: >
+      sjrtd-dfc: a veteran with a valid Department of Defense DD Form 214 or a
+      San Joaquin County Health Department Veteran's Discount Card needs no
+      medical certification to be issued a Discount Fare Card — the veteran path
+      is a document path, not a medical one. The answer names the accepted
+      documents and where the application goes (Access San Joaquin, response
+      within 21 working days), and rules on nobody.
+
+  - id: edge-073
+    question: "I'm a 10th grader at a Stockton Unified school. Do I ride RTD for free, or do I pay the student fare?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)free", "re:(?i)student ID"]
+    rationale: >
+      Two published paths that must not be merged: sjrtd-fares Special Programs
+      gives SUSD 9th-12th graders (and SJCOE 7th-12th graders) free rides with a
+      valid student ID, while the fare table separately prices a Student single
+      ride at $1.50 for ages 5 to 17 generally. A 10th grader at a Stockton
+      Unified school is inside the free program's published terms; the answer
+      states the free path with its ID condition rather than defaulting to the
+      paid student fare, and does not assert the rider is enrolled.
+
+  - id: edge-074
+    question: "I have an RTD Discount Fare Card. Does it make my paratransit rides cheaper too?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.00"]
+    rationale: >
+      sjrtd-fares publishes a Discount row for Express/Local/Hopper ($0.75) and
+      for Van Go! ($3.00 base), but the Paratransit table has exactly one fare:
+      Full, $3.00 one-way, for ADA-eligible riders. No discount tier is
+      published for paratransit, and the answer must say what is published
+      rather than extend the DFC discount to a service whose table does not
+      carry one — the FAX Handy Ride lesson (edge-061) in this agency's shape.
