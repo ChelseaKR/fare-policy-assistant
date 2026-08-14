@@ -372,3 +372,26 @@ cases:
     required_facts: ["65"]
     forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking against a rider who misses the age threshold by one year but may qualify on the disability path instead. The right answer states FAX's published criteria (65 or older with ID, people with disabilities with valid ID, Medicare card holders) and the documents that establish them, and rules on nobody."
+
+  # Marin Transit's live fares page still sells a day pass at the farebox —
+  # and no fetched page prices one. The published daily structure is the $5
+  # Clipper frequent-rider maximum, which is a cap, not a pass. The decline
+  # case for the price the corpus cannot state.
+  - id: refuse-marin-001
+    question: "How much is a Marin Transit day pass?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:\\$\\s?5"]
+    rationale: >
+      The retired-product failure class, caught at the price question.
+      marin-fares' "Where to Buy Passes" says "Day passes can be purchased
+      through the farebox on the bus" — but no fetched Marin Transit page
+      publishes any day-pass product or price: the fare table sells cash
+      rides, Clipper rides, and 31-day passes, and the published daily
+      structure is the $5-per-day Clipper frequent-rider maximum, which is
+      a cap, not a purchasable pass. The honest answer says the published
+      pages price no day pass, offers the $5 Clipper daily maximum as what
+      the agency does publish, and points the rider to Marin Transit for
+      the farebox product the page mentions but never prices. Any day-pass
+      dollar figure beyond the $5 maximum would be invented.

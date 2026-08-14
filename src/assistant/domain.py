@@ -41,7 +41,18 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans", "FAX"),
+    scopes=(
+        "MST",
+        "SBMTD",
+        "Yolobus",
+        "SacRT",
+        "HTA",
+        "E-tran",
+        "SCMTD",
+        "SolTrans",
+        "FAX",
+        "Marin Transit",
+    ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -97,6 +108,21 @@ TRANSIT = DomainProfile(
         "fresno": "FAX",
         "fresno area express": "FAX",
         "handy ride": "FAX",
+        # Marin Transit (Marin County Transit District). "marin" alone is
+        # safe here the way "yolo" is for Yolobus: no other corpus agency
+        # serves the county, and the word-boundary match keeps it off
+        # "marina" and "mariner". "san rafael" and "novato" are
+        # single-operator geographies (the "vallejo"->SolTrans pattern);
+        # "marin access" is its paratransit brand. Deliberately NOT aliased:
+        # "golden gate" — Golden Gate Transit shares Marin's local fares but
+        # is its own operator outside this corpus, and mapping its name here
+        # would invite answers about GGT's regional routes that Marin's
+        # pages cannot support.
+        "marin": "Marin Transit",
+        "marin transit": "Marin Transit",
+        "marin access": "Marin Transit",
+        "san rafael": "Marin Transit",
+        "novato": "Marin Transit",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

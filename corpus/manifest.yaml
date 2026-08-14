@@ -111,6 +111,23 @@
 #                 attempted. Crawl-delay is unspecified; the manifest's 10-second
 #                 default was honored anyway.
 #
+# Robots/permissions note for the tenth agency, Marin Transit (checked
+# 2026-08-13 PT / 2026-08-14 UTC). Two hosts, one wrinkle:
+#   marintransit.org  301s every path to marintransit.gov (Pantheon
+#                 "primary-domain-policy-doc" redirect). The .gov host is the
+#                 agency's primary domain and the one this project fetched.
+#   marintransit.gov  robots.txt is stock Drupal (HTTP 200, Last-Modified
+#                 2026-08-11): `User-agent: *` disallows only CMS internals —
+#                 nothing under /fares, /future-fares-clipper, or
+#                 /marin-local-31-day-pass. No Crawl-delay (the manifest's
+#                 10-second default was honored anyway), no Content-Signal
+#                 line in robots.txt, and no Content-Signal or x-robots-tag
+#                 header on any fetched page. All pages returned HTTP 200 to
+#                 this project's identified user agent on the first try — no
+#                 WAF challenge, no workaround needed or attempted. One URL
+#                 note: /clipper 301s to /future-fares-clipper; the manifest
+#                 records the final URL.
+#
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
 # whether a crawler may fetch a page; it says nothing about whether anyone may
@@ -157,6 +174,9 @@
 #            https://www.soltrans.org/about/policies/privacy-policy; there is no
 #            terms-of-use entry. Footer: "© 2024 SolTrans" (a bare copyright line,
 #            and note the footer year is 2024, not the current year).
+#   Marin Transit  terms of use: none located, checked 2026-08-13 (page
+#            footers link only /privacy-policy; no copyright line is rendered
+#            in the served HTML).
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -618,6 +638,99 @@ documents:
     # reason sbmtd-farechange is: a fare-change announcement the assistant must be
     # able to cite when a rider asks about a product the fare table still lists.
     license_note: "Public agency fare-change announcement; no Content-Signal served."
+
+  # ── Marin Transit (Marin County Transit District) ─────────────────────────
+  # Added as the tenth agency (2026-08-13 PT). Marin County local fixed
+  # route, with fares shared across Marin Transit and Golden Gate Transit
+  # for LOCAL travel in Marin — the deepest interagency entanglement in the
+  # corpus — and an accumulator-capped structure with a scoping twist:
+  #
+  # FREQUENT-RIDER MAXIMUMS (the accumulator): "Never pay more than $5 per
+  # day or $40 per month no matter how many times you ride", Clipper only —
+  # and "only trips on Marin Transit count towards the Marin Transit fare
+  # maximum", UNLIKE the prepaid 31-Day Pass, which covers local Golden Gate
+  # Transit rides in Marin too. Same $40 price, two different scopes. Both
+  # the rule and the amounts are published prose, so the structure is
+  # representable and cased (edge-marin-001/002) rather than flattened.
+  #
+  # A DAY PASS THAT HAS NO PRICE — the retired-product failure class, live
+  # on the current page. marin-fares' "Where to Buy Passes" section still
+  # says "Day passes can be purchased through the farebox on the bus", but
+  # no page fetched for this work publishes any day-pass product or price;
+  # the fare table lists cash / Clipper / 31-Day only, and the published
+  # daily structure is the $5 Clipper fare maximum, which is not a
+  # purchasable pass. The sentence reads like a leftover from a retired
+  # paper product. Kept (it is the agency's live page), and pinned:
+  # refuse-marin-001 is the decline case for the price the corpus cannot
+  # state.
+  #
+  # PAPER 31-DAY PASSES, RETIRED ON SCHEDULE: "Paper 31-day passes will no
+  # longer be sold after March 31, 2026", valid "through early summer 2026"
+  # (marin-31day-transition, page stamped "last updated 3/5/2026"); the
+  # clipper page states flatly "Paper 31-day passes are no longer available
+  # on Marin Transit." Today (2026-08-13) is past both the sales cutoff and
+  # any reasonable reading of "early summer", so a rider asking to buy one
+  # must get the cutoff, not a purchase pointer — fresh-marin-001 pins it,
+  # the fresh-016 (SolTrans paper-pass) pattern.
+  #
+  # CROSS-AGENCY CAUTION, the SolTrans-Clipper shape: marin-fares and
+  # marin-clipper describe Golden Gate Transit and SMART transfer treatment
+  # and fares. Those are Marin Transit's characterizations of other
+  # operators' arrangements — citable as what Marin Transit publishes, never
+  # as GGT's or SMART's own policy. The same caution covers the NG-Clipper
+  # transfer discount marin-clipper states as "$2.85 off the total adult
+  # fare" (halved for Youth/Senior/Access/START cardholders): it is MTC's
+  # regional arrangement as Marin describes it, and other Bay Area agencies'
+  # live pages state the same program differently — quote the asked-about
+  # agency's page, never harmonize.
+  #
+  # Fetched and excluded: /youth-pass. Its unique bulk is a participating-
+  # schools table naming individual school coordinators with their phone
+  # numbers and email addresses — verbatim third-party bulk that would
+  # outrank fare text in retrieval (the FAX Handy Ride lesson), and personal
+  # contact details of named school staff that a fare corpus has no need to
+  # republish. Its fare facts (Youth Clipper 50%, the free income-qualified
+  # Youth Pass) are already on the two pages ingested below.
+  #
+  # No Spanish counterpart: marintransit.gov serves Spanish through a Google
+  # Translate widget rather than published /es/ pages (checked 2026-08-13),
+  # so there is no Spanish source document to catalogue. The multilingual
+  # gap is deliberate (the e-tran precedent); ml-marin-001 is an honest
+  # cross-lingual case.
+  - id: marin-fares
+    agency: Marin Transit
+    agency_full: Marin County Transit District (Marin Transit)
+    title: "Fares"
+    url: https://marintransit.gov/fares
+    language: en
+    # "Where to Buy Passes" still sells a day pass no page prices; see the
+    # header note. Local fares apply across Marin Transit AND Golden Gate
+    # Transit within Marin County, per this page's own framing.
+    license_note: "Public agency fare information; no Content-Signal served."
+  - id: marin-clipper
+    agency: Marin Transit
+    agency_full: Marin County Transit District (Marin Transit)
+    title: "Clipper (discounts, transfers, frequent-rider maximums)"
+    url: https://marintransit.gov/future-fares-clipper
+    language: en
+    # Fetched via /clipper, which 301s here. Carries the $5/day and
+    # $40/month frequent-rider maximums and the Clipper discount-card
+    # catalogue; also contains third-party assertions (Golden Gate
+    # Transit/Ferry, SMART, the regional transfer discount) that are Marin
+    # Transit's characterization, not those operators' own published policy.
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (Golden Gate Transit/Ferry, SMART) that are Marin Transit's characterization, not those agencies' own published policy."
+  - id: marin-31day-transition
+    agency: Marin Transit
+    agency_full: Marin County Transit District (Marin Transit)
+    title: "Marin Transit Local 31-Day Passes on Clipper (paper-pass transition)"
+    url: https://marintransit.gov/marin-local-31-day-pass
+    language: en
+    # The dated fare-change page (stamped "Page last updated 3/5/2026"):
+    # paper 31-day passes not sold after 2026-03-31, honored "through early
+    # summer 2026". Ingested for the same reason sbmtd-farechange and
+    # soltrans-paperless-fares are: the assistant must be able to cite the
+    # retirement when a rider asks for the retired product.
+    license_note: "Public agency fare-change information; no Content-Signal served."
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

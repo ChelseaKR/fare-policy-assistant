@@ -377,3 +377,34 @@ cases:
     expected_behavior: answer
     required_facts: ["free", "re:valid ID|identification"]
     rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."
+
+  # Marin Transit (Marin County Transit District). Local fares apply across
+  # Marin Transit AND Golden Gate Transit within Marin County; the fare
+  # table is labeled row by row, so amounts are representable. Case ids use
+  # the agency-named form (refuse-soltrans-001 precedent) so parallel agency
+  # additions cannot collide on numbers.
+  - id: ground-marin-001
+    question: "How much is an adult local fare on Marin Transit, and is Clipper cheaper than cash?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00", "re:\\$\\s?1\\.80"]
+    rationale: >
+      marin-fares table: Adult $2.00 cash, $1.80 Clipper; marin-clipper
+      calls it out as "a 10% savings on the standard $2.00 cash fare." Both
+      figures required — the Clipper discount is the agency's own selling
+      point.
+
+  - id: ground-marin-002
+    question: "What do seniors pay on Marin Transit, and what counts as a senior?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "65"]
+    rationale: >
+      marin-fares table: Seniors (age 65+) pay $1.00 cash or Clipper, with a
+      $20.00 31-day pass; the footnote lists the accepted proof (valid
+      Medicare Card, DMV ID card/license, or senior ID from another
+      California transit service). Persons with disabilities pay the same
+      $1.00 on their own documented path — two rows, one price, different
+      criteria, and the answer must not merge them (R1-6).

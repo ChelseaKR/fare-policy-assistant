@@ -32,6 +32,7 @@ def test_reexports_match_the_profile():
             "SCMTD",
             "SolTrans",
             "FAX",
+            "Marin Transit",
         )
     )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact
@@ -44,6 +45,9 @@ def test_detect_agencies_uses_the_active_aliases():
     assert detect_agencies("senior fare on SBMTD?") == ["SBMTD"]
     assert detect_agencies("Monterey to Salinas") == ["MST"]
     assert detect_agencies("day pass in Vallejo") == ["SolTrans"]
+    assert detect_agencies("bus fare in San Rafael") == ["Marin Transit"]
+    # Word-boundary matching keeps the broad "marin" alias off lookalikes.
+    assert detect_agencies("is there a bus to the marina?") == []
 
 
 def test_clipper_is_not_an_agency_alias():

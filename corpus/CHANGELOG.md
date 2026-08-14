@@ -68,3 +68,37 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## 0a8bbe659de3 (2026-08-14 UTC)
+
+Added Marin Transit (Marin County Transit District): 10 agencies, 26
+documents, 174 chunks. Three documents, all fetched 2026-08-14 UTC:
+`marin-fares`, `marin-clipper` (the /clipper URL, which 301s to
+/future-fares-clipper), and `marin-31day-transition` (the dated paper-pass
+retirement page, stamped 3/5/2026).
+
+The structures that earn the disk space: frequent-rider maximums ("never
+pay more than $5 per day or $40 per month", Clipper only) whose scope
+differs from the same-priced 31-day pass — only Marin Transit trips count
+toward the maximum, while the pass also covers Golden Gate Transit locally
+in Marin — plus a two-tier transfer rule that changes with the payment
+method, and a PCA/attendant discount riders over-read as free.
+
+Two corpus-hygiene findings recorded with the addition:
+- A day pass with no price: the live fares page still says day passes "can
+  be purchased through the farebox on the bus" and no fetched page
+  publishes any day-pass product or price. refuse-marin-001 pins the honest
+  partial answer.
+- Paper 31-day passes retired on schedule (not sold after 2026-03-31,
+  honored "through early summer 2026") with the transition page still
+  framing the wind-down in the future tense; fresh-marin-001 pins the
+  cutoff-not-purchase-pointer behavior, the fresh-016 pattern.
+- Excluded: /youth-pass, whose unique bulk is a participating-schools table
+  naming individual school coordinators with phone numbers and emails —
+  retrieval pollution (the FAX Handy Ride lesson) and personal contact
+  details a fare corpus has no need to republish.
+
+This id was computed on a branch based on the nine-agency corpus
+(95794539d1d0). Three sibling agency branches were in flight at the same
+time; whichever merges after this one re-runs `make ingest` and re-stamps
+its own heading, as the 2026-08-12/13 additions did.
