@@ -52,6 +52,7 @@ TRANSIT = DomainProfile(
         "SolTrans",
         "FAX",
         "CCCTA",
+        "SJRTD",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -118,6 +119,18 @@ TRANSIT = DomainProfile(
         "county connection": "CCCTA",
         "central contra costa": "CCCTA",
         "concord": "CCCTA",
+        # San Joaquin RTD. The agency brands itself "RTD", which is safe to
+        # alias here because no other corpus agency uses the string; "Van Go!"
+        # is its microtransit brand and riders name it without naming RTD (the
+        # same shape as "Handy Ride" for FAX). Deliberately NOT aliased:
+        # "vamos" — the Vamos Mobility fare app is a San Joaquin COG regional
+        # product, not an agency, and the word is common Spanish.
+        "sjrtd": "SJRTD",
+        "san joaquin": "SJRTD",
+        "san joaquin rtd": "SJRTD",
+        "rtd": "SJRTD",
+        "stockton": "SJRTD",
+        "van go": "SJRTD",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

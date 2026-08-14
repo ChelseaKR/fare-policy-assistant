@@ -171,22 +171,24 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
     # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
     # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
-    # df00d694…b626); and adding County Connection (CCCTA, 4 aliases,
-    # 2026-08-13) produces the seventh and current one below: a ten-entry
-    # `scopes` tuple and 41 aliases in one domain block. The values below were
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # and merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top
+    # produces the eighth and current one below: an eleven-entry `scopes`
+    # tuple and 47 aliases in one domain block. The values below were
     # re-derived by building the descriptor from this fixture against the
-    # updated profile, not lifted from any branch or from a failure message.
+    # merged profile, not lifted from any branch or from a failure message.
     # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
     # 249b0835…907a.
     assert (
-        first.config_version == "56e222015db334a0376c40a504c655a3e801c622a32683a3df3b47f8a6dd12c5"
+        first.config_version == "fb4d057e000a30434a93e516b24137099630ce841ae742d53134e24b4187caf4"
     )
     assert (
-        first.release_version == "f8511bb2a454dd43e907c97480d7cd292297c259e7d6abe207153bc73687dce3"
+        first.release_version == "6becd6052ad7fd6bb95b32ab8fd120963c60f8e3d9711d42fc2c9232e781e787"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "16d2b360156bc866008bf933bef95617f7ca53443b868bea713824d2c1e8ab59"
+        == "5a86bf97e94d501ef3a7f3d19f8e1d4b575411b96dba9ccd6fb81b29200c630a"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

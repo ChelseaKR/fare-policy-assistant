@@ -303,3 +303,17 @@ cases:
       framing — it is described as a pilot — with the as-of disclosure and a
       pointer to the agency for current status. Asserting it has been made
       permanent, or that it is ending, would be ungrounded either way.
+  - id: fresh-024
+    question: "How current is the San Joaquin RTD fare information you have?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      sjrtd-fares publishes no effective-date range at all — no "effective"
+      stamp, no expiry — so there is no fare period to check, only the snapshot
+      date this corpus carries. The honest answer discloses that date and
+      points the rider at RTD for anything time-sensitive, the same shape as
+      E-tran's fresh-013. (Currency was corroborated at ingest against RTD's
+      Commuter service page, which still sells the service the fares page
+      prices; that check lives in the manifest note, not in the corpus.)

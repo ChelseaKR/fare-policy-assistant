@@ -99,3 +99,25 @@ pins it.
 Written on a branch that adds only CCCTA. If another corpus change merges
 first, this id needs another `make ingest` and a re-stamp of this heading, the
 way 95794539d1d0's was.
+## d113659adda8 (2026-08-14 UTC)
+
+Added San Joaquin RTD (San Joaquin Regional Transit District): 11 agencies, 30
+documents, 188 chunks. Two documents, both fetched 2026-08-14 UTC (checked
+2026-08-13 Pacific): `sjrtd-fares` (the Fares page: fixed route, Commuter,
+Paratransit, and Van Go! tables plus where-to-buy) and `sjrtd-dfc` (the
+Discount Fare Card eligibility and application page under Access San Joaquin).
+
+The corpus's second Central Valley agency, and the first whose senior discount
+age depends on the rider's city of residence: the DFC page qualifies seniors at
+62+ in Manteca or Lathrop, 65+ in Tracy or Escalon, and 60+ in Stockton, Lodi,
+Ripon, and other San Joaquin County cities, while the fares page's discount row
+says only "ages 60 and over". Neither page publishes an effective-date range;
+currency was corroborated against RTD's Commuter service page (modified
+2026-02-27, fetched for verification only), which still sells the Sacramento
+and Dublin BART service the fares page prices.
+
+This id was recomputed at merge time: the branch derived 47bc4ec2e419 against
+FAX's 95794539d1d0, County Connection's 60033300dc49 (#126) landed first, and
+`make ingest` over the union re-stamped this heading — the same treatment
+95794539d1d0 itself got. Further sibling agency merges will re-stamp their own
+headings, not this one.
