@@ -6,6 +6,7 @@ Cells: number of eval cases touching that agency x program. `-` means the corpus
 
 | Agency | senior | disabled | medicare | veteran | youth/student | child free | regular |
 |---|---|---|---|---|---|---|---|
+| CCCTA | 5 | 4 | 2 | 2 | 2 | 2 | 8 |
 | E-tran | 5 | 2 | 2 | - | 1 | 1 | 3 |
 | FAX | 2 | 4 | 4 | 1 | 1 | 1 | 3 |
 | HTA | 9 | 1 | - | - | 5 | - | 5 |
