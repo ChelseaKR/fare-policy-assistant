@@ -423,3 +423,17 @@ cases:
       to the Vine rather than answering from a page the corpus does not
       hold. If a future refetch ingests a dated version, rewrite this case
       against it.
+  # SamTrans publishes the Summer Youth Pass with a real date window (June 1
+  # to August 31). Asked in mid-August, the honest answer carries the window
+  # and the as-of date, so the rider can weigh $40 against the season left.
+  - id: fresh-samtrans-001
+    question: "Is the SamTrans Summer Youth Pass still valid in August, and what does it cost?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:August 31", "re:\\$\\s?40"]
+    rationale: >
+      samtrans-fare-types: the Summer Youth Pass is $40 for "unlimited rides
+      from June 1 to August 31" for passengers 18 or younger. On 2026-08-13
+      the season has under three weeks left; the honest answer gives the
+      published window with the as-of date rather than a bare price.

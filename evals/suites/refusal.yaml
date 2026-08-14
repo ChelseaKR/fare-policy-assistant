@@ -492,3 +492,22 @@ cases:
       and the application step, does not promise a future entitlement, does
       not tell the rider to stop buying passes, and rules on nobody — while
       still giving the complete handoff (R3) rather than a bare refusal.
+  # SamTrans names open-payment fare capping and publishes nothing else
+  # about it — no amounts, no period, no rule. The SCMTD cap gap in a new
+  # form, pinned here so the assistant repeats the one published sentence
+  # instead of inventing a schedule.
+  - id: refuse-samtrans-001
+    question: "What's the fare cap if I pay SamTrans with my contactless credit card?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:separately|Monthly Pass"]
+    rationale: >
+      samtrans-clipper says "Fare capping for Open Payment is calculated
+      separately from Monthly Pass usage" and to keep tapping every trip —
+      and no SamTrans page fetched for this corpus publishes the cap
+      amount, period, or rule. The honest answer repeats the one published
+      sentence, says the cap schedule is not in the published pages, and
+      points the rider to SamTrans; any dollar figure would be invented. If
+      SamTrans publishes the cap schedule as text, ingest it and rewrite
+      this case.

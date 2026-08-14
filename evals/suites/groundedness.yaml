@@ -633,3 +633,30 @@ cases:
     expected_behavior: answer
     required_facts: ["re:\\$\\s?55"]
     rationale: "vine-fares Passes table: 31-Day Pass, Adult $55.00, Youth $37.00, Half $27.50; the separate BART 31-Day Pass is $125.00 for every class and is the only pass valid on Route 29. Which pass the rider means changes the price by seventy dollars, so the answer must keep the two products apart."
+  # SamTrans (San Mateo County Transit District). The fare table binds its
+  # categories in-row (one merged line covers Youth and Eligible Discount),
+  # so amounts are representable here. Case ids use the agency-named form
+  # (refuse-soltrans-001 precedent) so parallel agency additions cannot
+  # collide on numbers.
+  - id: ground-samtrans-001
+    question: "How much is an adult SamTrans fare, and is it cheaper with Clipper?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.25", "re:\\$\\s?2\\.05"]
+    rationale: >
+      samtrans-fares fare table: Adult (Age 19 through 64) $2.25 cash or
+      mobile, $2.05 Clipper. Both figures required — the Clipper discount is
+      the page's own comparison, stated in one labeled row.
+
+  - id: ground-samtrans-002
+    question: "What does a SamTrans Day Pass cost?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?4\\.50", "re:\\$\\s?2\\.00"]
+    rationale: >
+      samtrans-fare-types, Day Pass Prices: "Eligible Discount - $2.00 •
+      Youth - $2.00 • Adult - $4.50", valid on all fixed-route buses and
+      Ride Plus until the end of the service day (2 a.m.). Both price points
+      required so the discount classes are not dropped.

@@ -58,6 +58,7 @@ TRANSIT = DomainProfile(
         "SLORTA",
         "VTA",
         "VINE",
+        "SamTrans",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -196,6 +197,18 @@ TRANSIT = DomainProfile(
         "napa": "VINE",
         "vinego": "VINE",
         "vine go": "VINE",
+        # SamTrans (San Mateo County Transit District). "san mateo" is a
+        # single-operator geography within this corpus (the
+        # "vallejo"->SolTrans pattern); "redi-wheels" is its paratransit
+        # brand, named by riders without naming SamTrans (the
+        # "handy ride"->FAX pattern). Deliberately NOT aliased: "caltrain" —
+        # a separate operator this corpus does not cover, even though
+        # SamTrans' pages describe accepting one of its passes.
+        "samtrans": "SamTrans",
+        "sam trans": "SamTrans",
+        "san mateo": "SamTrans",
+        "redi-wheels": "SamTrans",
+        "rediwheels": "SamTrans",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

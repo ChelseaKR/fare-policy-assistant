@@ -258,3 +258,32 @@ This id was recomputed at merge time: the branch derived 7caf9b3638ec against
 the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
 WestCAT, SLO RTA, and VTA landed first, and `make ingest` over the union
 re-stamped this heading, the way 95794539d1d0's was.
+## cbfe81efcf3f (2026-08-14 UTC)
+
+Added SamTrans (San Mateo County Transit District): 17 agencies, 49
+documents, 279 chunks. Three documents, all fetched 2026-08-14 UTC:
+`samtrans-fares`, `samtrans-fare-types`, and `samtrans-clipper`.
+
+The structures that earn the disk space: a merged discount row (Youth and
+the senior/disabled/Medicare "Eligible Discount" class share one price
+line), a two-children-age-4-or-younger-free-per-paying-adult rule, the
+Youth Unlimited free-fare program for Socioeconomically Disadvantaged
+students, a 19th-birthday cliff that cancels an active Youth Monthly Pass
+mid-month, and fare waivers with two simultaneous conditions (uniform AND
+unexpired military ID). And one named-but-unpublished structure, recorded
+in the manifest rather than invented: SamTrans says open-payment fare
+capping "is calculated separately from Monthly Pass usage" and publishes no
+cap amounts, period, or rule anywhere in the fetched pages — the corpus
+carries that one sentence, and refuse-samtrans-001 pins the honest partial
+answer.
+
+Two pages fetched and excluded with reasons in the manifest:
+/fares/fare-structure (a pointer hub to the codified-tariff PDF, itself the
+only dated fare-period statement SamTrans publishes — a PDF-ingest
+candidate for a follow-up) and /rider-info/youth-riders (a 60-row
+school-route table, the FAX Handy Ride lesson).
+
+This id was recomputed at merge time: the branch derived af0feed6c742 against
+the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
+WestCAT, SLO RTA, VTA, and the Vine landed first, and `make ingest` over the
+union re-stamped this heading, as the 2026-08-12/13 additions did.

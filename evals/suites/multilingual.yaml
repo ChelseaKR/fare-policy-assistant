@@ -408,3 +408,15 @@ cases:
     required_facts: ["80", "re:[Ll]ifetime [Pp]ass|[Pp]ase [Vv]italicio|de por vida"]
     mirror_of: edge-082
     rationale: "Cross-lingual mirror of edge-082 (the age-80+ complimentary Lifetime Pass and its application step), answered from the English vine-fares passage and returned in Spanish, with the same complete handoff: criterion, application, agency decides. Declares the same two facts as its mirror — the age threshold and the pass by name (accepting the English product name or a Spanish rendering) — so the Spanish case cannot pass by proving less."
+  - id: ml-samtrans-001
+    question: "¿Cuánto cuesta el pasaje de adulto en SamTrans, y es más barato con Clipper?"
+    agency_scope: SamTrans
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]25", "re:\\$\\s?2[.,]05"]
+    mirror_of: ground-samtrans-001
+    rationale: >
+      Cross-lingual: SamTrans publishes no Spanish fare pages (a Google
+      Translate widget serves the site's other languages), so the Spanish
+      question must be answered from English passages and returned in
+      Spanish — the FAX ml-027 pattern.

@@ -323,3 +323,17 @@ cases:
       the rider to the Vine to confirm — it must not convert one agency's
       characterization into the other agency's policy, and must not convert
       the corpus's silence into a denial either.
+  - id: xagency-samtrans-001
+    question: "Does the Clipper START discount work on both SamTrans and SolTrans?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50"]
+    rationale: >
+      A regional program, answered per agency: samtrans-fare-types ("The
+      Clipper START program offers a 50% fare discount for adult low-income
+      SamTrans riders") and SolTrans' pages (the Clipper START 50% discount
+      on SolTrans). Each half must carry its own agency's citation; the
+      regional card invites exactly the generalization the
+      soltrans-clipper-scope cases forbid, so the answer states each
+      agency's published participation and stops there — it does not
+      enumerate other agencies the passages never mention.

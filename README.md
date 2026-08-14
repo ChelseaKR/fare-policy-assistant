@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for sixteen California transit agencies, wrapped
+and reduced-fare policies for seventeen California transit agencies, wrapped
 in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
@@ -361,8 +361,8 @@ Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
 Solano County Transit (SolTrans), Fresno Area Express (FAX), County
 Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, WestCAT (Western
 Contra Costa Transit Authority), San Luis Obispo RTA (SLORTA), the Santa
-Clara Valley Transportation Authority (VTA), and Napa Valley Vine Transit
-(VINE),
+Clara Valley Transportation Authority (VTA), Napa Valley Vine Transit
+(VINE), and SamTrans (San Mateo County Transit District),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
@@ -385,6 +385,11 @@ drops, so the category-to-price bindings are honestly absent from the corpus
 answer), while the structures VTA states in prose — the Day Pass Accumulator
 cap, the express surcharge and its exemptions, the Clipper START criteria —
 are cased like any other agency's.
+SamTrans brings the corpus's first named-but-unpublished fare cap: its
+Clipper FAQ says open-payment fare capping "is calculated separately from
+Monthly Pass usage" and publishes no amounts, period, or rule, so the corpus
+carries the one sentence the agency wrote and an eval case pins the honest
+partial answer.
 
 AC Transit is the first accumulator-capped structure: its Day, Weekly, and
 Monthly passes are "fare maximums" that apply automatically once

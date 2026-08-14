@@ -1252,3 +1252,92 @@ cases:
       rather than the flat FAX one. The eligible rider can also buy the $20
       discount pass carrying $24 of value. An answer from the fixed-route
       table ($2.00) misprices the trip fourfold.
+  # SamTrans boundaries. The published rules with teeth: a two-child cap on
+  # free little kids, a Medicare path independent of age, a birthday that
+  # cancels a pass mid-month, a means-tested free-fare program defined by a
+  # third party, and a fare waiver with two simultaneous conditions.
+  - id: edge-samtrans-001
+    question: "I'm riding SamTrans with my three kids, ages 2, 4, and 9. Who pays?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Tt]wo children", "re:4 or younger|age 4"]
+    rationale: >
+      samtrans-fares: "Two children age 4 or younger may travel free with
+      each Adult or Eligible Discount fare-paying passenger. Additional
+      children are subject to the Youth fare." The 2- and 4-year-old ride
+      free with a paying adult; the 9-year-old pays the Youth fare. The
+      two-per-adult count and the age-4 line are both boundaries, and both
+      are published.
+
+  - id: edge-samtrans-002
+    question: "I have a Medicare card. What fare do I pay on SamTrans and what do I need to show?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.10|\\$\\s?1\\.00", "Medicare"]
+    rationale: >
+      samtrans-fares: the Eligible Discount row (Senior / Disabled /
+      Medicare cardholder) is $1.10 cash, $1.00 Clipper, and the footnote
+      lists the accepted proof: 65 years or older, an RTC Discount Card, a
+      DMV Disabled Placard Identification card, an equivalent card from
+      another California transit agency, or a Medicare card. Medicare is its
+      own path, not an age path (R1-6).
+
+  - id: edge-samtrans-003
+    question: "My 19th birthday is next week. What happens to the Youth Monthly Pass on my Clipper card for SamTrans?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["19", "re:cancel"]
+    rationale: >
+      samtrans-clipper: "On your 19th birthday, your Youth Clipper card will
+      automatically change to an Adult Clipper card ... If you have a Youth
+      Monthly Pass on your card, it will be cancelled. This will happen even
+      if it is the beginning or middle of the month," with the published
+      mitigation (disable Autoload before the birthday) and the follow-on
+      path (Clipper START for 19-64 if income-eligible). A hard published
+      cliff with a date the rider named; the answer must state the
+      cancellation, not soften it.
+
+  - id: edge-samtrans-004
+    question: "Is there a way for low-income students to ride SamTrans free?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:Socioeconomically Disadvantaged|SED", "re:[Ff]ree"]
+    requires_handoff: true
+    rationale: >
+      samtrans-fare-types, fare waivers: "Youth Unlimited. In partnership
+      with the San Mateo County Office of Education, SamTrans provides free
+      bus fares for Socioeconomically Disadvantaged (SED) students, as
+      defined by the California Department of Education, by swiping their
+      pass in the farebox." The criterion is a third party's definition; the
+      honest answer names the program, the defining authority, and where to
+      pursue it, and rules on nobody.
+
+  - id: edge-samtrans-005
+    question: "Do active-duty soldiers ride SamTrans for free?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:in uniform", "re:military identification|military ID"]
+    rationale: >
+      samtrans-fare-types waives fares for "Active military personnel in
+      uniform showing their non-expired military identification card." Both
+      conditions (uniform AND unexpired ID) are the published rule; an
+      answer that waives fares for veterans or out-of-uniform personnel
+      claims more than the page does.
+
+  - id: edge-samtrans-006
+    question: "Can I use my Caltrain monthly pass to ride SamTrans?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:2\\+? [Zz]one|two[- ]zone", "re:[Mm]onthly"]
+    rationale: >
+      samtrans-fares: "The Caltrain 2+ Zone Clipper Monthly Pass functions
+      as a SamTrans monthly bus pass for all Local/Express routes." This is
+      SamTrans' own acceptance rule for another operator's product — citable
+      as SamTrans policy because SamTrans is the accepting side; the zone
+      condition is the boundary (a 1-zone pass is not named).

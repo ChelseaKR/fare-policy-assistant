@@ -1,0 +1,8 @@
+doc_id: samtrans-clipper
+url: https://www.samtrans.com/fares/clipper
+final_url: https://www.samtrans.com/fares/clipper
+fetch_date: '2026-08-14'
+http_status: 200
+format: html
+sha256: c48ddf7652acaa7501f133759d235f80be15446b3feafed26676584438d2d64e
+bytes: 130044
