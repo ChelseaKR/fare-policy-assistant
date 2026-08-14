@@ -420,3 +420,15 @@ cases:
       Translate widget serves the site's other languages), so the Spanish
       question must be answered from English passages and returned in
       Spanish — the FAX ml-027 pattern.
+  - id: ml-marin-001
+    question: "¿Cuánto cuesta el pasaje local de adulto en Marin Transit, y es más barato con Clipper?"
+    agency_scope: Marin Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00", "re:\\$\\s?1[.,]80"]
+    mirror_of: ground-marin-001
+    rationale: >
+      Cross-lingual: marintransit.gov publishes no Spanish fare pages (a
+      Google Translate widget serves the site's other languages), so the
+      Spanish question must be answered from English passages and returned
+      in Spanish — the FAX ml-027 pattern.

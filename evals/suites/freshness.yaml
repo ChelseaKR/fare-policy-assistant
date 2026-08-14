@@ -437,3 +437,25 @@ cases:
       from June 1 to August 31" for passengers 18 or younger. On 2026-08-13
       the season has under three weeks left; the honest answer gives the
       published window with the as-of date rather than a bare price.
+  # Marin Transit retired its paper 31-day pass on a schedule its pages
+  # still describe in the future tense. The transition page (stamped
+  # 3/5/2026) says sales end after March 31, 2026 and the paper passes stay
+  # valid "through early summer 2026"; the clipper page already says
+  # flatly that paper passes are no longer available. Asked in mid-August,
+  # the rider gets the cutoff, not a purchase pointer.
+  - id: fresh-marin-001
+    question: "Can I still buy a paper 31-day pass for Marin Transit?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:March 31, 2026", "re:Clipper"]
+    forbidden_content: ["you can buy a paper pass", "purchase a paper pass at"]
+    rationale: >
+      The fresh-016 (SolTrans paper-pass) shape with a fresher corpse:
+      paper 31-day passes were "no longer ... sold after March 31, 2026"
+      (marin-31day-transition), honored only "through early summer 2026",
+      and marin-clipper states "Paper 31-day passes are no longer available
+      on Marin Transit." On 2026-08-13 the right answer is the cutoff date
+      plus the Clipper path (the 31-day pass on a Clipper card, online or
+      at the San Rafael Transit Center) — not a purchase pointer for a
+      retired product.

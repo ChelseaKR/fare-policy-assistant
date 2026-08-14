@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for seventeen California transit agencies, wrapped
+and reduced-fare policies for eighteen California transit agencies, wrapped
 in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
@@ -362,7 +362,8 @@ Solano County Transit (SolTrans), Fresno Area Express (FAX), County
 Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, WestCAT (Western
 Contra Costa Transit Authority), San Luis Obispo RTA (SLORTA), the Santa
 Clara Valley Transportation Authority (VTA), Napa Valley Vine Transit
-(VINE), and SamTrans (San Mateo County Transit District),
+(VINE), SamTrans (San Mateo County Transit District), and Marin Transit
+(Marin County Transit District),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
@@ -390,6 +391,12 @@ Clipper FAQ says open-payment fare capping "is calculated separately from
 Monthly Pass usage" and publishes no amounts, period, or rule, so the corpus
 carries the one sentence the agency wrote and an eval case pins the honest
 partial answer.
+Marin Transit brings an accumulator-capped structure whose published caps
+($5/day, $40/month, Clipper only) share a price with a pass that covers
+different buses — and two live-page findings the corpus pins with eval cases
+rather than smooths over: a day pass its fares page still sells at the
+farebox but no page prices, and a paper 31-day pass retired on a published
+schedule the page still describes in the future tense.
 
 AC Transit is the first accumulator-capped structure: its Day, Weekly, and
 Monthly passes are "fare maximums" that apply automatically once

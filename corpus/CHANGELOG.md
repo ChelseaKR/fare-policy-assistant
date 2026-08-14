@@ -287,3 +287,38 @@ This id was recomputed at merge time: the branch derived af0feed6c742 against
 the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
 WestCAT, SLO RTA, VTA, and the Vine landed first, and `make ingest` over the
 union re-stamped this heading, as the 2026-08-12/13 additions did.
+## 3dd8b7bd757e (2026-08-14 UTC)
+
+Added Marin Transit (Marin County Transit District): 18 agencies, 52
+documents, 301 chunks. Three documents, all fetched 2026-08-14 UTC:
+`marin-fares`, `marin-clipper` (the /clipper URL, which 301s to
+/future-fares-clipper), and `marin-31day-transition` (the dated paper-pass
+retirement page, stamped 3/5/2026).
+
+The structures that earn the disk space: frequent-rider maximums ("never
+pay more than $5 per day or $40 per month", Clipper only) whose scope
+differs from the same-priced 31-day pass — only Marin Transit trips count
+toward the maximum, while the pass also covers Golden Gate Transit locally
+in Marin — plus a two-tier transfer rule that changes with the payment
+method, and a PCA/attendant discount riders over-read as free.
+
+Two corpus-hygiene findings recorded with the addition:
+- A day pass with no price: the live fares page still says day passes "can
+  be purchased through the farebox on the bus" and no fetched page
+  publishes any day-pass product or price. refuse-marin-001 pins the honest
+  partial answer.
+- Paper 31-day passes retired on schedule (not sold after 2026-03-31,
+  honored "through early summer 2026") with the transition page still
+  framing the wind-down in the future tense; fresh-marin-001 pins the
+  cutoff-not-purchase-pointer behavior, the fresh-016 pattern.
+- Excluded: /youth-pass, whose unique bulk is a participating-schools table
+  naming individual school coordinators with phone numbers and emails —
+  retrieval pollution (the FAX Handy Ride lesson) and personal contact
+  details a fare corpus has no need to republish.
+
+This id was recomputed at merge time as the last car of the ten-PR expansion
+train: the branch derived 0a8bbe659de3 against the nine-agency 95794539d1d0;
+County Connection, San Joaquin RTD, AC Transit, WestCAT, SLO RTA, VTA, the
+Vine, and SamTrans landed first, and `make ingest` over the full
+eighteen-agency union re-stamped this heading, as the 2026-08-12/13
+additions did.

@@ -1341,3 +1341,92 @@ cases:
       SamTrans' own acceptance rule for another operator's product — citable
       as SamTrans policy because SamTrans is the accepting side; the zone
       condition is the boundary (a 1-zone pass is not named).
+  # Marin Transit boundaries. The distinctive structure is the frequent-
+  # rider maximum ($5/day, $40/month, Clipper only) whose scope differs
+  # from the same-priced 31-day pass — plus a transfer rule that changes
+  # with the payment method, and a PCA discount riders over-read as free.
+  - id: edge-marin-001
+    question: "If I keep tapping my Clipper card on Marin Transit buses all day, what's the most I'll be charged?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5", "re:[Cc]lipper"]
+    rationale: >
+      marin-clipper, Frequent-Rider Maximums: "Never pay more than $5 per
+      day or $40 per month no matter how many times you ride! Frequent-rider
+      maximums are only available on Clipper." The daily accumulator with
+      its channel restriction — a cash rider has no cap. Both the rule and
+      the amounts are published prose, so the capping structure is
+      representable here and required, not flattened.
+
+  - id: edge-marin-002
+    question: "Does Marin Transit's monthly fare maximum cover my Golden Gate Transit rides in Marin, like the 31-day pass does?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:only trips on Marin Transit|only.{0,30}Marin Transit", "31"]
+    rationale: >
+      The subtlest published boundary in this agency: marin-clipper —
+      "Unlike the 31-day pass that riders purchase upfront and that is
+      valid for local trips on Marin Transit and Golden Gate Transit, only
+      trips on Marin Transit count towards the Marin Transit fare maximum."
+      Same $40 price, two different scopes. An answer that treats the $40
+      maximum as a $40 pass quietly changes which buses a rider can afford.
+
+  - id: edge-marin-003
+    question: "How many free transfers do I get on Marin Transit, and does paying cash change that?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:two free transfers|up to two", "re:two hours|2 hours"]
+    rationale: >
+      Two tiers, both published: marin-fares — cash riders get "up to two
+      free transfers within Marin County for up to two hours", issued by
+      the driver at boarding; marin-clipper — Clipper riders get "Unlimited
+      free rides within 2 hours of first boarding a Marin Transit bus." The
+      payment method changes the transfer rule, and the answer must give
+      each tier its own terms rather than quoting one as the rule.
+
+  - id: edge-marin-004
+    question: "How much is the youth fare for my 16-year-old on Marin Transit, and is there a free pass for students?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "re:income"]
+    requires_handoff: true
+    rationale: >
+      marin-fares: Youth (5-18) pay $1.00; "Students from income-qualified
+      households may be eligible for a free annual Youth Pass," and College
+      of Marin students ride free with a validated COM Card. The free path
+      is income-conditioned and school-administered, so the handoff (the
+      Youth Clipper card application and the school program) is part of a
+      complete answer; the assistant rules on nobody.
+
+  - id: edge-marin-005
+    question: "Do children ride Marin Transit for free?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]nder 5", "re:two per adult|up to two"]
+    rationale: >
+      marin-fares table: "Children Under 5 (up to two per adult) — Free."
+      The count condition is the boundary: a third child under 5 is not
+      free under the published rule, and an answer that says only "kids
+      under 5 ride free" claims more than the row does.
+
+  - id: edge-marin-006
+    question: "I have a Clipper Access card with the attendant logo. Does my personal care assistant ride Marin Transit free?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:50\\s?%|50 percent|half"]
+    rationale: >
+      A published discount a rider will over-read as free. marin-fares:
+      "Personal Care Assistants (PCAs) are eligible for 50% off the adult
+      cash fare only when accompanying a person with disabilities who has
+      an attendant logo on his/her RTC Discount Card"; marin-clipper
+      repeats it for Clipper Access cards ("Caregivers may also receive the
+      discount when accompanying a rider with a Clipper Access card that
+      has an attendant logo"). Not free — half the ADULT cash fare, only
+      with the attendant-logo card present. Every qualifier is published
+      and load-bearing.

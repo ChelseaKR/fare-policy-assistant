@@ -183,22 +183,24 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # merging VTA (5 aliases, 2026-08-14) on top produced the twelfth
     # (54e25716…5937 / 8edb5f4c…2614 / 76fe204d…a162); merging Napa VINE (6
     # aliases, 2026-08-14) produced the thirteenth (e3574bfd…4340 /
-    # 992bf97b…2238 / bdb59326…8c4f); and merging SamTrans (5 aliases,
-    # 2026-08-14) on top produces the fourteenth and current one below: a
-    # seventeen-entry `scopes` tuple and 82 aliases in one domain block. The
-    # values below were re-derived by building the descriptor from this
-    # fixture against the merged profile, not lifted from any branch or from
-    # a failure message. Before any of the 2026-08 additions: 56ef528a…d337 /
-    # fbc9799c…e675 / 249b0835…907a.
+    # 992bf97b…2238 / bdb59326…8c4f); merging SamTrans (5 aliases,
+    # 2026-08-14) produced the fourteenth (1a4915b0…67a5 / 5911bac9…3345 /
+    # 86d8e55d…056e); and merging Marin Transit (5 aliases, 2026-08-14), the
+    # last car of the ten-PR expansion train, produces the fifteenth and
+    # current one below: an eighteen-entry `scopes` tuple and 87 aliases in
+    # one domain block. The values below were re-derived by building the
+    # descriptor from this fixture against the merged profile, not lifted
+    # from any branch or from a failure message. Before any of the 2026-08
+    # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "1a4915b0f1a320f5901e2244572815e5e9869e800ca4f257a8c2d017422467a5"
+        first.config_version == "d52812b489572bacb51dfd043db3cd45b5246ea8df799c1bba87d5d9bcbf0c7e"
     )
     assert (
-        first.release_version == "5911bac9cab6d0bf52cb6fe117b4e28e1eda6db28877f7ce9baf66293c3c3345"
+        first.release_version == "fdf0a136ef202413e9a4d2d9f2547101f816fa66af7661d804f9b72d083101a0"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "86d8e55dfa2afd522725d4a98221c18dc16ebdc8ce9c7a01dc2d566ecedc056e"
+        == "bc0cee09aa6f7400c4cc512331b2ce622feb8a84ccffa9c709d6fc9758348cad"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

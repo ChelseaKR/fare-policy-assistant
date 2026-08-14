@@ -5,16 +5,16 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-seventeen California transit agencies: Monterey-Salinas Transit (MST), Santa
+eighteen California transit agencies: Monterey-Salinas Transit (MST), Santa
 Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
 Transit Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO
 (SCMTD), Solano County Transit (SolTrans), Fresno Area Express (FAX), County
 Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit (Alameda-Contra
 Costa Transit District), WestCAT (Western Contra Costa Transit Authority),
 San Luis Obispo RTA (SLORTA), the Santa Clara Valley Transportation
-Authority (VTA), Napa Valley Vine Transit (VINE), and SamTrans (San Mateo
-County Transit District). It explains published policy. It does not decide
-anything about any person.
+Authority (VTA), Napa Valley Vine Transit (VINE), SamTrans (San Mateo County
+Transit District), and Marin Transit (Marin County Transit District). It
+explains published policy. It does not decide anything about any person.
 
 ## Intended users and uses
 
@@ -74,32 +74,34 @@ available behind a config switch.
 
 ## Data
 
-Forty-seven public web pages and two public PDF documents, fetched with an
+Fifty public web pages and two public PDF documents, fetched with an
 identified user agent between 2026-06-12 and 2026-08-14 (HTA added 2026-06-16;
 the Elk Grove, Santa Cruz METRO, SolTrans, and FAX documents added 2026-08-13;
 the County Connection pages added 2026-08-14; the two San Joaquin RTD pages,
 the AC Transit documents (one of them a real Spanish translation), the
 WestCAT pages, the four SLO RTA pages, the VTA documents, the two Vine
-pages, and the SamTrans documents added 2026-08-14 UTC), honoring robots.txt
-and crawl delays; URLs, dates, and license notes in
+pages, the SamTrans documents, and the Marin Transit documents added
+2026-08-14 UTC), honoring robots.txt and crawl delays; URLs, dates, and
+license notes in
 `corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
 in the system.
 
 ## Evaluation
 
-373 cases across groundedness, refusal, edge-case, multilingual, freshness,
+385 cases across groundedness, refusal, edge-case, multilingual, freshness,
 multi-turn conversation, cross-agency, counterfactual sensitivity, and
 stretch-language (Tagalog) suites; method and
 current scores in [EVALS.md](../EVALS.md). The scores published there predate
-twelve of the seventeen agencies: the cases added 2026-08-12/13 for Elk Grove
-e-tran, Santa Cruz METRO, SolTrans and Fresno Area Express, and 2026-08-13/14
-for County Connection, San Joaquin RTD, AC Transit, WestCAT, SLO RTA, VTA,
-the Vine, and SamTrans, have not been scored in a promoted live run. They
-also predate system prompt v11 (2026-08-13), which widened the scope rule
-from five named agencies to all in the corpus, and v12 through v19, which
-name County Connection, San Joaquin RTD, AC Transit, WestCAT, SLO RTA, VTA,
-the Vine, and SamTrans; the published scores were produced under v10, which
-instructed the model to decline the newer agencies.
+thirteen of the eighteen agencies: the cases added 2026-08-12/13 for Elk
+Grove e-tran, Santa Cruz METRO, SolTrans and Fresno Area Express, and
+2026-08-13/14 for County Connection, San Joaquin RTD, AC Transit, WestCAT,
+SLO RTA, VTA, the Vine, SamTrans, and Marin Transit, have not been scored in
+a promoted live run. They also predate system prompt v11 (2026-08-13), which
+widened the scope rule from five named agencies to all in the corpus, and
+v12 through v20, which name County Connection, San Joaquin RTD, AC Transit,
+WestCAT, SLO RTA, VTA, the Vine, SamTrans, and Marin Transit; the published
+scores were produced under v10, which instructed the model to decline the
+newer agencies.
 `evals/stale_acknowledged.json` carries the matching corpus-version and
 prompt-version waivers until a promoted run replaces them.
 Deterministic

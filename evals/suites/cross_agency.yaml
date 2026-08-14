@@ -337,3 +337,16 @@ cases:
       soltrans-clipper-scope cases forbid, so the answer states each
       agency's published participation and stops there — it does not
       enumerate other agencies the passages never mention.
+  - id: xagency-marin-001
+    question: "Do I get free transfers with Clipper on both Marin Transit and SolTrans?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:no transfers|are no transfers", "re:2 hours|two hours"]
+    rationale: >
+      A sharp published contrast between two Clipper agencies:
+      marin-clipper gives "Unlimited free rides within 2 hours of first
+      boarding a Marin Transit bus", while soltrans-clipper-card states
+      "there are no transfers within the SolTrans system." A correct
+      answer gives each agency its own rule with its own citation and does
+      not let the regional card imply a regional rule — the
+      soltrans-clipper-scope discipline.
