@@ -373,9 +373,9 @@ cases:
     forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking against a rider who misses the age threshold by one year but may qualify on the disability path instead. The right answer states FAX's published criteria (65 or older with ID, people with disabilities with valid ID, Medicare card holders) and the documents that establish them, and rules on nobody."
 
-  # SLO RTA: refuse-030, not refuse-029, which is held by the sibling San
-  # Joaquin RTD branch (see the ground-047 note in groundedness.yaml).
-  - id: refuse-030
+  # SLO RTA: refuse-033, not refuse-029, which is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: refuse-033
     question: "I'm 79 and I ride RTA every day. Just tell me I qualify for the free VIP fare."
     agency_scope: SLORTA
     language: en

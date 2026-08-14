@@ -623,13 +623,13 @@ cases:
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
 
-  # SLO RTA. Ids start at edge-075 on purpose: the sibling San Joaquin RTD
-  # branch holds edge-068..074 (see the ground-047 note). The boundary this
+  # SLO RTA. Ids start at edge-094 on purpose: the sibling San Joaquin RTD
+  # branch holds edge-068..074 (see the ground-059 note). The boundary this
   # agency contributes is the senior split at 80: seniors 65-79 pay half fare,
   # seniors 80+ ride free with a VIP Card — the only age-tiered senior fare in
-  # the corpus. edge-081 pins a genuine cross-page disagreement; the manifest
+  # the corpus. edge-100 pins a genuine cross-page disagreement; the manifest
   # records it and no other case rests on the contested fact.
-  - id: edge-075
+  - id: edge-094
     question: "I'm 81. Do I still pay the senior fare on RTA buses?"
     agency_scope: SLORTA
     language: en
@@ -644,7 +644,7 @@ cases:
       that quotes the 65-79 half fare for an 81-year-old charges a rider the
       agency says rides free; the handoff is where the VIP Pass is issued.
 
-  - id: edge-076
+  - id: edge-095
     question: "I'm 64. Do I get the senior discount on SLO RTA?"
     agency_scope: SLORTA
     language: en
@@ -657,7 +657,7 @@ cases:
       (disabled, Medicare cardholder — neither age-gated) belong in a complete
       answer, because missing the senior floor by a year does not close them.
 
-  - id: edge-077
+  - id: edge-096
     question: "My daughter is in 8th grade in Grover Beach. Does she get the K-12 student discount on the Route 21 bus?"
     agency_scope: SLORTA
     language: en
@@ -673,7 +673,7 @@ cases:
       (Seniors/Disabled, no student tier) corroborate. An answer that quotes
       the half fare here invents a discount the agency withholds.
 
-  - id: edge-078
+  - id: edge-097
     question: "I have an ADA paratransit ID card. Do I pay to ride the regular RTA bus, and does the person helping me ride free too?"
     agency_scope: SLORTA
     language: en
@@ -688,7 +688,7 @@ cases:
       PCA rides free once verified — edge-065 — which is exactly why the
       assistant must not carry one agency's attendant rule to another).
 
-  - id: edge-079
+  - id: edge-098
     question: "Does the money on an RTA Stored Value Pass expire?"
     agency_scope: SLORTA
     language: en
@@ -702,7 +702,7 @@ cases:
       administrative office at (805) 781-4833. The deactivation is the fact;
       the recovery path is the handoff, and it is in the passage.
 
-  - id: edge-080
+  - id: edge-099
     question: "I tap my phone on some RTA trips and my watch on others. Will I still hit the fare cap?"
     agency_scope: SLORTA
     language: en
@@ -717,7 +717,7 @@ cases:
       example asked back; the answer must carry the same-method condition, not
       just "yes there is a cap."
 
-  - id: edge-081
+  - id: edge-100
     question: "My daughter is 40 inches tall. Does she ride free with me on the Route 21 bus?"
     agency_scope: SLORTA
     language: en

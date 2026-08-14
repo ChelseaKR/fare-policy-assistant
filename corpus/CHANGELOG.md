@@ -89,11 +89,11 @@ Two corpus-hygiene findings recorded with the addition:
 - The fares page and the discounts page disagree about whether the child free
   fare (44 inches and under) applies on the South County routes; both are
   ingested as published, the manifest records the conflict, and eval case
-  edge-081 pins the honest behavior (state the rule, surface the
+  edge-100 pins the honest behavior (state the rule, surface the
   disagreement, decide nothing).
 - The contactless page disagrees with itself about whether the disabled
   discount is available on Tap2Ride ("not available ... yet" in one section,
-  "now available" in its FAQ). Eval case fresh-023 requires the cash path,
+  "now available" in its FAQ). Eval case fresh-026 requires the cash path,
   which works under either reading.
 
 Written on a branch where FAX's 95794539d1d0 (23 documents, 152 chunks) is

@@ -678,7 +678,7 @@ documents:
   # while the discounts page's Free Fare row says children 44″ and smaller
   # ride free "(Not available on the South County routes)". Two live pages,
   # one question, opposite answers, and no third page to break the tie. Both
-  # are ingested as published; eval case edge-081 pins the honest behavior
+  # are ingested as published; eval case edge-100 pins the honest behavior
   # (surface both, decide nothing), and no other case rests on the contested
   # South County child fare.
   #
@@ -687,7 +687,7 @@ documents:
   # discounts are "not available on Tap2Ride yet" (pay cash), while its FAQ
   # says discounted contactless fares are "now available for older adults
   # (ages 65+), Disabled and Medicare cardholders". Left as published; eval
-  # case fresh-023 requires the cash path and the Cal-ITP registration path to
+  # case fresh-026 requires the cash path and the Cal-ITP registration path to
   # be stated rather than a flat yes or no.
   #
   # Also noteworthy, in the direction that helps riders: unlike Santa Cruz

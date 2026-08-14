@@ -285,9 +285,9 @@ cases:
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
 
-  # SLO RTA. Ids start at fresh-022: fresh-021 is held by the sibling San
-  # Joaquin RTD branch (see the ground-047 note in groundedness.yaml).
-  - id: fresh-022
+  # SLO RTA. Ids start at fresh-025: fresh-021 is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: fresh-025
     question: "Did SLO RTA change its fares recently?"
     agency_scope: SLORTA
     language: en
@@ -299,7 +299,7 @@ cases:
       answer should surface the date the agency itself published, the
       sbmtd-farechange shape (fresh-002).
 
-  - id: fresh-023
+  - id: fresh-026
     question: "Can I get my disabled discount automatically when I tap a contactless card on RTA?"
     agency_scope: SLORTA
     language: en

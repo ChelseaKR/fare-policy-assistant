@@ -23,7 +23,7 @@ not checked is not an oversight, and it says what is left.
 - [x] A Spanish (`language: es`) fares page added if the agency publishes one;
       if it does not, say so in the PR so the multilingual gap is on purpose.
       RTA publishes none: Spanish is served through a translate widget. The
-      multilingual case for this agency (`ml-029`) is an honest cross-lingual
+      multilingual case for this agency (`ml-035`) is an honest cross-lingual
       one.
 - [x] `make fetch && make ingest` run; snapshots committed under `corpus/raw/`.
       Fetched through `assistant.ingest fetch` with the manifest's user agent
@@ -37,15 +37,15 @@ not checked is not an oversight, and it says what is left.
       cutoffs, income limits, document alternatives, what stacks with what).
       The boundary that matters most here is the senior split at 80: seniors
       65-79 pay half fare and seniors 80+ ride free with a VIP Card, the only
-      age-tiered senior fare in the corpus (`edge-075`, `edge-076`,
-      `refuse-030`, `xagency-013`). Two published disagreements are pinned
+      age-tiered senior fare in the corpus (`edge-094`, `edge-095`,
+      `refuse-033`, `xagency-017`). Two published disagreements are pinned
       rather than papered over: the child-free/South-County conflict between
-      the fares and discounts pages (`edge-081`) and the contactless page's
-      self-contradiction on the disabled Tap2Ride discount (`fresh-023`).
+      the fares and discounts pages (`edge-100`) and the contactless page's
+      self-contradiction on the disabled Tap2Ride discount (`fresh-026`).
 - [x] Cases mirrored into the real suites: `groundedness`, `refusal`,
       `cross_agency`, `multilingual`, `freshness` — matching the coverage the
-      other agencies get. 16 cases: ground-047..050, edge-075..081,
-      fresh-022..023, ml-029, refuse-030, xagency-013 — numbered above the
+      other agencies get. 16 cases: ground-059..062, edge-094..100,
+      fresh-025..026, ml-035, refuse-033, xagency-017 — numbered above the
       sibling San Joaquin RTD branch's ids on purpose, so the two in-flight
       Batch C branches cannot collide with each other; they may still be
       renumbered against other parallel work on merge, the FAX precedent.

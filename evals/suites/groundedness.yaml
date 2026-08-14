@@ -378,12 +378,12 @@ cases:
     required_facts: ["free", "re:valid ID|identification"]
     rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."
 
-  # SLO RTA (SLORTA), added 2026-08-13. Ids start at ground-047 on purpose:
+  # SLO RTA (SLORTA), added 2026-08-13. Ids start at ground-059 on purpose:
   # the sibling San Joaquin RTD branch holds ground-043..046, and numbering
   # above it keeps the two in-flight Batch C branches from colliding with each
   # other (they may still be renumbered against other parallel work on merge,
   # the FAX precedent).
-  - id: ground-047
+  - id: ground-059
     question: "What's the cash fare on RTA Route 9 from Paso Robles to San Luis Obispo?"
     agency_scope: SLORTA
     language: en
@@ -391,7 +391,7 @@ cases:
     required_facts: ["re:\\$\\s?2\\.00"]
     rationale: "slorta-fares cash table: Regular $2.00 on Routes 9, 10, 12, and 15. Cash fares vary by route group on this system, so the case names a route in the $2.00 group."
 
-  - id: ground-048
+  - id: ground-060
     question: "How much is the Regional Day Pass on SLO RTA?"
     agency_scope: SLORTA
     language: en
@@ -399,7 +399,7 @@ cases:
     required_facts: ["re:\\$\\s?5\\.50"]
     rationale: "slorta-passes Regional Day Pass: $5.50 general public, unlimited rides on all RTA, South County, SLO Transit, Paso Robles A & B, and Morro Bay Transit routes for the date indicated."
 
-  - id: ground-049
+  - id: ground-061
     question: "What does the RTA 31-Day Pass cost, and is there a cheaper rate for seniors?"
     agency_scope: SLORTA
     language: en
@@ -407,7 +407,7 @@ cases:
     required_facts: ["re:\\$\\s?47", "re:\\$\\s?23\\.50"]
     rationale: "slorta-passes RTA 31-Day Pass: $47.00 general public, $23.50 for Seniors (65-79) / Disabled / Students (K-12). Both figures belong in the answer; the discount tier's own age band (65-79) is part of the published rate."
 
-  - id: ground-050
+  - id: ground-062
     question: "Does RTA cap what I'm charged in a day if I pay by tapping a contactless card?"
     agency_scope: SLORTA
     language: en

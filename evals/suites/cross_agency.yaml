@@ -180,9 +180,9 @@ cases:
       different kinds of answer — one a price, one the absence of a price with a
       condition attached. A correct answer keeps them separate and cites each.
 
-  # SLO RTA: xagency-013, not xagency-012, which is held by the sibling San
-  # Joaquin RTD branch (see the ground-047 note in groundedness.yaml).
-  - id: xagency-013
+  # SLO RTA: xagency-017, not xagency-012, which is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: xagency-017
     question: "Is the senior fare age the same on SLO RTA and Santa Barbara MTD?"
     language: en
     expected_behavior: answer
