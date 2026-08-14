@@ -68,3 +68,27 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## 69aab4ac6576 (2026-08-14 UTC)
+
+Added WestCAT (Western Contra Costa Transit Authority): 10 agencies, 27
+documents, 165 chunks. Four documents, all fetched 2026-08-14 UTC:
+`westcat-fares-all` (one table covering local/express, LYNX Transbay, ADA
+paratransit, and Senior Dial-a-Ride), `westcat-transfers`, `westcat-clipper`,
+and `westcat-buying`.
+
+WestCAT publishes no robots.txt at all — both hosts 404 — which RFC 9309 reads
+as no restrictions; the manifest's 10-second crawl delay was honored anyway.
+
+Two findings travel with this version. First, WestCAT's Transfers page still
+honors paper transfers "from County Connection and Tri Delta Transit at shared
+stops in Martinez", while County Connection's own pages describe its transfers
+as Clipper-only — one agency's current page describing another's apparently
+retired product (xagency-013). Second, WestCAT publishes a 120-minute window
+for inter-agency Clipper transfers where SolTrans' page says 60 minutes;
+xagency-014 requires an answer to attribute each number rather than blend
+them.
+
+Written on a branch that adds only WestCAT. If another corpus change merges
+first, this id needs another `make ingest` and a re-stamp of this heading, the
+way 95794539d1d0's was.

@@ -179,3 +179,41 @@ cases:
       discount, not a suspension (hta-fares). Two agencies, two ages, and two
       different kinds of answer — one a price, one the absence of a price with a
       condition attached. A correct answer keeps them separate and cites each.
+
+  # Ids jump to xagency-013 because a sibling branch holds xagency-012.
+  - id: xagency-013
+    question: "I got a paper transfer on a County Connection bus. Will WestCAT take it at a shared stop in Martinez?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["Martinez", "Clipper"]
+    rationale: >
+      Two agencies' current pages describe the same arrangement incompatibly,
+      and the corpus holds both. westcat-transfers: "All Transfers from County
+      Connection and Tri Delta Transit at shared stops in Martinez are free
+      with a valid transfer." County Connection's own pages (sibling branch;
+      cccta-transfers and cccta-fare-types-prices) say its bus-to-bus
+      transfers are "only available when using Clipper" — i.e. the paper
+      transfer WestCAT promises to honor is a product County Connection's site
+      no longer describes issuing. The honest answer states WestCAT's
+      published rule with its citation, states that the issuing agency's
+      published transfer channel is Clipper, and recommends confirming with
+      the agencies rather than resolving the conflict itself. Until the
+      County Connection branch merges, retrieval holds only WestCAT's side;
+      the case still requires the answer to name the Clipper condition, which
+      westcat-transfers itself carries for inter-agency transfers.
+
+  - id: xagency-014
+    question: "With Clipper, how long is my transfer good for between a SolTrans bus and a WestCAT bus?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["60", "120"]
+    rationale: >
+      The corpus holds two published numbers for the same kind of transfer,
+      and neither agency speaks for the other. soltrans-clipper-card:
+      inter-agency bus transfers, WestCAT named in the list, "good for 60
+      minutes". westcat-transfers: Clipper transfers "are good for 120
+      minutes after boarding a bus". A grounded answer attributes each window
+      to the agency that published it, cites both pages, does not average or
+      pick one, and recommends confirming with the agencies for the trip in
+      question. Blending the two into a single confident number is the
+      failure this case exists to catch.

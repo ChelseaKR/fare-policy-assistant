@@ -268,3 +268,25 @@ cases:
     required_facts: ["re:\\$\\s?1[.,]00"]
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
+
+  # ── WestCAT (added 2026-08-13) ────────────────────────────────────────────
+  # WestCAT publishes English-only pages, so both cases are honest
+  # cross-lingual retrieval, the SolTrans pattern. Ids jump to ml-030 because
+  # a sibling branch holds ml-028..029.
+  - id: ml-030
+    question: "¿Cuánto cuesta en efectivo el autobús local de WestCAT?"
+    agency_scope: WestCAT
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]75"]
+    mirror_of: ground-047
+    rationale: "Cross-lingual mirror of ground-047: WestCAT publishes its fare table only in English (westcat-fares-all), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-031
+    question: "¿Mi hijo de 5 años viaja gratis en WestCAT?"
+    agency_scope: WestCAT
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:gratis|free", "6"]
+    mirror_of: ground-050
+    rationale: "Cross-lingual mirror of ground-050 (child free under age 6, from the fare table's Under age 6 column), answered from the English westcat-fares-all passage and returned in Spanish."

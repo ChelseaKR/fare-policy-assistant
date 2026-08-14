@@ -169,23 +169,23 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
-    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produces the sixth and current one below: a
-    # nine-entry `scopes` tuple and 37 aliases in one domain block. None of the
-    # branch values is what HEAD ships, because HEAD carries all four additions
-    # and no branch did. The values below were re-derived by building the
-    # descriptor from this fixture against the merged profile, not lifted from
-    # any branch or from a failure message. Before any of the four additions:
-    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
+    # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
+    # df00d694…b626); and adding WestCAT (6 aliases, 2026-08-13) produces the
+    # seventh and current one below: a ten-entry `scopes` tuple and 43 aliases
+    # in one domain block. The values below were re-derived by building the
+    # descriptor from this fixture against the updated profile, not lifted from
+    # any branch or from a failure message. Before any of the 2026-08
+    # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "50fb01a990c29bad1d20b64a371c9f6c4e76f173717338153383eb05ce124999"
+        first.config_version == "2924b514695e04a597e2d51fdfb2f5eb77bac2b1548f85051ec48207965209f4"
     )
     assert (
-        first.release_version == "816ff4028414386422d426ba55e218c2eb981e2006dd7fc9e1fb471e4fa4cb94"
+        first.release_version == "0cf05b6e45f98a4430035befd9c10b2ba41fce61a56790555e0ede27ea86bda1"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "df00d69422d7034c46271580a7a44cdbf3c629e0be6d5e3d583fb1a27183b626"
+        == "71faf0f81e03ba15c05a08d7b779f4c43d733bab5ac2ef6229fb7c6019b6288a"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

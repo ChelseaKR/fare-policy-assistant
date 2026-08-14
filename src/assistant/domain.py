@@ -41,7 +41,18 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans", "FAX"),
+    scopes=(
+        "MST",
+        "SBMTD",
+        "Yolobus",
+        "SacRT",
+        "HTA",
+        "E-tran",
+        "SCMTD",
+        "SolTrans",
+        "FAX",
+        "WestCAT",
+    ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -97,6 +108,16 @@ TRANSIT = DomainProfile(
         "fresno": "FAX",
         "fresno area express": "FAX",
         "handy ride": "FAX",
+        # WestCAT (Western Contra Costa Transit Authority), Pinole/Hercules.
+        # "LYNX" is its Transbay brand and riders name it without naming
+        # WestCAT; unlike "link" or "metro" it is not an everyday English word
+        # in a fare question, so the alias is safe to carry.
+        "westcat": "WestCAT",
+        "west cat": "WestCAT",
+        "western contra costa": "WestCAT",
+        "lynx": "WestCAT",
+        "pinole": "WestCAT",
+        "hercules": "WestCAT",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

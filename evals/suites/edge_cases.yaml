@@ -622,3 +622,64 @@ cases:
       buy single fares at $0.75. Fresno City College is in the subsidized group,
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
+
+  # WestCAT boundaries. The distinctive ones: a local-to-LYNX transfer is an
+  # upcharge, not free; paper and Clipper transfers carry different windows
+  # (one hour vs 120 minutes); and WestCAT honors but does not certify the
+  # regional Clipper Access (RTC) card. Ids jump to edge-075 because a sibling
+  # branch holds edge-068..074.
+  - id: edge-075
+    question: "I paid cash on a local WestCAT bus. Can I transfer to the LYNX for free?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.25"]
+    rationale: "westcat-fares-all transfer table: From WestCAT Local Fixed Route Buses to WestCAT LYNX is $3.25 ($1.25 reduced) — an upcharge to the Transbay fare, not a free transfer. Local-to-local is free with a transfer slip at shared stops only. An answer that extends the free local transfer to LYNX undercharges the rider by the price of the bridge."
+
+  - id: edge-076
+    question: "Can I use a WestCAT paper transfer to ride back home on the same route?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:one hour|1 hour", "re:not (be )?(valid|accepted)|no round trip"]
+    rationale: "westcat-transfers: transfers are valid for up to one hour, at established transfer points only, 'not valid to return to original boarding location (no round trip)' and not valid to reboard the same route after a stopover. The rider's plan is the exact excluded case; the honest answer says so and gives the one-hour window."
+
+  - id: edge-077
+    question: "Can WestCAT certify me for the Clipper Access (RTC) discount card?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:honor", "re:certif"]
+    rationale: "westcat-fares-all: 'Currently, we honor but do not certify Clipper Access (formerly known as the Regional Transit Connection card- RTC).' The card works on WestCAT but the certification happens elsewhere; the answer must keep the honor/certify split and point the rider at the Clipper Access process rather than a WestCAT office."
+
+  - id: edge-078
+    question: "If I pay with Clipper cash value all day on WestCAT, do I hit a day-pass cap? Does the LYNX count toward it?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?3\\.75", "re:LYNX[^.]{0,60}(do not|not) apply|do not apply toward"]
+    rationale: "westcat-fares-all: pay $3.75 in Clipper fares in a day ($1.75 senior/Clipper Access) across County Connection, Tri Delta, WestCAT and Wheels and the rest of the day is free — but 'Free rides and fares paid on WestCAT LYNX Transbay service do not apply toward a Day Pass.' Both halves must appear: the cap is real and LYNX sits outside it."
+
+  - id: edge-079
+    question: "I have a Medi-Cal card and a photo ID. Is that enough for WestCAT's reduced fare?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:Medi-Cal"]
+    rationale: "westcat-fares-all lists 'Photo ID and Medicare card (not Medi-Cal)' among the accepted reduced-fare documents. Medicare and Medi-Cal are the boundary the sensitivity suite probes at other agencies; here the agency writes the exclusion into the ID list itself. The honest answer states the accepted alternatives (state ID at 65+, Clipper Access, DMV placard receipt, Disabled Veterans ID) and rules on nobody."
+
+  - id: edge-080
+    question: "How much is ADA paratransit on WestCAT? Is a regional trip the same price as a local one?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.25", "re:\\$\\s?3\\.00"]
+    rationale: "westcat-fares-all: ADA Paratransit Local $1.25, ADA Paratransit Regional $3.00, and both charge the same figure in the reduced column — paratransit is priced by distance class, not rider class. The FAX Handy Ride lesson in the other direction: here the paratransit fare is LOWER than the local cash fare, and an answer built from the fixed-route row overcharges a disabled rider."
+
+  - id: edge-081
+    question: "My 15-year-old has a Youth Clipper card. What balance does she need on it to board a WestCAT bus?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.75"]
+    rationale: "westcat-clipper, Boarding Requirements: Adult / Youth cards must hold at least $1.75 in cash value or a valid pass; Senior / Access cards $0.75. The youth minimum equals the adult one — WestCAT publishes no youth fare discount of its own on this page, and the answer must not invent one."
