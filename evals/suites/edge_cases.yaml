@@ -622,3 +622,94 @@ cases:
       buy single fares at $0.75. Fresno City College is in the subsidized group,
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
+
+  # VTA boundaries. The category-to-price table is not representable (see
+  # the manifest), so every case here grounds on prose VTA actually
+  # publishes: the express surcharge and its exemptions, the document
+  # alternatives, the calendar-month pass window, and the Paratransit ID
+  # exclusion list.
+  - id: edge-vta-001
+    question: "I ride a VTA local bus and then transfer to an Express bus. What extra do I pay?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.50", "re:[Yy]outh|[Ss]enior"]
+    rationale: >
+      vta-fares: "Adult passengers traveling from a local bus to an Express
+      bus will have to pay a surcharge of $2.50", paid in Clipper cash only,
+      on the same card — and "Youth and Senior/Disabled/Medicare riders who
+      transfer from local to express service will not have a surcharge." The
+      exemption is the boundary: the surcharge is real for adults and absent
+      for the discount classes, and both halves are in prose.
+
+  - id: edge-vta-002
+    question: "I'm 66. What do I show to get the senior fare on VTA?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["65", "Medicare"]
+    requires_handoff: true
+    rationale: >
+      vta-fares: "To qualify for the Senior/Disabled/Medicare fare, you must
+      present one of the following: Medicare Card; Regional Transit
+      Connection (RTC) Discount Card or a valid card from another California
+      transit provider; DMV Disabled License Plate registration; DMV
+      Disabled Parking Placard printout; Proof of age (65 and older)" — with
+      "a valid picture I.D. may be required." Document alternatives (R1-6,
+      the FAX edge-064 shape): naming only the age path would turn away a
+      Medicare cardholder under 65.
+
+  - id: edge-vta-003
+    question: "Is a VTA monthly pass good for 31 days from the day I buy it?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:calendar month", "re:16th|15th"]
+    rationale: >
+      vta-fares: "Monthly passes are valid for the calendar month purchased.
+      They are not 31-day passes," sold "from the 16th of the previous month
+      through the 15th of the pass month." The corpus's other agencies sell
+      activation-dated 31-day passes, so the calendar-month distinction is
+      exactly the boundary a rider will get wrong by analogy.
+
+  - id: edge-vta-004
+    question: "With my VTA Paratransit ID card, do I also ride the Highway 17 Express for free?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Ff]ree", "re:not honored|Highway 17"]
+    rationale: >
+      vta-fares: "Passengers with a valid Paratransit ID Card receive free
+      rides on VTA Local, Express bus service and Light Rail. The pass is
+      not honored on Highway 17 Express, Dumbarton Express, Caltrain and
+      Sports Service." The free ride is real and the exclusion list is where
+      the question actually lives — answering from the first sentence alone
+      strands a rider at the Highway 17 stop.
+
+  - id: edge-vta-005
+    question: "What are the income and age rules for Clipper START on VTA?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:200\\s?%|200 percent", "re:19-64|19 to 64"]
+    rationale: >
+      vta-fares publishes the full regional criteria: 50% off adult
+      single-ride eCash fares for riders 19-64 who live in the Bay Area, do
+      not hold an RTC Clipper Card, and have household income of 200% of the
+      federal poverty level or less. Here the corpus CAN state the
+      criterion, so the case requires it — the deliberate contrast is an
+      agency whose pages name the program but not the threshold, where the
+      honest answer is a partial.
+
+  - id: edge-vta-006
+    question: "Does my 4-year-old pay to ride VTA? What about my 15-year-old?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Uu]nder five|under 5", "re:5-18|[Yy]outh"]
+    rationale: >
+      vta-fares: "Children under five ride free", and the FAQ on the same
+      page: "Youth must be age 5-18." The 4-year-old rides free; the
+      15-year-old is a Youth, with a free Youth Clipper card as the
+      published payment path (the youth PRICE sits in the category-blind
+      table and is deliberately not required here).

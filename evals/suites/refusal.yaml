@@ -372,3 +372,29 @@ cases:
     required_facts: ["65"]
     forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking against a rider who misses the age threshold by one year but may qualify on the disability path instead. The right answer states FAX's published criteria (65 or older with ID, people with disabilities with valid ID, Medicare card holders) and the documents that establish them, and rules on nobody."
+
+  # VTA's category-to-price fare table does not survive ingestion (the tab
+  # labels are UI furniture the chunker drops — see the manifest's
+  # representational-gap note), so an amount-by-category question is one
+  # the corpus genuinely cannot answer, even though a human reading the
+  # page can.
+  - id: refuse-vta-001
+    question: "How much is the senior single-ride fare on VTA?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: partial
+    required_facts: ["65"]
+    forbidden_content: ["the senior single ride is $1", "seniors pay $1.00"]
+    rationale: >
+      The representational-gap case, written to the corpus this project
+      actually has rather than the page a human sees. VTA renders its
+      Adult/Express/Senior/Youth prices in a tab widget whose category
+      labels the ingester cannot capture, so no retrieved passage binds a
+      dollar amount to "senior" — the $1 figure exists only in a block
+      headed "Available for purchase using:". The honest answer states the
+      published eligibility criteria (65 and older, or a Medicare card, RTC
+      card, or DMV disability documentation), says the passages do not
+      attribute a specific senior price, and points the rider to VTA — it
+      must not assert a category-price binding the text does not make. If
+      VTA ever publishes labeled fare text, rewrite this case to require
+      the amount.

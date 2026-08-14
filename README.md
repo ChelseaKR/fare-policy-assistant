@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for nine California transit agencies, wrapped in a
+and reduced-fare policies for ten California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -357,7 +357,8 @@ make fetch && make ingest
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
-Solano County Transit (SolTrans), and Fresno Area Express (FAX),
+Solano County Transit (SolTrans), Fresno Area Express (FAX), and the Santa
+Clara Valley Transportation Authority (VTA),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
@@ -365,6 +366,13 @@ document. MST and SBMTD are the two agencies live
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
+VTA is the largest system in the corpus and the one whose fare table did not
+survive ingestion: its rider-category tab labels are UI furniture the chunker
+drops, so the category-to-price bindings are honestly absent from the corpus
+(the manifest documents the gap and an eval case pins the honest partial
+answer), while the structures VTA states in prose — the Day Pass Accumulator
+cap, the express surcharge and its exemptions, the Clipper START criteria —
+are cased like any other agency's.
 
 SolTrans is the only Clipper participant in the corpus. That is the point of
 including it and also its main hazard: Clipper is a regional card, so a rider

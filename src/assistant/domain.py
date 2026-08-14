@@ -41,7 +41,18 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA", "E-tran", "SCMTD", "SolTrans", "FAX"),
+    scopes=(
+        "MST",
+        "SBMTD",
+        "Yolobus",
+        "SacRT",
+        "HTA",
+        "E-tran",
+        "SCMTD",
+        "SolTrans",
+        "FAX",
+        "VTA",
+    ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -97,6 +108,16 @@ TRANSIT = DomainProfile(
         "fresno": "FAX",
         "fresno area express": "FAX",
         "handy ride": "FAX",
+        # Santa Clara Valley Transportation Authority. Riders say "VTA";
+        # "san jose" and "santa clara" are single-operator geographies within
+        # this corpus (the "vallejo"->SolTrans pattern). Deliberately NOT
+        # aliased: "valley" alone, and "light rail" — Sacramento's SacRT runs
+        # light rail too, so the mode name must not resolve to one operator.
+        "vta": "VTA",
+        "santa clara": "VTA",
+        "san jose": "VTA",
+        "valley transportation": "VTA",
+        "smartpass": "VTA",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

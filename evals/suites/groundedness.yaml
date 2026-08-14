@@ -377,3 +377,36 @@ cases:
     expected_behavior: answer
     required_facts: ["free", "re:valid ID|identification"]
     rationale: "fax-fares Fares table: Active Military/Veteran (with valid ID) — Free. The ID condition is part of the fare, not a footnote: without it the rider pays $1.00 at the farebox."
+
+  # VTA (Santa Clara Valley Transportation Authority). The fare TABLE arrives
+  # category-blind (see the manifest's representational-gap note), so these
+  # cases ground on what VTA states in prose. Case ids use the agency-named
+  # form (refuse-soltrans-001 precedent) so parallel agency additions cannot
+  # collide on numbers.
+  - id: ground-vta-001
+    question: "If I pay per ride with Clipper cash on VTA, can I end up paying more than a day pass costs in one day?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:never pay more|will be free|[Dd]ay [Pp]ass [Aa]ccumulator"]
+    rationale: >
+      vta-fares, in prose: "The Day Pass Accumulator feature ensures the
+      Clipper® cash rider will never pay more than the price of a Day Pass.
+      ... once you've paid the equivalent of a Day Pass, any further local
+      rides that day will be free." The accumulator RULE is representable
+      and is what this case requires; the day-pass AMOUNTS sit in the
+      category-blind table and are deliberately not required (see
+      refuse-vta-001 for the honest handling of an amount question).
+
+  - id: ground-vta-002
+    question: "Do I get free transfers on VTA if I pay my single ride with Clipper?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:2 [Hh]ours|two hours", "re:[Ee]xpress"]
+    rationale: >
+      vta-fares: "Payment for a single ride with Clipper will be valid for 2
+      hours of FREE transfers across VTA buses and light rail. Express bus
+      fare is required for any trip that includes express service." The
+      express carve-out is part of the rule, not a footnote — a transfer
+      answer without it sends a rider onto an express bus expecting free.
