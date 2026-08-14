@@ -386,3 +386,25 @@ cases:
       must be answered from English passages and returned in Spanish — the
       FAX ml-027 pattern. Mirrors ground-vta-002 including the express
       carve-out.
+  # ── Napa Valley Vine Transit (added 2026-08-13) ───────────────────────────
+  # The Vine publishes Spanish application PDFs and a Spanish VineGo video but
+  # no Spanish fare page, so both cases are honest cross-lingual retrieval,
+  # the SolTrans pattern. Ids jump to ml-032 because sibling branches hold
+  # ml-028..031.
+  - id: ml-032
+    question: "¿Cuánto cuesta un viaje sencillo para adultos en el Vine de Napa?"
+    agency_scope: VINE
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-051
+    rationale: "Cross-lingual mirror of ground-051: the Vine publishes its fare table only in English (vine-fares), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-033
+    question: "Tengo 82 años. ¿Puedo viajar gratis en el Vine?"
+    agency_scope: VINE
+    language: es
+    expected_behavior: answer
+    required_facts: ["80", "re:[Ll]ifetime [Pp]ass|[Pp]ase [Vv]italicio|de por vida"]
+    mirror_of: edge-082
+    rationale: "Cross-lingual mirror of edge-082 (the age-80+ complimentary Lifetime Pass and its application step), answered from the English vine-fares passage and returned in Spanish, with the same complete handoff: criterion, application, agency decides. Declares the same two facts as its mirror — the age threshold and the pass by name (accepting the English product name or a Spanish rendering) — so the Spanish case cannot pass by proving less."

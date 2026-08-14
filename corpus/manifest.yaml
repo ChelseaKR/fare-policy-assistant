@@ -214,6 +214,47 @@
 #                any fetched page. All three pages below returned HTTP 200 to
 #                this project's identified user agent on the first try — no
 #                WAF challenge, no workaround needed or attempted.
+# Robots/permissions note for Napa Valley Vine Transit (checked 2026-08-13):
+#   vinetransit.com  robots.txt is the WordPress default plus a crawl delay:
+#                 "User-agent: * / Disallow: /wp-admin/ / Allow:
+#                 /wp-admin/admin-ajax.php / Crawl-delay: 10", plus a Sitemap
+#                 line. WP Engine behind Cloudflare; no Content-Signal in
+#                 robots.txt or in any response header. Every page returned
+#                 HTTP 200 to this project's identified research user agent on
+#                 the first try — no WAF challenge, no workaround needed or
+#                 attempted. www.vinetransit.com 301s to the apex host.
+#                 Crawl-delay 10 honored. (ridethevine.com, an older brand
+#                 domain, did not resolve at all when checked.)
+#
+# Golden Gate Transit, checked 2026-08-13 and NOT added — a NO-GO for a new
+# reason, recorded so the next attempt does not re-learn it:
+#   www.goldengate.org  robots.txt is permissive for every fare page
+#                 (Disallow only /search/, /admin/, /500.aspx, and backurl
+#                 query URLs), there is no WAF, no Content-Signal, and all
+#                 four candidate pages (bus-fares-payment, its transfers
+#                 sub-page, determine-your-fare, and the 2026-07-01 regional
+#                 fare-increase notice) returned HTTP 200 to this project's
+#                 identified user agent on the first try. Fetching is fine.
+#                 INGEST is not: the site is ASP.NET WebForms and wraps the
+#                 entire page body — <main> included — in a single
+#                 <form id="main">, and this pipeline's cleaner strips <form>
+#                 wholesale as page furniture, so every Golden Gate page
+#                 cleans to zero sections and no chunk can land. That is a
+#                 deliberate cleaner behavior (search boxes and signup forms
+#                 are noise on every other host), and un-stripping or
+#                 unwrapping page-wrapper forms would change the ingested text
+#                 of existing agencies too — a corpus-identity-moving pipeline
+#                 change that needs its own PR and eval justification, not a
+#                 side effect of an agency addition. Until then, SolTrans'
+#                 "Golden Gate Transit 40/42" transfer claim remains a
+#                 third-party characterization with no Golden Gate side in the
+#                 corpus. For the record, from the recon fetches this project
+#                 could read but not ingest: Golden Gate's own Transfers page
+#                 publishes a three-hour, up-to-two-uses Clipper transfer and
+#                 a generic interagency discount of up to $2.85 ($1.40
+#                 youth/senior/disabled) with no agency list and no 60-minute
+#                 window — the same window-mismatch pattern County Connection
+#                 and WestCAT surfaced against SolTrans' "60 minutes".
 #
 # Redistribution terms (checked 2026-08-12) — a separate question, and the one
 # that matters for a repository that commits the snapshots. robots.txt says
@@ -300,6 +341,14 @@
 #   VTA      terms of use: none located, checked 2026-08-13 (page footers link
 #            only /privacy-policy; no copyright line is rendered in the served
 #            HTML).
+#   VINE     terms of use: none located, checked 2026-08-13. The site's page
+#            sitemap lists an NVTA privacy policy page
+#            (https://vinetransit.com/nvta-privacy-policy/) and Title VI
+#            pages; no terms-of-use entry, and the footer links none and
+#            carries no copyright line. The online store page carries its own
+#            store privacy/security/refund/shipping policies, which govern
+#            purchases, not content reuse. Silence is not permission; same
+#            reading as MST and Yolobus above.
 # The per-document `license_note` fields below describe what the material is and
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
@@ -1264,6 +1313,99 @@ documents:
     url: https://www.vta.org/fares/regional-transit-connection-card
     language: en
     license_note: "Public agency fare information; no Content-Signal served."
+  # ── Napa Valley Vine Transit (NVTA) ───────────────────────────────────────
+  # Added as the tenth agency (2026-08-13). Napa County fixed route plus the
+  # VineGo ADA paratransit service; operated by the Napa Valley Transportation
+  # Authority, branded "The Vine" / "Vine Transit".
+  #
+  # WHY THIS AGENCY: SolTrans' Clipper Card page lists "NAPA VINE Route 11"
+  # among the agencies Clipper supports transfers with — a third-party
+  # characterization the manifest's SolTrans block fences off because the
+  # corpus had nothing of the Vine's own to check it against. What the Vine's
+  # own pages publish: the Clipper START discount ("50% off of your Vine
+  # Transit Rides") — which presupposes Clipper acceptance — and, on the
+  # excluded connections page, that Route 11 physically connects with SolTrans
+  # daily at several Vallejo locations. Nothing on any Vine page documents
+  # Clipper inter-agency TRANSFER CREDITS, with SolTrans or anyone else. So
+  # SolTrans' claim is partially corroborated (the connection exists, Clipper
+  # is accepted) and uncorroborated on the transfer-credit specifics; eval
+  # case xagency-015 requires an answer to attribute the transfer claim to
+  # SolTrans' page and to say the Vine's own pages do not document it.
+  #
+  # FARE PERIOD (checked 2026-08-13): no Vine page publishes an effective date
+  # or an expiry, and the theme emits no modified-time metadata to lean on.
+  # Cross-page corroboration in place of a date: the fares page's prose table
+  # and its pipe table state the same figures twice ($2.00 adult, $1.25 youth,
+  # $1.00 Half, $3.50 Route 21, $6.00 Route 29), and the transfer rule (free,
+  # 90 minutes) is stated once in each rendering.
+  #
+  # CONTRADICTION FOUND AND CONTAINED (the SolTrans ticket-office precedent):
+  #   https://vinetransit.com/faq/ — its transfers answer says "Transfers are
+  #   valid for ONE hour after they are issued," where the live fares page
+  #   says "Transfers are valid for 90 minutes after they are issued." Two
+  #   live pages, one agency, two windows. The FAQ also duplicates the
+  #   routes-10/11 and Route-29 exclusions the fares page already carries and
+  #   adds Transit-app mechanics. Ingesting it would put two different
+  #   transfer windows into retrieval with nothing to break the tie, so it is
+  #   excluded and the fares page's 90-minute figure is the corpus's number;
+  #   eval case edge-083 is the tripwire that fails if a refetch ever swaps
+  #   the fares page to a different window.
+  #
+  # ALSO EXCLUDED, deliberately:
+  #   https://vinetransit.com/news/summeryouthpass/ — a live news page selling
+  #   a $20 all-summer youth pass "valid from June 1 to August 31" with NO
+  #   YEAR printed anywhere on the page. Today that window is 17 days from
+  #   closing (assuming it means 2026); committed, it would become an undated
+  #   stale product page the moment it lapses — the Yolobus lesson, but with
+  #   no date for a refresh to catch. The corpus stays silent on the product
+  #   and fresh-023 pins the honest behavior (decline and redirect, the
+  #   fresh-008 pattern for a deliberately excluded page).
+  #   https://vinetransit.com/fares/buy-passes-online/ — store mechanics
+  #   (payment methods, refund/shipping policy) plus one thin eligibility
+  #   line; the scmtd splash-pass-faqs precedent.
+  #   https://vinetransit.com/connections/ — service connections (BART, SF
+  #   Bay Ferry, SolTrans, FAST, Rio Vista, Lake Transit, Amtrak), no fare
+  #   content at all; two chunks of third-party service characterization that
+  #   would pollute fare retrieval. Its SolTrans corroboration is recorded in
+  #   the header note above instead.
+  #
+  # Oddity, left as-is: the fares page's Lifetime Pass paragraph and the
+  # VineGo page render "[email protected]" — Cloudflare's email-obfuscation
+  # placeholder, which survives because ingest strips the script that would
+  # rewrite it in a browser. Pre-existing pattern: fax-fares#6 and
+  # mst-veterans-resource#1 carry the same placeholder. The Lifetime Pass
+  # paragraph also spells "complimentary" as "complementary"; the agency's
+  # words are snapshotted as published.
+  - id: vine-fares
+    agency: VINE
+    agency_full: Napa Valley Vine Transit (Napa Valley Transportation Authority)
+    title: "Fares & Passes"
+    url: https://vinetransit.com/fares/
+    language: en
+    # The whole fixed-route fare policy on one page: the fare table (adult
+    # $2.00 / youth $1.25 / Half $1.00 for seniors 65+, disabled individuals,
+    # and Medicare card holders / Route 21 $3.50 / Route 29 $6.00), passes
+    # (day / 20-ride / 31-day / BART 31-day) with their route exclusions and
+    # ride-count rules, free 90-minute transfers with the 10/11 and Route 29
+    # exclusions, the Clipper START discount, and the age-80+ complimentary
+    # Lifetime Pass with its application address.
+    license_note: "Public agency fare information; no Content-Signal served. No site terms page located (see header note)."
+  - id: vine-go
+    agency: VINE
+    agency_full: Napa Valley Vine Transit (Napa Valley Transportation Authority)
+    title: "VineGo Paratransit Service"
+    url: https://vinetransit.com/vine-go/
+    language: en
+    # The ADA paratransit service: zone-based one-way fares ($4.00 within and
+    # between most cities, $8.00 for the longest trips such as Calistoga to
+    # American Canyon or Kaiser Vallejo) and the $20-for-$24 discount pass.
+    # The page also carries certification/eligibility process text; ingested
+    # despite that bulk because, unlike FAX's Handy Ride page, the fares here
+    # are published nowhere else.
+    license_note: "Public agency fare information; no Content-Signal served."
+  # No Spanish counterpart: the Vine publishes Spanish application PDFs and a
+  # Spanish VineGo video, but no Spanish fare page; the multilingual gap is
+  # deliberate and both Spanish eval cases are cross-lingual.
 
 # ── GTFS(-Fares) cross-validation (EXP-06) ──────────────────────────────────
 # A second, structured evidence source, checked against the prose documents

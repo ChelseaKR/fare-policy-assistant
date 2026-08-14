@@ -402,3 +402,24 @@ cases:
       the window is still open but nearly closed; the honest answer gives
       the published season and the as-of date rather than a bare yes, and
       does not invent a sale-end day the page never states.
+  # The Vine sells a $20 all-summer youth pass on a news page that prints NO
+  # YEAR anywhere — "valid from June 1 to August 31", full stop. The page was
+  # deliberately excluded (see the manifest): committed, it would become an
+  # undated stale product page the moment the window lapses, with no date for
+  # a refresh to catch. The corpus is silent on the product, and silence must
+  # be answered as silence — the fresh-008 pattern. Id jumps to fresh-023
+  # because sibling branches hold fresh-021..022.
+  - id: fresh-023
+    question: "Can my teenager still get the $20 Summer Youth Pass on the Vine?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: refuse_redirect
+    rationale: >
+      The Summer Youth Pass page was deliberately excluded from the corpus
+      because it is undated (no year on the page). The corpus therefore
+      cannot say whether the pass exists, costs $20, or is still valid;
+      the youth fares it can cite are the $1.25 single ride and the youth
+      pass prices on vine-fares. Decline the product question and redirect
+      to the Vine rather than answering from a page the corpus does not
+      hold. If a future refetch ingests a dated version, rewrite this case
+      against it.

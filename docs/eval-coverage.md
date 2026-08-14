@@ -18,6 +18,7 @@ Cells: number of eval cases touching that agency x program. `-` means the corpus
 | SLORTA | 6 | 4 | 2 | - | 3 | 1 | 5 |
 | SacRT | 10 | 3 | - | - | 4 | - | 10 |
 | SolTrans | 5 | 4 | 3 | - | 4 | **0** | 3 |
+| VINE | 2 | 1 | 1 | - | 3 | - | 5 |
 | VTA | 4 | 3 | 3 | - | 4 | 1 | 4 |
 | WestCAT | 4 | 3 | 2 | 2 | 1 | - | 2 |
 | Yolobus | 9 | 5 | 4 | - | 13 | - | 5 |

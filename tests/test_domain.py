@@ -38,6 +38,7 @@ def test_reexports_match_the_profile():
             "WestCAT",
             "SLORTA",
             "VTA",
+            "VINE",
         )
     )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact

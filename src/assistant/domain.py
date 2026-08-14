@@ -57,6 +57,7 @@ TRANSIT = DomainProfile(
         "WestCAT",
         "SLORTA",
         "VTA",
+        "VINE",
     ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
@@ -184,6 +185,17 @@ TRANSIT = DomainProfile(
         "san jose": "VTA",
         "valley transportation": "VTA",
         "smartpass": "VTA",
+        # Napa Valley Vine Transit (NVTA). Riders say "the Vine"; "vine" as a
+        # bare word is carried because in a fare question it is the brand, not
+        # the plant, and unlike "metro" it is not what other agencies' riders
+        # call their own operator. "VineGo" is the paratransit brand and
+        # riders name it without naming the Vine.
+        "vine": "VINE",
+        "vine transit": "VINE",
+        "napa vine": "VINE",
+        "napa": "VINE",
+        "vinego": "VINE",
+        "vine go": "VINE",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

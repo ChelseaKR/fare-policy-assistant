@@ -232,3 +232,29 @@ This id was recomputed at merge time: the branch derived 491751588366 against
 the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
 WestCAT, and SLO RTA landed first, and `make ingest` over the union
 re-stamped this heading, as the 2026-08-12/13 additions did.
+## 09f9c297deba (2026-08-14 UTC)
+
+Added Napa Valley Vine Transit (VINE, operated by the Napa Valley
+Transportation Authority): 16 agencies, 46 documents, 270 chunks. Two
+documents, both fetched 2026-08-14 UTC: `vine-fares` (the whole fixed-route
+policy on one page, including the age-80+ complimentary Lifetime Pass) and
+`vine-go` (VineGo paratransit zone fares).
+
+Two exclusions carry the findings. The FAQ page contradicts the fares page on
+the transfer window — "ONE hour" against the fares page's "90 minutes" — so it
+is excluded the way SolTrans' 20-percent duplicate was, and edge-083 is the
+tripwire on the ingested number. The Summer Youth Pass news page sells a $20
+seasonal pass "valid from June 1 to August 31" with no year printed anywhere;
+committed, it would go stale undetectably, so the corpus stays silent and
+fresh-023 pins decline-and-redirect (the fresh-008 pattern).
+
+Golden Gate Transit was checked for this batch and is recorded in the manifest
+header as a NO-GO of a new kind: fetchable (permissive robots, no WAF, all
+pages 200) but not ingestible, because the site wraps every page body in a
+single ASP.NET form element and this pipeline's cleaner strips form tags
+wholesale, so every page cleans to zero sections.
+
+This id was recomputed at merge time: the branch derived 7caf9b3638ec against
+the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
+WestCAT, SLO RTA, and VTA landed first, and `make ingest` over the union
+re-stamped this heading, the way 95794539d1d0's was.

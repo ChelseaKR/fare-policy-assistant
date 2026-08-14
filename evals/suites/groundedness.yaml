@@ -597,3 +597,39 @@ cases:
       fare is required for any trip that includes express service." The
       express carve-out is part of the rule, not a footnote — a transfer
       answer without it sends a rider onto an express bus expecting free.
+  # Napa Valley Vine Transit (VINE). Fares are flat by rider class but priced
+  # by route tier (local, Route 21 express, Route 29 to BART), so the ground
+  # truth is mostly "which tier was the rider actually on". Ids jump to
+  # ground-051 because sibling branches hold ground-043..050; renumber on
+  # merge if needed, nothing but the ids changes.
+  - id: ground-051
+    question: "How much is a single adult ride on the Vine?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2\\.00"]
+    rationale: "vine-fares table: Adult (19-64) $2.00 on local routes; youth (6-18) pays $1.25. The plain base-fare fact, asked plainly — and distinct from the $3.50 Route 21 and $6.00 Route 29 tiers on the same table."
+
+  - id: ground-052
+    question: "What does the Vine Route 29 to El Cerrito BART cost?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6\\.00"]
+    rationale: "vine-fares table: BART (Route 29) $6.00. The route-tier boundary asked directly; an answer quoting the $2.00 local fare for the BART run undercharges by three dollars."
+
+  - id: ground-053
+    question: "Who pays the $1.00 Half fare on the Vine, and what card can prove it?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1\\.00", "Medicare", "65"]
+    rationale: "vine-fares: 'Half* $1.00 ... *Seniors (65+), disabled individuals, or Medicare Card holders.' Three independent paths to the same fare (R1-6): the answer names all three and merges none, and does not rule on the rider."
+
+  - id: ground-054
+    question: "How much is a Vine 31-day pass?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?55"]
+    rationale: "vine-fares Passes table: 31-Day Pass, Adult $55.00, Youth $37.00, Half $27.50; the separate BART 31-Day Pass is $125.00 for every class and is the only pass valid on Route 29. Which pass the rider means changes the price by seventy dollars, so the answer must keep the two products apart."

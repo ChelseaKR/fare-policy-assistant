@@ -305,3 +305,21 @@ cases:
       surface both answer-bearing chunks. Deterministic checks and no
       determination: the answer describes the tiers, it does not tell the
       rider "you ride free."
+  # Id jumps to xagency-015 because sibling branches hold xagency-012..014.
+  - id: xagency-015
+    question: "SolTrans says Clipper covers transfers with the Vine's Route 11. Does the Vine's own fare policy confirm that?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["Route 11", "SolTrans"]
+    rationale: >
+      The asymmetry case: soltrans-clipper-card lists "NAPA VINE Route 11"
+      among the agencies Clipper supports transfers with, good for 60
+      minutes — SolTrans' characterization. The Vine's own ingested pages
+      (vine-fares, vine-go) document the Clipper START discount and the
+      Vine's own paper-transfer rules, and say nothing about Clipper
+      inter-agency transfer credits with anyone. The honest answer attributes
+      the transfer claim to SolTrans' page, states that the Vine's own
+      published fare policy in this corpus does not document it, and points
+      the rider to the Vine to confirm — it must not convert one agency's
+      characterization into the other agency's policy, and must not convert
+      the corpus's silence into a denial either.

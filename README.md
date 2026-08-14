@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for fifteen California transit agencies, wrapped
+and reduced-fare policies for sixteen California transit agencies, wrapped
 in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
@@ -360,8 +360,9 @@ Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
 Solano County Transit (SolTrans), Fresno Area Express (FAX), County
 Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit, WestCAT (Western
-Contra Costa Transit Authority), San Luis Obispo RTA (SLORTA), and the Santa
-Clara Valley Transportation Authority (VTA),
+Contra Costa Transit Authority), San Luis Obispo RTA (SLORTA), the Santa
+Clara Valley Transportation Authority (VTA), and Napa Valley Vine Transit
+(VINE),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
@@ -408,6 +409,12 @@ WestCAT's pages carry the same annotation, and where the published windows
 overlap they disagree: SolTrans publishes a 60-minute window for inter-agency
 Clipper transfers and WestCAT publishes 120 minutes, which `xagency-014`
 requires an answer to attribute rather than resolve.
+The Vine, one of the agencies SolTrans names, is also in the corpus, and its
+own pages document the Clipper START discount but no inter-agency transfer
+credits — an asymmetry `xagency-015` requires the assistant to report as
+attribution, not resolve. Golden Gate Transit, also named there, was checked
+and could not be added: its site is fetchable but not ingestible by this
+pipeline (the manifest header records why).
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
