@@ -24,7 +24,7 @@ not checked is not an oversight, and it says what is left.
       if it does not, say so in the PR so the multilingual gap is on purpose.
       RTD publishes none: Spanish is served through a translate widget
       ("Translate »" in every footer), the SacRT pattern. The multilingual
-      case for this agency (`ml-028`) is an honest cross-lingual one.
+      case for this agency (`ml-034`) is an honest cross-lingual one.
 - [x] `make fetch && make ingest` run; snapshots committed under `corpus/raw/`.
       Fetched through `assistant.ingest fetch` with the manifest's user agent
       and 10-second crawl delay, not by hand. 11 chunks (7 + 4).
@@ -40,16 +40,16 @@ not checked is not an oversight, and it says what is left.
       65+ in Tracy/Escalon, and 60+ in Stockton, Lodi, Ripon, and other San
       Joaquin County cities, while the fares page's discount row says only
       "ages 60 and over". No other corpus agency's discount age depends on
-      where the rider lives (`edge-068`, `edge-069`, `refuse-029`).
+      where the rider lives (`edge-087`, `edge-088`, `refuse-032`).
 - [x] Cases mirrored into the real suites: `groundedness`, `refusal`,
       `cross_agency`, `multilingual`, `freshness` — matching the coverage the
-      other agencies get. 15 cases: ground-043..046, edge-068..074, fresh-021,
-      ml-028, refuse-029, xagency-012. Two sibling agency branches are in
+      other agencies get. 15 cases: ground-055..058, edge-087..093, fresh-024,
+      ml-034, refuse-032, xagency-016. Two sibling agency branches are in
       flight, so these ids may be renumbered on merge the way FAX's were
       (twice), with nothing but the ids changing. `make coverage` reports no
       SJRTD blind spot in any program column; the one blind spot it still
       reports (SolTrans / child free) predates this branch and is not SJRTD's
-      to close. One phrasing lesson recorded in ml-028's rationale: the
+      to close. One phrasing lesson recorded in ml-034's rationale: the
       fare-table chunk never contains the bare string "RTD", and a
       Stockton-flavored Spanish wording scored below the calibrated decline
       threshold (ADR 0013), so the question names the agency the way the

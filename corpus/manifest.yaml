@@ -664,7 +664,7 @@ documents:
   # whose discount age depends on the rider's city of residence. The fares
   # page, meanwhile, says only "seniors (ages 60 and over) ... with a valid
   # Discount Fare Card", which is true as the floor but not the whole rule.
-  # Eval cases edge-068..070 pin the split.
+  # Eval cases edge-087..089 pin the split.
   #
   # Oddities in the ingested text, left as-is because editing an agency's words
   # would break the point of snapshotting them:

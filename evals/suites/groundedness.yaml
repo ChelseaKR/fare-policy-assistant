@@ -381,7 +381,7 @@ cases:
   # San Joaquin RTD (SJRTD), added 2026-08-13. The fares page prices four
   # different services (fixed route, Commuter, Paratransit, Van Go!) on one
   # page, so the cases below deliberately name the service they ask about.
-  - id: ground-043
+  - id: ground-055
     question: "How much is a single ride on an RTD bus in Stockton if I pay cash?"
     agency_scope: SJRTD
     language: en
@@ -389,7 +389,7 @@ cases:
     required_facts: ["re:\\$\\s?1\\.50"]
     rationale: "sjrtd-fares 'Express, Local, and Hopper' table: Full (ages 18 to 59) 1-Ride $1.50. The plain base-fare fact, asked with the agency's own brand ('RTD') and its city."
 
-  - id: ground-044
+  - id: ground-056
     question: "What does the discounted 31-day pass cost on San Joaquin RTD?"
     agency_scope: SJRTD
     language: en
@@ -397,7 +397,7 @@ cases:
     required_facts: ["re:\\$\\s?30"]
     rationale: "sjrtd-fares 'Express, Local, and Hopper' table: Discount 31-Day $30.00, against the full-fare 31-Day at $65.00. Also checks that the agency's full name resolves to the SJRTD scope."
 
-  - id: ground-045
+  - id: ground-057
     question: "How much does the RTD Commuter bus from Stockton to Sacramento cost one way?"
     agency_scope: SJRTD
     language: en
@@ -405,7 +405,7 @@ cases:
     required_facts: ["re:\\$\\s?7\\.00"]
     rationale: "sjrtd-fares Commuter table: Route 163, Stockton to Sacramento, $7.00 one-way ($176 monthly). The Commuter table prices five origin-destination pairs at different monthly rates, so the answer must come from the row the rider asked about."
 
-  - id: ground-046
+  - id: ground-058
     question: "What does Van Go! cost for a short trip?"
     agency_scope: SJRTD
     language: en

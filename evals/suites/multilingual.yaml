@@ -269,15 +269,15 @@ cases:
     mirror_of: ground-039
     rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
 
-  - id: ml-028
+  - id: ml-034
     question: "¿Cuánto cuesta un viaje sencillo en San Joaquin RTD?"
     agency_scope: SJRTD
     language: es
     expected_behavior: answer
     required_facts: ["re:\\$\\s?1[.,]50"]
-    mirror_of: ground-043
+    mirror_of: ground-055
     rationale: >
-      Cross-lingual mirror of ground-043: sanjoaquinrtd.com publishes no /es/
+      Cross-lingual mirror of ground-055: sanjoaquinrtd.com publishes no /es/
       pages (Spanish is served through a translate widget, like SacRT), so the
       Spanish question must be answered from the English sjrtd-fares table and
       returned in Spanish. San Joaquin County's Spanish-speaking ridership makes

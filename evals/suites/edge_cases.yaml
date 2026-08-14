@@ -627,9 +627,9 @@ cases:
   # corpus: the Discount Fare Card's senior age depends on the rider's city of
   # residence (62+ in Manteca/Lathrop, 65+ in Tracy/Escalon, 60+ in Stockton,
   # Lodi, Ripon, and other San Joaquin County cities), while the fares page
-  # states only the 60+ floor. Cases edge-068..070 pin that split; the rest
+  # states only the 60+ floor. Cases edge-087..089 pin that split; the rest
   # cover the boundaries the fares page itself publishes.
-  - id: edge-068
+  - id: edge-087
     question: "I'm 61 and live in Manteca. Am I old enough for San Joaquin RTD's senior discount fare?"
     agency_scope: SJRTD
     language: en
@@ -644,7 +644,7 @@ cases:
       rider to the DFC application (Access San Joaquin responds within 21
       working days) without ruling on the rider (RR4).
 
-  - id: edge-069
+  - id: edge-088
     question: "What age does San Joaquin RTD's senior discount start? Does it matter where I live?"
     agency_scope: SJRTD
     language: en
@@ -658,7 +658,7 @@ cases:
       page's own "ages 60 and over" shorthand — has flattened a rule the agency
       publishes as three.
 
-  - id: edge-070
+  - id: edge-089
     question: "I'm 45 but I have a Medicare card. Do I pay full fare on RTD buses?"
     agency_scope: SJRTD
     language: en
@@ -672,7 +672,7 @@ cases:
       precondition for the Medicare path (R1-6): the answer must not merge the
       senior and Medicare paths or imply the rider is too young to qualify.
 
-  - id: edge-071
+  - id: edge-090
     question: "I'm boarding an RTD bus in Stockton with my four kids, all age 3. What do I pay for them?"
     agency_scope: SJRTD
     language: en
@@ -686,7 +686,7 @@ cases:
       same shape as E-tran's two-child rule (edge-050), with different numbers
       on both sides.
 
-  - id: edge-072
+  - id: edge-091
     question: "I'm a veteran. How do I get the discount fare on San Joaquin RTD, and what proof do I need?"
     agency_scope: SJRTD
     language: en
@@ -701,7 +701,7 @@ cases:
       documents and where the application goes (Access San Joaquin, response
       within 21 working days), and rules on nobody.
 
-  - id: edge-073
+  - id: edge-092
     question: "I'm a 10th grader at a Stockton Unified school. Do I ride RTD for free, or do I pay the student fare?"
     agency_scope: SJRTD
     language: en
@@ -716,7 +716,7 @@ cases:
       states the free path with its ID condition rather than defaulting to the
       paid student fare, and does not assert the rider is enrolled.
 
-  - id: edge-074
+  - id: edge-093
     question: "I have an RTD Discount Fare Card. Does it make my paratransit rides cheaper too?"
     agency_scope: SJRTD
     language: en

@@ -285,7 +285,7 @@ cases:
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
 
-  - id: fresh-021
+  - id: fresh-024
     question: "How current is the San Joaquin RTD fare information you have?"
     agency_scope: SJRTD
     language: en

@@ -180,7 +180,7 @@ cases:
       different kinds of answer — one a price, one the absence of a price with a
       condition attached. A correct answer keeps them separate and cites each.
 
-  - id: xagency-012
+  - id: xagency-016
     question: "How much does the RTD Commuter bus from Stockton to Sacramento cost, and what is the basic single ride fare on SacRT once I'm there?"
     language: en
     expected_behavior: answer
