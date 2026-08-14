@@ -111,6 +111,109 @@
 #                 attempted. Crawl-delay is unspecified; the manifest's 10-second
 #                 default was honored anyway.
 #
+# RABA (Redding Area Bus Authority), candidate check (2026-08-13): NO-GO at
+# robots.txt itself, before any page was fetched.
+#   www.rabaride.com  robots.txt 302s to the site's Revize CMS host
+#                 (cms3.revize.com/revize/reddingbusauthority/robots.txt),
+#                 which serves an allowlist: Googlebot, FacebookBot,
+#                 LinkedInBot, and Twitterbot may crawl, Bingbot may not, and
+#                 "User-agent: * / Disallow: /" closes the door on everyone
+#                 else — including this project's identified fetcher. No
+#                 content page was requested from the host.
+#   www.cityofredding.gov  (RABA's administering city, the Elk-Grove-style
+#                 fallback publisher) serves the same Revize-managed shape —
+#                 302 to files.cityofredding.gov/robots.txt, an allowlist,
+#                 then the same terminal "User-agent: * / Disallow: /". Also
+#                 not fetched. Evidence and reasoning in docs/decisions/0002.
+#
+# Robots/permissions note for County Connection (CCCTA), checked 2026-08-13:
+#   countyconnection.com  robots.txt is the WordPress default plus a crawl
+#                 delay: "User-agent: * / Disallow: /wp-admin/ / Allow:
+#                 /wp-admin/admin-ajax.php / Crawl-delay: 10", plus a Sitemap
+#                 line. WP Engine behind Cloudflare; no Content-Signal line in
+#                 robots.txt and no Content-Signal or x-robots-tag header on
+#                 robots.txt or on any of the six fare pages checked. Every page
+#                 returned HTTP 200 to this project's identified research user
+#                 agent on the first try — no WAF challenge, no cf-mitigated
+#                 header, no browser-UA workaround needed or attempted.
+#                 www.countyconnection.com 301s to the apex host. Crawl-delay 10
+#                 honored.
+# Robots/permissions note for San Joaquin RTD (checked 2026-08-13):
+#   sanjoaquinrtd.com  robots.txt returns HTTP 200 (Apache, WordPress site,
+#                 last-modified 2025-12-19) and reads: "User-Agent: * / Allow: /
+#                 / Disallow: /events/list/ / Disallow: /events/category/ /
+#                 Disallow: /events/month/" — the three excluded paths are The
+#                 Events Calendar plugin's listing views, nothing else. Neither
+#                 document below is under /events/. No Crawl-delay directive;
+#                 the manifest's 10-second default was honored anyway. No
+#                 Content-Signal header and no Content-Signal line in
+#                 robots.txt, on robots.txt or on either content page. The host
+#                 is not behind Cloudflare (plain Apache headers, no
+#                 `cf-mitigated`, no challenge); both pages returned HTTP 200
+#                 to this project's identified research user agent on the first
+#                 try.
+# Robots/permissions note for the tenth agency, AC Transit (checked 2026-08-13
+# PT / 2026-08-14 UTC):
+#   www.actransit.org  robots.txt is stock Drupal (HTTP 200, Last-Modified
+#                 2024-07-17): `User-agent: *` disallows only CMS internals
+#                 (/core/, /profiles/, /admin/, /search/, /user/*, README and
+#                 config files) — nothing under /fares, /es/fares, or
+#                 /discounts. No Crawl-delay; the manifest's 10-second default
+#                 was honored anyway. No Content-Signal line in robots.txt and
+#                 no Content-Signal or x-robots-tag header on any fetched
+#                 page. One wrinkle a reviewer should see rather than have to
+#                 reconstruct: a second group, `User-agent: bingbot`, disallows
+#                 PDFs and /website/. That group binds bingbot alone; this
+#                 project's fetcher (fare-policy-assistant-research/0.1) is not
+#                 bingbot, presents no other agent's name, and falls under
+#                 `User-agent: *` — and in any case no AC Transit PDF is
+#                 ingested. Every page below returned HTTP 200 to the
+#                 identified user agent on the first try — no WAF challenge,
+#                 no workaround needed or attempted.
+# Robots/permissions note for WestCAT (checked 2026-08-13):
+#   westcat.org   publishes NO robots.txt at all: https://westcat.org/robots.txt
+#                 and https://www.westcat.org/robots.txt both return HTTP 404
+#                 (an IIS error page, not an empty allow file). Under RFC 9309
+#                 §2.3.1.3, a 404 on robots.txt means no crawl restrictions are
+#                 in place, and that is how this project read it — an absent
+#                 file is not a block, and nothing was worked around. IIS/Plesk
+#                 host, no Cloudflare, no WAF: every page below returned HTTP
+#                 200 to this project's identified research user agent on the
+#                 first try. No Content-Signal or x-robots-tag header on any
+#                 response. No Crawl-delay is published anywhere (there is no
+#                 robots.txt to publish one in); the manifest's 10-second
+#                 default was honored anyway.
+# Robots/permissions note for SLO RTA (checked 2026-08-13) — read the server
+# headers before trusting the robots file, because they disagree about what
+# the site is:
+#   www.slorta.org  robots.txt returns HTTP 200 but is a stock JOOMLA file,
+#                 last-modified 2015-09-17, while the site itself is WordPress
+#                 (X-Pingback: .../wordpress/xmlrpc.php) — a robots file that
+#                 survived at least one platform migration unedited. Its
+#                 `User-agent: *` group disallows only Joomla internals
+#                 (/administrator/, /cache/, /components/, /images/, /media/,
+#                 /modules/, /plugins/, /templates/, and the rest of the stock
+#                 list); every document below lives under /fares/, which is not
+#                 excluded. Two of the disallowed paths (/images/, /media/)
+#                 would matter if fare PDFs lived there, but every document
+#                 below is HTML. No Crawl-delay directive; the manifest's
+#                 10-second default was honored anyway. No Content-Signal
+#                 header and no Content-Signal line in robots.txt on any
+#                 response. All four pages returned HTTP 200 to this project's
+#                 identified research user agent on the first try — plain
+#                 Apache, no WAF challenge.
+# Robots/permissions note for the tenth agency, VTA (checked 2026-08-13 PT /
+# 2026-08-14 UTC):
+#   www.vta.org  robots.txt is stock Drupal (HTTP 200, nginx, Last-Modified
+#                2026-08-06): `User-agent: *` disallows only CMS internals
+#                (/core/, /profiles/, /admin/, /search/, /user/*, README and
+#                composer files) — nothing under /go/fares or /fares. No
+#                Crawl-delay (the manifest's 10-second default was honored
+#                anyway), no per-agent rules, no Content-Signal line in
+#                robots.txt, and no Content-Signal or x-robots-tag header on
+#                any fetched page. All three pages below returned HTTP 200 to
+#                this project's identified user agent on the first try — no
+#                WAF challenge, no workaround needed or attempted.
 # Robots/permissions note for Napa Valley Vine Transit (checked 2026-08-13):
 #   vinetransit.com  robots.txt is the WordPress default plus a crawl delay:
 #                 "User-agent: * / Disallow: /wp-admin/ / Allow:
@@ -199,6 +302,45 @@
 #            https://www.soltrans.org/about/policies/privacy-policy; there is no
 #            terms-of-use entry. Footer: "© 2024 SolTrans" (a bare copyright line,
 #            and note the footer year is 2024, not the current year).
+#   CCCTA    terms of use: none located, checked 2026-08-13. The site's page
+#            sitemap (wp-sitemap-posts-page-1.xml, the whole page inventory)
+#            lists no terms, privacy, or legal page, and the site footer links
+#            none and carries no copyright line at all — only contact channels
+#            and an accessibility-formats notice. Silence is not permission;
+#            same reading as MST and Yolobus above.
+#   SJRTD    terms of use: none located, checked 2026-08-13. The footer's only
+#            legal link, labeled "Legal & Policies", resolves to
+#            https://sanjoaquinrtd.com/privacy-policy/, which covers visitor
+#            data collection (personal and aggregated information, cookies,
+#            COPPA) and says nothing about copying or republishing the site's
+#            content. Footer: "© 2026 San Joaquin Regional Transit District |
+#            All Rights Reserved".
+#   AC Transit  site terms: https://www.actransit.org/disclaimer ("Disclaimer",
+#            linked from every page footer — read it there, not here). Footer
+#            carries a bare "© AC TRANSIT" with no year. Checked 2026-08-13.
+#   WestCAT  terms of use: none located, checked 2026-08-13. The site
+#            publishes a Privacy Policy at /Home/PrivacyPolicy (its page title
+#            reads "Privacy Polcy", sic) covering visitor data collection
+#            only; it says nothing about copying or republishing page content.
+#            No copyright line found in any page footer. Silence is not
+#            permission; same reading as MST and Yolobus above.
+#   SLORTA   terms of use: https://www.slorta.org/terms-use/ (footer-linked,
+#            checked 2026-08-13). Read it there, not here; what a maintainer
+#            must know before trusting this corpus entry: its Copyright Notice
+#            grants personal, non-commercial copying and states that other
+#            reproduction requires RTA's prior written permission. That is more
+#            license than SBMTD's terms grant (SBMTD's "Reservation of rights"
+#            reserves all rights and grants none), and this project's posture is
+#            unchanged from corpus/LICENSE-NOTE.md: snapshots are committed
+#            solely so the dated evaluation can be re-run, and no redistribution
+#            right is claimed or granted. A maintainer who reads RTA's terms as
+#            forbidding committed snapshots should drop this agency the way
+#            Unitrans was dropped — and should apply the same reading to SBMTD,
+#            whose terms grant strictly less. Footer: "© 1989–2026 San Luis
+#            Obispo Regional Transit Authority. All Rights Reserved."
+#   VTA      terms of use: none located, checked 2026-08-13 (page footers link
+#            only /privacy-policy; no copyright line is rendered in the served
+#            HTML).
 #   VINE     terms of use: none located, checked 2026-08-13. The site's page
 #            sitemap lists an NVTA privacy policy page
 #            (https://vinetransit.com/nvta-privacy-policy/) and Title VI
@@ -669,6 +811,508 @@ documents:
     # able to cite when a rider asks about a product the fare table still lists.
     license_note: "Public agency fare-change announcement; no Content-Signal served."
 
+  # ── County Connection (Central Contra Costa Transit Authority) ───────────
+  # Added as the tenth agency (2026-08-13). Concord/Walnut Creek/Pleasant Hill
+  # and central Contra Costa County; the second Clipper participant in the
+  # corpus, after SolTrans.
+  #
+  # WHY THIS AGENCY: SolTrans' Clipper Card page asserts that Clipper supports
+  # transfers between SolTrans and "County Connection" (among others) — a
+  # third-party characterization the manifest's SolTrans block explicitly
+  # fences off because the corpus had nothing of County Connection's own to
+  # check it against. Now it does, and County Connection's side corroborates
+  # the arrangement: its Transfers page says "Free transfers from SolTrans,
+  # Tri Delta, WestCat and Wheels are only available using Clipper," and its
+  # Clipper Card page says Clipper will "recognize and honor free transfers
+  # between County Connection, Tri Delta Transit, Wheels, WestCAT, SolTrans,
+  # and FAST at shared transit stops." What the two agencies do NOT publish
+  # identically: SolTrans says inter-agency bus transfers are "good for 60
+  # minutes"; County Connection publishes a 2-hour window for its own
+  # bus-to-bus transfer and no window at all for transfers from other
+  # operators. Not a contradiction — different rules, differently scoped —
+  # but an answer must quote each agency's own page, never blend the two.
+  #
+  # FARE PERIOD (checked 2026-08-13): no page carries an effective-date banner
+  # or an expiry. The fare-types page's site metadata reports it last modified
+  # 2025-09-09; the Transfers page (modified 2026-03-19) and the Clipper Card
+  # page independently state the same BART-transfer figures ($1.00 adult /
+  # $0.50 reduced) and the same 2-hour transfer window, and the day-pass cap
+  # ($3.75 / $1.75) and $60 31-day pass appear identically on the fare-types
+  # and Clipper pages — cross-page corroboration that the committed table is
+  # the current period, in place of a date the agency does not publish.
+  #
+  # EXCLUDED, deliberately:
+  #   https://countyconnection.com/fares/ — the agency's own "Fares & Passes"
+  #   landing page. Its entire rendered body is the two words "Coming soon"
+  #   (site metadata: last modified 2018-05-22). Nothing to ingest; the four
+  #   sub-pages below carry all the policy. Recorded because a hub page whose
+  #   body says "Coming soon" eight years on is exactly the kind of freshness
+  #   signal this manifest exists to surface.
+  #
+  # INGEST HAZARD, found while writing the eval cases and left in the corpus
+  # because the corrective text sits on the same page: the pipeline's
+  # per-section line dedupe drops a fare row whenever two rider classes price
+  # identically. On the live page the cash table prices Adult and Youth at the
+  # same $2.50 ("All Routes | $2.50" once under each heading), so the second,
+  # identical row is deduped and in cccta-fare-types-prices#0 the "Youth
+  # (6-18)" heading is left dangling directly above the Senior/Disabled
+  # "All Routes | $1.25" row — a reader of the chunk could misprice a youth
+  # cash fare at $1.25. The same dedupe drops the Senior/Disabled "31-Day
+  # Pass | $60" row (identical to the Adult one above it) and the reduced
+  # group's "Bus-to-Bus Transfer | Free" row. None of these is the agency's
+  # error; all three are this pipeline flattening a table it snapshotted
+  # faithfully (the raw HTML in corpus/raw/ has every row). The page's own
+  # prose states the youth rule in a form that survives ingest intact: "The
+  # youth fare discount is not available when paying with cash." Eval case
+  # edge-069 pins that a youth-cash answer must come from the prose rule, not
+  # the misgrouped table region.
+  - id: cccta-fare-types-prices
+    agency: CCCTA
+    agency_full: County Connection (Central Contra Costa Transit Authority)
+    title: "Fare Types & Prices"
+    url: https://countyconnection.com/fares/fare-types-prices/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. No site terms page located (see header note)."
+  - id: cccta-clipper-card
+    agency: CCCTA
+    agency_full: County Connection (Central Contra Costa Transit Authority)
+    title: "Clipper Card"
+    url: https://countyconnection.com/fares/clipper-card/
+    language: en
+    # Mixed provenance, same shape as soltrans-clipper-card: County Connection
+    # policy AND County Connection's assertions about other operators (Tri
+    # Delta, Wheels, WestCAT, SolTrans, FAST, BART). Note the Day Pass here is
+    # a fare CAP, not a purchased product: "Once you pay $3.75 in fares in a
+    # day ... your rides will be free of charge for the rest of that day."
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (Tri Delta Transit, Wheels, WestCAT, SolTrans, FAST, BART) that are County Connection's characterization, not those agencies' own published policy."
+  - id: cccta-transfers
+    agency: CCCTA
+    agency_full: County Connection (Central Contra Costa Transit Authority)
+    title: "Transfers"
+    url: https://countyconnection.com/fares/transfers/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (SolTrans, Tri Delta, WestCAT, Wheels, ACE, Amtrak, BART) that are County Connection's characterization, not those agencies' own published policy."
+  - id: cccta-rtc-discount-card
+    agency: CCCTA
+    agency_full: County Connection (Central Contra Costa Transit Authority)
+    title: "RTC Discount Card Program"
+    url: https://countyconnection.com/fares/rtc-discount-card-program/
+    language: en
+    # The regional RTC discount-card program as County Connection publishes it:
+    # eligibility documents (Medicare card only under 65, and "Medi-Cal is not
+    # accepted"), the medical-certification path, the attendant card, renewal
+    # and replacement rules. The Spanish links on this page are application
+    # form PDFs, not a Spanish policy page, so there is no `language: es`
+    # document to catalogue — the multilingual gap is deliberate.
+    # Oddity, left as-is because editing an agency's words would break the
+    # point of snapshotting them: the RTC Central Processor mail address is
+    # rendered "P.O. Box 700 6 Stockton, CA 95267" (a space inside the box
+    # number) in both places it appears.
+    license_note: "Public agency fare-eligibility information; no Content-Signal served."
+  - id: cccta-link-fares
+    agency: CCCTA
+    agency_full: County Connection (Central Contra Costa Transit Authority)
+    title: "LINK Fares (paratransit)"
+    url: https://countyconnection.com/paratransit/fares/
+    language: en
+    # County Connection LINK is the ADA paratransit service; one-way fare
+    # $5.00, eligible personal care attendants free, companions pay. Ingested
+    # for the same reason FAX's fares page keeps its Handy Ride table: the
+    # fixed-route discount story ($1.25/$1.00 reduced fares) is wrong for a
+    # paratransit trip, and the corpus must be able to say so.
+    license_note: "Public agency fare information; no Content-Signal served."
+  # ── San Joaquin RTD (San Joaquin Regional Transit District) ───────────────
+  # Added as the tenth agency (2026-08-13). Stockton and San Joaquin County —
+  # the corpus's second Central Valley agency after FAX, and a deliberate
+  # counterweight to the Bay-Area drift: RTD's fare media are agency-local
+  # (Vamos Mobility App, farebox cash, its own Discount Fare Card), with no
+  # Clipper and no Cal-ITP contactless product on either page.
+  #
+  # FARE PERIOD (checked 2026-08-13). RTD publishes no effective-date range on
+  # the fares page; the page's own site metadata reports it last modified
+  # 2026-03-05, and the DFC page 2026-05-21. Corroborating currency: the
+  # Commuter service page (modified 2026-02-27, fetched for verification, not
+  # ingested) still sells the same Sacramento and Dublin BART commuter service
+  # the fares page prices, through the same Vamos Mobility App the fares page
+  # names. Like FAX, treat this as a current page without a published period,
+  # not a committed range that can expire.
+  #
+  # THE BOUNDARY THAT MAKES THIS AGENCY WORTH ITS CASES: the senior age for the
+  # Discount Fare Card is not one number. The DFC page qualifies seniors at 62+
+  # in Manteca or Lathrop, 65+ in Tracy or Escalon, and 60+ in Stockton, Lodi,
+  # Ripon, or other San Joaquin County cities — the only agency in the corpus
+  # whose discount age depends on the rider's city of residence. The fares
+  # page, meanwhile, says only "seniors (ages 60 and over) ... with a valid
+  # Discount Fare Card", which is true as the floor but not the whole rule.
+  # Eval cases edge-087..089 pin the split.
+  #
+  # Oddities in the ingested text, left as-is because editing an agency's words
+  # would break the point of snapshotting them:
+  #   * The paratransit fare table's only column is headed "1-Ride Online Only"
+  #     with a footnote "*10 physical passes will be mail to your home
+  #     address" — the $3.00 fare is per one-way ride, and the "Online Only"
+  #     wording concerns where the 10-pass product is sold, not where a ride
+  #     can be paid.
+  #   * The DFC page's application form (names, Medicare number, disability
+  #     details) is stripped at ingest with the rest of the <form> furniture;
+  #     the eligibility criteria and process text above it are what the corpus
+  #     carries.
+  - id: sjrtd-fares
+    agency: SJRTD
+    agency_full: San Joaquin Regional Transit District (San Joaquin RTD)
+    title: "Fares"
+    url: https://sanjoaquinrtd.com/fares/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. No terms-of-use page located; footer links a visitor-data privacy policy only."
+  # The Discount Fare Card page lives under the Access San Joaquin section
+  # (RTD's consolidated-transportation brand) rather than under /fares/, the
+  # same way SCMTD's discount eligibility lives on its Accessibility page.
+  - id: sjrtd-dfc
+    agency: SJRTD
+    agency_full: San Joaquin Regional Transit District (San Joaquin RTD)
+    title: "Discount Fare Card (Access San Joaquin)"
+    url: https://sanjoaquinrtd.com/access-sj/dfc/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. No terms-of-use page located; footer links a visitor-data privacy policy only."
+  # No Spanish counterpart: sanjoaquinrtd.com serves Spanish through a
+  # Google-Translate-style widget ("Translate »" in every footer) rather than
+  # published /es/ pages, so there is no Spanish source document to catalogue —
+  # the same deliberate multilingual gap as SacRT and E-tran. The multilingual
+  # eval case for this agency is an honest cross-lingual one.
+  # ── AC Transit (Alameda-Contra Costa Transit District) ────────────────────
+  # Added as the tenth agency (2026-08-13 PT). WHY THIS AGENCY: it is the
+  # corpus's first accumulator-capped fare structure. AC Transit prices its
+  # Day, Weekly, and Monthly passes as "fare maximums": pay per ride with
+  # Next-Generation Clipper or a contactless bank card, and the pass applies
+  # automatically once spending reaches the pass price within the calendar
+  # period. Unlike Santa Cruz METRO — whose cap AMOUNTS live only in a PNG the
+  # pipeline cannot read — AC Transit publishes both the rule and the amounts
+  # in HTML table text ("Local Day Pass | Fare maximum at $6.00"), so the
+  # chunk model can represent this structure faithfully and eval cases can
+  # require the figures. Fares are stamped "Effective July 1, 2026": an
+  # open-ended effective-from that covers today (2026-08-13).
+  #
+  # A REPRESENTATIONAL HAZARD inside actransit-fares, stated here so no eval
+  # case papers over it: the Adult and Discounted fare tables sit in a tab
+  # widget. The two tab labels ("Adult (Ages 19-64)", "Discounted") survive
+  # ingestion but land TOGETHER, above both tables, so no ingested sentence
+  # binds either label to its table. The binding is recoverable — the label
+  # order matches the table order, and the cash pair ($3.00 vs $1.50) matches
+  # the 50% discount actransit-discounts publishes — but it is positional,
+  # not stated, and any eval case that requires a Discounted-table figure
+  # must say so in its rationale rather than treat the table as labeled.
+  #
+  # THE TRANSFER-CREDIT DISAGREEMENT, and why /transfers is excluded. The
+  # fares page (Effective July 1, 2026) says interagency transfers with
+  # Next-Generation Clipper or contactless earn "a credit equal in value to
+  # the last fare paid, up to $3", and that local transfers are "Unlimited
+  # free local transfers within two hours". The undated /transfers page says
+  # the credit is "up to $2.85" and "one free local-to-local transfer within
+  # two hours" — both figures contradicting the dated page, in text that
+  # still describes the Next-Generation rollout as in progress. Same
+  # reasoning as the SolTrans ticket-office-location exclusion: two live
+  # pages putting two different figures for one program into retrieval with
+  # nothing in the text to break the tie; the dated page wins and the undated
+  # one stays out. Its unique remainder (per-agency interagency voucher
+  # rules) is explicitly marked as applying only "to transfers without
+  # Clipper Next-Generation". A CROSS-AGENCY CAUTION survives the exclusion:
+  # the interagency credit is an MTC regional arrangement, and other Bay Area
+  # agencies' live pages (VTA's and Marin Transit's were checked while
+  # surveying this batch) still state it as "up to $2.85". An AC Transit
+  # answer must quote AC Transit's own dated page and never harmonize the two
+  # figures; eval case edge-actransit-003 pins that with forbidden content.
+  #
+  # Also fetched and excluded: /tempo/fares — the main fares page already
+  # states "The cost to ride Tempo is the same as AC Transit local fares" and
+  # carries the proof-of-payment rule; the Tempo page's unique content is
+  # station ticket-machine mechanics, not fare policy (the METRO
+  # splash-pass-faqs precedent).
+  #
+  # LANGUAGE NOTE: AC Transit also publishes real Chinese (/zh/fares) and
+  # Vietnamese (/vi/fares) translations of the fares page. They are not
+  # ingested: the pipeline's language support is en/es/tl (docs/I18N.md), and
+  # cataloguing documents in languages the language-id and eval tooling
+  # cannot handle would misrepresent coverage. Recorded as a real gap, not an
+  # oversight; revisit if zh or vi ever joins the supported set.
+  - id: actransit-fares
+    agency: AC Transit
+    agency_full: Alameda-Contra Costa Transit District (AC Transit)
+    title: "Fares"
+    url: https://www.actransit.org/fares
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.actransit.org/disclaimer"
+  - id: actransit-fares-es
+    agency: AC Transit
+    agency_full: Alameda-Contra Costa Transit District (AC Transit)
+    title: "Tarifas (Spanish fares page)"
+    url: https://www.actransit.org/es/fares
+    language: es
+    # A real translation, verified 2026-08-13: the body is rendered in Spanish
+    # (fare table headings, the accumulator prose "Tarifa máxima de $6.00",
+    # the transfer rules), not the untranslated /es/ shell that kept
+    # mst.org/es/fares/benefits/ out. Second genuine Spanish fares page in the
+    # corpus, after MST's — and the first that translates an accumulator-cap
+    # structure, so the multilingual suite can test the hard structure
+    # same-language.
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.actransit.org/disclaimer"
+  - id: actransit-discounts
+    agency: AC Transit
+    agency_full: Alameda-Contra Costa Transit District (AC Transit)
+    title: "Discounts (youth, senior, disabled, Clipper START, Student Transit Pass)"
+    url: https://www.actransit.org/discounts
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.actransit.org/disclaimer"
+  # ── WestCAT (Western Contra Costa Transit Authority) ──────────────────────
+  # Added as the tenth agency (2026-08-13). Pinole/Hercules and western Contra
+  # Costa County, plus the LYNX Transbay service to San Francisco; a Clipper
+  # participant.
+  #
+  # WHY THIS AGENCY: SolTrans' Clipper Card page lists "WestCat" among the
+  # agencies Clipper supports transfers with — a third-party characterization
+  # the manifest's SolTrans block fences off because the corpus had nothing of
+  # WestCAT's own to check it against. What WestCAT's own Transfers page
+  # publishes: Clipper "automatically grants free or discounted transfers when
+  # transferring to another agency that accepts Clipper," with no agency list
+  # — so SolTrans' claim is neither corroborated by name nor contradicted —
+  # and a validity window of "120 minutes after boarding a bus," against
+  # SolTrans' "good for 60 minutes" for the same kind of inter-agency
+  # transfer. Two agencies, one arrangement, two published windows; eval case
+  # xagency-014 requires an answer to attribute each number to its own agency
+  # and blend nothing.
+  #
+  # FARE PERIOD (checked 2026-08-13): no page carries an effective date or an
+  # expiry. Cross-page corroboration in place of a date the agency does not
+  # publish: the East Bay Day Pass cap paragraph on westcat-fares-all ($3.75
+  # adult / $1.75 senior-Access, LYNX excluded) matches County Connection's
+  # Clipper page for the same regional product word for word on the figures,
+  # and westcat-clipper's boarding minimums ($1.75 adult/youth, $0.75
+  # senior/Access) are consistent with the fare table's local fares.
+  #
+  # CROSS-AGENCY FINDING, recorded here and pinned by xagency-013: WestCAT's
+  # Transfers page still honors PAPER transfers "from County Connection and
+  # Tri Delta Transit at shared stops in Martinez ... with a valid transfer."
+  # County Connection's own pages (in this corpus) say its bus-to-bus
+  # transfers exist "only ... when using Clipper" — i.e. County Connection no
+  # longer issues the paper transfer WestCAT's page describes honoring. That
+  # is one agency's current page describing another agency's apparently
+  # retired fare product; neither page is edited here, and the eval case
+  # requires an answer to cite each agency's own rule and recommend
+  # confirming.
+  - id: westcat-fares-all
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "All Fares"
+    url: https://www.westcat.org/home/FaresAll
+    language: en
+    # The one fare table for every WestCAT service: local/express, LYNX
+    # Transbay, ADA paratransit (local and regional), Senior Dial-a-Ride,
+    # transfer fares (including the $3.25/$1.25 local-to-LYNX upcharge), pass
+    # prices, the reduced-fare ID list ("Photo ID and Medicare card (not
+    # Medi-Cal)", DMV placard receipt, Disabled Veterans ID), and the note
+    # that WestCAT honors but does not certify Clipper Access (formerly RTC).
+    license_note: "Public agency fare information; no Content-Signal served. No site terms page located (see header note)."
+  - id: westcat-transfers
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "Transfers"
+    url: https://www.westcat.org/home/FaresTransfers
+    language: en
+    # Paper transfers: one hour, established transfer points only, no round
+    # trips, no reboarding the same route, no transfers to BART. Clipper
+    # transfers: 120 minutes. Contains third-party assertions (County
+    # Connection, Tri Delta Transit, Capitol Corridor, AC Transit, BART) that
+    # are WestCAT's characterization, not those agencies' own published
+    # policy — including the Martinez paper-transfer finding noted above.
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (County Connection, Tri Delta Transit, Capitol Corridor, AC Transit, BART) that are WestCAT's characterization, not those agencies' own published policy."
+  - id: westcat-clipper
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "Clipper Card"
+    url: https://www.westcat.org/home/FaresClipper
+    language: en
+    # Note the FAX-shaped condition with no date: "Virtual Adult cards: Free
+    # (limited time) with a $3 minimum load." Eval case fresh-022 requires an
+    # answer to keep the agency's own qualifier.
+    license_note: "Public agency fare information; no Content-Signal served."
+  - id: westcat-buying
+    agency: WestCAT
+    agency_full: WestCAT (Western Contra Costa Transit Authority)
+    title: "Buying & Ordering Passes"
+    url: https://www.westcat.org/home/FaresBuying
+    language: en
+    # Where and how passes are sold (office address and hours, online store,
+    # mail order) — the yolobus-purchasing precedent, ingested so eligibility
+    # handoffs can name a concrete first step.
+    license_note: "Public agency fare information; no Content-Signal served."
+  # No Spanish counterpart: westcat.org publishes English-only pages (no /es/
+  # or translated fare pages located), so the multilingual gap is deliberate
+  # and both Spanish eval cases are cross-lingual.
+  # ── SLO RTA (San Luis Obispo Regional Transit Authority) ──────────────────
+  # Added as the tenth agency (2026-08-13; two sibling agency branches are in
+  # flight as this is written, so the ordinal is merge-dependent, the FAX
+  # renumbering precedent). Central Coast, filling the geographic gap between
+  # SBMTD and MST. RTA operates the regional routes, South County Transit,
+  # Paso Express (Routes A & B), and Morro Bay Transit; its regional passes are
+  # also honored on SLO Transit — the City of San Luis Obispo's SEPARATE
+  # system, which is NOT in this corpus. Deliberately not aliased: the bare
+  # string "slo" (it names the city system as often as the RTA) — see
+  # domain.py.
+  #
+  # FARE PERIOD (checked 2026-08-13): the fares page is headed "New cash fares
+  # as of April 6, 2026" — an open-ended effective-from stamp, current today.
+  # The passes and contactless pages carry no date of their own, but their
+  # prices agree with the fares page and with each other (the fare-capping
+  # example on the contactless page reprices the same $47 / $68 / $5.50 passes
+  # the passes page sells), which is the cross-page corroboration Yolobus
+  # never had.
+  #
+  # THE DISAGREEMENT, recorded before anyone finds it the hard way: the fares
+  # page's cash table prices "Children 44″ and under" as "Free with adult
+  # rider" in BOTH columns, including the South County/A&B/Morro Bay column,
+  # while the discounts page's Free Fare row says children 44″ and smaller
+  # ride free "(Not available on the South County routes)". Two live pages,
+  # one question, opposite answers, and no third page to break the tie. Both
+  # are ingested as published; eval case edge-100 pins the honest behavior
+  # (surface both, decide nothing), and no other case rests on the contested
+  # South County child fare.
+  #
+  # The contactless page also disagrees with itself about the disabled
+  # discount: its "Tap2Ride Discounts" section says ADA Disabled and K-12
+  # discounts are "not available on Tap2Ride yet" (pay cash), while its FAQ
+  # says discounted contactless fares are "now available for older adults
+  # (ages 65+), Disabled and Medicare cardholders". Left as published; eval
+  # case fresh-026 requires the cash path and the Cal-ITP registration path to
+  # be stated rather than a flat yes or no.
+  #
+  # Also noteworthy, in the direction that helps riders: unlike Santa Cruz
+  # METRO, whose Tap2Cruz cap amounts exist only inside a PNG, RTA publishes
+  # its full fare-capping table (single ride, daily, weekly, and monthly caps
+  # per bus system) as HTML on the contactless page, so the cap amounts are in
+  # the corpus and citable.
+  - id: slorta-fares
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Fares"
+    url: https://www.slorta.org/fares/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  - id: slorta-discounts
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Discounts (eligibility and verification)"
+    url: https://www.slorta.org/fares/discounts/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  - id: slorta-passes
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Passes"
+    url: https://www.slorta.org/fares/passes/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  - id: slorta-contactless
+    agency: SLORTA
+    agency_full: San Luis Obispo Regional Transit Authority (SLO RTA)
+    title: "Contactless Fares (Tap2Ride and fare capping)"
+    url: https://www.slorta.org/fares/contactless/
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Site terms: https://www.slorta.org/terms-use/ (see the SLORTA terms note in the header)."
+  # No Spanish counterpart: slorta.org serves Spanish through a translate
+  # widget ("Translate »" in every footer) rather than published /es/ pages,
+  # so there is no Spanish source document to catalogue — the same deliberate
+  # multilingual gap as SacRT, E-tran, and SJRTD. The multilingual eval case
+  # for this agency is an honest cross-lingual one.
+  # Excluded, deliberately: /fares/outlets/ and /fares/purchase-passes/ (pass
+  # sales furniture, no policy of their own); the per-route pages under
+  # /schedules-fares/ (their cash fares repeat the fares page's table row by
+  # row); and /fares/privacy-policy/ (not fare policy).
+  # ── Santa Clara Valley Transportation Authority (VTA) ─────────────────────
+  # Added as the tenth agency (2026-08-13 PT). WHY THIS AGENCY: the largest
+  # system in the corpus, and an accumulator-capped one — VTA's "Day Pass
+  # Accumulator" caps a Clipper-cash rider at the Day Pass price, published
+  # as prose the pipeline can quote: "ensures the Clipper® cash rider will
+  # never pay more than the price of a Day Pass ... once you've paid the
+  # equivalent of a Day Pass, any further local rides that day will be free."
+  #
+  # THE REPRESENTATIONAL GAP, stated before the documents so nobody trusts
+  # the fare table further than it deserves: /go/fares renders its four fare
+  # tables (Adult 19-64, Adult Express, Senior 65+ & Disabled, Youth 5-18)
+  # inside a tab widget whose category labels are <button role="tab"> and
+  # <summary> elements. The ingester reads headings, paragraphs, list items,
+  # and table rows (ADR 0005's linearizer), so the four price blocks land as
+  # four near-identical sections each headed "Available for purchase using:"
+  # — WITH their prices but WITHOUT the rider category that distinguishes
+  # them. No ingested sentence binds $2.50/$7.50/$90 to "Adult" or $1/$3/$30
+  # to "Senior/Disabled". The bindings exist only in UI furniture the chunk
+  # model drops, and the snapshots are the agency's words, not this
+  # project's to edit, so THE CATEGORY-TO-PRICE TABLE IS NOT FAITHFULLY
+  # REPRESENTABLE in the current pipeline. What IS representable, because
+  # VTA states it in prose: the Day Pass Accumulator rule; 2-hour free
+  # Clipper transfers with the express carve-out; the $2.50 local-to-Express
+  # surcharge and its Youth and Senior/Disabled/Medicare exemption; the
+  # discount ages ("Seniors must be age 65 or older and Youth must be age
+  # 5-18"); "Children under five ride free"; the calendar-month pass window
+  # (sold the 16th of the prior month through the 15th); the full Clipper
+  # START criteria (50% off, 19-64, Bay Area resident, no RTC card,
+  # household income at or below 200% of the federal poverty level); the
+  # annual subscription (12 months for the price of 11); the Paratransit ID
+  # free-ride rule with its exclusion list; and, on the transfers page, a
+  # worked example that states the adult local fare in a sentence ("tags and
+  # pays $2.50 for a VTA local fare"). Eval case refuse-vta-001 pins the
+  # honest behavior for a category-price question the corpus cannot bind.
+  # Re-check on any refetch: if VTA ever publishes the per-category tables
+  # as labeled text, the gap closes and that case should be rewritten.
+  #
+  # CROSS-AGENCY CAUTION, the SolTrans-Clipper shape: vta-regional-transfers
+  # describes arrangements with third parties (BART, Caltrain, AC Transit,
+  # Dumbarton Express, SamTrans, ACE, Capitol Corridor, Highway 17 Express).
+  # Those are VTA's characterizations of inter-operator agreements, citable
+  # as what VTA publishes, never as the other operator's own policy. Its "up
+  # to $2.85" transfer-credit figure is MTC's regional arrangement as VTA
+  # states it; other agencies' live pages state the same program differently,
+  # and an answer must quote the asked-about agency's page.
+  #
+  # FARE PERIOD: no effective-date banner on any page above; the fares page
+  # carries one dated operational note ("Beginning 12/10/25", on TVM
+  # behavior), which is in the past and consistent with a current page. No
+  # end date published anywhere; treated as live by the agency's own
+  # framing, the SolTrans open-ended pattern rather than the Yolobus
+  # expired-period one.
+  #
+  # Fetched and excluded: /go/fares/clipper — card-purchase and TVM
+  # mechanics (where to buy, how to tag, balance checks); its fare-policy
+  # facts (free Youth/Senior Clipper cards, the accumulator restated) are
+  # already on the two pages kept, and the METRO splash-pass-faqs precedent
+  # keeps app mechanics out of fare retrieval.
+  #
+  # No Spanish counterpart: vta.org serves other languages through a Google
+  # Translate widget rather than published /es/ pages (checked 2026-08-13),
+  # so there is no Spanish source document to catalogue. The multilingual
+  # gap is deliberate (the e-tran precedent); ml-vta-001 is an honest
+  # cross-lingual case.
+  - id: vta-fares
+    agency: VTA
+    agency_full: Santa Clara Valley Transportation Authority (VTA)
+    title: "Fares"
+    url: https://www.vta.org/go/fares
+    language: en
+    # See the representational-gap note above: this page's four fare tables
+    # arrive without their rider-category tab labels.
+    license_note: "Public agency fare information; no Content-Signal served."
+  - id: vta-regional-transfers
+    agency: VTA
+    agency_full: Santa Clara Valley Transportation Authority (VTA)
+    title: "Regional Transfers"
+    url: https://www.vta.org/go/fares/regional-transfers
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served. Contains third-party assertions (BART, Caltrain, AC Transit, Dumbarton Express, SamTrans, ACE, Capitol Corridor, Highway 17 Express) that are VTA's characterization, not those agencies' own published policy."
+  - id: vta-rtc-card
+    agency: VTA
+    agency_full: Santa Clara Valley Transportation Authority (VTA)
+    title: "Regional Transit Connection Card"
+    url: https://www.vta.org/fares/regional-transit-connection-card
+    language: en
+    license_note: "Public agency fare information; no Content-Signal served."
   # ── Napa Valley Vine Transit (NVTA) ───────────────────────────────────────
   # Added as the tenth agency (2026-08-13). Napa County fixed route plus the
   # VineGo ADA paratransit service; operated by the Napa Valley Transportation

@@ -1,0 +1,8 @@
+doc_id: soltrans-paperless-fares
+url: https://www.soltrans.org/news/service-alert-paper-pass-elimination
+final_url: https://www.soltrans.org/news/service-alert-paper-pass-elimination
+fetch_date: '2026-08-13'
+http_status: 200
+format: html
+sha256: 6434168ac3c435f881e62f0b3e81088966dc5fc02b724f99379b192887cfc1d9
+bytes: 33927

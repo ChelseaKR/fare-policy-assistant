@@ -1,0 +1,8 @@
+doc_id: vta-rtc-card
+url: https://www.vta.org/fares/regional-transit-connection-card
+final_url: https://www.vta.org/fares/regional-transit-connection-card
+fetch_date: '2026-08-14'
+http_status: 200
+format: html
+sha256: 53e30c69f7fb35f8d7bec9a1022e196749f305c4006de134af3f38db03504252
+bytes: 57262

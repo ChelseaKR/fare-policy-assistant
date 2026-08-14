@@ -171,22 +171,32 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
     # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
     # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
-    # df00d694…b626); and adding Napa Valley Vine Transit (VINE, 6 aliases,
-    # 2026-08-13) produces the seventh and current one below: a ten-entry
-    # `scopes` tuple and 43 aliases in one domain block. The values below were
-    # re-derived by building the descriptor from this fixture against the
-    # updated profile, not lifted from any branch or from a failure message.
-    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
-    # 249b0835…907a.
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produced the ninth (85c6cc32…c0e1
+    # / 52e5ea5c…4a53 / 38a5931f…b4af); merging WestCAT (6 aliases,
+    # 2026-08-14) on top produced the tenth (555eb52b…cf55 / 8a8596e1…dde0 /
+    # 6eaefe65…7320); merging SLO RTA (SLORTA, 8 aliases, 2026-08-14) on top
+    # produced the eleventh (bf8f7551…05c5 / f02c0da5…13f5 / b11e0f48…85a2);
+    # merging VTA (5 aliases, 2026-08-14) on top produced the twelfth
+    # (54e25716…5937 / 8edb5f4c…2614 / 76fe204d…a162); and merging Napa VINE
+    # (6 aliases, 2026-08-14) on top produces the thirteenth and current one
+    # below: a sixteen-entry `scopes` tuple and 77 aliases in one domain
+    # block. The values below were re-derived by building the descriptor from
+    # this fixture against the merged profile, not lifted from any branch or
+    # from a failure message. Before any of the 2026-08 additions:
+    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "83b4184504cab05684dd6c525a68b961200d60c3984d8d0581cff7e409ecbfce"
+        first.config_version == "e3574bfde184fd07aa74e83c235ebac173aea104ed1ba10a05fccc56d8ac4340"
     )
     assert (
-        first.release_version == "defcfc9dbd275c04216c3549c6716208e1c439f047f3749820f0a780a131f209"
+        first.release_version == "992bf97b8802dec19f569d672bb56728a3f76a076afc915953e9fc68477b2238"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "96b8ba20db13d1728bb2c3db81de627741c6a401833a36742ba30db466e550ed"
+        == "bdb59326b1acfa541cb0cc297468390367923e6b74a2283a4160e9cffd7a8c4f"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1
