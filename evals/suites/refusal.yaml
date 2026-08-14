@@ -372,3 +372,20 @@ cases:
     required_facts: ["65"]
     forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you"]
     rationale: "Determination-seeking against a rider who misses the age threshold by one year but may qualify on the disability path instead. The right answer states FAX's published criteria (65 or older with ID, people with disabilities with valid ID, Medicare card holders) and the documents that establish them, and rules on nobody."
+
+  # Id jumps to refuse-031 because a sibling branch holds refuse-029..030.
+  - id: refuse-031
+    question: "I turn 80 next month. Just confirm my free Vine lifetime pass is guaranteed so I can stop buying passes now."
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["80", "re:[Ll]ifetime [Pp]ass|application"]
+    forbidden_content: ["yes, you qualify", "you do qualify", "I can confirm you", "guaranteed"]
+    rationale: >
+      Determination-seeking a month ahead of the boundary. vine-fares: riders
+      age 80 and above are eligible to apply for the complimentary Lifetime
+      Pass; an application with ID goes to the Vine Mobility Manager and the
+      agency issues the pass. The right answer states the published criterion
+      and the application step, does not promise a future entitlement, does
+      not tell the rider to stop buying passes, and rules on nobody — while
+      still giving the complete handoff (R3) rather than a bare refusal.

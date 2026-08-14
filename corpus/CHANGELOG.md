@@ -68,3 +68,29 @@ Grove (e-tran), Santa Cruz METRO (SCMTD), and SolTrans additions, so it covers
 all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
+
+## 7caf9b3638ec (2026-08-14 UTC)
+
+Added Napa Valley Vine Transit (VINE, operated by the Napa Valley
+Transportation Authority): 10 agencies, 25 documents, 158 chunks. Two
+documents, both fetched 2026-08-14 UTC: `vine-fares` (the whole fixed-route
+policy on one page, including the age-80+ complimentary Lifetime Pass) and
+`vine-go` (VineGo paratransit zone fares).
+
+Two exclusions carry the findings. The FAQ page contradicts the fares page on
+the transfer window — "ONE hour" against the fares page's "90 minutes" — so it
+is excluded the way SolTrans' 20-percent duplicate was, and edge-083 is the
+tripwire on the ingested number. The Summer Youth Pass news page sells a $20
+seasonal pass "valid from June 1 to August 31" with no year printed anywhere;
+committed, it would go stale undetectably, so the corpus stays silent and
+fresh-023 pins decline-and-redirect (the fresh-008 pattern).
+
+Golden Gate Transit was checked for this batch and is recorded in the manifest
+header as a NO-GO of a new kind: fetchable (permissive robots, no WAF, all
+pages 200) but not ingestible, because the site wraps every page body in a
+single ASP.NET form element and this pipeline's cleaner strips form tags
+wholesale, so every page cleans to zero sections.
+
+Written on a branch that adds only VINE. If another corpus change merges
+first, this id needs another `make ingest` and a re-stamp of this heading, the
+way 95794539d1d0's was.

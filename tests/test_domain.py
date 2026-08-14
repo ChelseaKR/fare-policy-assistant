@@ -32,6 +32,7 @@ def test_reexports_match_the_profile():
             "SCMTD",
             "SolTrans",
             "FAX",
+            "VINE",
         )
     )
     assert config.STATEWIDE_TRANSIT_INFO == p.fallback_contact

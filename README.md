@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for nine California transit agencies, wrapped in a
+and reduced-fare policies for ten California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -357,7 +357,8 @@ make fetch && make ingest
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
-Solano County Transit (SolTrans), and Fresno Area Express (FAX),
+Solano County Transit (SolTrans), Fresno Area Express (FAX), and Napa Valley
+Vine Transit (VINE),
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as is FAX's Spanish reduced-fare
@@ -366,14 +367,20 @@ on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
 
-SolTrans is the only Clipper participant in the corpus. That is the point of
+SolTrans is the corpus's main Clipper participant. That is the point of
 including it and also its main hazard: Clipper is a regional card, so a rider
 reads a Clipper answer as generalizing across the Bay Area, while the corpus
-holds exactly one agency's side of it. The `xagency-009` / `xagency-010` cases
+holds mostly one agency's side of it. The `xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
-WestCat, County Connection), which it does not speak for.
+WestCat, County Connection), which it does not speak for. The Vine, one of the
+agencies SolTrans names, is now in the corpus, and its own pages document the
+Clipper START discount but no inter-agency transfer credits — an asymmetry
+`xagency-015` requires the assistant to report as attribution, not resolve.
+Golden Gate Transit, also named there, was checked and could not be added: its
+site is fetchable but not ingestible by this pipeline (the manifest header
+records why).
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block

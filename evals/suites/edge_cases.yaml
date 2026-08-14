@@ -622,3 +622,71 @@ cases:
       buy single fares at $0.75. Fresno City College is in the subsidized group,
       so the honest answer names the free path and the $0.75 path and says which
       one the college falls in, without asserting the rider is enrolled.
+
+  # VINE boundaries. The distinctive ones: an age-80+ complimentary Lifetime
+  # Pass (no other corpus agency publishes one), transfers that are free
+  # except between two named routes, and passes whose validity and ride-count
+  # rules vary by route tier. Ids jump to edge-082 because sibling branches
+  # hold edge-068..081.
+  - id: edge-082
+    question: "I'm 82. Do I ride the Vine for free?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["80", "re:[Ll]ifetime [Pp]ass"]
+    requires_handoff: true
+    rationale: >
+      vine-fares: "Riders age 80 and above are eligible for a complementary
+      Lifetime Pass, valid on all Vine Transit routes and services," with an
+      application sent with a copy of a valid ID to the Vine Mobility Manager,
+      625 Burnell St, Napa. The pass requires applying, not just being 80 —
+      so the complete answer states the criterion, the application step, and
+      that the agency issues the pass; a bare "yes, free" skips the process
+      that makes it true. Until the pass is in hand the rider's fare is the
+      $1.00 Half fare (65+), which the answer may add.
+
+  - id: edge-083
+    question: "Can I transfer free from Vine Route 10 to Route 11?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Nn]o free transfers", "90"]
+    rationale: >
+      vine-fares, Transfers: "Transfers on the Vine are free ... valid for 90
+      minutes after they are issued. No free transfers between Routes 10 and
+      11. There are no free transfers to the Route 29. Transfers cannot be
+      used on the same route." The rider's exact pair is the named exception.
+      The 90-minute figure is also this corpus's tripwire: the agency's FAQ
+      page (deliberately excluded, see the manifest) says "ONE hour" for the
+      same transfers, and if a refetch ever changes the fares page's window
+      this case is where it surfaces.
+
+  - id: edge-084
+    question: "Does a Vine Day Pass work on Route 29?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:[Nn]ot valid", "29"]
+    rationale: "vine-fares Passes table footnote: Day Pass and 31-Day Pass are '*Not valid on Route 29'; only the $125.00 BART 31-Day Pass is '***Valid on all Vine routes'. A day-pass holder boarding Route 29 owes the $6.00 fare; the answer must say the pass does not cover it and may name the pass that does."
+
+  - id: edge-085
+    question: "If I use a Vine 20-Ride Pass on Route 29, how many rides does one trip use up?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:three|3"]
+    rationale: "vine-fares Passes table footnote: '**Routes 10, 11 one \"ride,\" Route 21 two \"rides\", Route 29 three \"rides\"'. The 20-Ride Pass is not twenty trips everywhere: it is twenty local rides, ten Route 21 trips, or six-and-two-thirds Route 29 trips. The ride-count rule is the whole answer."
+
+  - id: edge-086
+    question: "How much is a VineGo paratransit trip from Calistoga to American Canyon?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?8\\.00"]
+    rationale: >
+      vine-go, VineGo One-Way Fares: the zone matrix prices Calistoga to
+      American Canyon (and to Kaiser Vallejo) at $8.00 where most in-county
+      pairs are $4.00 — paratransit priced by distance, the WestCAT pattern
+      rather than the flat FAX one. The eligible rider can also buy the $20
+      discount pass carrying $24 of value. An answer from the fixed-route
+      table ($2.00) misprices the trip fourfold.
