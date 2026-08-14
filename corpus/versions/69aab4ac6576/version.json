@@ -1,0 +1,20 @@
+{
+  "corpus_version": "69aab4ac6576",
+  "content_version": "c24ba96b6fcac127d5c2dccb0d67f53533b2fcb7f1af0aae3c7d8f9e5159cc8d",
+  "as_of": "2026-08-14",
+  "agencies": [
+    "E-tran",
+    "FAX",
+    "HTA",
+    "MST",
+    "SBMTD",
+    "SCMTD",
+    "SacRT",
+    "SolTrans",
+    "WestCAT",
+    "Yolobus"
+  ],
+  "documents": 27,
+  "chunks": 165,
+  "archived_at": "2026-08-14T00:45:22+00:00"
+}

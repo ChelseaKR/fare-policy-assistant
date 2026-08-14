@@ -69,10 +69,146 @@ all five changes: FAX's twelve chunks are the only ones it adds on top of the
 140 those four left behind. Any further corpus change landing before this does
 needs another `make ingest` and another re-stamp of this heading.
 
-## 491751588366 (2026-08-14 UTC)
+## 60033300dc49 (2026-08-14 UTC)
 
-Added VTA (Santa Clara Valley Transportation Authority): 10 agencies, 26
-documents, 167 chunks. Three documents, all fetched 2026-08-14 UTC:
+Added County Connection (CCCTA, Central Contra Costa Transit Authority): 10
+agencies, 28 documents, 177 chunks. Five documents, all fetched 2026-08-14 UTC:
+`cccta-fare-types-prices`, `cccta-clipper-card`, `cccta-transfers`,
+`cccta-rtc-discount-card`, and `cccta-link-fares` (LINK is the paratransit
+service). The agency's own "Fares & Passes" landing page was excluded: its
+entire rendered body is "Coming soon" and has been since its 2018-05-22
+modification stamp.
+
+County Connection is the corpus's second Clipper agency, which is the reason it
+was chosen: SolTrans' Clipper page asserts a transfer arrangement with "County
+Connection" that the manifest could previously only fence off as a third-party
+claim. County Connection's own Transfers and Clipper pages corroborate the
+arrangement (free transfers from SolTrans, Clipper only, at shared stops) while
+publishing a different window scope — 2 hours for its own bus-to-bus transfer,
+no published window for inter-operator transfers — against SolTrans' "good for
+60 minutes".
+
+One ingest hazard is recorded in the manifest rather than fixed silently: the
+pipeline's per-section line dedupe drops fare rows that price identically, so
+the cash table's Youth row ($2.50, identical to Adult) is missing from
+`cccta-fare-types-prices#0` and the Youth heading sits directly above the
+Senior/Disabled $1.25 row. The page's prose rule ("The youth fare discount is
+not available when paying with cash") survives ingest and eval case edge-069
+pins it.
+
+Written on a branch that adds only CCCTA. If another corpus change merges
+first, this id needs another `make ingest` and a re-stamp of this heading, the
+way 95794539d1d0's was.
+## d113659adda8 (2026-08-14 UTC)
+
+Added San Joaquin RTD (San Joaquin Regional Transit District): 11 agencies, 30
+documents, 188 chunks. Two documents, both fetched 2026-08-14 UTC (checked
+2026-08-13 Pacific): `sjrtd-fares` (the Fares page: fixed route, Commuter,
+Paratransit, and Van Go! tables plus where-to-buy) and `sjrtd-dfc` (the
+Discount Fare Card eligibility and application page under Access San Joaquin).
+
+The corpus's second Central Valley agency, and the first whose senior discount
+age depends on the rider's city of residence: the DFC page qualifies seniors at
+62+ in Manteca or Lathrop, 65+ in Tracy or Escalon, and 60+ in Stockton, Lodi,
+Ripon, and other San Joaquin County cities, while the fares page's discount row
+says only "ages 60 and over". Neither page publishes an effective-date range;
+currency was corroborated against RTD's Commuter service page (modified
+2026-02-27, fetched for verification only), which still sells the Sacramento
+and Dublin BART service the fares page prices.
+
+This id was recomputed at merge time: the branch derived 47bc4ec2e419 against
+FAX's 95794539d1d0, County Connection's 60033300dc49 (#126) landed first, and
+`make ingest` over the union re-stamped this heading — the same treatment
+95794539d1d0 itself got. Further sibling agency merges will re-stamp their own
+headings, not this one.
+## 5db0d6a4bfbd (2026-08-14 UTC)
+
+Added AC Transit (Alameda-Contra Costa Transit District): 12 agencies, 33
+documents, 214 chunks. Three documents, all fetched 2026-08-14 UTC:
+`actransit-fares` (Fares, stamped "Effective July 1, 2026"),
+`actransit-fares-es` (a genuine Spanish translation — the corpus's second real
+Spanish fares page, after MST's), and `actransit-discounts`.
+
+AC Transit is the corpus's first accumulator-capped fare structure: Day,
+Weekly, and Monthly passes are "fare maximums" applied automatically when
+pay-per-ride spending reaches the pass price within the calendar period, and
+both the rule and the amounts are published as HTML text, so the capping
+structure is representable and cased (edge-actransit-001/002,
+ml-actransit-002) rather than flattened.
+
+Two corpus-hygiene findings recorded with the addition:
+- `actransit.org/transfers` was excluded: undated, it states the
+  Next-Generation Clipper interagency credit as "up to $2.85" and local
+  transfers as "one free" where the dated fares page says "up to $3" and
+  "unlimited" — the SolTrans ticket-office-location reasoning, applied to the
+  page that lost the date contest. edge-actransit-003 forbids the $2.85.
+- The fares page's Adult and Discounted tables arrive without their tab-widget
+  labels bound to them (label order is the only binding); recorded in the
+  manifest as a representational hazard for any discounted-figure case.
+
+This id was recomputed at merge time: the branch derived 02c3bb15a506 against
+the nine-agency 95794539d1d0, County Connection (60033300dc49) and San
+Joaquin RTD (d113659adda8) landed first, and `make ingest` over the union
+re-stamped this heading, as the 2026-08-12/13 additions did.
+## 8b119819d9c8 (2026-08-14 UTC)
+
+Added WestCAT (Western Contra Costa Transit Authority): 13 agencies, 37
+documents, 227 chunks. Four documents, all fetched 2026-08-14 UTC:
+`westcat-fares-all` (one table covering local/express, LYNX Transbay, ADA
+paratransit, and Senior Dial-a-Ride), `westcat-transfers`, `westcat-clipper`,
+and `westcat-buying`.
+
+WestCAT publishes no robots.txt at all — both hosts 404 — which RFC 9309 reads
+as no restrictions; the manifest's 10-second crawl delay was honored anyway.
+
+Two findings travel with this version. First, WestCAT's Transfers page still
+honors paper transfers "from County Connection and Tri Delta Transit at shared
+stops in Martinez", while County Connection's own pages describe its transfers
+as Clipper-only — one agency's current page describing another's apparently
+retired product (xagency-013). Second, WestCAT publishes a 120-minute window
+for inter-agency Clipper transfers where SolTrans' page says 60 minutes;
+xagency-014 requires an answer to attribute each number rather than blend
+them.
+
+This id was recomputed at merge time: the branch derived 69aab4ac6576 against
+the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, and AC
+Transit landed first, and `make ingest` over the union re-stamped this
+heading, the way 95794539d1d0's was.
+## b21d4e3b3c98 (2026-08-14 UTC)
+
+Added SLO RTA (San Luis Obispo Regional Transit Authority): 14 agencies, 41
+documents, 249 chunks. Four documents, all fetched 2026-08-14 UTC (checked
+2026-08-13 Pacific): `slorta-fares` (the cash fare table, headed "New cash
+fares as of April 6, 2026"), `slorta-discounts` (eligibility categories and
+the RTA Discount Eligibility Card), `slorta-passes` (pass products, the VIP
+Pass, ADA free fixed-route), and `slorta-contactless` (Tap2Ride, Token
+Transit, and the full fare-capping table).
+
+Central Coast, filling the gap between SBMTD and MST, and the only corpus
+agency with an age-tiered senior fare: 65-79 pay half, 80 and over ride free
+with a VIP Card. Unlike Santa Cruz METRO, whose cap amounts exist only inside
+a PNG, RTA publishes its fare-capping amounts as HTML, so they are citable.
+
+Two corpus-hygiene findings recorded with the addition:
+
+- The fares page and the discounts page disagree about whether the child free
+  fare (44 inches and under) applies on the South County routes; both are
+  ingested as published, the manifest records the conflict, and eval case
+  edge-100 pins the honest behavior (state the rule, surface the
+  disagreement, decide nothing).
+- The contactless page disagrees with itself about whether the disabled
+  discount is available on Tap2Ride ("not available ... yet" in one section,
+  "now available" in its FAQ). Eval case fresh-026 requires the cash path,
+  which works under either reading.
+
+This id was recomputed at merge time: the branch derived 21251137e67b against
+FAX's 95794539d1d0; County Connection, San Joaquin RTD, AC Transit, and
+WestCAT landed first, and `make ingest` over the union re-stamped this
+heading, the same way 95794539d1d0 itself was recomputed.
+## cbc07c922784 (2026-08-14 UTC)
+
+Added VTA (Santa Clara Valley Transportation Authority): 15 agencies, 44
+documents, 264 chunks. Three documents, all fetched 2026-08-14 UTC:
 `vta-fares`, `vta-regional-transfers`, and `vta-rtc-card`.
 
 The addition that documents its own limit: VTA's fare table renders its four
@@ -92,7 +228,7 @@ One page fetched and excluded with its reason in the manifest:
 /go/fares/clipper (card-purchase and TVM mechanics, the METRO
 splash-pass-faqs precedent).
 
-This id was computed on a branch based on the nine-agency corpus
-(95794539d1d0). Three sibling agency branches were in flight at the same
-time; whichever merges after this one re-runs `make ingest` and re-stamps its
-own heading, as the 2026-08-12/13 additions did.
+This id was recomputed at merge time: the branch derived 491751588366 against
+the nine-agency 95794539d1d0; County Connection, San Joaquin RTD, AC Transit,
+WestCAT, and SLO RTA landed first, and `make ingest` over the union
+re-stamped this heading, as the 2026-08-12/13 additions did.

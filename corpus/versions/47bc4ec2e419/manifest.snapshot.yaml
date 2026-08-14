@@ -1,0 +1,178 @@
+documents:
+- id: mst-fares
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Fares
+  url: https://mst.org/fares/
+  format: null
+  language: en
+- id: mst-fares-benefits
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Benefits (Cal-ITP reduced fares)
+  url: https://mst.org/fares/benefits/
+  format: null
+  language: en
+- id: mst-veterans-resource
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Veterans Resource
+  url: https://mst.org/mobility/veterans-resource/
+  format: null
+  language: en
+- id: mst-fares-es
+  agency: MST
+  agency_full: Monterey-Salinas Transit
+  title: Tarifas (Spanish fares page)
+  url: https://mst.org/es/fares/
+  format: null
+  language: es
+- id: sbmtd-fares-passes
+  agency: SBMTD
+  agency_full: Santa Barbara Metropolitan Transit District
+  title: Fares & Passes
+  url: https://sbmtd.gov/fares-passes/
+  format: null
+  language: en
+- id: sbmtd-farechange
+  agency: SBMTD
+  agency_full: Santa Barbara Metropolitan Transit District
+  title: Fare Change
+  url: https://sbmtd.gov/farechange/
+  format: null
+  language: en
+- id: yolobus-fares
+  agency: Yolobus
+  agency_full: Yolo County Transportation District
+  title: Fares
+  url: https://yolobus.com/fares/
+  format: null
+  language: en
+- id: yolobus-reduced-fare-id
+  agency: Yolobus
+  agency_full: Yolo County Transportation District
+  title: Reduced Fare ID
+  url: https://yolobus.com/reducedfareid/
+  format: null
+  language: en
+- id: yolobus-purchasing
+  agency: Yolobus
+  agency_full: Yolo County Transportation District
+  title: Purchasing a Ticket or Pass
+  url: https://yolobus.com/purchasing-a-ticket-or-pass/
+  format: null
+  language: en
+- id: sacrt-fares
+  agency: SacRT
+  agency_full: Sacramento Regional Transit District
+  title: Fares
+  url: https://www.sacrt.com/fares/
+  format: null
+  language: en
+- id: hta-fares
+  agency: HTA
+  agency_full: Humboldt Transit Authority
+  title: Fares
+  url: https://hta.org/fares/
+  format: null
+  language: en
+- id: fax-fares
+  agency: FAX
+  agency_full: Fresno Area Express (City of Fresno)
+  title: Fares & Passes
+  url: https://www.fresno.gov/transportation/fares-passes/
+  format: null
+  language: en
+- id: fax-reduced-fare-program
+  agency: FAX
+  agency_full: Fresno Area Express (City of Fresno)
+  title: Reduced Fare Program Instructions
+  url: https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf
+  format: pdf
+  language: en
+- id: fax-reduced-fare-program-es
+  agency: FAX
+  agency_full: Fresno Area Express (City of Fresno)
+  title: Programa de Tarifas Reducidas (Spanish reduced-fare instructions)
+  url: https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf
+  format: pdf
+  language: es
+- id: etran-fares
+  agency: E-tran
+  agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional
+    Transit District
+  title: Elk Grove Transit Fares
+  url: https://www.sacrt.com/elk-grove-transit-fares/
+  format: null
+  language: en
+- id: etran-senior-pass
+  agency: E-tran
+  agency_full: Elk Grove Transit Services (e-tran), operated by Sacramento Regional
+    Transit District
+  title: Elk Grove Senior Pass
+  url: https://www.sacrt.com/egsenior/
+  format: null
+  language: en
+- id: scmtd-fares-passes
+  agency: SCMTD
+  agency_full: Santa Cruz Metropolitan Transit District
+  title: Fares & Passes
+  url: https://scmetro.org/rider-info/fares-passes/
+  format: null
+  language: en
+- id: scmtd-accessibility
+  agency: SCMTD
+  agency_full: Santa Cruz Metropolitan Transit District
+  title: Accessibility (discount fares and Discount Photo ID Card)
+  url: https://scmetro.org/rider-info/accessibility/
+  format: null
+  language: en
+- id: scmtd-tap2cruz
+  agency: SCMTD
+  agency_full: Santa Cruz Metropolitan Transit District
+  title: Tap2Cruz (contactless payment and fare capping)
+  url: https://scmetro.org/tap2cruz/
+  format: null
+  language: en
+- id: soltrans-fare-table
+  agency: SolTrans
+  agency_full: Solano County Transit
+  title: Fare Table
+  url: https://www.soltrans.org/fares/fare-table
+  format: null
+  language: en
+- id: soltrans-clipper-card
+  agency: SolTrans
+  agency_full: Solano County Transit
+  title: Clipper Card
+  url: https://www.soltrans.org/fares/clipper-card
+  format: null
+  language: en
+- id: soltrans-ways-to-pay
+  agency: SolTrans
+  agency_full: Solano County Transit
+  title: Ways to Pay
+  url: https://www.soltrans.org/fares/ways-to-pay
+  format: null
+  language: en
+- id: soltrans-paperless-fares
+  agency: SolTrans
+  agency_full: Solano County Transit
+  title: 'Service Alert: Paper Pass Elimination'
+  url: https://www.soltrans.org/news/service-alert-paper-pass-elimination
+  format: null
+  language: en
+- id: sjrtd-fares
+  agency: SJRTD
+  agency_full: San Joaquin Regional Transit District (San Joaquin RTD)
+  title: Fares
+  url: https://sanjoaquinrtd.com/fares/
+  format: null
+  language: en
+- id: sjrtd-dfc
+  agency: SJRTD
+  agency_full: San Joaquin Regional Transit District (San Joaquin RTD)
+  title: Discount Fare Card (Access San Joaquin)
+  url: https://sanjoaquinrtd.com/access-sj/dfc/
+  format: null
+  language: en

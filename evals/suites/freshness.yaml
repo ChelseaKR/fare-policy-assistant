@@ -285,6 +285,106 @@ cases:
       promise and not a guess at when it ends. An answer that says only "free"
       has dropped the only qualifier the agency wrote.
 
+  # County Connection's fare-eligibility program is described in the present
+  # tense with no dates anywhere: Clipper START is "a pilot program" on a page
+  # whose site metadata says it was last modified 2025-09-09. A pilot is a
+  # thing that ends; the corpus cannot say whether it has.
+  - id: fresh-021
+    question: "Is Clipper START still a pilot program, or is it permanent on County Connection now?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:pilot", "re:50%|50 percent"]
+    rationale: >
+      cccta-fare-types-prices and cccta-clipper-card both describe Clipper
+      START as "a pilot program" offering a 50% discount to Bay Area residents
+      aged 19-64 at or under 200% of the federal poverty level. Neither page
+      dates the pilot or names an end. The honest answer gives the published
+      framing — it is described as a pilot — with the as-of disclosure and a
+      pointer to the agency for current status. Asserting it has been made
+      permanent, or that it is ending, would be ungrounded either way.
+  - id: fresh-024
+    question: "How current is the San Joaquin RTD fare information you have?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      sjrtd-fares publishes no effective-date range at all — no "effective"
+      stamp, no expiry — so there is no fare period to check, only the snapshot
+      date this corpus carries. The honest answer discloses that date and
+      points the rider at RTD for anything time-sensitive, the same shape as
+      E-tran's fresh-013. (Currency was corroborated at ingest against RTD's
+      Commuter service page, which still sells the service the fares page
+      prices; that check lives in the manifest note, not in the corpus.)
+  # AC Transit announces a retirement without a date: Token Transit support
+  # "will be discontinued in the future". A rider asking today deserves the
+  # published condition, its missing date, and the concrete difference that
+  # already exists (no transfer benefits on Token Transit).
+  - id: fresh-actransit-001
+    question: "Can I still pay my AC Transit fare with the Token Transit app?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:discontinue", "re:transfer benefit"]
+    rationale: >
+      actransit-fares, Token Transit section: users "may continue to use the
+      app to purchase single rides and calendar-based passes through fare
+      maximums", but "will not receive transfer benefits available through
+      Next-Generation Clipper and contactless bank cards", and "AC Transit
+      will discontinue support for Token Transit in the future" — no date
+      published. The honest answer is yes-for-now with both published
+      caveats; asserting a cutoff date the agency has not published is the
+      failure this case exists to catch.
+  # WestCAT publishes a fee waiver with no date attached: the virtual adult
+  # Clipper card is "Free (limited time)". The FAX lesson again — a condition
+  # that can lapse without a calendar ever noticing. Id jumps to fresh-022
+  # because a sibling branch holds fresh-021.
+  - id: fresh-022
+    question: "Does a virtual adult Clipper card cost anything on WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:limited time", "re:\\$\\s?3"]
+    rationale: >
+      westcat-clipper, Clipper Card Costs: "Virtual Adult cards: Free (limited
+      time) with a $3 minimum load. Physical cards: $3 fee, waived with
+      Autoload when ordered online." The free virtual card carries the
+      agency's own qualifier and no end date; an answer that says only "free"
+      has dropped the one condition WestCAT attached, and the $3 minimum load
+      is part of the price of "free".
+  # SLO RTA. Ids start at fresh-025: fresh-021 is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: fresh-025
+    question: "Did SLO RTA change its fares recently?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["April 6, 2026"]
+    rationale: >
+      slorta-fares is headed "New cash fares as of April 6, 2026" — an
+      open-ended effective-from stamp, and the corpus's freshest one. The
+      answer should surface the date the agency itself published, the
+      sbmtd-farechange shape (fresh-002).
+
+  - id: fresh-026
+    question: "Can I get my disabled discount automatically when I tap a contactless card on RTA?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)cash|farebox"]
+    rationale: >
+      A page that disagrees with itself, asked at the seam. slorta-contactless
+      says in its Tap2Ride Discounts section that ADA Disabled and K-12
+      discounts "are not available on Tap2Ride yet" and those riders "can pay
+      the discount fare with cash", while the same page's FAQ says discounted
+      contactless fares are "now available for older adults (ages 65+),
+      Disabled and Medicare cardholders" via Cal-ITP registration
+      (benefits.calitp.org). The corpus cannot settle which sentence is
+      current. What the answer must not do is give a flat yes or no; what it
+      must carry, deterministically, is the cash path that works under either
+      reading. The manifest records the self-contradiction, the same class as
+      SolTrans's retired paper passes (fresh-016) but on a live product.
   # VTA's Summer Youth Pass is a season, not a fare: published as "June
   # through August" with no year and no cutoff day. Asked in mid-August, the
   # honest answer is the published window plus the as-of date, not a bare
