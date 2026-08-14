@@ -3,7 +3,7 @@
 [![CI](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/ChelseaKR/fare-policy-assistant/actions/workflows/ci.yml)
 
 A small retrieval-augmented assistant that answers rider questions about fare
-and reduced-fare policies for ten California transit agencies, wrapped in a
+and reduced-fare policies for twelve California transit agencies, wrapped in a
 public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
@@ -357,7 +357,8 @@ make fetch && make ingest
 Published fare pages from Monterey-Salinas Transit (MST), Santa Barbara MTD
 (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt Transit
 Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO (SCMTD),
-Solano County Transit (SolTrans), Fresno Area Express (FAX), and AC Transit,
+Solano County Transit (SolTrans), Fresno Area Express (FAX), County
+Connection (CCCTA), San Joaquin RTD (SJRTD), and AC Transit,
 snapshotted with fetch dates in `corpus/manifest.yaml`. MST's Spanish fares page is included,
 which makes part of the multilingual suite a same-language retrieval test and
 the rest an honest cross-lingual one, as are FAX's Spanish reduced-fare
@@ -365,6 +366,10 @@ document and AC Transit's Spanish fares page. MST and SBMTD are the two agencies
 on Cal-ITP Benefits, so the corpus overlaps with a real eligibility
 verification domain. FAX is the first Central Valley agency in the corpus and
 the first whose reduced fare is a funded suspension rather than a discount.
+San Joaquin RTD is the second Central Valley agency and the only one whose
+senior discount age depends on the rider's city of residence (60, 62, or 65
+across San Joaquin County), which is the boundary its edge cases exist to pin.
+
 AC Transit is the first accumulator-capped structure: its Day, Weekly, and
 Monthly passes are "fare maximums" that apply automatically once
 pay-per-ride spending reaches the pass price, and both the rule and the
@@ -372,20 +377,27 @@ amounts are published as HTML text the pipeline can quote — unlike Santa
 Cruz METRO's cap amounts, which live in an image and stay honestly out of
 the corpus.
 
-SolTrans was the first Clipper participant in the corpus, and AC Transit is
-the second. The hazard that came with the first still binds both: Clipper is
-a regional card, so a rider reads a Clipper answer as generalizing across the
-Bay Area, while the corpus holds only each named agency's side of it. The
-`xagency-009` / `xagency-010` cases
+SolTrans, County Connection, and AC Transit are the corpus's three Clipper
+participants. That is the point of including them and also the main hazard:
+Clipper is a regional card, so a rider reads a Clipper answer as generalizing
+across the Bay Area, while the corpus holds only each named agency's side of
+it. The `xagency-009` / `xagency-010` cases
 require the assistant to answer for SolTrans and stop, and SolTrans' Clipper
 page is annotated in the manifest to separate its own policy from its
 assertions about other operators (BART, Golden Gate Transit, SF Bay Ferry,
-WestCat, County Connection), which it does not speak for.
+WestCat, County Connection), which it does not speak for. County Connection's
+pages are annotated the same way, and they corroborate the SolTrans link from
+the other side: its Transfers page grants free Clipper transfers from
+SolTrans, which `xagency-012` tests with both agencies' own pages cited.
 
 Unitrans was in the original pilot list; its WAF blocks non-browser clients,
 so SacRT was substituted rather than working around the block
 (`docs/decisions/0002`). Re-checked 2026-08-12: its robots.txt permits the fare
 pages, the WAF still returns 403 to this project's fetcher, and it remains out.
+RABA (Redding) was checked as a candidate on 2026-08-13 and is also out, for a
+cleaner reason: its robots.txt allows only a short list of named crawlers and
+disallows everyone else, this fetcher included, so nothing was fetched at all
+(`docs/decisions/0002`).
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored

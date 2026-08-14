@@ -169,28 +169,27 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
     # Merging E-tran and SCMTD produced a fourth, distinct identity
     # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
-    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); and
-    # merging FAX on top of that produced the sixth (50fb01a9…4999 /
-    # 816ff402…cb94 / df00d694…b626), the nine-agency base this branch starts
-    # from. Adding AC Transit (5 aliases, the tenth scope) rebinds them to the
-    # values below: a ten-entry `scopes` tuple and 42 aliases in one domain
-    # block. This branch was written alongside three sibling agency branches
-    # (batches A and C of the same expansion), so as on 2026-08-12, none of
-    # the concurrent branch values will be what HEAD ships after the merges;
-    # whoever merges last re-derives against the combined profile. The values
-    # below were re-derived by building the descriptor from this fixture
-    # against this branch's profile, not lifted from any failure message.
-    # Before any of the 2026-08 additions: 56ef528a…d337 / fbc9799c…e675 /
-    # 249b0835…907a.
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
+    # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produces the ninth and current
+    # one below: a twelve-entry `scopes` tuple and 52 aliases in one domain
+    # block. The values below were re-derived by building the descriptor from
+    # this fixture against the merged profile, not lifted from any branch or
+    # from a failure message. Before any of the 2026-08 additions:
+    # 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "bb9cfbc9250789d9bef0f09d62eb9e2875c4664b64485a06de1d9b3e711dac7b"
+        first.config_version == "85c6cc32c6c64009fd2adfb97bd68ebd006eb101ac76d11fe09085df05a2c0e1"
     )
     assert (
-        first.release_version == "706e5a697d946a1d35ec84c40b634eca4e9e4bf5d861e43469aff6e50d0b4b1b"
+        first.release_version == "52e5ea5c8b25f3f06ee0c21fb89c73a0b2671db99548b834cb33e7515e724a53"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "c2cc5c138594dbfb8f200fd58a2733dcf85d58aebcbf9ca93b19cbb5efe62627"
+        == "38a5931f37b490ac230b72e2c74e53ea527396a98642dca33fed070520cbb4af"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

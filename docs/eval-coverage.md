@@ -7,13 +7,15 @@ Cells: number of eval cases touching that agency x program. `-` means the corpus
 | Agency | senior | disabled | medicare | veteran | youth/student | child free | regular |
 |---|---|---|---|---|---|---|---|
 | AC Transit | 3 | 3 | - | - | 2 | 1 | 5 |
+| CCCTA | 5 | 4 | 2 | 2 | 2 | 2 | 8 |
 | E-tran | 5 | 2 | 2 | - | 1 | 1 | 3 |
 | FAX | 2 | 4 | 4 | 1 | 1 | 1 | 3 |
 | HTA | 9 | 1 | - | - | 5 | - | 5 |
 | MST | 23 | 5 | 7 | 15 | 5 | - | 8 |
 | SBMTD | 8 | 4 | 1 | - | 4 | 3 | 11 |
 | SCMTD | 6 | 5 | 2 | 1 | 3 | 1 | 7 |
-| SacRT | 10 | 3 | - | - | 4 | - | 9 |
+| SJRTD | 4 | 1 | 2 | 1 | 1 | 1 | 6 |
+| SacRT | 10 | 3 | - | - | 4 | - | 10 |
 | SolTrans | 4 | 4 | 3 | - | 4 | **0** | 3 |
 | Yolobus | 9 | 5 | 4 | - | 13 | - | 5 |
 

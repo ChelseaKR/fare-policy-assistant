@@ -5,12 +5,13 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-ten California transit agencies: Monterey-Salinas Transit (MST), Santa
+twelve California transit agencies: Monterey-Salinas Transit (MST), Santa
 Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
 Transit Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO
-(SCMTD), Solano County Transit (SolTrans), Fresno Area Express (FAX), and AC
-Transit (Alameda-Contra Costa Transit District). It
-explains published policy. It does not decide anything about any person.
+(SCMTD), Solano County Transit (SolTrans), Fresno Area Express (FAX), County
+Connection (CCCTA), San Joaquin RTD (SJRTD), and AC Transit (Alameda-Contra
+Costa Transit District). It explains published policy. It does not decide
+anything about any person.
 
 ## Intended users and uses
 
@@ -70,27 +71,30 @@ available behind a config switch.
 
 ## Data
 
-Twenty-four public web pages and two public PDF documents, fetched with an
+Thirty-one public web pages and two public PDF documents, fetched with an
 identified user agent between 2026-06-12 and 2026-08-14 (HTA added 2026-06-16;
 the Elk Grove, Santa Cruz METRO, SolTrans, and FAX documents added 2026-08-13;
-the AC Transit documents, one of them a real Spanish translation, added
-2026-08-14 UTC),
-honoring robots.txt and crawl delays; URLs, dates, and license notes in
-`corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
-in the system.
+the County Connection pages added 2026-08-14; the two San Joaquin RTD pages
+and the AC Transit documents, one of them a real Spanish translation, added
+2026-08-14 UTC), honoring robots.txt and crawl delays; URLs, dates, and
+license notes in `corpus/manifest.yaml`. No user data is collected, stored, or
+used anywhere in the system.
 
 ## Evaluation
 
-271 cases across groundedness, refusal, edge-case, multilingual, freshness,
+302 cases across groundedness, refusal, edge-case, multilingual, freshness,
 multi-turn conversation, cross-agency, counterfactual sensitivity, and
 stretch-language (Tagalog) suites; method and
 current scores in [EVALS.md](../EVALS.md). The scores published there predate
-five of the ten agencies: the cases added 2026-08-12/13 for Elk Grove e-tran,
-Santa Cruz METRO, SolTrans, Fresno Area Express, and AC Transit have not been
-scored in a promoted live run. They also predate system prompts v11 and v12
-(2026-08-13), which widened the scope rule from five named agencies to all
-ten; the published scores were produced under v10, which instructed the model
-to decline the five newest. `evals/stale_acknowledged.json` carries the matching corpus-version and
+seven of the twelve agencies: the cases added 2026-08-12/13 for Elk Grove
+e-tran, Santa Cruz METRO, SolTrans and Fresno Area Express, and 2026-08-13/14
+for County Connection, San Joaquin RTD, and AC Transit, have not been scored
+in a promoted live run. They also predate system prompt v11 (2026-08-13),
+which widened the scope rule from five named agencies to all in the corpus,
+and v12/v13/v14, which name County Connection, San Joaquin RTD, and AC
+Transit; the published scores were produced under v10, which instructed the
+model to decline the newer agencies.
+`evals/stale_acknowledged.json` carries the matching corpus-version and
 prompt-version waivers until a promoted run replaces them.
 Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
