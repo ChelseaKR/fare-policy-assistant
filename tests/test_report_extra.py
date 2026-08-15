@@ -91,6 +91,40 @@ def test_unpriced_model_is_rendered_without_crashing_or_silent_zero():
     assert "$0" not in line
 
 
+def test_cheap_run_says_the_cache_served_it_rather_than_reading_as_a_broken_meter():
+    """A fully cached nightly publishes a near-zero cost line. Unexplained, that
+    reads as a measurement failure; the report must say the calls were reused."""
+    summary = json.loads(json.dumps(SUMMARY_WITH_COST))
+    summary["execution"] = {
+        "cache": {
+            "enabled": True,
+            "answer_hits": 201,
+            "answer_calls": 201,
+            "judge_hits": 360,
+            "judge_calls": 368,
+        }
+    }
+    line = report._cost_line(summary)
+    assert "561 of 569 model calls were served from the content-keyed eval cache" in line
+
+
+def test_a_genuinely_cold_run_gets_no_cache_caveat_on_its_cost():
+    summary = json.loads(json.dumps(SUMMARY_WITH_COST))
+    summary["execution"] = {
+        "cache": {
+            "enabled": True,
+            "refresh": True,
+            "answer_hits": 0,
+            "answer_calls": 201,
+            "judge_hits": 0,
+            "judge_calls": 368,
+        }
+    }
+    assert "served from the content-keyed eval cache" not in report._cost_line(summary)
+    summary.pop("execution")
+    assert "served from the content-keyed eval cache" not in report._cost_line(summary)
+
+
 def test_spanish_parity_table_pairs_mirror():
     records = [
         _rec(case_id="ml-001", suite="multilingual", mirror_of="ground-001", passed=True),
@@ -215,3 +249,53 @@ def test_latest_run_dir_errors_with_no_runs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "EVAL_RUNS_DIR", tmp_path)
     with pytest.raises(SystemExit):
         report.latest_run_dir()
+
+
+def test_a_fully_cached_live_run_says_so_in_its_header():
+    """The promoted 2026-07-12 baseline was published as `(full, live)` while
+    all 553 of its model calls came from the on-disk cache. The answers are
+    real completions recorded under byte-identical prompts, so the run is valid
+    regression evidence, but "live" alone reads as "called the provider"."""
+    summary = {
+        "run_at": "2026-07-12T05:01:17+00:00",
+        "mode": "full",
+        "offline": False,
+        "execution": {
+            "cache": {
+                "enabled": True,
+                "answer_hits": 186,
+                "answer_calls": 186,
+                "judge_hits": 367,
+                "judge_calls": 367,
+            }
+        },
+    }
+    assert (
+        report._run_mode_label(summary)
+        == "full, live provider — every model call served from cache"
+    )
+
+
+def test_a_partly_cached_run_is_still_labelled_live():
+    # One real call is enough for "live" to mean what a reader expects; the
+    # cost line carries the hit count for the rest.
+    summary = {
+        "mode": "full",
+        "offline": False,
+        "execution": {
+            "cache": {
+                "enabled": True,
+                "answer_hits": 185,
+                "answer_calls": 186,
+                "judge_hits": 367,
+                "judge_calls": 367,
+            }
+        },
+    }
+    assert report._run_mode_label(summary) == "full, live"
+
+
+def test_an_offline_run_keeps_its_own_label():
+    assert report._run_mode_label({"mode": "smoke", "offline": True}) == (
+        "smoke, offline — deterministic checks only"
+    )

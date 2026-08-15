@@ -13,12 +13,14 @@ import sys
 from pathlib import Path
 
 from assistant import config, corpus
-from evals import provenance
+from evals import provenance, spanish_quality
+from evals.calibration import load_worksheet
 from evals.runner import (
     MACRO_THRESHOLD_PP,
     PARITY_CASE_FLOOR,
     PARITY_THRESHOLD_PP,
     expected_below_macro,
+    pair_discrimination,
     parity_delta,
     suites_below_macro,
 )
@@ -32,6 +34,62 @@ def _rate_cell(suite: dict) -> str:
     if "ci_low" in suite and "ci_high" in suite:
         return f"{suite['pass_rate']}% ({suite['ci_low']}–{suite['ci_high']})"
     return f"{suite['pass_rate']}%"
+
+
+def _spanish_quality_section() -> str | None:
+    """The native-Spanish half of the bilingual equity standard, reported as
+    what it is.
+
+    The Spanish parity table above is a pass/fail comparison against mirrored
+    English cases, and the two verdicts come from checks that ask whether a
+    citation resolves and a required fact appears. None of that is a question
+    about whether the Spanish reads as Spanish. This section prints the state of
+    the rating census (`evals/spanish/native_es_rubric_2026-08-05.jsonl`) —
+    which, unrated, says "not measured" rather than showing a zero or being
+    left off the page.
+    """
+    if not spanish_quality.SHEET_PATH.exists():
+        return None
+    entries = [e.row for e in load_worksheet(spanish_quality.SHEET_PATH) if e.row is not None]
+    try:
+        rated = spanish_quality.load_ratings(spanish_quality.SHEET_PATH)
+    except ValueError:
+        rated = []  # a template or half-filled sheet establishes nothing
+    summary = spanish_quality.summarize(rated, floor=len(entries))
+    body = "\n\n".join(spanish_quality.status_lines(summary))
+    return f"## Native-Spanish answer quality\n\n{body}"
+
+
+def _discrimination_note(records: list[dict]) -> list[str]:
+    """How many pairs the per-variant checks could actually tell apart.
+
+    The pair pass rate above reads as evidence that the assistant discriminates
+    across a boundary. It is not: a pair passes when both variants pass their
+    own checks, and until this line existed nothing asked whether the two
+    answers differed at all. This replays each variant's answer through its
+    sibling's `required_facts` / `forbidden_content`; a pair whose answers are
+    mutually interchangeable proved nothing about the boundary, however green it
+    scored. Reported, not gated — see `runner.pair_discrimination`.
+    """
+    result = pair_discrimination(records)
+    if not result:
+        return []
+    total = len(result)
+    weak = sorted(k for k, v in result.items() if not v["discriminating"])
+    strong = total - len(weak)
+    out = [
+        "",
+        f"**Of those pairs, {strong}/{total} produced answers the per-variant checks can "
+        "tell apart.** A pair passes when both variants pass their own checks; that is not "
+        "the same as the two answers differing. For the rest, each variant's answer also "
+        "satisfies its sibling's required facts and forbidden content, so a single answer "
+        "would have passed both sides of the boundary and the pair demonstrates nothing "
+        "about sensitivity to it.",
+    ]
+    if weak:
+        out.append("")
+        out.append(f"Interchangeable pairs: {', '.join(weak)}.")
+    return out
 
 
 def _variance_section() -> str:
@@ -118,11 +176,31 @@ def _stretch_language_parity(records: list[dict]) -> str | None:
     return _parity_table(records, "stretch_tagalog", "Tagalog (stretch)")
 
 
+def _eval_cache_note(summary: dict) -> str:
+    """Suffix explaining a cost line that reads low because the answer/judge
+    cache served the run rather than because the run got cheaper.
+
+    Without it a fully-cached nightly publishes "$0.0000 for 0 tokens", which
+    reads as a broken meter instead of a reused result."""
+    stats = summary.get("execution", {}).get("cache") or {}
+    if not stats.get("enabled"):
+        return ""
+    served = stats.get("answer_hits", 0) + stats.get("judge_hits", 0)
+    calls = stats.get("answer_calls", 0) + stats.get("judge_calls", 0)
+    if not served:
+        return ""
+    return (
+        f" — {served:,} of {calls:,} model calls were served from the content-keyed "
+        "eval cache and cost nothing this run"
+    )
+
+
 def _cost_line(summary: dict) -> str:
     """One-line cost summary; token counts are exact, USD is an estimate."""
     cost = summary.get("cost")
     if not cost:
         return "- Cost: not recorded for this run"
+    served_note = _eval_cache_note(summary)
     total = cost.get("total_est_usd")
     answer = cost.get("answer_model", {}).get("est_usd")
     judge = cost.get("judge_model", {}).get("est_usd")
@@ -140,14 +218,14 @@ def _cost_line(summary: dict) -> str:
         return (
             f"- Cost (estimated): unavailable for {cost['total_tokens']:,} tokens — "
             f"unpriced: {unpriced} (exact tokens{cache_note}; "
-            "unpriced usage is never assigned a zero-dollar estimate)"
+            f"unpriced usage is never assigned a zero-dollar estimate){served_note}"
         )
     return (
         f"- Cost (estimated): ${total:.4f} for "
         f"{cost['total_tokens']:,} tokens — "
         f"answer ${answer:.4f}, "
         f"judge ${judge:.4f} "
-        f"(exact tokens{cache_note}, list-price estimate)"
+        f"(exact tokens{cache_note}, list-price estimate){served_note}"
     )
 
 
@@ -164,13 +242,40 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
         return None
     if not c["n_matched"]:
         return None
-    kappa = "n/a" if c["cohen_kappa"] is None else f"{c['cohen_kappa']:.3f}"
+    # κ is undefined when both raters gave the same verdict every time. Printing
+    # the conventional 1.000 there reads as perfect agreement measured; it is
+    # arithmetic on a sample that could not have produced anything else.
+    kappa = (
+        "undefined — every scored label agreed, so there is no disagreement to "
+        "chance-correct against"
+        if c["cohen_kappa"] is None
+        else f"**{c['cohen_kappa']:.3f}**"
+    )
     lines = [
         f"Human labels checked against this run's judge verdicts on "
         f"{c['n_matched']} of {c['n_labels']} sampled (case, judge) pairs.",
         "",
         f"- Raw agreement: **{c['agreement']:.1%}**",
-        f"- Cohen's κ: **{kappa}**",
+        f"- Cohen's κ: {kappa}",
+    ]
+    if not c.get("meets_floor", True):
+        # The standard's floor stated as a number rather than as "the sample is
+        # small". A coverage gap on the page beats a caveat under a percentage.
+        lines.append(
+            f"- **Below the sample floor:** {c['n_matched']} scored labels against a floor of "
+            f"{c['floor']} (10% of the {c['n_judged']} (case, judge) pairs this run judged). "
+            "Read the agreement and κ above as provisional; the sample is "
+            f"{c['floor'] - c['n_matched']} labels short of the size that would make them "
+            "evidence."
+        )
+    if c["n_matched"] and not c.get("n_disagreements"):
+        lines.append(
+            "- **No disagreement in the scored sample.** Every label that survived staleness "
+            "agreed with the judge, so this sample can only report 100%. Read the stale list "
+            "below before reading the agreement as a result: a sample that lost its "
+            "disagreements to a prompt bump is the agreeing half of the set, not a clean one."
+        )
+    lines += [
         f"- Stale labels skipped (answer changed since labeling): **{c['n_stale']}**",
         f"- Note: {c['note']}.",
     ]
@@ -188,15 +293,34 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
     return "\n".join(lines)
 
 
+def _run_mode_label(summary: dict) -> str:
+    """The run's mode, and — for a live run — whether it actually called the
+    provider.
+
+    "live" only ever meant "not the mock provider". The promoted 2026-07-12
+    baseline was labeled `(full, live)` while every one of its 553 answer and
+    judge calls was served from the on-disk cache: the answers are real
+    Bedrock completions recorded under byte-identical prompts, which is why
+    they are legitimate regression evidence (ADR 0022), but no call was made
+    and no money was spent that day. A reader should not have to reach the
+    cost line to learn that.
+    """
+    if summary["offline"]:
+        return f"{summary['mode']}, offline — deterministic checks only"
+    stats = summary.get("execution", {}).get("cache") or {}
+    calls = stats.get("answer_calls", 0) + stats.get("judge_calls", 0)
+    hits = stats.get("answer_hits", 0) + stats.get("judge_hits", 0)
+    if stats.get("enabled") and calls and hits == calls:
+        return f"{summary['mode']}, live provider — every model call served from cache"
+    return f"{summary['mode']}, live"
+
+
 def generate_markdown(summary: dict, records: list[dict]) -> str:
     total = summary["total"]
     lines = [
         "# Evaluation Report",
         "",
-        f"Generated from the run at `{summary['run_at']}` "
-        + f"({summary['mode']}, "
-        + ("offline — deterministic checks only" if summary["offline"] else "live")
-        + ").",
+        f"Generated from the run at `{summary['run_at']}` ({_run_mode_label(summary)}).",
         "",
         f"- Answer model: `{summary['answer_model']}` · Judge model: `{summary['judge_model']}`",
         "- Judges ran: "
@@ -229,9 +353,10 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
         lines += [
             "",
             f"**Counterfactual sensitivity:** {sens['pairs_passed']}/{sens['pairs_total']} "
-            "boundary pairs correctly distinguished "
+            "boundary pairs passed "
             "(a pair passes only if every variant passes across the boundary).",
         ]
+        lines += _discrimination_note(records)
 
     # Per-suite macro floor (M-1, general form): a gated suite sitting more
     # than 5 points below the macro pass rate is named here — with its written
@@ -266,6 +391,9 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 f"mirrored cases diverge; each gated suite must also stay within "
                 f"{MACRO_THRESHOLD_PP:g} points of the macro pass rate.",
             ]
+        quality = _spanish_quality_section()
+        if quality:
+            lines += ["", quality]
 
     stretch_parity = _stretch_language_parity(records)
     if stretch_parity:

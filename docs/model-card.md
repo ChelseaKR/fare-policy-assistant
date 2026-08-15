@@ -5,10 +5,16 @@ Reference implementation, not a product. Last updated 2026-07-11.
 ## Purpose
 
 Answers rider questions about fares, passes, and reduced-fare programs for
-five California transit agencies: Monterey-Salinas Transit (MST), Santa
-Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), and
-Humboldt Transit Authority (HTA). It explains published policy. It does not
-decide anything about any person.
+eighteen California transit agencies: Monterey-Salinas Transit (MST), Santa
+Barbara MTD (SBMTD), Yolobus, Sacramento Regional Transit (SacRT), Humboldt
+Transit Authority (HTA), Elk Grove Transit Services (e-tran), Santa Cruz METRO
+(SCMTD), Solano County Transit (SolTrans), Fresno Area Express (FAX), County
+Connection (CCCTA), San Joaquin RTD (SJRTD), AC Transit (Alameda-Contra
+Costa Transit District), WestCAT (Western Contra Costa Transit Authority),
+San Luis Obispo RTA (SLORTA), the Santa Clara Valley Transportation
+Authority (VTA), Napa Valley Vine Transit (VINE), SamTrans (San Mateo County
+Transit District), and Marin Transit (Marin County Transit District). It
+explains published policy. It does not decide anything about any person.
 
 ## Intended users and uses
 
@@ -68,25 +74,49 @@ available behind a config switch.
 
 ## Data
 
-Twelve public web pages fetched 2026-06-12 (HTA added 2026-06-16) with an
-identified user agent,
-honoring robots.txt and crawl delays; URLs, dates, and license notes in
+Fifty public web pages and two public PDF documents, fetched with an
+identified user agent between 2026-06-12 and 2026-08-14 (HTA added 2026-06-16;
+the Elk Grove, Santa Cruz METRO, SolTrans, and FAX documents added 2026-08-13;
+the County Connection pages added 2026-08-14; the two San Joaquin RTD pages,
+the AC Transit documents (one of them a real Spanish translation), the
+WestCAT pages, the four SLO RTA pages, the VTA documents, the two Vine
+pages, the SamTrans documents, and the Marin Transit documents added
+2026-08-14 UTC), honoring robots.txt and crawl delays; URLs, dates, and
+license notes in
 `corpus/manifest.yaml`. No user data is collected, stored, or used anywhere
 in the system.
 
 ## Evaluation
 
-201 cases across groundedness, refusal, edge-case, multilingual, freshness,
+385 cases across groundedness, refusal, edge-case, multilingual, freshness,
 multi-turn conversation, cross-agency, counterfactual sensitivity, and
 stretch-language (Tagalog) suites; method and
-current scores in [EVALS.md](../EVALS.md). Deterministic
+current scores in [EVALS.md](../EVALS.md). The scores published there predate
+thirteen of the eighteen agencies: the cases added 2026-08-12/13 for Elk
+Grove e-tran, Santa Cruz METRO, SolTrans and Fresno Area Express, and
+2026-08-13/14 for County Connection, San Joaquin RTD, AC Transit, WestCAT,
+SLO RTA, VTA, the Vine, SamTrans, and Marin Transit, have not been scored in
+a promoted live run. They also predate system prompt v11 (2026-08-13), which
+widened the scope rule from five named agencies to all in the corpus, and
+v12 through v20, which name County Connection, San Joaquin RTD, AC Transit,
+WestCAT, SLO RTA, VTA, the Vine, SamTrans, and Marin Transit; the published
+scores were produced under v10, which instructed the model to decline the
+newer agencies.
+`evals/stale_acknowledged.json` carries the matching corpus-version and
+prompt-version waivers until a promoted run replaces them.
+Deterministic
 checks run on every case; LLM-judge scores apply to live runs. Each live run
 also records its exact fresh/cache token usage and an estimated cost (cache
 writes and reads use their distinct rates), and checks the LLM
 judge against a hand-labeled sample (`evals/calibration/judge_labels.jsonl`):
 the report prints judge-vs-human agreement and Cohen's κ over that sample
-(harness in `evals/calibration.py`). An independent black-box audit by the
-external GovChat-Eval harness is in [docs/audits/](audits/methodology.md).
+(harness in `evals/calibration.py`). That sample is currently 4 scored labels
+against a floor of 37; the queued replacement is
+`evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl`, labeled with
+`make relabel`, which shows each row's criterion, question, passages, and
+answer, and records a verdict only after the reviewer states one. A second,
+black-box pass by the separate GovChat-Eval harness (same author, not public) is
+in [docs/audits/](audits/methodology.md).
 
 Known limits found by the harness so far:
 

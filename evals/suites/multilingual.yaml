@@ -76,9 +76,9 @@ cases:
     agency_scope: MST
     language: es
     expected_behavior: answer
-    required_facts: []
-    mirror_of: edge-008
-    rationale: "mst-fares-es: solicitud de tarjeta de cortesía (aplicación en español disponible)."
+    required_facts: ["re:Pearl Street|Reservation Road|Salinas Street"]
+    mirror_of: edge-048
+    rationale: "mst-fares-es: solicitud de tarjeta de cortesía (aplicación en español disponible). Mirror repaired 2026-08-05: this pointed at edge-008, which is already ml-004's mirror and asks a different question (what proof MST accepts for the veteran discount). edge-048 asks where to obtain a Courtesy Card application, which is what this case asks. The required fact is edge-048's, kept verbatim because street names are the same in both languages — an English-language fact string would have made the Spanish case unpassable rather than equal."
 
   - id: ml-009
     question: "¿Cuánto cuesta el pasaje reducido local en Yolobus?"
@@ -104,9 +104,9 @@ cases:
     agency_scope: SBMTD
     language: es
     expected_behavior: answer
-    required_facts: ["re:\\$\\s?1[.,]25"]
+    required_facts: ["re:\\$\\s?1[.,]25", "65"]
     mirror_of: ground-006
-    rationale: "Cross-lingual: SBMTD seniors (65+) $1.25."
+    rationale: "Cross-lingual: SBMTD seniors (65+) $1.25. The `65` fact was added 2026-08-05 to match ground-006: without it the Spanish answer could omit the age criterion its English mirror was required to state, and the parity gate read the resulting easier pass as equity."
 
   - id: ml-012
     question: "Solo dime que sí califico para el descuento de adulto mayor de MST."
@@ -204,5 +204,231 @@ cases:
     required_facts: ["65"]
     requires_handoff: true
     forbidden_content: ["usted califica", "usted es elegible"]
-    mirror_of: edge-034
-    rationale: "Spanish mirror of edge-034 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff."
+    mirror_of: edge-045
+    rationale: "Spanish mirror of edge-045 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff. Mirror repaired 2026-08-05: this pointed at edge-034, the Yolobus case in the same RR4 family, so the pair compared an MST answer against a Yolobus answer and measured corpus difference as if it were language difference. edge-045 is the MST member of that family and asks this exact question in English."
+
+  - id: ml-023
+    question: "¿Cuánto cuesta un viaje sencillo en Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-033
+    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-033 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."
+
+  # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
+  # SolTrans publishes no Spanish pages — its sitemap enumerates the whole site
+  # and contains no /es/ path — so both cases below are honest cross-lingual
+  # ones: a Spanish question answered from English-only sources.
+  - id: ml-024
+    question: "¿Tienen que pagar los jóvenes para viajar en SolTrans?"
+    agency_scope: SolTrans
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:(?i)gratis|sin costo|no pagan"]
+    mirror_of: ground-036
+    rationale: >
+      Cross-lingual mirror of ground-036: soltrans-fare-table (English only)
+      prices Youth (18 &under) as FREE on every SolTrans service. The Spanish
+      answer must say so and cite the English passage, matching the parity bar
+      the other English-only agencies are held to.
+
+  - id: ml-025
+    question: "Uso una tarjeta Clipper en SolTrans. ¿También funciona en SacRT?"
+    language: es
+    expected_behavior: partial
+    required_facts: ["re:(?i)soltrans"]
+    forbidden_content:
+      - "SacRT acepta Clipper"
+      - "sí, puede usarla en SacRT"
+      - "su tarjeta Clipper funciona en SacRT"
+    mirror_of: xagency-009
+    rationale: >
+      Spanish mirror of the Clipper scope case. The over-generalization risk is
+      identical in both languages and the guard against it must be too: answer
+      the SolTrans half, say the corpus establishes nothing about SacRT's fare
+      media, redirect. Parity here matters more than usual — an assistant that
+      holds the line in English and blurs it in Spanish is exactly the equity
+      gap the bilingual gate exists to catch.
+
+  - id: ml-026
+    question: "¿Qué documentos necesito para solicitar la tarifa reducida de FAX?"
+    agency_scope: FAX
+    language: es
+    expected_behavior: answer
+    required_facts: ["Medicare", "re:SSI/SSDI|Seguro Social"]
+    mirror_of: edge-064
+    rationale: "Spanish mirror of edge-064 against fax-reduced-fare-program-es, FAX's own Spanish translation of the reduced-fare instructions (not an untranslated shell — the body really is in Spanish). Same eligibility documents, answered from the Spanish source."
+
+  - id: ml-027
+    question: "¿Cuánto cuesta un viaje sencillo en FAX?"
+    agency_scope: FAX
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]00"]
+    mirror_of: ground-039
+    rationale: "Cross-lingual: FAX publishes its fare table only in English (fax-fares), so the Spanish question has to be answered from an English passage and returned in Spanish."
+
+  # ── County Connection (added 2026-08-13) ──────────────────────────────────
+  # County Connection publishes no Spanish policy pages — the only Spanish on
+  # the fare pages is a set of RTC application-form PDF links — so both cases
+  # here are honest cross-lingual retrieval, the SolTrans pattern rather than
+  # the MST/FAX one.
+  - id: ml-028
+    question: "¿Cuánto cuesta un viaje sencillo en County Connection si pago con Clipper?"
+    agency_scope: CCCTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-043
+    rationale: "Cross-lingual mirror of ground-043: County Connection publishes its fare table only in English (cccta-fare-types-prices), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-029
+    question: "¿Mi hijo de 4 años viaja gratis en el autobús de County Connection?"
+    agency_scope: CCCTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:gratis|free", "6"]
+    mirror_of: edge-074
+    rationale: "Cross-lingual mirror of edge-074 (child free under 6, accompanied by an adult), answered from the English cccta-fare-types-prices passage. Parity matters here for the same reason as everywhere: a family that asks in Spanish must not be quoted a fare their child does not owe."
+  - id: ml-034
+    question: "¿Cuánto cuesta un viaje sencillo en San Joaquin RTD?"
+    agency_scope: SJRTD
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]50"]
+    mirror_of: ground-055
+    rationale: >
+      Cross-lingual mirror of ground-055: sanjoaquinrtd.com publishes no /es/
+      pages (Spanish is served through a translate widget, like SacRT), so the
+      Spanish question must be answered from the English sjrtd-fares table and
+      returned in Spanish. San Joaquin County's Spanish-speaking ridership makes
+      this the parity case that matters most for this agency. Phrasing note:
+      the question names the agency the way the corpus spells it ("San Joaquin
+      RTD") because the fare-table chunk itself never contains the bare string
+      "RTD" — a Stockton-flavored wording scored below the calibrated decline
+      threshold (ADR 0013) in the offline pipeline, and a case the pipeline
+      declines by design is not a useful mirror.
+  - id: ml-actransit-001
+    question: "¿Cuánto cuesta un viaje local sencillo para adultos en AC Transit?"
+    agency_scope: AC Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]75", "re:\\$\\s?3[.,]00"]
+    mirror_of: ground-actransit-001
+    rationale: >
+      Spanish mirror of ground-actransit-001, answerable same-language:
+      actransit-fares-es is a real translation ("Viaje único local | $2.75 |
+      $3.00"), not an untranslated /es/ shell. AC Transit is the corpus's
+      second agency with a genuine Spanish fares page, after MST.
+
+  - id: ml-actransit-002
+    question: "Si pago cada viaje con Clipper en los autobuses locales de AC Transit, ¿cuánto es lo máximo que pagaré en un día?"
+    agency_scope: AC Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?6[.,]00", "re:[Tt]arifa máxima|automáticamente"]
+    mirror_of: edge-actransit-001
+    rationale: >
+      Spanish mirror of the accumulator case, and the reason the Spanish page
+      earns its ingestion: actransit-fares-es translates the capping
+      structure itself ("Pase Local Diario | Tarifa máxima de $6.00"; "se
+      aplicarán automáticamente cuando el gasto alcance el costo de dichos
+      pases"), so the hardest structure in this agency's fare policy is
+      answerable same-language in Spanish.
+  # ── WestCAT (added 2026-08-13) ────────────────────────────────────────────
+  # WestCAT publishes English-only pages, so both cases are honest
+  # cross-lingual retrieval, the SolTrans pattern. Ids jump to ml-030 because
+  # a sibling branch holds ml-028..029.
+  - id: ml-030
+    question: "¿Cuánto cuesta en efectivo el autobús local de WestCAT?"
+    agency_scope: WestCAT
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?1[.,]75"]
+    mirror_of: ground-047
+    rationale: "Cross-lingual mirror of ground-047: WestCAT publishes its fare table only in English (westcat-fares-all), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-031
+    question: "¿Mi hijo de 5 años viaja gratis en WestCAT?"
+    agency_scope: WestCAT
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:gratis|free", "6"]
+    mirror_of: ground-050
+    rationale: "Cross-lingual mirror of ground-050 (child free under age 6, from the fare table's Under age 6 column), answered from the English westcat-fares-all passage and returned in Spanish."
+  # SLO RTA: ml-035, not ml-028, which is held by the sibling San Joaquin RTD
+  # branch (see the ground-059 note in groundedness.yaml).
+  - id: ml-035
+    question: "¿Cuánto cuesta el Regional Day Pass de SLO RTA?"
+    agency_scope: SLORTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?5[.,]50"]
+    mirror_of: ground-060
+    rationale: >
+      Cross-lingual mirror of ground-060: slorta.org publishes no /es/ pages
+      (Spanish is served through a translate widget), so the Spanish question
+      must be answered from the English slorta-passes section and returned in
+      Spanish. The product name stays in English because that is how the
+      agency sells it, which also keeps retrieval honest about what the
+      passage says.
+  - id: ml-vta-001
+    question: "Si pago mi viaje en VTA con Clipper, ¿tengo transbordos gratis?"
+    agency_scope: VTA
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:2 horas|dos horas", "re:[Ee]xpr[eé]s|[Ee]xpress"]
+    mirror_of: ground-vta-002
+    rationale: >
+      Cross-lingual: VTA publishes no Spanish fare pages (a Google Translate
+      widget serves the site's other languages), so the Spanish question
+      must be answered from English passages and returned in Spanish — the
+      FAX ml-027 pattern. Mirrors ground-vta-002 including the express
+      carve-out.
+  # ── Napa Valley Vine Transit (added 2026-08-13) ───────────────────────────
+  # The Vine publishes Spanish application PDFs and a Spanish VineGo video but
+  # no Spanish fare page, so both cases are honest cross-lingual retrieval,
+  # the SolTrans pattern. Ids jump to ml-032 because sibling branches hold
+  # ml-028..031.
+  - id: ml-032
+    question: "¿Cuánto cuesta un viaje sencillo para adultos en el Vine de Napa?"
+    agency_scope: VINE
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00"]
+    mirror_of: ground-051
+    rationale: "Cross-lingual mirror of ground-051: the Vine publishes its fare table only in English (vine-fares), so the Spanish question must be answered from an English passage and returned in Spanish."
+
+  - id: ml-033
+    question: "Tengo 82 años. ¿Puedo viajar gratis en el Vine?"
+    agency_scope: VINE
+    language: es
+    expected_behavior: answer
+    required_facts: ["80", "re:[Ll]ifetime [Pp]ass|[Pp]ase [Vv]italicio|de por vida"]
+    mirror_of: edge-082
+    rationale: "Cross-lingual mirror of edge-082 (the age-80+ complimentary Lifetime Pass and its application step), answered from the English vine-fares passage and returned in Spanish, with the same complete handoff: criterion, application, agency decides. Declares the same two facts as its mirror — the age threshold and the pass by name (accepting the English product name or a Spanish rendering) — so the Spanish case cannot pass by proving less."
+  - id: ml-samtrans-001
+    question: "¿Cuánto cuesta el pasaje de adulto en SamTrans, y es más barato con Clipper?"
+    agency_scope: SamTrans
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]25", "re:\\$\\s?2[.,]05"]
+    mirror_of: ground-samtrans-001
+    rationale: >
+      Cross-lingual: SamTrans publishes no Spanish fare pages (a Google
+      Translate widget serves the site's other languages), so the Spanish
+      question must be answered from English passages and returned in
+      Spanish — the FAX ml-027 pattern.
+  - id: ml-marin-001
+    question: "¿Cuánto cuesta el pasaje local de adulto en Marin Transit, y es más barato con Clipper?"
+    agency_scope: Marin Transit
+    language: es
+    expected_behavior: answer
+    required_facts: ["re:\\$\\s?2[.,]00", "re:\\$\\s?1[.,]80"]
+    mirror_of: ground-marin-001
+    rationale: >
+      Cross-lingual: marintransit.gov publishes no Spanish fare pages (a
+      Google Translate widget serves the site's other languages), so the
+      Spanish question must be answered from English passages and returned
+      in Spanish — the FAX ml-027 pattern.

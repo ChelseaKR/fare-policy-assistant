@@ -131,7 +131,20 @@ def _serialized(payload: object) -> bytes:
     return (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
+# The three goldens below rebind whenever the hashed release config changes, and the
+# domain profile is part of that config (`_resolved_config_payload` hashes
+# `_domain_payload`). Every agency added on 2026-08-12/13 therefore moved them.
+# That is the mechanism working: a deployed release's identity is supposed to record
+# which agencies it can answer for. Re-derive these, never loosen the assertion.
 def test_config_and_release_identity_have_stable_golden_values(config_case: ConfigCase) -> None:
+    # These goldens are meant to move only when the logical release genuinely
+    # changes, and to make you say why in the diff when it does. The domain
+    # profile's `scopes` and `aliases` are part of the config identity (see
+    # release_identity.py, the "domain" block), so an assistant that answers for
+    # a new agency is a different logical release and must not keep the previous
+    # release_version. Corpus content is not in this hash — that is
+    # `corpus_version`, pinned separately — so ingest alone would not have moved
+    # these three; registering the scope did.
     first = _descriptor(config_case)
     reversed_environment = dict(reversed(list(config_case.environment.items())))
     second_config = _config(config_case, environment=reversed_environment)
@@ -144,15 +157,50 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     )
 
     assert first == second
+    # These goldens bind the whole behavior-complete config, which includes the
+    # active domain profile's scopes and aliases. They move when the domain
+    # genuinely changes and must not move otherwise.
+    #
+    # Four branches rebound these off the same five-agency base on 2026-08-12,
+    # each unaware of the others, so the history is worth stating in full:
+    #   Elk Grove (E-tran, 4 aliases)   -> 24314b16…733a / 9c48bbe9…a3c7 / 37d9f967…cab7
+    #   Santa Cruz METRO (SCMTD, 6)     -> 6620411d…5ebb5 / fdb1a140…9fdc2 / b4d99a2c…9764e
+    #   SolTrans (7 aliases)            -> e105f5fc…80d2 / b75db932…2c4a / 172977b5…41f7
+    #   FAX (Fresno, 4 aliases)         -> 20103166…279f / cf3fbc95…27ba / 23bc74f8…1a7b
+    # Merging E-tran and SCMTD produced a fourth, distinct identity
+    # (fbc8438d…cecb / 51d71269…037b / c1750946…6e14e); merging SolTrans on top
+    # produced a fifth (ef5786da…dda1 / e04eea41…87a1 / 50e32157…8e50); merging
+    # FAX on top of that produced the sixth (50fb01a9…4999 / 816ff402…cb94 /
+    # df00d694…b626); adding County Connection (CCCTA, 4 aliases, 2026-08-13)
+    # produced the seventh (56e22201…12c5 / f8511bb2…dce3 / 16d2b360…ab59);
+    # merging San Joaquin RTD (SJRTD, 6 aliases, 2026-08-14) on top produced
+    # the eighth (fb4d057e…caf4 / 6becd605…e787 / 5a86bf97…c630a); and merging
+    # AC Transit (5 aliases, 2026-08-14) on top produced the ninth (85c6cc32…c0e1
+    # / 52e5ea5c…4a53 / 38a5931f…b4af); merging WestCAT (6 aliases,
+    # 2026-08-14) on top produced the tenth (555eb52b…cf55 / 8a8596e1…dde0 /
+    # 6eaefe65…7320); merging SLO RTA (SLORTA, 8 aliases, 2026-08-14) on top
+    # produced the eleventh (bf8f7551…05c5 / f02c0da5…13f5 / b11e0f48…85a2);
+    # merging VTA (5 aliases, 2026-08-14) on top produced the twelfth
+    # (54e25716…5937 / 8edb5f4c…2614 / 76fe204d…a162); merging Napa VINE (6
+    # aliases, 2026-08-14) produced the thirteenth (e3574bfd…4340 /
+    # 992bf97b…2238 / bdb59326…8c4f); merging SamTrans (5 aliases,
+    # 2026-08-14) produced the fourteenth (1a4915b0…67a5 / 5911bac9…3345 /
+    # 86d8e55d…056e); and merging Marin Transit (5 aliases, 2026-08-14), the
+    # last car of the ten-PR expansion train, produces the fifteenth and
+    # current one below: an eighteen-entry `scopes` tuple and 87 aliases in
+    # one domain block. The values below were re-derived by building the
+    # descriptor from this fixture against the merged profile, not lifted
+    # from any branch or from a failure message. Before any of the 2026-08
+    # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
     assert (
-        first.config_version == "48cbb2231ea6b7aab69ddaaf312b9793b2f9e6c743694bd936884fec9b1da257"
+        first.config_version == "d52812b489572bacb51dfd043db3cd45b5246ea8df799c1bba87d5d9bcbf0c7e"
     )
     assert (
-        first.release_version == "205d2a029efb87579e1321bd3af10ca23a2263346679c1566ebb411d5f13b2a8"
+        first.release_version == "fdf0a136ef202413e9a4d2d9f2547101f816fa66af7661d804f9b72d083101a0"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "41dd896f017b9de004b0ce0967d226030521672a99c4d21c353170c6f80c4cd0"
+        == "bc0cee09aa6f7400c4cc512331b2ce622feb8a84ccffa9c709d6fc9758348cad"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

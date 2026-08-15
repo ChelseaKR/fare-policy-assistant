@@ -1,0 +1,50 @@
+name: CodeQL
+
+# SAST over two languages: python (the assistant, evals, and tools) and actions
+# (the workflows, for the template-injection and permission classes CodeQL's
+# actions pack understands). Closes the "no CodeQL" half of the
+# Security & Supply-Chain row in the README's standards table.
+#
+# Semgrep already runs in security.yml. This is not redundant: Semgrep matches
+# patterns, CodeQL does dataflow, and they miss different things. Both are cheap
+# enough to keep.
+#
+# Trigger shape: PRs into main plus a weekly schedule. No push trigger, because
+# the pull_request run already analyzed the same changes before merge.
+on:
+  pull_request:
+  schedule:
+    - cron: "41 6 * * 1" # weekly, Monday 06:41 UTC, off the hour and off
+      # corpus-freshness (09:xx) and the other weekly crons
+  workflow_dispatch:
+
+# Cancel superseded runs of the same ref.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write # required to upload SARIF to code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["python", "actions"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          category: "/language:${{ matrix.language }}"

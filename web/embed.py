@@ -59,6 +59,8 @@ EMBED_HTML = """<!doctype html>
   .sources { border-top: 1px solid #d6d3cb; margin-top: 0.6rem; padding-top: 0.5rem;
     font-size: 0.85rem; }
   .sources a { color: #1d4ed8; }
+  /* h2 for heading navigation; styled to stay the inline bold caption it was. */
+  .sources-h { font-size: inherit; font-weight: 700; margin: 0; }
   .asof { color: #4d5860; font-size: 0.8rem; margin-top: 0.4rem; }
   .privacy { color: #4d5860; font-size: 0.8rem; margin: 0.45rem 0; }
   .ref { color: #4d5860; font-size: 0.78rem; margin-top: 0.8rem;
@@ -140,7 +142,11 @@ EMBED_HTML = """<!doctype html>
     if (!citations || !citations.length) { return; }
     var src = document.createElement("div");
     src.className = "sources";
-    var label = document.createElement("strong");
+    // A heading, not a <strong>, so heading navigation reaches it (see the
+    // same change in web/index.html). h2 here: the embed's only other heading
+    // is its h1, so an h3 would skip a level.
+    var label = document.createElement("h2");
+    label.className = "sources-h";
     label.textContent = "Sources";
     src.appendChild(label);
     var ul = document.createElement("ul");
@@ -193,6 +199,9 @@ EMBED_HTML = """<!doctype html>
       ans.innerHTML = render(data.answer);
       ans.setAttribute("lang", data.language || "en");
       appendSources(ans, data.citations);
+      // Same headline freshness claim as the full page: `as_of_date` is the
+      // oldest fetch date among the passages this answer cites
+      // (assistant.answer._as_of_cited), not the newest passage retrieved.
       if (data.as_of_date) {
         var asof = document.createElement("p");
         asof.className = "asof";

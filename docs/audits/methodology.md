@@ -1,9 +1,23 @@
-# Independent audit methodology
+# Second-harness audit methodology
 
-This directory holds an **independent** audit of the deployed assistant,
-produced by [GovChat-Eval](https://github.com/ChelseaKR/govchat-eval) — a
-separate evaluation project (the `govchat-eval` CLI). It complements, and does
-not replace, this repo's own evaluation in [`../../EVALS.md`](../../EVALS.md).
+This directory holds a **second-harness** audit of the deployed assistant:
+recorded answers, replayed and re-scored by
+[GovChat-Eval](https://github.com/ChelseaKR/govchat-eval) — a separate
+evaluation project (the `govchat-eval` CLI), **private as of 2026-08-12, so that
+link 404s without access**. It complements, and does not replace, this repo's
+own evaluation in [`../../EVALS.md`](../../EVALS.md).
+
+The heading used to read "independent audit". The word was doing more work than
+the setup supports, so it now says what is actually true. The harness is
+separate code with its own suites and its own judge, and it is blind to this
+system's internals, which is where its value is. It is not a third party: it was
+written by the same author, it is not published, `make audit` needs a local
+clone at `../govchat-eval`, and the CI job that runs it is scheduled-only and
+skipped on pull requests while the harness stays private. Read the numbers below
+as a second opinion from a different tool, not as an outside party's finding,
+and note that nobody outside this repo can rerun them today. What is checkable
+from outside is the recorded dataset (`evals/govchat/golden.jsonl`, with a
+`.sha256` sidecar) and the committed report beside this file.
 
 ## Why two evaluations
 
@@ -16,11 +30,12 @@ of doing so.
 
 GovChat-Eval is **black-box**. It sees only the question, the recorded answer,
 and declared ground truth, and applies its own suites and judge with no
-knowledge of how the assistant works. A system graded only by its author is a
-weaker claim than one an outside tool also audits — that second, independent
-pass is the credibility this directory adds. It also contributes suites this
+knowledge of how the assistant works. A system graded only by the harness tuned
+against it is a weaker claim than one a second, blind harness also grades, and
+that second pass is what this directory adds. It also contributes suites this
 repo's harness does not have a native form of (notably claim-level groundedness
-entailment and cross-language anchor fidelity).
+entailment and cross-language anchor fidelity). What it does not add, until the
+harness is public, is anything an outside reader can rerun.
 
 This mirrors the wider civic-AI family: GovChat-Eval is the shared audit
 engine, and `civic-rag-starter-kit` is the reference RAG template both it and
@@ -37,6 +52,16 @@ pinned Bedrock model the Lambda serves) into a content-hashed
 then byte-reproducible and runs offline, matching the family's
 record-then-replay pattern. The dataset carries a `.sha256` sidecar, so a
 tampered or wrong-version file fails closed rather than evaluating silently.
+
+Replaying it requires the harness, which is the part outsiders do not have:
+`make audit` fails fast unless a clone exists at `../govchat-eval` (override with
+`EVAL_HARNESS=<path>`), and CI's audit job is scheduled-only for the same reason.
+
+The dataset quotes agency fare text in each row's `sources[]`. Its per-row
+`license` field states that this project grants no rights over that text; see
+[`../../corpus/LICENSE-NOTE.md`](../../corpus/LICENSE-NOTE.md). Correcting that
+note later is `make audit-restamp-license`, which rewrites the note and nothing
+else, so recorded answers and the provenance header stay as they were recorded.
 
 ## Suite mapping
 

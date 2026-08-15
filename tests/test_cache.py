@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from assistant.models import Completion
+from evals import cache as cache_module
 from evals.cache import CachingModel, EvalCache, case_content_key, completion_key
 
 
@@ -56,21 +59,28 @@ def test_completion_key_cannot_collide_across_nul_containing_prompt_boundaries()
 
 def test_case_content_key_changes_when_any_input_changes():
     base = dict(
-        case_id="c1",
-        question_or_turns="q?",
-        expected_behavior="answer",
-        provider="mock",
-        answer_model="a",
-        judge_model="j",
-        corpus_version="v1",
-        prompt_versions={"system": "v1"},
+        case_semantics_version="a" * 64,
+        run_context_version="b" * 64,
         run_judges=True,
+        replicates=1,
     )
     key = case_content_key(**base)
     assert key == case_content_key(**base)
-    assert case_content_key(**{**base, "corpus_version": "v2"}) != key
-    assert case_content_key(**{**base, "question_or_turns": "different?"}) != key
+    assert case_content_key(**{**base, "case_semantics_version": "c" * 64}) != key
+    assert case_content_key(**{**base, "run_context_version": "d" * 64}) != key
     assert case_content_key(**{**base, "run_judges": False}) != key
+    assert case_content_key(**{**base, "replicates": 2}) != key
+
+
+@pytest.mark.parametrize("replicates", [0, -1, True, 1.5])
+def test_case_content_key_rejects_invalid_replicates(replicates):
+    with pytest.raises(ValueError, match="positive integer"):
+        case_content_key(
+            case_semantics_version="a" * 64,
+            run_context_version="b" * 64,
+            run_judges=True,
+            replicates=replicates,
+        )
 
 
 # ── EvalCache ─────────────────────────────────────────────────────────────────
@@ -206,3 +216,113 @@ def test_caching_model_disabled_always_calls_inner(tmp_path):
     wrapped.complete("sys", "question one", 100, 0.0)
 
     assert inner.calls == 2
+
+
+# ── refresh mode (ADR 0022: the weekly cold CI run) ───────────────────────────
+
+
+def _entry(text: str) -> dict:
+    return {"text": text, "model": "m", "input_tokens": 0, "output_tokens": 0}
+
+
+def test_refresh_reads_nothing_but_rewrites_what_it_measures(tmp_path):
+    warm = EvalCache(tmp_path)
+    warm.put_answer("k", _entry("stale"))
+    warm.save()
+
+    cold = EvalCache(tmp_path, refresh=True)
+    assert cold.get_answer("k") is None  # every lookup misses, so the model is really called
+    assert cold.stats()["answer_hits"] == 0
+    cold.put_answer("k", _entry("fresh"))
+    cold.save()
+
+    # The point of refresh over --no-cache: the store now agrees with the
+    # scoreboard the cold run published, so the next cached run cannot
+    # republish the answers this run just contradicted.
+    assert EvalCache(tmp_path).get_answer("k")["text"] == "fresh"
+
+
+def test_refresh_preserves_entries_the_run_did_not_touch(tmp_path):
+    warm = EvalCache(tmp_path)
+    warm.put_answer("kept", _entry("old"))
+    warm.put_answer("redone", _entry("old"))
+    warm.save()
+
+    cold = EvalCache(tmp_path, refresh=True)
+    cold.put_answer("redone", _entry("new"))
+    cold.save()
+
+    reloaded = EvalCache(tmp_path)
+    assert reloaded.get_answer("kept")["text"] == "old"
+    assert reloaded.get_answer("redone")["text"] == "new"
+
+
+def test_refresh_is_meaningless_without_a_cache_to_write_to(tmp_path):
+    assert EvalCache(tmp_path, enabled=False, refresh=True).refresh is False
+
+
+def test_stats_distinguishes_a_refresh_miss_from_a_cold_cache(tmp_path):
+    assert EvalCache(tmp_path).stats()["refresh"] is False
+    assert EvalCache(tmp_path, refresh=True).stats()["refresh"] is True
+
+
+def test_refreshed_caching_model_calls_inner_every_time_and_stores_the_result(tmp_path):
+    inner = _FakeModel()
+    cache = EvalCache(tmp_path, refresh=True)
+    wrapped = CachingModel(inner, cache, provider="mock", kind="answer")
+
+    wrapped.complete("sys", "question one", 100, 0.0)
+    wrapped.complete("sys", "question one", 100, 0.0)
+
+    assert inner.calls == 2
+    cache.save()
+    assert len(json.loads((tmp_path / "answers.json").read_text())) == 1
+
+
+# ── bounded growth (the store is persisted across CI runs) ────────────────────
+
+
+def test_save_trims_to_the_most_recently_used_entries(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache_module, "MAX_ENTRIES_PER_STORE", 3)
+    cache = EvalCache(tmp_path)
+    for i in range(5):
+        cache.put_answer(f"k{i}", _entry(str(i)))
+    cache.save()
+
+    assert set(json.loads((tmp_path / "answers.json").read_text())) == {"k2", "k3", "k4"}
+
+
+def test_a_served_entry_counts_as_recent_and_survives_the_trim(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache_module, "MAX_ENTRIES_PER_STORE", 2)
+    cache = EvalCache(tmp_path)
+    cache.put_answer("old", _entry("old"))
+    cache.put_answer("mid", _entry("mid"))
+    cache.get_answer("old")  # a hit is evidence the entry is still in use
+    cache.put_answer("new", _entry("new"))
+    cache.save()
+
+    assert set(json.loads((tmp_path / "answers.json").read_text())) == {"old", "new"}
+
+
+def test_rewriting_an_entry_also_marks_it_recent(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache_module, "MAX_ENTRIES_PER_STORE", 2)
+    cache = EvalCache(tmp_path)
+    cache.put_answer("a", _entry("a"))
+    cache.put_answer("b", _entry("b"))
+    cache.put_answer("a", _entry("a2"))  # a refresh run rewriting what it re-measured
+    cache.put_answer("c", _entry("c"))
+    cache.save()
+
+    stored = json.loads((tmp_path / "answers.json").read_text())
+    assert set(stored) == {"a", "c"}
+    assert stored["a"]["text"] == "a2"
+
+
+def test_trim_leaves_a_store_under_the_cap_untouched(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache_module, "MAX_ENTRIES_PER_STORE", 10)
+    cache = EvalCache(tmp_path)
+    for i in range(4):
+        cache.put_judge(f"j{i}", _entry(str(i)))
+    cache.save()
+
+    assert len(json.loads((tmp_path / "judges.json").read_text())) == 4

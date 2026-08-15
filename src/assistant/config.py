@@ -104,6 +104,37 @@ MAX_HISTORY_TURNS = 3
 MAX_HISTORY_ANSWER_CHARS = 1200
 ANSWER_CACHE_KEY_SCHEMA = "fare-assistant.answer-cache.v2"
 
+# Per-caller limiting and the spend circuit breaker (``web.ratelimit``, ADR 0025).
+#
+# The window is deliberately short: it is also the rotation period of the salt
+# that keys a caller's digest, so two windows of the same rider are not linkable
+# to each other. The quotas are deliberately generous, because this limiter is
+# not the spend ceiling -- the gateway throttle (2 rps) and reserved concurrency
+# (2) remain the ceiling. Its one job is to stop a single source from consuming
+# the whole aggregate allowance and starving every other rider. At 10 asks per
+# 60 seconds, one source can take at most ~8% of the ~120 requests/minute the
+# gateway admits, while a human asking fare questions -- or a NAT/CGNAT address
+# shared by several riders, which is one key for all of them -- stays under it.
+#
+# Note the deliberate ordering against REQUESTS_PER_MINUTE above: the ask quota
+# (10) is above the per-container in-process budget (8), so under a burst that
+# lands on one warm container the shared in-process backstop can still trip
+# first and return 429 to everybody. That backstop was always aggregate and is
+# unchanged here; the per-caller guarantee is at the gateway scale, where the
+# spend actually comes from. Lowering the quota below 8 would make the
+# per-caller limit bind first but would also start refusing the deploy's own
+# production smoke, which issues several asks from one address.
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_ASK_PER_WINDOW = 10
+RATE_LIMIT_FEEDBACK_PER_WINDOW = 20
+# How long one container may reuse its last spend-breaker read before checking
+# again. This is the worst-case lag between an operator (or the cost alarm)
+# tripping the breaker and this container stopping model calls.
+SPEND_BREAKER_CACHE_SECONDS = 30
+# Domain separation for the keyed caller digest. Changing it invalidates every
+# in-flight counter, which is a safe (fail-open) operation.
+CALLER_DIGEST_SCHEMA = "fare-assistant.caller-digest.v1"
+
 # Both evaluator calls deliberately use the same bounded deterministic request
 # settings. Their prompt bytes and model ID remain distinct release inputs.
 JUDGE_MAX_TOKENS = 512

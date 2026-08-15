@@ -5,7 +5,17 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    - cron: "17 9 * * *"  # nightly full suite
+    # Nightly full suite, served from the persisted answer/judge cache: an
+    # unchanged corpus and prompt set cost nothing to re-score. Monday's run is
+    # deliberately cold (--refresh-cache), so provider drift is still measured
+    # once a week against real model calls. See ADR 0022.
+    #
+    # GitHub's schedule cron only accepts day-of-week 0-6 (Sunday=0); "7" is
+    # out of range and fails workflow schema validation before any job runs
+    # (silent startup_failure, all required checks stay unreported). "Every
+    # day except Monday" is Sunday plus Tuesday-Saturday: 0,2-6.
+    - cron: "17 9 * * 0,2-6"  # nightly full suite (cache-backed)
+    - cron: "17 9 * * 1"      # weekly cold full suite (cache refreshed)
 
 # Least privilege by default; jobs that need AWS add id-token themselves.
 permissions:
@@ -82,10 +92,20 @@ jobs:
         run: make i18n
 
   a11y-browser:
-    # Blocking axe/pa11y pass over the served page — the cross-check the
+    # Blocking axe/pa11y pass over the served pages — the cross-check the
     # pure-Python structural gate cannot do (computed contrast, ARIA semantics).
-    # Graduated from advisory to merge-blocking (BL-12): the page is
+    # Graduated from advisory to merge-blocking (BL-12): the pages are
     # violation-free, so any new finding is a real regression.
+    #
+    # Until 2026-08-12 this ran over `web/index.html` alone, while three other
+    # pages are served publicly: `/embed` (what an agency puts on its own fare
+    # page), `/offline`, and `/guide` (built for riders with no signal at the
+    # stop or who would rather browse than type). The structural gate was
+    # widened to all four on 2026-08-05; the browser gate was not, so the pages
+    # whose audience is least able to route around a problem had never been
+    # loaded in a real browser by any check. All four pass both runners as of
+    # the day this was widened — the point is that a regression on any of them
+    # now fails a build instead of shipping.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
@@ -95,22 +115,49 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: "20"
-      - name: Run pa11y on the static page (WCAG2AA)
+      - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
+      - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
+        run: uv sync --frozen --all-groups
+      # `/offline`, `/guide`, and `/embed` are generated from the committed
+      # corpus and a module constant — no network, no model call, no
+      # credentials — so they render here exactly as they are served. Emitting
+      # them from `web.a11y` means both gates read one definition of "every
+      # public page" and neither can silently fall out of coverage.
+      - name: Render every public page
+        run: uv run python -m web.a11y --emit /tmp/a11y-pages
+      # Two runners, because they catch different rules: axe covers ARIA
+      # semantics and computed contrast, HTML CodeSniffer covers WCAG
+      # techniques axe does not implement. Neither is a substitute for the
+      # manual screen-reader walkthrough (docs/audits/a11y-walkthrough.md).
+      - name: Run pa11y on every public page (WCAG2AA, axe + htmlcs)
         run: |
           printf '%s\n' '{"chromeLaunchConfig":{"args":["--no-sandbox"]}}' > /tmp/pa11y-ci.json
-          npx --yes pa11y@9.1.1 --standard WCAG2AA --runner axe --config /tmp/pa11y-ci.json ./web/index.html
+          a11y_status=0
+          for page in /tmp/a11y-pages/*.html; do
+            for runner in axe htmlcs; do
+              echo "::group::pa11y $runner $(basename "$page")"
+              npx --yes pa11y@9.1.1 --standard WCAG2AA --runner "$runner" \
+                --config /tmp/pa11y-ci.json "$page" || a11y_status=1
+              echo "::endgroup::"
+            done
+          done
+          exit $a11y_status
 
   smoke-evals:
-    # 25-case smoke suite on every PR. AWS access comes from GitHub OIDC
-    # federation (no long-lived keys): set the AWS_OIDC_ROLE_ARN repository
-    # variable to an IAM role that trusts this repo's OIDC subject and allows
-    # bedrock:InvokeModel on the pinned models. Forks and repos without the
-    # variable run offline: deterministic checks only, judges recorded as
-    # skipped.
-    if: github.event_name != 'schedule'
+    # Pull-request code is untrusted until merge. Keep this job explicitly
+    # offline and omit id-token permission entirely: skipping a credential
+    # action is not an authorization boundary because any checked-out code can
+    # request a job-scoped OIDC token when id-token: write is present.
+    #
+    # A runner smoke score is not meaningful with the deliberately incapable
+    # mock provider: its correct outcome is a red, non-promotable receipt.
+    # Instead, prove offline that the evaluator catches every planted defect.
+    # The first real served-model smoke receipt is produced only after merge.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
@@ -119,24 +166,76 @@ jobs:
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
         with:
           enable-cache: true
+      - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
+        run: uv sync --frozen --all-groups
+      - name: Prove evaluator gates catch planted defects offline
+        run: make eval-selftest
+
+  smoke-evals-online:
+    # Only merged main executes with cloud identity. AWS access comes from
+    # GitHub OIDC federation (no long-lived keys); repositories without the
+    # configured role still produce an ordinary offline smoke receipt.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Configure AWS credentials via OIDC
-        if: ${{ vars.AWS_OIDC_ROLE_ARN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        if: ${{ vars.AWS_OIDC_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4
         with:
           role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
-        # Fork PRs never assume the AWS role (defence in depth on top of the IAM
-        # trust policy): they run the smoke suite offline. Only same-repo PRs,
-        # pushes, and the schedule reach Bedrock.
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
         run: uv sync --frozen --all-groups
+      - name: Restore the answer/judge model cache
+        # The cache is content-keyed on the *rendered* system and user prompts
+        # (evals/cache.py), so a hit is only possible when the prompt bytes,
+        # the retrieved corpus passages, the model IDs, and the question are
+        # all identical to a previous run. Any change to any of them misses and
+        # re-pays. Without this step every CI run starts cold and buys the same
+        # 26 answers and ~48 judgements again, including the push-to-main run
+        # that re-scores the identical tree its own PR scored minutes earlier.
+        #
+        # This job is the first *real*, non-mocked receipt for the merged code
+        # (the offline smoke-evals job above only proves the evaluator catches
+        # planted defects). A cache hit here still reflects a genuine prior
+        # call recorded under byte-identical prompts, so it stays honest as
+        # regression signal — it is not promotion evidence either way.
+        # Promotion runs its own separate full, live, --no-cache evaluation at
+        # deploy time (infra/deploy.sh), which is the run ADR 0023 requires to
+        # be uncached; cache speedups here are explicitly fine for CI/dev use.
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          # The exact key is unique per run, so the restore always falls through
+          # to the prefix and picks up the most recent cache this ref can see.
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: eval-model-cache-
       - name: Run smoke suite
         run: uv run python -m evals.runner --smoke
+      - name: Save the answer/judge model cache
+        # Split restore/save rather than the combined action so the save still
+        # happens when the suite fails its gate: those calls were paid for, and
+        # discarding them would make the next run buy the same answers again.
+        # Skipped when the run was offline (no AWS role, no calls, no cache).
+        if: always() && hashFiles('evals/cache/**') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
-          name: eval-run
+          name: eval-run-online
           path: evals/runs/
 
   full-evals-nightly:
@@ -158,8 +257,37 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+      - name: Restore the answer/judge model cache
+        # Same content-keyed store the smoke job uses, and the reason the two
+        # share one key prefix: the nightly full run is what warms all 201
+        # cases on main, so the next day's pull requests inherit a cache that
+        # already covers every smoke case they will ask for.
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: eval-model-cache-
       - name: Full eval run
-        run: uv run python -m evals.runner --full
+        # Monday's schedule re-measures the provider for real and rewrites the
+        # stored answers; the other six nights re-score from cache. A plain
+        # --no-cache Monday would re-measure but leave the cache holding last
+        # week's answers, so Tuesday would publish numbers Monday contradicted.
+        #
+        # This report is a comparison/research artifact (committed EVALS.md),
+        # not promotion evidence: exact release evaluation is its own full,
+        # live, --no-cache run at deploy time (infra/deploy.sh; ADR 0023).
+        env:
+          CACHE_MODE: ${{ github.event.schedule == '17 9 * * 1' && '--refresh-cache' || '' }}
+        run: uv run python -m evals.runner --full $CACHE_MODE
+      - name: Save the answer/judge model cache
+        # A red regression gate still paid for every call in the run. Saving on
+        # failure is what stops a week of failing nightlies from re-buying the
+        # same 201 cases each morning.
+        if: always() && hashFiles('evals/cache/**') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: evals/cache
+          key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Upload report
         # Failure evidence is most valuable when the release gate is red.
         # Preserve the partial report, traces, and provenance even when the

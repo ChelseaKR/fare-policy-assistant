@@ -41,7 +41,26 @@ class DomainProfile:
 # forks this object, it does not edit the pipeline.
 TRANSIT = DomainProfile(
     name="California transit fare policy",
-    scopes=("MST", "SBMTD", "Yolobus", "SacRT", "HTA"),
+    scopes=(
+        "MST",
+        "SBMTD",
+        "Yolobus",
+        "SacRT",
+        "HTA",
+        "E-tran",
+        "SCMTD",
+        "SolTrans",
+        "FAX",
+        "CCCTA",
+        "SJRTD",
+        "AC Transit",
+        "WestCAT",
+        "SLORTA",
+        "VTA",
+        "VINE",
+        "SamTrans",
+        "Marin Transit",
+    ),
     # Aliases riders actually use, mapped to manifest agency keys.
     aliases={
         "mst": "MST",
@@ -60,6 +79,152 @@ TRANSIT = DomainProfile(
         "eureka": "HTA",
         "arcata": "HTA",
         "redwood transit": "HTA",
+        # Elk Grove Transit Services. SacRT has operated these routes since the
+        # 2021 annexation, but riders still say "e-tran" and "the Elk Grove bus",
+        # and the E-prefix routes keep their own fare table, so the alias points
+        # at its own scope rather than folding into SacRT.
+        "e-tran": "E-tran",
+        "etran": "E-tran",
+        "e tran": "E-tran",
+        "elk grove": "E-tran",
+        # Santa Cruz METRO. "metro" alone is deliberately absent: it is what
+        # riders of half the agencies in California call their own operator, and
+        # an alias that broad would pull unrelated questions into this scope.
+        "scmtd": "SCMTD",
+        "scmetro": "SCMTD",
+        "santa cruz": "SCMTD",
+        "santa cruz metro": "SCMTD",
+        "watsonville": "SCMTD",
+        "tap2cruz": "SCMTD",
+        "soltrans": "SolTrans",
+        "sol trans": "SolTrans",
+        "solano": "SolTrans",
+        "solano county transit": "SolTrans",
+        "solanoexpress": "SolTrans",
+        "vallejo": "SolTrans",
+        "benicia": "SolTrans",
+        # Deliberately NOT aliased: "clipper". Clipper is a regional fare card
+        # operated by MTC and accepted by many Bay Area agencies, most of which
+        # are not in this corpus. Mapping the word to SolTrans would make the
+        # assistant answer agency-specific Clipper questions as if they were
+        # SolTrans questions — the exact over-generalization the
+        # soltrans-clipper-scope eval cases exist to prevent.
+        #
+        # Fresno Area Express, operated by the City of Fresno. "Handy Ride" is
+        # its paratransit brand and riders name it without naming FAX.
+        "fax": "FAX",
+        "fresno": "FAX",
+        "fresno area express": "FAX",
+        "handy ride": "FAX",
+        # County Connection (Central Contra Costa Transit Authority),
+        # Concord/Walnut Creek. Its paratransit brand is "LINK", which is
+        # deliberately NOT aliased: \blink\b is an ordinary English word ("send
+        # me the link") and would pull unrelated questions into this scope; a
+        # rider who says "County Connection LINK" already matches on the agency
+        # name. Same reasoning as the absent "metro" and "clipper" aliases above.
+        "cccta": "CCCTA",
+        "county connection": "CCCTA",
+        "central contra costa": "CCCTA",
+        "concord": "CCCTA",
+        # San Joaquin RTD. The agency brands itself "RTD", which is safe to
+        # alias here because no other corpus agency uses the string; "Van Go!"
+        # is its microtransit brand and riders name it without naming RTD (the
+        # same shape as "Handy Ride" for FAX). Deliberately NOT aliased:
+        # "vamos" — the Vamos Mobility fare app is a San Joaquin COG regional
+        # product, not an agency, and the word is common Spanish.
+        "sjrtd": "SJRTD",
+        "san joaquin": "SJRTD",
+        "san joaquin rtd": "SJRTD",
+        "rtd": "SJRTD",
+        "stockton": "SJRTD",
+        "van go": "SJRTD",
+        # AC Transit (Alameda-Contra Costa Transit District). "Tempo" is its
+        # Line 1T bus-rapid-transit brand and "Transbay" its bridge-route
+        # brand; within this corpus only AC Transit publishes fares under
+        # either name, so both point here (the "handy ride"/"tap2cruz"
+        # pattern). Deliberately NOT aliased: "oakland", "berkeley", and
+        # "east bay" — multi-operator geographies served by agencies outside
+        # this corpus (BART, WestCAT, Union City Transit), so a geography
+        # alias would over-claim scope the way "metro" would have for Santa
+        # Cruz.
+        "ac transit": "AC Transit",
+        "actransit": "AC Transit",
+        "alameda-contra costa": "AC Transit",
+        "tempo": "AC Transit",
+        "transbay": "AC Transit",
+        # WestCAT (Western Contra Costa Transit Authority), Pinole/Hercules.
+        # "LYNX" is its Transbay brand and riders name it without naming
+        # WestCAT; unlike "link" or "metro" it is not an everyday English word
+        # in a fare question, so the alias is safe to carry.
+        "westcat": "WestCAT",
+        "west cat": "WestCAT",
+        "western contra costa": "WestCAT",
+        "lynx": "WestCAT",
+        "pinole": "WestCAT",
+        "hercules": "WestCAT",
+        # SLO RTA. "rta" is safe to alias the way FAX's "fax" is: no other
+        # corpus agency uses the string. "Runabout" is its paratransit brand
+        # and riders name it without naming RTA (the Handy Ride shape).
+        # Deliberately NOT aliased: the bare string "slo" — it names SLO
+        # Transit, the City of San Luis Obispo's separate bus system (not in
+        # this corpus, though RTA's regional passes are honored on it), at
+        # least as often as it names the RTA; the "metro" lesson from SCMTD.
+        "slorta": "SLORTA",
+        "slo rta": "SLORTA",
+        "rta": "SLORTA",
+        "san luis obispo": "SLORTA",
+        "south county transit": "SLORTA",
+        "morro bay": "SLORTA",
+        "paso robles": "SLORTA",
+        "runabout": "SLORTA",
+        # Santa Clara Valley Transportation Authority. Riders say "VTA";
+        # "san jose" and "santa clara" are single-operator geographies within
+        # this corpus (the "vallejo"->SolTrans pattern). Deliberately NOT
+        # aliased: "valley" alone, and "light rail" — Sacramento's SacRT runs
+        # light rail too, so the mode name must not resolve to one operator.
+        "vta": "VTA",
+        "santa clara": "VTA",
+        "san jose": "VTA",
+        "valley transportation": "VTA",
+        "smartpass": "VTA",
+        # Napa Valley Vine Transit (NVTA). Riders say "the Vine"; "vine" as a
+        # bare word is carried because in a fare question it is the brand, not
+        # the plant, and unlike "metro" it is not what other agencies' riders
+        # call their own operator. "VineGo" is the paratransit brand and
+        # riders name it without naming the Vine.
+        "vine": "VINE",
+        "vine transit": "VINE",
+        "napa vine": "VINE",
+        "napa": "VINE",
+        "vinego": "VINE",
+        "vine go": "VINE",
+        # SamTrans (San Mateo County Transit District). "san mateo" is a
+        # single-operator geography within this corpus (the
+        # "vallejo"->SolTrans pattern); "redi-wheels" is its paratransit
+        # brand, named by riders without naming SamTrans (the
+        # "handy ride"->FAX pattern). Deliberately NOT aliased: "caltrain" —
+        # a separate operator this corpus does not cover, even though
+        # SamTrans' pages describe accepting one of its passes.
+        "samtrans": "SamTrans",
+        "sam trans": "SamTrans",
+        "san mateo": "SamTrans",
+        "redi-wheels": "SamTrans",
+        "rediwheels": "SamTrans",
+        # Marin Transit (Marin County Transit District). "marin" alone is
+        # safe here the way "yolo" is for Yolobus: no other corpus agency
+        # serves the county, and the word-boundary match keeps it off
+        # "marina" and "mariner". "san rafael" and "novato" are
+        # single-operator geographies (the "vallejo"->SolTrans pattern);
+        # "marin access" is its paratransit brand. Deliberately NOT aliased:
+        # "golden gate" — Golden Gate Transit shares Marin's local fares but
+        # is its own operator outside this corpus, and mapping its name here
+        # would invite answers about GGT's regional routes that Marin's
+        # pages cannot support.
+        "marin": "Marin Transit",
+        "marin transit": "Marin Transit",
+        "marin access": "Marin Transit",
+        "san rafael": "Marin Transit",
+        "novato": "Marin Transit",
     },
     fallback_contact="https://511.org (Bay Area) or the agency's own website",
     # Topics adjacent to fare policy that the assistant must redirect, not answer.

@@ -3,7 +3,13 @@
 # Path to a local govchat-eval clone for the independent audit (make audit).
 EVAL_HARNESS ?= ../govchat-eval
 
-.PHONY: fetch index ingest eval smoke report audit a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares
+.PHONY: fetch index ingest eval smoke report audit audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
+
+# The committed relabeling worksheet `make relabel` opens by default.
+WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
+
+# The committed native-Spanish rating census `make spanish-quality` opens.
+ES_SHEET ?= evals/spanish/native_es_rubric_2026-08-05.jsonl
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -21,7 +27,7 @@ index: ingest
 ingest:       ## Clean, chunk, and index the fetched snapshots
 	uv run python -m assistant.ingest process
 
-gtfs-fetch:   ## Snapshot GTFS(-Fares) feed data listed in corpus/manifest.yaml (EXP-06)
+gtfs-fetch:   ## Transactionally capture exact GTFS(-Fares) feeds (ADRs 0011, 0024)
 	uv run python -m assistant.gtfs fetch
 
 gtfs-check:   ## Cross-check snapshotted GTFS fares against the prose corpus (EXP-06)
@@ -30,7 +36,7 @@ gtfs-check:   ## Cross-check snapshotted GTFS fares against the prose corpus (EX
 fares:        ## Print an agency's authoritative fares from its GTFS-Fares feed (ADR 0017): make fares AGENCY=SBMTD
 	uv run python -m assistant.fare_table $(AGENCY)
 
-smoke:        ## CI smoke suite (25 cases, deterministic checks only unless key present)
+smoke:        ## CI smoke suite (26 cases, deterministic checks only unless key present)
 	uv run python -m evals.runner --smoke
 
 eval:         ## Full eval run; writes evals/runs/<timestamp>/ and regenerates EVALS.md
@@ -40,7 +46,7 @@ report:       ## Regenerate EVALS.md + HTML from the latest run, and the eval-hi
 	uv run python -m evals.report
 	uv run python -m evals.history
 
-a11y:         ## Structural accessibility gate on the demo page (WCAG 2.2 AA, static subset)
+a11y:         ## Structural accessibility gate on every public page (WCAG 2.2 AA, static subset)
 	uv run python -m web.a11y
 
 offline:      ## Render the offline fare reference (web/offline.html) from the corpus
@@ -65,6 +71,9 @@ audit:        ## Independent GovChat-Eval audit: record answers, then run the ex
 		--dataset "$(CURDIR)/evals/govchat/golden.jsonl" \
 		--baseline "$(CURDIR)/evals/govchat/baseline.json" \
 		--out "$(CURDIR)/docs/audits"
+
+audit-restamp-license: ## Rewrite the committed golden.jsonl's per-row license note from evals/govchat_export.LICENSE_NOTE (offline; no answers re-recorded, provenance header untouched, .sha256 refreshed)
+	uv run python -m evals.govchat_export --restamp-license
 
 test:         ## Run the unit suite with the branch-coverage gate (offline; no paid calls)
 	uv run pytest -q --cov=assistant --cov=web --cov=evals --cov-branch \
@@ -135,6 +144,12 @@ mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; n
 
 eval-selftest:  ## Plant known defects into clean answers and prove the deterministic gate catches each (offline; also enforced by tests/test_selftest.py in CI)
 	uv run python -m evals.selftest
+
+relabel:      ## Label the judge-calibration worksheet one row at a time (offline; shows each row's evidence, never proposes a verdict): make relabel [WORKSHEET=<path>]
+	uv run python -m evals.calibration --review "$(WORKSHEET)"
+
+spanish-quality: ## Rate the native-Spanish answer-quality census (offline; the half of I18N §7 the parity gate cannot see): make spanish-quality [ES_SHEET=<path>]
+	uv run python -m evals.spanish_quality --review "$(ES_SHEET)"
 
 coverage:     ## Agency x program coverage matrix + corpus blind spots; --write regenerates docs/eval-coverage.md
 	uv run python -m evals.coverage --write

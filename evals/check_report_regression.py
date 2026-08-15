@@ -46,6 +46,7 @@ from evals import provenance
 from evals.runner import (
     expected_below_macro,
     parity_regressed,
+    stale_annotations,
     suite_regressed,
     suites_below_macro,
 )
@@ -57,9 +58,26 @@ BASELINE_PATH = config.REPO_ROOT / "evals" / "baseline.json"
 def check(evals_md_text: str, baseline: dict) -> list[str]:
     """Return a list of human-readable regression descriptions; empty is clean.
 
-    A suite present in the baseline but absent from the committed report's
-    provenance is not flagged here (that is a missing-provenance problem for
-    `evals/provenance.py`, not a regression this function can evaluate).
+    Three ways a committed report can describe a worse system than the baseline,
+    and until 2026-08-05 only the first was checked:
+
+    1. **A suite's pass rate dropped** — `suite_regressed`, the original check.
+    2. **A suite vanished.** A baseline suite absent from the committed report
+       used to be skipped, on the reasoning that it was "a missing-provenance
+       problem for `evals/provenance.py`". It is not: `provenance.py` compares
+       prompt and corpus versions and has never looked at suite composition, so
+       the responsibility was assigned to a module that does not implement it.
+       Regenerating `EVALS.md` from a `--suite` subset, or deleting a suite
+       outright, left every gate green.
+    3. **A suite shrank.** `suite_regressed` needs both a pass-rate drop and a
+       pass-count drop, so removing the cases a suite fails *raises* its pass
+       rate and can never trip it. Deleting the failing test is the oldest way
+       to turn a board green, and nothing here could see it.
+
+    (2) and (3) share the regression escape hatch this module already documents:
+    a maintainer who genuinely retires a suite or a case runs
+    `python -m evals.runner --update-baseline` with a written rationale, which
+    is a visible line in the diff. What is closed is the silent path.
     """
     payload = provenance.read_evals_md(evals_md_text)
     if payload is None or "suites" not in payload:
@@ -71,7 +89,17 @@ def check(evals_md_text: str, baseline: dict) -> list[str]:
     for suite, base in baseline.get("suites", {}).items():
         now = payload["suites"].get(suite)
         if now is None:
+            regressions.append(
+                f"{suite}: {base['passed']}/{base['total']} at baseline but absent from the "
+                "committed EVALS.md — a suite that disappears is not a suite that passed"
+            )
             continue
+        if now.get("total", 0) < base.get("total", 0):
+            regressions.append(
+                f"{suite}: {base['total']} cases at baseline, {now['total']} in the committed "
+                f"EVALS.md — {base['total'] - now['total']} case(s) removed. Dropping cases "
+                "raises a pass rate without fixing anything, so it is gated separately"
+            )
         if suite_regressed(base, now):
             regressions.append(
                 f"{suite}: {base['passed']}/{base['total']} (baseline) -> "
@@ -140,7 +168,8 @@ def check_parity_committed(
             f"{parity['mirror_passed']}/{parity['pairs']} in the committed EVALS.md — "
             f"gap {parity['delta_pp']} pp exceeds the 5-point gate on 2+ cases"
         )
-    for name, o in sorted(suites_below_macro(payload.get("suites", {})).items()):
+    suites = payload.get("suites", {})
+    for name, o in sorted(suites_below_macro(suites).items()):
         if name in notes:
             continue
         problems.append(
@@ -148,6 +177,7 @@ def check_parity_committed(
             f"{o['floor']}% (macro {o['macro']}%) with no written annotation in "
             "evals/expected_below_macro.json"
         )
+    problems += stale_annotations(suites, notes)
     return problems
 
 

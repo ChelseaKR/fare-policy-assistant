@@ -1,0 +1,24 @@
+{
+  "corpus_version": "b21d4e3b3c98",
+  "content_version": "842260f5b3022e3316c867ad0caaa71980d76d3e6434fa2828c3d7376c248105",
+  "as_of": "2026-08-14",
+  "agencies": [
+    "AC Transit",
+    "CCCTA",
+    "E-tran",
+    "FAX",
+    "HTA",
+    "MST",
+    "SBMTD",
+    "SCMTD",
+    "SJRTD",
+    "SLORTA",
+    "SacRT",
+    "SolTrans",
+    "WestCAT",
+    "Yolobus"
+  ],
+  "documents": 41,
+  "chunks": 249,
+  "archived_at": "2026-08-14T02:12:20+00:00"
+}

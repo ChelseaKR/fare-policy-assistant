@@ -10,7 +10,28 @@ or confidential code, data, methods, or documentation.
 
 Licensed under the Apache License, Version 2.0. See the LICENSE file for the full terms.
 
-Files under `corpus/raw/` are reproducibility snapshots of publicly published
-transit-agency fare information. Their source URLs and fetch dates are recorded
-in `corpus/manifest.yaml`; those source materials remain the work of their
-respective agencies and are not covered by the project's Apache License, Version 2.0.
+The Apache-2.0 grant covers this project's own work: code, prompts, eval suites,
+documentation, and the reports generated from them. It does not cover the
+transit-agency text this repository quotes, and it could not: those pages are
+the agencies' copyrighted work, published on their own sites under their own
+"all rights reserved" notices. This project holds no license to that text, so
+it has none to pass on. Every place the text lands is carved out of the
+Apache-2.0 grant, not only the first one:
+
+  corpus/raw/                    fetched page snapshots, verbatim
+  corpus/processed/*.md          the same pages, cleaned to markdown
+  corpus/processed/chunks.jsonl  the same text, split into retrieval chunks
+  corpus/snapshots/**            dated snapshots: raw bytes plus their chunks
+  corpus/versions/*/chunks.jsonl chunk sets retained from earlier corpus versions
+  evals/govchat/golden.jsonl     retrieved passages carried in each row's sources[]
+  evals/calibration/judge_label_packet_2026-07-11.md
+                                 passages quoted in full for human judge labeling
+  EVALS.md, docs/eval-report.*   short passage excerpts inside failure traces
+
+That is roughly 1.5 MB of other people's writing. Source URLs, fetch dates, and
+each agency's own terms-of-use or copyright page (where one exists) are recorded
+in `corpus/manifest.yaml`. `corpus/LICENSE-NOTE.md` says in plain English what a
+downstream reader may and may not assume about this material. For current fare
+policy, the agencies' own sites are the authoritative source; this repository is
+a dated snapshot kept so an evaluation can be re-run against what it was scored
+on.

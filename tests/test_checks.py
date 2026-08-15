@@ -46,11 +46,15 @@ FACTS_BY_DOC = {
 }
 
 
-def _answered(text: str, agency: str = "MST") -> AnswerResult:
+def _answered(text: str, agency: str = "MST", as_of_date: str = "2026-06-12") -> AnswerResult:
+    # `as_of_date` defaults to the citation's own fetch date, which is what the
+    # answer pipeline produces (assistant.answer._as_of_cited) and what
+    # `as_of_matches_oldest_citation` requires of a well-formed answer.
     return AnswerResult(
         question="q",
         answer=text,
         kind="answered",
+        as_of_date=as_of_date,
         citations=[
             Citation(
                 doc_id="mst-fares",
@@ -116,6 +120,54 @@ class TestAnswerChecks:
         result = _answered("The fare is $2.00 [doc:mst-fares].")
         checks = _by_name(run_checks(case, result, DOC_IDS))
         assert not checks["as_of_disclosure"].passed
+
+    def test_as_of_date_newer_than_the_cited_passage_fails(self):
+        # The defect this check exists for: a freshly refetched document
+        # elsewhere in the top-k dated the whole answer to its fetch date while
+        # the citation the answer rests on was two months older.
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered(
+            "The fare is $2.00 [doc:mst-fares], as of 2026.", as_of_date="2026-08-10"
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert not checks["as_of_matches_oldest_citation"].passed
+        assert "oldest cited=2026-06-12" in checks["as_of_matches_oldest_citation"].detail
+
+    def test_as_of_date_matching_the_cited_passage_passes(self):
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered("The fare is $2.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert checks["as_of_matches_oldest_citation"].passed
+
+    def test_as_of_date_takes_the_oldest_of_several_citations(self):
+        # An answer resting on a June page and an August page is only verified
+        # as of June; the August date would overstate it.
+        case = {"expected_behavior": "answer", "language": "en"}
+        result = _answered("The fare is $2.00 [doc:mst-fares], as of 2026.")
+        result.citations.append(
+            Citation(
+                doc_id="yolobus-fares",
+                agency="Yolobus",
+                title="Fares",
+                url="https://yolobus.com/fares/",
+                fetch_date="2026-08-10",
+            )
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert checks["as_of_matches_oldest_citation"].passed
+
+    def test_as_of_check_is_dormant_on_a_decline(self):
+        # A decline carries no citations, so there is no cited evidence to date
+        # and the check must not fire on the corpus-level value.
+        case = {"expected_behavior": "refuse_redirect", "language": "en"}
+        result = AnswerResult(
+            question="q",
+            answer="I don't have a published policy for that. Please contact customer service.",
+            kind="refused_no_support",
+            as_of_date="2026-08-10",
+        )
+        checks = _by_name(run_checks(case, result, DOC_IDS))
+        assert "as_of_matches_oldest_citation" not in checks
 
     def test_determination_language_fails_any_case(self):
         case = {"expected_behavior": "answer", "language": "en"}

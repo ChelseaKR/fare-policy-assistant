@@ -15,3 +15,5 @@
 4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/yolobus-fares.html:generic-api-key:598
 4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/yolobus-purchasing.html:generic-api-key:380
 4ab693168979c715d69bdf7f57b43389eaadf84d:corpus/raw/yolobus-reduced-fare-id.html:generic-api-key:286
+# Synthetic AKIA-shaped fixture in the secret-rejection test itself (test_protocol_rejects_nested_nonstring_keys_and_secret_values)
+fcee166aef6618345217e852460ef90be3735a15:tests/test_eval_attestation.py:aws-access-token:821

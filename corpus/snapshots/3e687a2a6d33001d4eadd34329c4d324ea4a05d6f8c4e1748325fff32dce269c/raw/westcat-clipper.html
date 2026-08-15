@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clipper</title>
+    
+    <link rel="stylesheet" href="/Content/bootstrap.min.css" />
+    <link rel="stylesheet" href="/Content/westCat.css" />
+    <link rel="stylesheet" href="https://use.typekit.net/whb7phd.css" />
+    <script src="/Scripts/modernizr-2.8.3.js"></script>
+
+
+    <script async src='https://docaccess.com/docbox.js'></script>
+    <link rel="shortcut icon" href="/Content/Images/wc-favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/Content/Images/wc-favicon.ico" type="image/x-icon">
+    <meta name="description" content="WestCAT is a public transportation service in western Contra Costa County.The Western Contra Costa County Transit was established in August 1977 as a Joint Exercise of Powers Agreement between Contra Costa County and the cities of Hercules and Pinole.">
+    <meta name="robots" content="index, follow" />
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-150206025-1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'UA-150206025-1');
+    </script>
+
+    <style type="text/css">
+        @media only screen and (max-width:991px) {
+            .navbar-text {
+                display: none;
+            }
+
+            #menu {
+                margin: 0px !important;
+            }
+            /*#promo {
+                position: relative;
+                top: -150px;
+            }
+
+            #logo {
+                position: relative;
+                top: 150px;
+            }*/
+        }
+
+        .nav-link {
+            color: #000 !important;
+        }
+
+        .social-link {
+            max-height: 28px;
+        }
+
+        .navbar-toggler {
+            position: relative;
+        }
+
+        .logo {
+            min-height: 65px;
+            border-radius: 5px 5px;
+            background-image: url("/Content/Images/logo-westcat-white.png");
+            background-position-x: left;
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-position-y: bottom;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            cursor: pointer;
+        }
+
+        .promo {
+            min-height: 125px;
+            border-radius: 5px 5px;
+            background-image: url("/Content/Images/2026-Top-banner-pass2class-lg.png");
+            background-position-x: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            cursor: pointer;
+        }
+
+        .promoB {
+            min-height: 125px;
+            border-radius: 5px 5px;
+            background-image: url("/Content/Images/2026-Top-banner-pass2class-lg.png");
+            background-position-x: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            cursor: pointer;
+        }
+
+        @media only screen and (max-width:1300px) {
+            .promo {
+                background-image: url("/Content/Images/2026-Top-banner-pass2class-md.png");
+            }
+        }
+
+        @media only screen and (max-width:700px) {
+            .promo {
+                background-image: url("/Content/Images/2026-Top-banner-pass2class-sm.png");
+            }
+
+            .logo {
+                background-position-x: center;
+                text-align: center;
+                margin-top: 10px;
+            }
+
+            .SideNavBlock {
+                display: none;
+            }
+        }
+
+
+
+        .navbar-text {
+            color: black !important;
+        }
+
+        #bannerLnav {
+            position: absolute;
+            top: 30%;
+            font-size: xx-large;
+        }
+
+        #bannerRnav {
+            position: absolute;
+            font-size: xx-large;
+            top: 30%;
+            right: 12px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="mt-0 pt-0">
+    <a href="#main" class="sr-only">Skip to main content</a>
+    <header>
+        <div class="container-fluid" style="background-color:#204782">
+            <div class="row position-relative">
+                <div class="col-xl-3 order-1 order-xl-0 logo" id="logo"><a href="https://westcat.org" class="d-inline-block w-100 h-100" style="text-decoration:none;" aria-label="Home Page"></a></div>
+                <div class="col-xl-9 order-0 order-xl-1 text-center">
+                    <div class="position-relative" style="cursor:pointer">
+                        <div id="bannerLnav" role="button" aria-label="Previous slide" tabindex="0"></div>
+                        <div id="promo" class="promo" tabindex="0"></div>
+                        <div id="bannerRnav" role="button" tabindex="0" aria-label="Next slide"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div style="background-color:#90b836;padding:3px;"></div>
+        <div class="container" id="menu">
+            <nav class="navbar navbar-expand-lg navbar-light">
+
+                <button class="navbar-toggler" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#navbarSupportedContent"
+                        aria-controls="navbarSupportedContent"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon text-dark"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav mr-auto ml-auto">
+                        <li class="nav-item dropdown">
+
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                OUR SERVICES
+                            </a>
+
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <p>
+                                    <a href="/home/ServLynx" class="dropdown-item">LYNX Bus to San Francisco</a>
+                                    <a href="/home/ServLocalBus" class="dropdown-item">Local Bus</a>
+                                    <a href="/home/ServADAPara" class="dropdown-item">ADA Paratransit</a>
+                                    <a href="/home/ServDial" class="dropdown-item">Senior Dial-a-Ride</a>
+                                    <a href="/home/ServJxExpress" class="dropdown-item">Express Bus to BART</a>
+
+                                </p>
+                            </div>
+
+                        </li>
+                        <li class="navbar-text">|</li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown2" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">ROUTES &#8226; MAPS &#8226; SCHEDULES</a>
+
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown2">
+                                <div class="container-fluid" style="width:750px;">
+                                    <div class="row">
+                                        <div class="col-sm-4">
+                                            <p><a href="/home/SchedSysMap"><span class="schedDropItemHead">SYSTEM MAP with ALL ROUTES</span></a></p>
+                                            <p><a href="/home/SchedHoliday"><span class="schedDropItemHead">HOLIDAY SCHEDULE</span></a></p>
+
+                                            <p><a href="/Content/Pdf/Feb-2026-schedule.pdf" target="_blank"><span class="schedDropItemHead">PRINTABLE SCHEDULE (PDF)</span></a></p>
+                                        </div>
+                                        <div class="col-sm-3 navColumnLine">
+                                            <p class="schedDropItemHead">WEEKDAY ROUTES</p>
+                                            <div class="container">
+                                                <div class="row">
+                                                    <div class="col-lg-6">
+                                                        <a href="/home/ScheduleView?routeId=75" class="dropdown-item">LYNX</a>
+                                                        <a href="/home/ScheduleView?routeId=79" class="dropdown-item">10</a>
+                                                        <a href="/home/ScheduleView?routeId=80" class="dropdown-item">11</a>
+                                                        <a href="/home/ScheduleView?routeId=81" class="dropdown-item">12</a>
+                                                        <a href="/home/ScheduleView?routeId=82" class="dropdown-item">15</a>
+                                                        <a href="/home/ScheduleView?routeId=83" class="dropdown-item">16</a>
+
+                                                    </div>
+                                                    <div class="col-lg-6">
+
+                                                        <a href="/home/ScheduleView?routeId=76" class="dropdown-item">30Z</a>
+                                                        <a href="/home/ScheduleView?routeId=84" class="dropdown-item">C3</a>
+                                                        <a href="/home/ScheduleView?routeId=74" class="dropdown-item">JPX</a>
+                                                        <a href="/home/ScheduleView?routeId=73" class="dropdown-item">JX</a>
+                                                        <a href="/home/ScheduleView?routeId=72" class="dropdown-item">J (JR/JL)</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-3 navColumnLine">
+                                            <p class="schedDropItemHead">SATURDAY ROUTES</p>
+
+                                            <a href="/home/ScheduleView?routeId=86" class="dropdown-item">11</a>
+                                            <a href="/home/ScheduleView?routeId=87" class="dropdown-item">19</a>
+                                            <a href="/home/ScheduleView?routeId=85" class="dropdown-item">J (JR/JL)</a>
+
+                                        </div>
+                                        <div class="col-sm-2 navColumnLine">
+                                            <p class="schedDropItemHead">SUNDAY ROUTES</p>
+                                            <a href="/home/ScheduleView?routeId=85&d=s" class="dropdown-item">J (JR/JL)</a>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </li>
+                        <li class="navbar-text">|</li>
+                        <li class="nav-item dropdown">
+
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown3" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                FARES &#8226; PASSES &#8226; TRANSFERS
+                            </a>
+
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown3">
+                                <p>
+                                    <a href="/home/FaresAll" class="dropdown-item">All Fares</a>
+                                    <a href="/home/FaresTransfers" class="dropdown-item">Transfers</a>
+                                    <a href="/home/FaresClipper" class="dropdown-item">Clipper Card</a>
+                                    <a href="/home/FaresBuying" class="dropdown-item">Buying &amp; Ordering Passes</a>
+                                    
+
+                                </p>
+                            </div>
+                        </li>
+                        <li class="navbar-text">|</li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown4" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                RIDER RESOURCES
+                            </a>
+
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown4">
+                                <p>
+                                    <a href="https://www.westcat.org/textalerts" class="dropdown-item">Text Alerts</a>
+                                    <a href="/home/RiderLostFound" class="dropdown-item">Lost &amp; Found</a>
+                                    <a href="/home/RiderBike" class="dropdown-item">Bikes/Scooters on Buses</a>
+                                    <a href="/home/RiderHowTo" class="dropdown-item">How to Ride</a>
+                                    <a href="/home/RiderFAQ" class="dropdown-item">FAQs</a>
+                                    <a href="/home/RiderAcc" class="dropdown-item">Accessibility</a>
+                                    <a href="/home/RiderADA" class="dropdown-item">ADA Reasonable Modification</a>
+                                    <a href="/home/RiderParking" class="dropdown-item">Parking / Park &amp; Ride</a>
+                                    <a href="/home/RiderSafety" class="dropdown-item">Safety</a>
+                                    <a href="/home/TravelTraining" class="dropdown-item">Travel Training</a>
+                                    <a href="/home/RiderServiceAnimals" class="dropdown-item">Service Animals/Pets on Buses</a>
+                                    <a href="/home/BusToSchool" class="dropdown-item">Buses to Schools</a>
+                                </p>
+                            </div>
+
+                        </li>
+                        <li class="navbar-text">|</li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown5" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                CONTACT US
+                            </a>
+
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown5">
+                                <p>
+                                    <a href="https://user.govoutreach.com/westcattransitca/support.php?cmd=shell" class="dropdown-item">Customer Comment Form</a>
+                                    <a href="/home/Contact" class="dropdown-item">Address/Hours/Phone/Fax</a>
+                                </p>
+                            </div>
+                        </li>
+                        <li class="navbar-text">|</li>
+                        <li class="nav-item">
+                            <div id="google_translate_element" class="pt-2 pl-2"></div>
+                        </li>
+
+
+                        
+                    </ul>
+
+                </div>
+            </nav>
+        </div>
+        <div style="background-color:#2d4f9e;padding:3px;"></div>
+    </header>
+    <main id="main">
+        
+
+
+
+<div class="container-fluid wcBody">
+    <div class="row">
+
+        <div class="col-md-2">
+            <div class="container rounded border SideNavBlock">
+    
+    <div class="SideNavItem"><a href="FaresAll">All Fares</a></div>
+    <div class="SideNavItem"><a href="FaresTransfers">Transfers</a></div>
+    <div class="SideNavItem"><a href="FaresClipper">Clipper Card</a></div>
+    <div class="SideNavItem"><a href="FaresBuying">Buying and Ordering Passes</a></div>
+    
+</div>
+
+
+        </div>
+
+        <div class="col-md-10">
+            <div class="h5-style">FARES, PASSES, &amp; TRANSFERS</div>
+            <h1>Clipper Card</h1>
+            <p>
+
+                <img src="/Content/Images/pic-clipper-card.png" class="float-left" alt="Clipper card" />
+                <br />
+                WestCAT accepts Clipper cards on all WestCAT Local, Express, and LYNX routes (some restrictions do apply). <br />
+                Clipper cards allow you to store multiple passes and cash fare on one easy-to-use card. <br />
+                Clipper automatically figures out the cost of your ride, including all discounts and transfers. Just tag and go!
+            </p>
+            <p>
+                <h2>Boarding Requirements</h2>
+               <ul>
+                   <li>Adult / Youth Cards: Must hold at least $1.75 in cash value, or have a valid pass loaded.</li>
+                   <li>Senior / Access (formerly RTC) Cards: Must hold at least $0.75 in cash value, or have a valid pass loaded.</li>
+                   <li>Tagging: Always tap your card on the reader near the front door when boarding and wait for the green light and beep.</li>
+                   </ul>
+            </p>
+            <p>For more information on how to use Clipper, see the guide at <a href="https://www.clippercard.com/westcat" target="_blank" class="linkBU">ClipperCard.com/westcat</a> or call WestCAT at (510) 724-7993.</p>
+            <p>
+
+                <h2>Where to Get a Clipper Card</h2>
+
+                <ul>
+                    <li>Download the Clipper mobile app from the App Store or Google Play to get a virtual card.</li>
+                    <li>Order a physical card at <a href="https://www.clippercard.com/" target="_blank" class="linkBU">clippercard.com </a></li>
+                    <li>Purchase Adult Clipper cards at BART Ticket Vending Machines (TVMs) or at participating Walgreens locations.</li>
+                    <li>Obtain a card in-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.).</li>
+                </ul>
+            </p>
+            <p>
+                <h2>Youth and Senior Discount Applications</h2>
+                Youth (ages 5–18) and Seniors (65+) can now apply for their discount Clipper cards online at <a href="https://www.clippercard.com/" target="_blank" class="linkBU">clippercard.com</a>, making it easier than ever to access discounted fares.
+            </p>
+            <p>
+                <h2> Clipper Card Costs</h2>
+                <ul>
+                    <li>Virtual Adult cards: Free (limited time) with a $3 minimum load.</li>
+                    <li>Physical cards: $3 fee, waived with Autoload when ordered online.</li>
+                    <li>Youth, Senior, Clipper START and Clipper Access (formerly RTC) cards: Free.</li>
+                </ul>
+            </p>
+            <p>
+                <h2>Adding Value and Passes</h2>
+                Add value through the Clipper app, Clipper website, BART Ticket Vending Machines, in-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.) or at participating Walgreens locations.<br />
+                Products loaded online or by phone may take up to three to five days to appear. </br>
+                Autoload can automatically reload your card when your balance is low.
+            </p>
+            <p>
+                <h2>Clipper START</h2>
+                Riders ages 19–64 with qualifying incomes can apply for Clipper START to receive discounted fares.
+                Riders must apply for and use the START card. Apply online at <a href="https://www.clipperstartcard.com/s/" target="_blank" class="linkBU"> www.clipperstartcard.com </a>
+            </p>
+            <p>
+                <h2> Checking Balances</h2>
+                Balances no longer display on validators but can be checked anytime:
+                <ul>
+                    <li>In real-time via the Clipper app or website (for registered cards).</li>
+                    <li>Through Apple Wallet or Google Wallet for mobile cards.</li>
+                    <li>Call Clipper Customer Service at 877.878.8883.</li>
+                    <li>In-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.) or at participating Walgreens locations. </li>
+                </ul>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+    </main>
+    
+    <div class="row pl-lg-5 pl-sm-3 pr-0 " style="background-color: #555555;
+        min-height: 200px;
+        color: white;
+        margin: 0px auto;
+        padding: 10px;">
+        <div class="col-lg">
+            <div class="footHead">Customer Care</div>
+            <div class="h4-style text-white">Route Information</div>
+            <p>(510) 724-7993</p>
+
+            <p>
+                <strong>TTY: 711 </strong><br />
+
+                
+            </p>
+            
+            <p><a href="/Home/Comment" style="color:white;">Customer Comment Form</a></p>
+            <p><a href="/Home/Contact" style="color:white;">Contact Us</a></p>
+            
+        </div>
+        <div class="col-lg">
+            <div class="footHead">Stay Connected</div>
+            <p>
+                <a href="https://www.facebook.com/wccta" target="_blank" style="color:white;" aria-label="Facebook opens new window">Facebook</a>
+            </p>
+            <p>
+                <a href="https://www.linkedin.com/company/westcat" style="color:white;" target="_blank" aria-label="LinkedIn opens new window">Linked In</a>
+            </p>
+            <p>
+                <a href="https://twitter.com/wccta" style="color:white;" target="_blank" aria-label="X opens new window">X</a>
+            </p>
+
+            <p>
+                <a href="https://www.instagram.com/officialwestcat/?hl=en" style="color:white;" target="_blank" aria-label="Instagram opens new window">Instagram</a>
+            </p>
+
+            <p>
+                <a href="https://www.tiktok.com/&#64;officialwestcat" style="color:white;" target="_blank" aria-label="TikTok opens new window">TikTok</a>
+            </p>
+
+            <p><a href="/Home/SocialMedia" style="color:white;">Social Media Policy</a></p>
+        </div>
+        <div class="col-lg">
+            <div class="footHead">Business Center</div>
+            <p><a href="/Home/BusProcurement" style="color:white;">Procurement</a></p>
+            <p><a href="/Home/BusDataRequest" style="color:white;">Data Requests</a></p>
+            <p><a href="/Home/BusCivilRights" style="color:white;">Civil Rights and Title VI</a></p>
+            <p><a href="/Home/BusDBESBE" style="color:white;">DBE and SBE Programs</a></p>
+            <p><a href="/Home/BusFinancial" style="color:white;">Financial Statement and Audits</a></p>
+            <p><a href="/Home/BusTransit" style="color:white;">Transit Plans</a></p>
+            <p><a href="/Home/BusAdvert" style="color:white;">Advertising on Buses</a></p>
+
+        </div>
+        <div class="col-lg">
+            <div class="footHead">Inside WestCAT</div>
+            <p><a href="/Home/InsEmployment" style="color:white;">Employment</a></p>
+            <p><a href="/Home/InsAbout" style="color:white;">About Us</a></p>
+            <p><a href="/Home/InsBoard" style="color:white;">Board of Directors</a></p>
+            <p><a href="/Home/InsCommittees" style="color:white;">Committees</a></p>
+            <p><a href="/Home/InsMedia" style="color:white;">Media Center</a></p>
+        </div>
+
+        <div class="col-lg pr-2" style="border-left:1px solid white;">
+
+            <div class="footHead">WestCAT Administration</div>
+
+            <p>601 Walter Ave., Pinole, CA 94564</p>
+            <p>
+                <strong>Office Hours</strong><br />Monday - Thursday<br /> 9:00 am to 4:00 pm. <br />
+                Closed Friday, Saturday, Sunday, Holidays
+            </p>
+            <footer class="align-bottom">&copy; 2026 - WestCAT &#0149; <a href="/Home/PrivacyPolicy" style="color:white;">Privacy Policy</a></footer>
+
+        </div>
+
+    </div>
+    
+
+    
+    
+
+
+    
+    <script src="/Scripts/jquery-3.7.1.min.js"></script>
+    <script src="/Scripts/jquery-3.7.1.min.js"></script>
+    <script src="/Scripts/jquery.validate.min.js"></script>
+    <script src="/Scripts/jquery-ui-1.14.1.min.js"></script>
+    <script src="/Scripts/jquery.unobtrusive-ajax.min.js"></script>
+    <script src="/Scripts/bootstrap.bundle.min.js"></script>
+
+
+    
+
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({ pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE }, 'google_translate_element');
+        }
+
+        //switch top banner
+        $(function () {
+
+            var index = 1;
+            var rindex = 1;
+            var timer = setInterval(switchBanner, 5000);
+            var items = [
+                { image: "2023-take-10", link: "https://511contracosta.org/transit/lynx-take-10" },
+                { image: "2026-Top-banner-Travel-Trainer", link: "/home/TravelTraining" },
+                { image: "2026-Top-banner-pass2class", link: "/home/PromoPass2Class" },             
+                { image: "2025-Top-banner-transit", link: "https://westcat.org/Home/TransitApp" },
+                { image: "2024-top-clipper", link: "https://www.clipperstartcard.com/s/" }
+
+            ];
+
+            var link;
+            var ext;
+
+            //add tag to google translate pixel img for WCAG compliance
+            const word = "cleardot";
+            const matchingImages = Array.from(document.querySelectorAll("img")).filter(img =>
+                img.src.includes(word)
+            );
+            // Add role="none" to each matching image
+            matchingImages.forEach(img => {
+                img.setAttribute("role", "none");
+            });
+
+            //switch on load
+            switchBanner();
+
+            function switchBanner() {
+                //var ext = $(".promo").css("background-image").substring($(".promo").css("background-image").length - 9, $(".promo").css("background-image").length - 2);
+                if (window.innerWidth <= 700) {
+                    ext = "-sm.png";
+                } else if (window.innerWidth <= 1300) {
+                    ext = "-md.png";
+                } else {
+                    ext = "-lg.png";
+                }
+
+                $(".promo").css("background-image", "url('/Content/Images/" + items[index].image + ext + "')");
+                link = items[index].link;
+                $("#promo").click(function () {
+                    location.href = link;
+                });
+                rindex = index;
+                index < items.length - 1 ? ++index : index = 0;
+            }
+            function switchBannerLeft() {
+
+                if (window.innerWidth <= 700) {
+                    ext = "-sm.png";
+                } else if (window.innerWidth <= 1300) {
+                    ext = "-md.png";
+                } else {
+                    ext = "-lg.png";
+                }
+
+                index = --rindex;
+                index = index < 0 ? 0 : index;
+                $(".promo").css("background-image", "url('/Content/Images/" + items[index].image + ext + "')");
+                link = items[index].link;
+                $("#promo").click(function () {
+                    location.href = link;
+                });
+
+                //index < items.length - 1 ? ++index : index = 0;
+            }
+
+            $("#bannerRnav").click(function () {
+                switchBanner();
+            });
+
+            $("#bannerLnav").click(function () {
+                switchBannerLeft();
+            });
+
+
+        })
+
+
+
+    </script>
+
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script>
+        //add tag to google translate pixel img for WCAG compliance
+        function updateImages() {
+            const word = "cleardot";
+            Array.from(document.querySelectorAll("img")).filter(img =>
+                img.src.includes(word)
+            ).forEach(img => {
+                img.setAttribute("role", "none");
+            });
+        }
+
+        // Set up a MutationObserver to monitor dynamically added elements
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+                if (mutation.addedNodes) {
+                    updateImages(); // Check and update images whenever nodes are added
+                }
+            });
+        });
+
+        // Start observing the document body for child elements being added
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Run the function initially for any existing images
+        updateImages
+    </script>
+</body>
+</html>

@@ -18,7 +18,19 @@ card notes Bedrock is *not perfectly* deterministic, so:
   * every run summary records whether the cache was enabled and its hit rate
     (`summary["cache"]`), so a suspiciously-fast full run is self-explaining;
   * `--no-cache` disables it outright — use it for FIX-04 variance-measurement
-    runs, where repeated identical calls must actually hit the network.
+    runs, where repeated identical calls must actually hit the network;
+  * `--refresh-cache` reads nothing but writes everything, so a run can
+    re-measure the provider from cold *and* leave the stored answers agreeing
+    with the scoreboard it just published. CI uses it for the weekly cold full
+    run (ADR 0022); a plain `--no-cache` run would re-measure but leave the
+    stored answers a week stale, so the next cached night would report numbers
+    the cold run had already contradicted.
+
+The maps are persisted across CI runs (`.github/workflows/ci.yml` caches
+`evals/cache/`), so they are trimmed on save: entries are kept in
+least-recently-used order and capped at `MAX_ENTRIES_PER_STORE`. Without the
+cap every superseded prompt or corpus version would accumulate forever in a
+store that nothing ever prunes.
 """
 
 from __future__ import annotations
@@ -29,6 +41,12 @@ import threading
 from pathlib import Path
 
 from assistant.models import Completion, Model
+
+# Roughly ten full runs' worth of entries per store (a full run renders ~207
+# answer and ~368 judge calls). Enough that an incremental change still hits on
+# everything it did not touch, bounded enough that a persisted CI cache cannot
+# grow without limit as prompt and corpus versions turn over.
+MAX_ENTRIES_PER_STORE = 4000
 
 
 def _digest(parts: list[str]) -> str:
@@ -65,8 +83,12 @@ class EvalCache:
     a stale answer (the calls are assumed deterministic).
     """
 
-    def __init__(self, cache_dir: Path, *, enabled: bool = True):
+    def __init__(self, cache_dir: Path, *, enabled: bool = True, refresh: bool = False):
         self.enabled = enabled
+        # Refresh = write-only: every lookup misses (so the provider is really
+        # called) but the result still replaces the stored entry. Meaningless
+        # when the cache is off entirely, so it collapses to False there.
+        self.refresh = refresh and enabled
         self.dir = cache_dir
         self._lock = threading.Lock()
         self.answer_hits = 0
@@ -89,7 +111,13 @@ class EvalCache:
         if not self.enabled:
             return None
         with self._lock:
-            hit = store.get(key)
+            # A refresh run reads nothing, so it records a miss for every call
+            # and the hit rate in the summary reads 0% — which is exactly what
+            # a cold re-measurement should look like on the scoreboard.
+            hit = None if self.refresh else store.get(key)
+            if hit is not None:
+                # Recency for the save-time trim: a served entry is a live one.
+                store[key] = store.pop(key)
             if is_answer:
                 self.answer_hits += int(hit is not None)
                 self.answer_misses += int(hit is None)
@@ -105,7 +133,7 @@ class EvalCache:
         if not self.enabled:
             return
         with self._lock:
-            self._answers[key] = record
+            self._put(self._answers, key, record)
 
     def get_judge(self, key: str) -> dict | None:
         return self._get(self._judges, key, is_answer=False)
@@ -114,13 +142,35 @@ class EvalCache:
         if not self.enabled:
             return
         with self._lock:
-            self._judges[key] = record
+            self._put(self._judges, key, record)
+
+    @staticmethod
+    def _put(store: dict, key: str, record: dict) -> None:
+        # Rewriting an existing key must also mark it most-recent, otherwise a
+        # refresh run would leave every entry it just re-measured sitting at the
+        # front of the trim order.
+        store.pop(key, None)
+        store[key] = record
+
+    @staticmethod
+    def _trim(store: dict[str, dict]) -> dict[str, dict]:
+        """Keep the `MAX_ENTRIES_PER_STORE` most-recently used entries.
+
+        Insertion order is the recency order: `_get` and `_put` both move a
+        touched key to the end, so the oldest untouched entries sit at the
+        front and are the ones dropped."""
+        excess = len(store) - MAX_ENTRIES_PER_STORE
+        if excess <= 0:
+            return store
+        return {k: v for i, (k, v) in enumerate(store.items()) if i >= excess}
 
     def save(self) -> None:
         if not self.enabled:
             return
         self.dir.mkdir(parents=True, exist_ok=True)
         with self._lock:
+            self._answers = self._trim(self._answers)
+            self._judges = self._trim(self._judges)
             (self.dir / "answers.json").write_text(
                 json.dumps(self._answers, ensure_ascii=False, indent=2), encoding="utf-8"
             )
@@ -133,6 +183,8 @@ class EvalCache:
         j_total = self.judge_hits + self.judge_misses
         return {
             "enabled": self.enabled,
+            # A 0% hit rate means something different when it was deliberate.
+            "refresh": self.refresh,
             "answer_hits": self.answer_hits,
             "answer_calls": a_total,
             "answer_hit_rate": round(100 * self.answer_hits / a_total, 1) if a_total else 0.0,
@@ -194,29 +246,30 @@ class CachingModel:
 
 def case_content_key(
     *,
-    case_id: str,
-    question_or_turns: str,
-    expected_behavior: str,
-    provider: str,
-    answer_model: str,
-    judge_model: str,
-    corpus_version: str,
-    prompt_versions: dict[str, str],
+    case_semantics_version: str,
+    run_context_version: str,
     run_judges: bool,
+    replicates: int,
 ) -> str:
-    """Whole-case content key used by `--since`: identifies whether a case's
-    inputs are unchanged since a prior run, so that run's record can be
-    reused wholesale (no answer call, no judge call, no re-scoring)."""
+    """Whole-case content key used by ``--since``.
+
+    ``case_semantics_version`` hashes the complete post-flatten case mapping,
+    not only its question and broad expected behavior. ``run_context_version``
+    hashes the evaluated release/configuration plus the exact suites, facts,
+    GTFS inputs, prompts, evaluator implementation, and requested models.
+    Keeping this final key intentionally small makes omissions impossible here:
+    callers must first construct the validated, schema-versioned attestation
+    context. Legacy records have no matching context version and therefore
+    cannot be reused.
+    """
+    if not isinstance(replicates, int) or isinstance(replicates, bool) or replicates < 1:
+        raise ValueError("replicates must be a positive integer")
     return _digest(
         [
-            case_id,
-            question_or_turns,
-            expected_behavior,
-            provider,
-            answer_model,
-            judge_model,
-            corpus_version,
-            json.dumps(prompt_versions, sort_keys=True),
+            "fare-assistant.eval-case-cache.v2",
+            case_semantics_version,
+            run_context_version,
             str(run_judges),
+            str(replicates),
         ]
     )

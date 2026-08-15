@@ -118,6 +118,10 @@
   .turn .q { font-weight: 600; margin: 0 0 0.4rem; }
   .turn .q::before { content: "You: "; color: var(--muted); font-weight: 400; }
   .sources { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.6rem; font-size: 0.95rem; }
+  /* The "Sources" caption is an h3 so screen-reader heading navigation reaches
+     it. It should still look like the inline bold caption it replaced, so the
+     visual size and spacing are pinned here rather than inherited from h3. */
+  .sources-h { font-size: inherit; font-weight: 700; margin: 0; }
   .asof { color: var(--muted); font-size: 0.9rem; }
   .feedback { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--muted); margin-top: 0.6rem; }
   .feedback button { font-size: 0.85rem; padding: 0.3rem 0.8rem; min-height: 1.75rem; }
@@ -436,7 +440,14 @@
     if ((data.citations || []).length) {
       var src = document.createElement("div");
       src.className = "sources";
-      var label = document.createElement("strong");
+      // A heading, not a <strong>: this is the one landmark a screen-reader
+      // user navigates to when checking where an answer came from, and heading
+      // navigation is how they get there. h3 sits under the "Conversation" h2
+      // that contains the transcript. The recorded-transcript artifact the
+      // independent audit reads already used <h3>Sources</h3>; the page riders
+      // actually use did not, which is the wrong way round.
+      var label = document.createElement("h3");
+      label.className = "sources-h";
       label.textContent = "Sources";
       src.appendChild(label);
       var ul = document.createElement("ul");
@@ -454,6 +465,11 @@
       turn.appendChild(src);
     }
 
+    // The headline freshness claim. `as_of_date` is the oldest fetch date among
+    // the passages this answer cites (assistant.answer._as_of_cited), so this
+    // line and relativeAge() below describe the evidence under the answer, not
+    // whatever else retrieval happened to surface beside it. Per-source dates
+    // are in the "(fetched …)" lines above.
     if (data.as_of_date) {
       var asof = document.createElement("p");
       asof.className = "asof";

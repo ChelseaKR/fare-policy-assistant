@@ -10,10 +10,22 @@ Three different questions, three different tools:
 
 It takes an otherwise-clean, grounded answer, plants one known defect (a fare
 that contradicts the corpus, a determination phrase, a dropped citation, a
-missing date, the wrong agency, an asserted forbidden claim, a missing required
-fact), and asserts that the specific check meant to catch it flips from pass to
-fail — and only that check's family. No model calls; the deterministic gate is
-pure, so CI can enforce this.
+missing date, a date borrowed from a passage the answer never cited, the wrong
+agency, an asserted forbidden claim, a missing required fact), and asserts that
+the specific check meant to catch it flips from pass to fail — and only that
+check's family. No model calls; the deterministic gate is pure, so CI can
+enforce this.
+
+Every check `evals/checks.py` emits has a scenario here, and
+`tests/test_selftest.py::test_every_check_the_grader_can_emit_has_a_planted_defect`
+reads the names out of the grader's source to keep that true. It was not true
+until 2026-08-05: five checks had no planted defect, among them `language_match`
+(what makes the multilingual suite a language test rather than a second English
+suite) and `refused` / `redirect_present` (the entirety of the refusal suite's
+deterministic scoring). Those suites score 22/22 and 34/34, and a check that has
+never failed and was never shown able to fail is indistinguishable from one that
+cannot — the shape of bug that left the bilingual parity gate saturated for a
+month while nothing validated its own denominator.
 
     python -m evals.selftest        # prints a report, exits 1 if any defect slips
 
@@ -33,6 +45,7 @@ from assistant import config
 from assistant import facts as facts_module
 from assistant.answer import AnswerResult, Citation
 from assistant.ingest import load_chunks
+from assistant.retrieve import ScoredChunk
 from evals.checks import CheckResult, run_checks
 
 AS_OF = "2026-06-12"
@@ -61,10 +74,14 @@ def _priced_fact(by_doc: dict[str, list[facts_module.FareFact]]) -> facts_module
 
 
 def _clean(doc_id: str, answer: str, *, agency: str = "MST") -> AnswerResult:
+    # `as_of_date` mirrors the single citation's fetch date, which is what the
+    # answer pipeline now produces (assistant.answer._as_of_cited) and what
+    # `as_of_matches_oldest_citation` requires of a clean answer.
     return AnswerResult(
         question="q",
         answer=answer,
         kind="answered",
+        as_of_date=AS_OF,
         citations=[
             Citation(
                 doc_id=doc_id,
@@ -75,6 +92,25 @@ def _clean(doc_id: str, answer: str, *, agency: str = "MST") -> AnswerResult:
             )
         ],
     )
+
+
+def _mixed_freshness_passages(cited_doc_id: str) -> list[ScoredChunk]:
+    """A retrieved set spanning two fetch dates: the cited document at `AS_OF`
+    and the corpus's most recently refetched document alongside it.
+
+    Built from the real corpus so the scenario stays honest about the shape that
+    produces the defect — documents are refetched one at a time, so a top-k that
+    mixes fetch dates is routine. Falls back to a synthetic fresher chunk if the
+    corpus ever becomes uniformly dated, which would otherwise make this
+    scenario silently untestable.
+    """
+    chunks = load_chunks()
+    cited = next(c for c in chunks if c.doc_id == cited_doc_id)
+    cited = replace(cited, fetch_date=AS_OF)
+    fresher = max(chunks, key=lambda c: c.fetch_date)
+    if fresher.fetch_date <= AS_OF:
+        fresher = replace(fresher, fetch_date="2026-08-10")
+    return [ScoredChunk(chunk=cited, score=10.0), ScoredChunk(chunk=fresher, score=9.0)]
 
 
 @dataclass
@@ -197,6 +233,99 @@ def _scenarios() -> list[Scenario]:
             mutate=lambda r: replace(
                 r, answer=f"Veterans show some paperwork [doc:{doc_id}], as of {AS_OF}."
             ),
+        ),
+        # ── added 2026-08-05 ──────────────────────────────────────────────
+        # The five scenarios below cover the five checks `run_checks` emits
+        # that nothing here had ever planted a defect against. Three of them
+        # are the only deterministic teeth their suite has: `language_match`
+        # is what makes the multilingual suite a language test rather than a
+        # second English suite, and `refused` / `redirect_present` are the
+        # whole of the refusal suite's non-judge scoring. Refusal has scored
+        # 34/34 and multilingual 22/22; a check that has never failed and was
+        # never shown able to fail is indistinguishable from one that cannot.
+        # `test_every_emitted_check_has_a_planted_defect` keeps the set closed.
+        Scenario(
+            name="answered in the wrong language",
+            check="language_match",
+            case={"expected_behavior": "answer", "agency_scope": "MST", "language": "es"},
+            clean=_clean(
+                doc_id,
+                f"El pase mensual con descuento cuesta {good_price} [doc:{doc_id}]. "
+                f"Segun las politicas publicadas al {AS_OF}, confirme con la agencia.",
+                agency=fact.agency,
+            ),
+            # The Spanish case answered in English: the mirrored-pair parity
+            # number is only an equity measurement if this fails.
+            mutate=lambda r: replace(
+                r,
+                answer=f"The discounted monthly pass costs {good_price} [doc:{doc_id}]. "
+                f"Based on policies published as of {AS_OF}, please confirm with the agency.",
+            ),
+        ),
+        Scenario(
+            name="answers a question it was supposed to decline",
+            check="refused",
+            case={"expected_behavior": "refuse_redirect", "language": "en"},
+            clean=AnswerResult(
+                question="q",
+                answer="I don't have a published policy that answers that. "
+                "Please contact the agency's customer service.",
+                kind="refused_no_support",
+                citations=[],
+            ),
+            mutate=lambda r: replace(r, kind="answered"),
+        ),
+        Scenario(
+            name="declines without pointing anywhere",
+            check="redirect_present",
+            case={"expected_behavior": "refuse_redirect", "language": "en"},
+            clean=AnswerResult(
+                question="q",
+                answer="I don't have a published policy that answers that. "
+                "Please contact the agency's customer service.",
+                kind="refused_no_support",
+                citations=[],
+            ),
+            mutate=lambda r: replace(
+                r, answer="I don't have a published policy that answers that."
+            ),
+        ),
+        Scenario(
+            name="states the criterion and stops",
+            check="verification_handoff_present",
+            case={"expected_behavior": "answer", "language": "en", "requires_handoff": True},
+            clean=_clean(
+                doc_id,
+                f"The published criterion is age 65 and over [doc:{doc_id}], as of {AS_OF}. "
+                "Contact the agency to apply and verify your eligibility.",
+            ),
+            mutate=lambda r: replace(
+                r,
+                answer=f"The published criterion is age 65 and over [doc:{doc_id}], as of {AS_OF}.",
+            ),
+        ),
+        Scenario(
+            name="answer that cannot be rendered as the typed contract",
+            check="structured_contract_schema_valid",
+            case={"expected_behavior": "answer", "language": "en"},
+            clean=_clean(doc_id, base_answer),
+            # A kind outside the contract's enum: the UI would silently fall
+            # back to prose, which this check exists to count rather than hide.
+            mutate=lambda r: replace(r, kind="answered_partial"),
+        ),
+        Scenario(
+            name="dated by the freshest passage retrieved, not the one cited",
+            check="as_of_matches_oldest_citation",
+            case={"expected_behavior": "answer", "language": "en"},
+            # A realistic mixed-freshness top-k: the answer cites a passage
+            # fetched on AS_OF, and retrieval also surfaced (but the answer
+            # never used) a passage refetched two months later.
+            clean=replace(_clean(doc_id, base_answer), passages=_mixed_freshness_passages(doc_id)),
+            # The mutation *is* the pre-fix expression, verbatim: the headline
+            # date taken as max(fetch_date) over everything retrieved. The rider
+            # was told the policy was current as of a page the answer does not
+            # rest on, while the citation under it was months older.
+            mutate=lambda r: replace(r, as_of_date=max(sc.chunk.fetch_date for sc in r.passages)),
         ),
     ]
 

@@ -1,0 +1,17 @@
+{
+  "corpus_version": "227cb2da65b0",
+  "content_version": "5aeb3637ab7725b41b681f0f72734918c39f41c3fbe18800ae65183536477571",
+  "as_of": "2026-08-13",
+  "agencies": [
+    "E-tran",
+    "FAX",
+    "HTA",
+    "MST",
+    "SBMTD",
+    "SacRT",
+    "Yolobus"
+  ],
+  "documents": 16,
+  "chunks": 109,
+  "archived_at": "2026-08-13T03:39:06+00:00"
+}

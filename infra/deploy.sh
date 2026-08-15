@@ -18,8 +18,13 @@ LOG_GROUP="/aws/lambda/$FN"
 LOGGING_CONFIG="LogFormat=JSON,ApplicationLogLevel=INFO,SystemLogLevel=WARN,LogGroup=$LOG_GROUP"
 ROLE_NAME="$FN-role"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD="$ROOT/infra/build"
+BUILD="${FPA_BUILD_DIR:-$ROOT/infra/build}"
 BUNDLE="$BUILD/bundle"
+PROMOTION_BUILD="$BUILD/promotion"
+PROMOTION_RUNTIME_EVIDENCE="$BUILD/promotion-runtime.json"
+PROMOTION_RUN_POINTER="$BUILD/promotion-run-path"
+EVAL_BUNDLE_POINTER="$BUILD/promotion-evidence-pointer.json"
+PROMOTION_RUNS_ROOT="${FPA_PROMOTION_RUNS_ROOT:-$ROOT/evals/runs}"
 API_ID="${FPA_API_ID:-}"
 SOURCE_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
 [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
@@ -32,18 +37,50 @@ if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]]; the
   exit 2
 fi
 
-for required_command in aws curl jq openssl uv; do
+for required_command in aws chmod cmp curl find install jq mktemp mv openssl uv; do
   command -v "$required_command" >/dev/null 2>&1 || {
     echo "$required_command is required" >&2
     exit 2
   }
 done
+
+sha256_hex() {
+  local digest
+  digest="$(openssl dgst -sha256 <"$1")"
+  digest="${digest##* }"
+  [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
+    echo "could not compute SHA-256 for $1" >&2
+    return 1
+  }
+  printf '%s\n' "$digest"
+}
 if [[ -n "$LEGACY_IDENTITY_ROLLBACK_VERSION" \
   && ! "$LEGACY_IDENTITY_ROLLBACK_VERSION" =~ ^[1-9][0-9]*$ ]]; then
   echo "FPA_LEGACY_IDENTITY_ROLLBACK_VERSION must be a numeric published version" >&2
   exit 2
 fi
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+
+# ── cost allocation ──────────────────────────────────────────────────────────
+# `project` is the cost-allocation tag key activated in Cost Explorer. Anything
+# created without it lands in the account's untagged bucket, where the
+# `fare-demo` budget and any per-project report cannot see this deployment's
+# spend at all. There is no CDK/Terraform layer here (ADR 0004) -- this script is
+# the whole deployment -- so tagging is applied by the script itself: on create
+# where the API supports it, and re-applied idempotently at the end of every
+# deploy so resources created before this existed get labelled on the next run
+# rather than staying invisible forever.
+#
+# The value is the portfolio project name, which is deliberately NOT the repo
+# name (`fare-policy-assistant`) or the function name: it is the key the budget
+# and the cross-repo cost report group on, so it must stay stable even if the
+# function is renamed. `tests/test_deploy_tagging.py` guards that.
+PROJECT_TAG=fare-assistant
+# Same pair in the two shorthand forms the AWS CLI uses: Lambda, Logs and API
+# Gateway take a `key=value` map; IAM, SNS and CloudWatch take a list of
+# Key=/Value= structs. Keeping both here means the value is written once.
+PROJECT_TAG_MAP="project=$PROJECT_TAG"
+PROJECT_TAG_LIST="Key=project,Value=$PROJECT_TAG"
 
 # Hard ceiling on parallel Bedrock spend: at most this many containers run at
 # once, no matter how many requests arrive. Every other rate figure below is
@@ -63,6 +100,30 @@ RESERVED_CONCURRENCY=2
 # (web/handler.py), which resets per container and is not shared across them.
 THROTTLE_RATE_LIMIT="$RESERVED_CONCURRENCY"
 THROTTLE_BURST_LIMIT=$((RESERVED_CONCURRENCY * 2 + 1))
+
+# Everything above is an AGGREGATE ceiling: it bounds what the service spends in
+# total but says nothing about who spends it, so one actor sustaining 2 rps
+# starves every real rider at no cost to itself. The table below is the shared
+# state behind the per-caller limiter and the spend breaker that fix that
+# (web/ratelimit.py, ADR 0025). Quotas themselves are release inputs in
+# src/assistant/config.py, not deploy-time settings, so a change to them is a
+# reviewed release with a new config version rather than a console edit.
+#
+# Why a table and not AWS WAF, which is the usual answer: WAF cannot attach to
+# an API Gateway *HTTP* API at all. It protects CloudFront, ALB, AppSync,
+# Cognito, App Runner, Verified Access, Amplify, and API Gateway REST APIs --
+# HTTP APIs are absent from the list, and the REST-vs-HTTP comparison table
+# says so outright. Buying WAF here would mean first putting CloudFront in
+# front of the API or migrating to a REST API, and would cost a $5/month web
+# ACL plus $1/month per rule before serving a single request: roughly 30% of
+# this project's entire $20/month budget, to protect a service whose model
+# spend rounds to a few dollars. See ADR 0025 for the full comparison.
+#
+# The table is deliberately outside the immutable-release boundary: it holds
+# operational counters and one operator-flippable breaker row, never release
+# state. Nothing in it survives its TTL, and losing the whole table degrades
+# the service to exactly the posture it had before this existed.
+RATE_LIMIT_TABLE="${FPA_RATE_LIMIT_TABLE:-$FN-limits}"
 
 # CloudWatch JSON metric contracts. Keep the legacy handler/call/feedback
 # filters through one rollback-compatible release; the additive v2 filters
@@ -325,6 +386,7 @@ print(values.get(os.environ["FPA_DEPLOY_ENV_KEY"], ""))
 
 EXISTING_DISABLED_DOC_IDS="$(lambda_env_value FPA_DISABLED_DOC_IDS)"
 EXISTING_HISTORY_HMAC_KEY="$(lambda_env_value FPA_HISTORY_HMAC_KEY)"
+EXISTING_RATE_LIMIT_HMAC_KEY="$(lambda_env_value FPA_RATE_LIMIT_HMAC_KEY)"
 
 # Production evidence controls. The currently reviewed bundle is pinned by its
 # deterministic corpus identity. ``yolobus-fares`` is contained by default
@@ -345,6 +407,22 @@ elif [[ -n "$EXISTING_HISTORY_HMAC_KEY" ]]; then
 else
   HISTORY_HMAC_KEY="$(openssl rand -hex 32)"
 fi
+# The secret that keys every caller digest. It is inherited across deploys, the
+# same way the history key is, so a release does not silently reset every
+# in-flight counter -- but unlike the history key it is safe to rotate at any
+# moment: the worst case is that one 60-second window's counters are abandoned
+# and callers start a fresh window early. Rotating it is also the fastest way to
+# make an existing table's contents permanently unlinkable to any address.
+# It is NOT recorded in the release descriptor, deliberately: the descriptor is
+# public release identity, and the identity of a secret that protects rider
+# addresses does not belong in it even as a digest.
+if [[ ${FPA_RATE_LIMIT_HMAC_KEY+x} ]]; then
+  RATE_LIMIT_HMAC_KEY="$FPA_RATE_LIMIT_HMAC_KEY"
+elif [[ -n "$EXISTING_RATE_LIMIT_HMAC_KEY" ]]; then
+  RATE_LIMIT_HMAC_KEY="$EXISTING_RATE_LIMIT_HMAC_KEY"
+else
+  RATE_LIMIT_HMAC_KEY="$(openssl rand -hex 32)"
+fi
 if [[ ! "$PINNED_CORPUS_VERSION" =~ ^[0-9a-f]{12}$ ]]; then
   echo "invalid corpus pin: expected a 12-character lowercase hex digest" >&2
   exit 2
@@ -355,6 +433,14 @@ if [[ -n "$DISABLED_DOC_IDS" && ! "$DISABLED_DOC_IDS" =~ ^[a-z0-9-]+(,[a-z0-9-]+
 fi
 if [[ ! "$HISTORY_HMAC_KEY" =~ ^[0-9a-f]{64}$ ]]; then
   echo "invalid history signing key: expected a 64-character lowercase hex secret" >&2
+  exit 2
+fi
+if [[ ! "$RATE_LIMIT_HMAC_KEY" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "invalid caller-digest key: expected a 64-character lowercase hex secret" >&2
+  exit 2
+fi
+if [[ ! "$RATE_LIMIT_TABLE" =~ ^[A-Za-z0-9._-]{3,255}$ ]]; then
+  echo "invalid rate-limit table name: expected a valid DynamoDB table name" >&2
   exit 2
 fi
 if [[ -n "$DISABLED_DOC_IDS" ]]; then
@@ -379,6 +465,8 @@ LAMBDA_ENV="$(
     FPA_DEPLOY_PINNED_CORPUS_VERSION="$PINNED_CORPUS_VERSION" \
     FPA_DEPLOY_DISABLED_DOC_IDS="$DISABLED_DOC_IDS" \
     FPA_DEPLOY_HISTORY_HMAC_KEY="$HISTORY_HMAC_KEY" \
+    FPA_DEPLOY_RATE_LIMIT_TABLE="$RATE_LIMIT_TABLE" \
+    FPA_DEPLOY_RATE_LIMIT_HMAC_KEY="$RATE_LIMIT_HMAC_KEY" \
     uv run python -c '
 import hashlib
 import json
@@ -405,6 +493,8 @@ values.update(
         "FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"],
         "FPA_HISTORY_HMAC_KEY": history_key,
         "FPA_HISTORY_HMAC_KEY_ID": history_key_id,
+        "FPA_RATE_LIMIT_TABLE": os.environ["FPA_DEPLOY_RATE_LIMIT_TABLE"],
+        "FPA_RATE_LIMIT_HMAC_KEY": os.environ["FPA_DEPLOY_RATE_LIMIT_HMAC_KEY"],
     }
 )
 print(json.dumps({"Variables": values}, separators=(",", ":")))
@@ -1182,6 +1272,7 @@ ensure_api_targets_live() {
         --name "$FN" \
         --protocol-type HTTP \
         --target "$ALIAS_ARN" \
+        --tags "$PROJECT_TAG_MAP" \
         --query ApiId --output text
     )"
     API_EXISTS=true
@@ -1440,7 +1531,11 @@ fi
 # ── bundle ───────────────────────────────────────────────────────────────────
 # The zip mirrors the repo layout (src/, prompts/, corpus/, web/) so that
 # config.REPO_ROOT resolves the same way it does in a checkout.
-rm -rf "$BUNDLE" "$BUILD/bundle.zip"
+rm -rf "$BUNDLE" "$BUILD/bundle.zip" "$PROMOTION_BUILD"
+rm -f \
+  "$PROMOTION_RUNTIME_EVIDENCE" \
+  "$PROMOTION_RUN_POINTER" \
+  "$EVAL_BUNDLE_POINTER"
 mkdir -p \
   "$BUNDLE/src" \
   "$BUNDLE/corpus/processed" \
@@ -1482,7 +1577,8 @@ uv pip install --quiet --target "$BUNDLE" \
     --file web/offline.py \
     --file web/guide.py \
     --file web/embed.py \
-    --file web/csp.py
+    --file web/csp.py \
+    --file web/ratelimit.py
 )
 
 DESCRIPTOR_BUILD_ARGS=(
@@ -1555,7 +1651,17 @@ LAMBDA_ENV="$(
     '.Variables.FPA_ARTIFACT_CODE_SHA256 = $artifact' <<<"$LAMBDA_ENV"
 )"
 
-# ── IAM role: logs plus InvokeModel on the pinned answer model only ──────────
+# ── IAM role: logs, InvokeModel on the pinned answer model, limiter counters ──
+# The DynamoDB grant is deliberately two actions on one table: the rider may
+# increment its own counter and read the breaker row, and nothing else. No
+# PutItem (it cannot forge or clear a breaker), no DeleteItem (it cannot erase
+# its own limiting), no Scan or Query (a compromised handler cannot enumerate
+# the digests of everyone else currently being counted).
+#
+# NOTE FOR THE FIRST DEPLOY OF THIS CHANGE: this is a shared-IAM edit, so the
+# drift guard below will refuse the release until you review it and re-run with
+# FPA_ALLOW_SHARED_IAM_CHANGE=1. That is working as intended -- an alias
+# rollback cannot undo a policy change. See infra/README.md.
 TRUST='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
 POLICY=$(cat <<EOF
 {
@@ -1573,6 +1679,11 @@ POLICY=$(cat <<EOF
         "arn:aws:bedrock:$REGION:$ACCOUNT:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
       ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["dynamodb:UpdateItem", "dynamodb:GetItem"],
+      "Resource": "arn:aws:dynamodb:$REGION:$ACCOUNT:table/$RATE_LIMIT_TABLE"
     }
   ]
 }
@@ -1582,7 +1693,8 @@ EOF
 ROLE_CREATED=false
 if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
   aws iam create-role --role-name "$ROLE_NAME" \
-    --assume-role-policy-document "$TRUST" >/dev/null
+    --assume-role-policy-document "$TRUST" \
+    --tags "$PROJECT_TAG_LIST" >/dev/null
   ROLE_CREATED=true
   echo "created role $ROLE_NAME; waiting for IAM propagation"
   sleep 10
@@ -1640,11 +1752,57 @@ else
 fi
 ROLE_ARN="arn:aws:iam::$ACCOUNT:role/$ROLE_NAME"
 
+# ── per-caller limiter state (ADR 0025) ──────────────────────────────────────
+# One table, two rows' worth of purpose: short-lived per-caller counters keyed
+# by an opaque rotating digest, and one well-known breaker row an operator or
+# the cost alarm can flip. Created before candidate verification so the numbered
+# candidate is checked against the same limiter public traffic will meet.
+#
+# On-demand billing, because the access pattern is a handful of tiny writes a
+# minute and provisioning capacity for that would cost more than the writes. At
+# this project's traffic the table's own bill is under a cent a month: in
+# us-west-2 on-demand writes are $0.625 per million write units, one UpdateItem
+# under 1 KB is one unit, and TTL deletes consume no units at all.
+#
+# The table holds no release state, so it is created idempotently here and never
+# versioned, rolled back, or compared against a candidate. If it is deleted, the
+# handler fails open and the service returns to its pre-ADR-0025 posture.
+if ! aws dynamodb describe-table --table-name "$RATE_LIMIT_TABLE" --region "$REGION" \
+  >/dev/null 2>&1; then
+  aws dynamodb create-table --region "$REGION" \
+    --table-name "$RATE_LIMIT_TABLE" \
+    --attribute-definitions AttributeName=pk,AttributeType=S \
+    --key-schema AttributeName=pk,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST \
+    --tags "$PROJECT_TAG_LIST" >/dev/null
+  aws dynamodb wait table-exists --table-name "$RATE_LIMIT_TABLE" --region "$REGION"
+  echo "created per-caller limiter table $RATE_LIMIT_TABLE"
+fi
+# TTL is the mechanism that keeps a counter from outliving the window it counts.
+# Enabling it twice is an error rather than a no-op, so read the state first.
+# The digest rotation, not this TTL, is what bounds linkability: DynamoDB
+# deletes expired items on its own schedule, which can lag by hours.
+RATE_LIMIT_TTL_STATUS="$(
+  aws dynamodb describe-time-to-live --region "$REGION" \
+    --table-name "$RATE_LIMIT_TABLE" \
+    --query 'TimeToLiveDescription.TimeToLiveStatus' --output text 2>/dev/null \
+    || echo UNKNOWN
+)"
+if [[ "$RATE_LIMIT_TTL_STATUS" != "ENABLED" && "$RATE_LIMIT_TTL_STATUS" != "ENABLING" ]]; then
+  aws dynamodb update-time-to-live --region "$REGION" \
+    --table-name "$RATE_LIMIT_TABLE" \
+    --time-to-live-specification "Enabled=true,AttributeName=expires_at" >/dev/null || {
+    echo "WARNING: could not enable TTL on $RATE_LIMIT_TABLE; counters will not self-delete" >&2
+    echo "enable it manually: aws dynamodb update-time-to-live --table-name $RATE_LIMIT_TABLE \\" >&2
+    echo "  --time-to-live-specification Enabled=true,AttributeName=expires_at" >&2
+  }
+fi
+
 # Create the reviewed log destination and metric filters before candidate
 # verification. The paid numeric-version check must produce a real structured
 # event against the same filter contract that will observe public traffic.
 aws logs create-log-group --log-group-name "$LOG_GROUP" --region "$REGION" \
-  2>/dev/null || true
+  --tags "$PROJECT_TAG_MAP" 2>/dev/null || true
 aws logs put-retention-policy --log-group-name "$LOG_GROUP" \
   --retention-in-days 14 --region "$REGION"
 
@@ -1850,6 +2008,7 @@ else
       --timeout 25 --memory-size 512 --role "$ROLE_ARN" \
       --environment "$LAMBDA_ENV" \
       --logging-config "$LOGGING_CONFIG" \
+      --tags "$PROJECT_TAG_MAP" \
       --zip-file "fileb://$BUILD/bundle.zip" \
       --output json
   )"
@@ -1991,11 +2150,493 @@ _test_metric_filter_event handler-errors-v2 "$HANDLER_ERROR_V2_FILTER" .answer_r
 _test_metric_filter_event bedrock-calls '{ $.model_called IS TRUE }' .answer_request 1
 _test_metric_filter_event answer-duration "$ANSWER_DURATION_FILTER" .answer_request 1
 
+verify_promotion_trio() {
+  local evidence_dir="$1"
+  local expected_summary_sha="$2"
+  local expected_results_sha="$3"
+  local expected_promotion_sha="$4"
+  local evidence_name
+  local unexpected_entry
+  local receipt
+
+  [[ -d "$evidence_dir" && ! -L "$evidence_dir" ]] || {
+    echo "promotion evidence bundle is not a regular directory" >&2
+    return 1
+  }
+  for evidence_name in summary.json results.jsonl promotion.json; do
+    [[ -f "$evidence_dir/$evidence_name" \
+      && ! -L "$evidence_dir/$evidence_name" ]] || {
+      echo "promotion evidence bundle is missing regular $evidence_name" >&2
+      return 1
+    }
+  done
+  unexpected_entry="$(
+    find "$evidence_dir" -mindepth 1 -maxdepth 1 \
+      ! -name summary.json ! -name results.jsonl ! -name promotion.json \
+      -print -quit
+  )"
+  [[ -z "$unexpected_entry" ]] || {
+    echo "promotion evidence bundle must contain exactly the verified trio" >&2
+    return 1
+  }
+  [[ "$(sha256_hex "$evidence_dir/summary.json")" == "$expected_summary_sha" \
+    && "$(sha256_hex "$evidence_dir/results.jsonl")" == "$expected_results_sha" \
+    && "$(sha256_hex "$evidence_dir/promotion.json")" == "$expected_promotion_sha" ]] || {
+    echo "promotion evidence bundle digest does not match its pointer" >&2
+    return 1
+  }
+
+  receipt="$(
+    cd "$ROOT"
+    FPA_DEPLOY_PROMOTION_DIR="$evidence_dir" \
+      FPA_DEPLOY_EXPECTED_SOURCE="$SOURCE_REVISION" \
+      FPA_DEPLOY_EXPECTED_CONFIG="$CONFIG_VERSION" \
+      FPA_DEPLOY_EXPECTED_CONTENT="$CONTENT_VERSION" \
+      FPA_DEPLOY_EXPECTED_SNAPSHOT="$SNAPSHOT_VERSION" \
+      FPA_DEPLOY_EXPECTED_RELEASE="$RELEASE_VERSION" \
+      FPA_DEPLOY_EXPECTED_CORPUS="$PINNED_CORPUS_VERSION" \
+      FPA_DEPLOY_EXPECTED_ARTIFACT="$CANDIDATE_CODE_SHA" \
+      FPA_DEPLOY_EXPECTED_FUNCTION_VERSION="$NEW_VERSION" \
+      uv run python -c '
+import json
+import os
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from assistant.promotion_evidence import verify_promotion_evidence
+
+root = Path(os.environ["FPA_DEPLOY_PROMOTION_DIR"])
+evidence = verify_promotion_evidence(
+    summary_path=root / "summary.json",
+    results_path=root / "results.jsonl",
+    promotion_path=root / "promotion.json",
+    freshness_budget=timedelta(days=7),
+    clock=lambda: datetime.now(UTC),
+)
+receipt = evidence.as_dict()
+print(json.dumps(
+    {
+        "status": evidence.status,
+        "summary_sha256": evidence.summary_sha256,
+        "results_sha256": evidence.results_sha256,
+        "promotion_sha256": evidence.promotion_sha256,
+        "runtime_release": receipt["runtime_release"],
+    },
+    sort_keys=True,
+    separators=(",", ":"),
+))
+'
+  )"
+  jq -e \
+    --arg summary "$expected_summary_sha" \
+    --arg results "$expected_results_sha" \
+    --arg promotion "$expected_promotion_sha" \
+    --arg source "$SOURCE_REVISION" \
+    --arg config "$CONFIG_VERSION" \
+    --arg content "$CONTENT_VERSION" \
+    --arg snapshot "$SNAPSHOT_VERSION" \
+    --arg release "$RELEASE_VERSION" \
+    --arg corpus "$PINNED_CORPUS_VERSION" \
+    --arg artifact "$CANDIDATE_CODE_SHA" \
+    --arg function_version "$NEW_VERSION" '
+      .status == "verified"
+      and .summary_sha256 == $summary
+      and .results_sha256 == $results
+      and .promotion_sha256 == $promotion
+      and .runtime_release.source_revision == $source
+      and .runtime_release.config_version == $config
+      and .runtime_release.content_version == $content
+      and .runtime_release.snapshot_version == $snapshot
+      and .runtime_release.release_version == $release
+      and .runtime_release.corpus_version == $corpus
+      and .runtime_release.artifact_code_sha256 == $artifact
+      and .runtime_release.function_version == $function_version
+    ' <<<"$receipt" >/dev/null || {
+    echo "full promotion evidence verifier returned an unexpected receipt" >&2
+    return 1
+  }
+  printf '%s\n' "$receipt"
+}
+
+# Bind the exact numbered candidate to a complete, live, uncached evaluation
+# before either alias can move. The runner writes the machine-readable pointer
+# only after strict parity/regression gates and a post-run identity recheck.
+mkdir -p "$PROMOTION_BUILD"
+(
+  cd "$ROOT"
+  FPA_RELEASE_EFFECTIVE_ENVIRONMENT_JSON="$LAMBDA_ENV" \
+    uv run python -m evals.runner \
+      --full \
+      --promotion \
+      --no-cache \
+      --release-descriptor "$BUNDLE/release/release.json" \
+      --run-path-output "$PROMOTION_RUN_POINTER"
+)
+[[ -f "$PROMOTION_RUN_POINTER" && ! -L "$PROMOTION_RUN_POINTER" ]] || {
+  echo "promotion runner did not write a regular eval-bundle pointer" >&2
+  exit 1
+}
+PROMOTION_RUN_POINTER_SNAPSHOT="$(
+  mktemp "$BUILD/.promotion-run-pointer-snapshot.XXXXXX"
+)"
+install -m 0444 "$PROMOTION_RUN_POINTER" "$PROMOTION_RUN_POINTER_SNAPSHOT"
+PROMOTION_RUN_POINTER_CANONICAL="$(mktemp "$BUILD/.promotion-run-pointer.XXXXXX")"
+if ! jq -e -s 'length == 1 and (.[0] | type == "object")' \
+    "$PROMOTION_RUN_POINTER_SNAPSHOT" >/dev/null \
+  || ! jq -S -c . \
+    "$PROMOTION_RUN_POINTER_SNAPSHOT" >"$PROMOTION_RUN_POINTER_CANONICAL" \
+  || ! cmp -s \
+    "$PROMOTION_RUN_POINTER_SNAPSHOT" "$PROMOTION_RUN_POINTER_CANONICAL"; then
+  echo "promotion eval-bundle pointer is not canonical JSON" >&2
+  rm -f "$PROMOTION_RUN_POINTER_CANONICAL" "$PROMOTION_RUN_POINTER_SNAPSHOT"
+  exit 1
+fi
+rm -f "$PROMOTION_RUN_POINTER_CANONICAL"
+PROMOTION_RUN_POINTER_JSON="$(<"$PROMOTION_RUN_POINTER_SNAPSHOT")"
+rm -f "$PROMOTION_RUN_POINTER_SNAPSHOT"
+jq -e '
+  keys == [
+    "bundle_path",
+    "content_address",
+    "results_sha256",
+    "run_dir",
+    "schema",
+    "summary_sha256"
+  ]
+  and .schema == "fare-assistant.eval-run-bundle-pointer.v1"
+  and (.run_dir | type == "string" and startswith("/"))
+  and (.bundle_path | type == "string" and startswith("/"))
+  and (.content_address | test("^[0-9a-f]{64}$"))
+  and (.summary_sha256 | test("^[0-9a-f]{64}$"))
+  and (.results_sha256 | test("^[0-9a-f]{64}$"))
+' <<<"$PROMOTION_RUN_POINTER_JSON" >/dev/null || {
+  echo "promotion eval-bundle pointer has an invalid closed schema" >&2
+  exit 1
+}
+PROMOTION_RUN_DIR="$(jq -r '.run_dir' <<<"$PROMOTION_RUN_POINTER_JSON")"
+PROMOTION_EVAL_BUNDLE="$(jq -r '.bundle_path' <<<"$PROMOTION_RUN_POINTER_JSON")"
+PROMOTION_EVAL_CONTENT_ADDRESS="$(
+  jq -r '.content_address' <<<"$PROMOTION_RUN_POINTER_JSON"
+)"
+PROMOTION_EVAL_SUMMARY_SHA="$(
+  jq -r '.summary_sha256' <<<"$PROMOTION_RUN_POINTER_JSON"
+)"
+PROMOTION_EVAL_RESULTS_SHA="$(
+  jq -r '.results_sha256' <<<"$PROMOTION_RUN_POINTER_JSON"
+)"
+[[ "$PROMOTION_RUN_DIR" == /* \
+  && "$(dirname "$PROMOTION_RUN_DIR")" == "$PROMOTION_RUNS_ROOT" \
+  && "$(basename "$PROMOTION_RUN_DIR")" =~ ^[0-9]{8}T[0-9]{6}Z(-[0-9]{2})?$ \
+  && -d "$PROMOTION_RUNS_ROOT" \
+  && ! -L "$PROMOTION_RUNS_ROOT" \
+  && -d "$PROMOTION_RUN_DIR" \
+  && ! -L "$PROMOTION_RUN_DIR" ]] || {
+  echo "promotion runner returned an unsafe or unexpected run directory" >&2
+  exit 1
+}
+[[ "$PROMOTION_EVAL_BUNDLE" \
+    == "$PROMOTION_RUN_DIR/bundles/$PROMOTION_EVAL_CONTENT_ADDRESS" \
+  && -d "$PROMOTION_RUN_DIR/bundles" \
+  && ! -L "$PROMOTION_RUN_DIR/bundles" \
+  && -d "$PROMOTION_EVAL_BUNDLE" \
+  && ! -L "$PROMOTION_EVAL_BUNDLE" ]] || {
+  echo "promotion pointer does not identify its content-addressed run bundle" >&2
+  exit 1
+}
+for promotion_input in summary.json results.jsonl bundle.json; do
+  [[ -f "$PROMOTION_EVAL_BUNDLE/$promotion_input" \
+    && ! -L "$PROMOTION_EVAL_BUNDLE/$promotion_input" ]] || {
+    echo "promotion eval bundle is missing regular $promotion_input" >&2
+    exit 1
+  }
+done
+PROMOTION_EVAL_EXTRA="$(
+  find "$PROMOTION_EVAL_BUNDLE" -mindepth 1 -maxdepth 1 \
+    ! -name summary.json ! -name results.jsonl ! -name bundle.json \
+    -print -quit
+)"
+[[ -z "$PROMOTION_EVAL_EXTRA" ]] || {
+  echo "promotion eval bundle contains an unexpected entry" >&2
+  exit 1
+}
+PROMOTION_BUNDLE_MANIFEST_SOURCE="$PROMOTION_EVAL_BUNDLE/bundle.json"
+PROMOTION_BUNDLE_MANIFEST="$(
+  mktemp "$BUILD/.promotion-bundle-manifest-snapshot.XXXXXX"
+)"
+install -m 0444 "$PROMOTION_BUNDLE_MANIFEST_SOURCE" "$PROMOTION_BUNDLE_MANIFEST"
+PROMOTION_BUNDLE_MANIFEST_CANONICAL="$(
+  mktemp "$BUILD/.promotion-bundle-manifest.XXXXXX"
+)"
+if ! jq -e -s 'length == 1 and (.[0] | type == "object")' \
+    "$PROMOTION_BUNDLE_MANIFEST" >/dev/null \
+  || ! jq -S -c . "$PROMOTION_BUNDLE_MANIFEST" \
+    >"$PROMOTION_BUNDLE_MANIFEST_CANONICAL" \
+  || ! cmp -s \
+    "$PROMOTION_BUNDLE_MANIFEST" \
+    "$PROMOTION_BUNDLE_MANIFEST_CANONICAL"; then
+  echo "promotion eval-bundle manifest is not canonical JSON" >&2
+  rm -f "$PROMOTION_BUNDLE_MANIFEST_CANONICAL" "$PROMOTION_BUNDLE_MANIFEST"
+  exit 1
+fi
+rm -f "$PROMOTION_BUNDLE_MANIFEST_CANONICAL"
+jq -e \
+  --arg summary "$PROMOTION_EVAL_SUMMARY_SHA" \
+  --arg results "$PROMOTION_EVAL_RESULTS_SHA" '
+    keys == ["results_sha256", "schema", "summary_sha256"]
+    and .schema == "fare-assistant.eval-run-bundle.v1"
+    and .summary_sha256 == $summary
+    and .results_sha256 == $results
+  ' "$PROMOTION_BUNDLE_MANIFEST" >/dev/null || {
+  echo "promotion eval-bundle manifest disagrees with its pointer" >&2
+  exit 1
+}
+[[ "$(sha256_hex "$PROMOTION_BUNDLE_MANIFEST")" \
+    == "$PROMOTION_EVAL_CONTENT_ADDRESS" \
+  && "$(sha256_hex "$PROMOTION_EVAL_BUNDLE/summary.json")" \
+    == "$PROMOTION_EVAL_SUMMARY_SHA" \
+  && "$(sha256_hex "$PROMOTION_EVAL_BUNDLE/results.jsonl")" \
+    == "$PROMOTION_EVAL_RESULTS_SHA" ]] || {
+  echo "promotion eval bundle does not match its content address or file digests" >&2
+  rm -f "$PROMOTION_BUNDLE_MANIFEST"
+  exit 1
+}
+rm -f "$PROMOTION_BUNDLE_MANIFEST"
+
+POST_EVAL_SOURCE_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
+[[ "$POST_EVAL_SOURCE_REVISION" == "$SOURCE_REVISION" \
+  && -z "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]] || {
+  echo "source state changed during promotion evaluation" >&2
+  exit 1
+}
+
+# Stage only from the runner's atomically published, content-addressed bundle.
+# Re-hash both destinations against its pointer so a source swap between the
+# two independent copies cannot compose a mixed evaluation.
+install -m 0644 \
+  "$PROMOTION_EVAL_BUNDLE/summary.json" \
+  "$PROMOTION_BUILD/summary.json"
+install -m 0644 \
+  "$PROMOTION_EVAL_BUNDLE/results.jsonl" \
+  "$PROMOTION_BUILD/results.jsonl"
+[[ "$(sha256_hex "$PROMOTION_BUILD/summary.json")" \
+    == "$PROMOTION_EVAL_SUMMARY_SHA" \
+  && "$(sha256_hex "$PROMOTION_BUILD/results.jsonl")" \
+    == "$PROMOTION_EVAL_RESULTS_SHA" ]] || {
+  echo "staged promotion evidence differs from the atomic eval-bundle pointer" >&2
+  exit 1
+}
+
+# The evaluation may be long. Re-read the immutable candidate and its runtime
+# mode so an operator/runtime drift cannot be hidden behind the earlier smoke.
+POST_EVAL_CANDIDATE_CONFIG="$(
+  aws lambda get-function-configuration \
+    --function-name "$FN" --qualifier "$NEW_VERSION" \
+    --region "$REGION" --output json
+)"
+if ! same_versioned_release_config \
+  "$PUBLISHED_CONFIG" "$POST_EVAL_CANDIDATE_CONFIG"; then
+  echo "numbered candidate changed during promotion evaluation" >&2
+  exit 1
+fi
+POST_EVAL_CODE_SHA="$(jq -r '.CodeSha256' <<<"$POST_EVAL_CANDIDATE_CONFIG")"
+[[ "$POST_EVAL_CODE_SHA" == "$LOCAL_CODE_SHA" \
+  && "$POST_EVAL_CODE_SHA" == "$CANDIDATE_CODE_SHA" ]] || {
+  echo "post-evaluation candidate artifact digest does not match the local bundle" >&2
+  exit 1
+}
+assert_managed_release_config \
+  "$POST_EVAL_CANDIDATE_CONFIG" "post-evaluation numbered candidate"
+POST_EVAL_RUNTIME_MODE="$(
+  aws lambda get-runtime-management-config \
+    --function-name "$FN" --qualifier "$NEW_VERSION" \
+    --region "$REGION" --query UpdateRuntimeOn --output text
+)"
+[[ "$POST_EVAL_RUNTIME_MODE" == "FunctionUpdate" ]] || {
+  echo "candidate runtime mode changed during promotion evaluation" >&2
+  exit 1
+}
+
+# This is deliberately the only runtime projection written to disk. The
+# complete Lambda environment contains a history-signing secret and must never
+# cross into public promotion evidence.
+jq -n \
+  --arg source_revision "$SOURCE_REVISION" \
+  --arg config_version "$CONFIG_VERSION" \
+  --arg content_version "$CONTENT_VERSION" \
+  --arg snapshot_version "$SNAPSHOT_VERSION" \
+  --arg release_version "$RELEASE_VERSION" \
+  --arg corpus_version "$PINNED_CORPUS_VERSION" \
+  --arg artifact_code_sha256 "$POST_EVAL_CODE_SHA" \
+  --arg function_version "$NEW_VERSION" '{
+    source_revision: $source_revision,
+    config_version: $config_version,
+    content_version: $content_version,
+    snapshot_version: $snapshot_version,
+    release_version: $release_version,
+    corpus_version: $corpus_version,
+    artifact_code_sha256: $artifact_code_sha256,
+    function_version: $function_version
+  }' >"$PROMOTION_RUNTIME_EVIDENCE"
+PROMOTION_BUILD_SUMMARY="$(
+  cd "$ROOT"
+  uv run python scripts/build_promotion_attestation.py \
+    --runtime "$PROMOTION_RUNTIME_EVIDENCE" \
+    --summary "$PROMOTION_BUILD/summary.json" \
+    --results "$PROMOTION_BUILD/results.jsonl" \
+    --output "$PROMOTION_BUILD/promotion.json"
+)"
+if ! jq -e \
+  --arg output "$PROMOTION_BUILD/promotion.json" '
+    .output_path == $output
+    and (.attestation_sha256 | test("^[0-9a-f]{64}$"))
+  ' <<<"$PROMOTION_BUILD_SUMMARY" >/dev/null; then
+  echo "promotion attestation builder returned an invalid receipt" >&2
+  exit 1
+fi
+PROMOTION_ATTESTATION_SHA="$(
+  jq -r '.attestation_sha256' <<<"$PROMOTION_BUILD_SUMMARY"
+)"
+[[ -f "$PROMOTION_BUILD/promotion.json" \
+  && ! -L "$PROMOTION_BUILD/promotion.json" ]] || {
+  echo "promotion attestation was not written as a regular file" >&2
+  exit 1
+}
+STAGED_SUMMARY_SHA="$(sha256_hex "$PROMOTION_BUILD/summary.json")"
+STAGED_RESULTS_SHA="$(sha256_hex "$PROMOTION_BUILD/results.jsonl")"
+STAGED_PROMOTION_SHA="$(sha256_hex "$PROMOTION_BUILD/promotion.json")"
+[[ "$STAGED_PROMOTION_SHA" == "$PROMOTION_ATTESTATION_SHA" ]] || {
+  echo "promotion builder receipt does not identify the exact staged attestation bytes" >&2
+  exit 1
+}
+
+# The builder composes the attestation, but the shared verifier is the complete
+# consumer predicate. Run it against the exact three staged files before those
+# bytes are eligible for publication.
+verify_promotion_trio \
+  "$PROMOTION_BUILD" \
+  "$STAGED_SUMMARY_SHA" \
+  "$STAGED_RESULTS_SHA" \
+  "$STAGED_PROMOTION_SHA" >/dev/null
+
+# The canonical promotion attestation commits to the exact summary/results
+# digests, so its SHA-256 is the content address for the closed evidence trio.
+# Populate an unpublished sibling first; only the final pointer is replaced
+# atomically after every copied byte re-matches the verified staging receipt.
+PROMOTION_ARCHIVE="$BUILD/promotions/$NEW_VERSION/$PROMOTION_ATTESTATION_SHA"
+PROMOTION_ARCHIVE_PARENT="$(dirname "$PROMOTION_ARCHIVE")"
+mkdir -p "$PROMOTION_ARCHIVE_PARENT"
+PROMOTION_ARCHIVE_STAGING="$(
+  mktemp -d "$PROMOTION_ARCHIVE_PARENT/.${PROMOTION_ATTESTATION_SHA}.XXXXXX"
+)"
+for promotion_artifact in summary.json results.jsonl promotion.json; do
+  install -m 0444 \
+    "$PROMOTION_BUILD/$promotion_artifact" \
+    "$PROMOTION_ARCHIVE_STAGING/$promotion_artifact"
+done
+if [[ -e "$PROMOTION_ARCHIVE" ]]; then
+  [[ -d "$PROMOTION_ARCHIVE" && ! -L "$PROMOTION_ARCHIVE" ]] || {
+    echo "retained promotion evidence path is not a regular directory" >&2
+    exit 1
+  }
+  for promotion_artifact in summary.json results.jsonl promotion.json; do
+    if [[ ! -f "$PROMOTION_ARCHIVE/$promotion_artifact" \
+      || -L "$PROMOTION_ARCHIVE/$promotion_artifact" ]] \
+        || ! cmp -s \
+          "$PROMOTION_ARCHIVE_STAGING/$promotion_artifact" \
+          "$PROMOTION_ARCHIVE/$promotion_artifact"; then
+      echo "retained promotion evidence conflicts with the current artifact" >&2
+      exit 1
+    fi
+  done
+  rm -rf "$PROMOTION_ARCHIVE_STAGING"
+else
+  chmod 0555 "$PROMOTION_ARCHIVE_STAGING"
+  mv "$PROMOTION_ARCHIVE_STAGING" "$PROMOTION_ARCHIVE"
+fi
+chmod 0555 "$PROMOTION_ARCHIVE"
+for promotion_artifact in summary.json results.jsonl promotion.json; do
+  if [[ -e "$PROMOTION_ARCHIVE/$promotion_artifact" ]]; then
+    continue
+  else
+    echo "atomically published promotion bundle is incomplete" >&2
+    exit 1
+  fi
+done
+
+EVAL_BUNDLE_POINTER_TEMP="$(mktemp "$BUILD/.promotion-evidence-pointer.XXXXXX")"
+jq -n -S -c \
+  --arg bundle_path "$PROMOTION_ARCHIVE" \
+  --arg content_address "$PROMOTION_ATTESTATION_SHA" \
+  --arg function_version "$NEW_VERSION" \
+  --arg summary_sha256 "$STAGED_SUMMARY_SHA" \
+  --arg results_sha256 "$STAGED_RESULTS_SHA" \
+  --arg promotion_sha256 "$STAGED_PROMOTION_SHA" '{
+    schema: "fare-assistant.eval-bundle-pointer.v1",
+    bundle_path: $bundle_path,
+    content_address: $content_address,
+    function_version: $function_version,
+    summary_sha256: $summary_sha256,
+    results_sha256: $results_sha256,
+    promotion_sha256: $promotion_sha256
+  }' >"$EVAL_BUNDLE_POINTER_TEMP"
+chmod 0444 "$EVAL_BUNDLE_POINTER_TEMP"
+mv "$EVAL_BUNDLE_POINTER_TEMP" "$EVAL_BUNDLE_POINTER"
+[[ -f "$EVAL_BUNDLE_POINTER" && ! -L "$EVAL_BUNDLE_POINTER" ]] || {
+  echo "promotion evidence pointer was not atomically published as a regular file" >&2
+  exit 1
+}
+
 # Apply the function-wide cost ceiling before a first deployment creates any
 # public route. Existing releases already carry this value; reapplying it is
 # idempotent shared-infrastructure reconciliation.
 aws lambda put-function-concurrency --function-name "$FN" --region "$REGION" \
   --reserved-concurrent-executions "$RESERVED_CONCURRENCY" >/dev/null
+
+# Resolve the atomic pointer rather than trusting in-memory paths, recheck its
+# content address and exact digests, then invoke the full consumer predicate
+# immediately before the first possible candidate alias mutation.
+EVAL_BUNDLE_POINTER_JSON="$(<"$EVAL_BUNDLE_POINTER")"
+jq -e \
+  --arg bundle_path "$PROMOTION_ARCHIVE" \
+  --arg content_address "$PROMOTION_ATTESTATION_SHA" \
+  --arg function_version "$NEW_VERSION" \
+  --arg summary_sha256 "$STAGED_SUMMARY_SHA" \
+  --arg results_sha256 "$STAGED_RESULTS_SHA" \
+  --arg promotion_sha256 "$STAGED_PROMOTION_SHA" '
+    keys == [
+      "bundle_path",
+      "content_address",
+      "function_version",
+      "promotion_sha256",
+      "results_sha256",
+      "schema",
+      "summary_sha256"
+    ]
+    and .schema == "fare-assistant.eval-bundle-pointer.v1"
+    and .bundle_path == $bundle_path
+    and .content_address == $content_address
+    and .function_version == $function_version
+    and .summary_sha256 == $summary_sha256
+    and .results_sha256 == $results_sha256
+    and .promotion_sha256 == $promotion_sha256
+  ' <<<"$EVAL_BUNDLE_POINTER_JSON" >/dev/null || {
+  echo "promotion evidence pointer is malformed or changed after publication" >&2
+  exit 1
+}
+POINTER_BUNDLE_PATH="$(jq -r '.bundle_path' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+POINTER_SUMMARY_SHA="$(jq -r '.summary_sha256' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+POINTER_RESULTS_SHA="$(jq -r '.results_sha256' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+POINTER_PROMOTION_SHA="$(jq -r '.promotion_sha256' <<<"$EVAL_BUNDLE_POINTER_JSON")"
+verify_promotion_trio \
+  "$POINTER_BUNDLE_PATH" \
+  "$POINTER_SUMMARY_SHA" \
+  "$POINTER_RESULTS_SHA" \
+  "$POINTER_PROMOTION_SHA" >/dev/null
+[[ "$(git -C "$ROOT" rev-parse HEAD)" == "$SOURCE_REVISION" \
+  && -z "$(git -C "$ROOT" status --porcelain --untracked-files=normal)" ]] || {
+  echo "source state changed before promotion evidence was consumed" >&2
+  exit 1
+}
 
 if [[ "$HAS_LIVE_ALIAS" == "true" && "$NEW_VERSION" == "$OLD_VERSION" ]]; then
   echo "candidate is already the live immutable version $NEW_VERSION; no alias move needed"
@@ -2305,9 +2946,73 @@ EOF
 aws cloudwatch put-dashboard --region "$REGION" --dashboard-name "$FN" \
   --dashboard-body "$DASHBOARD_BODY" >/dev/null
 
-# An account-level AWS Budget is the spend backstop beneath these; it needs
-# billing permissions this role may lack, so it stays a one-time manual step:
+# ── cost allocation: label everything this deploy owns ────────────────────────
+# The `--tags` arguments further up only fire the first time a resource is
+# created. This sweep re-applies `project` on EVERY deploy, so resources that
+# predate the tagging (or that a half-finished run created before reaching this
+# point) get labelled on the next run instead of sitting in the account's
+# untagged bucket indefinitely. Tagging an already-correctly-tagged resource is
+# a no-op, so re-running costs nothing.
+#
+# Deliberately not tagged, because AWS accepts no tags on them: CloudWatch
+# metric filters, the CloudWatch dashboard, Lambda aliases and published
+# versions (tags live on the function and cover every version), the API's
+# `$default` stage and route, and the inline IAM role policy. None of them bill
+# separately from a parent that is tagged here.
+#
+# A failure here does not fail the deploy: the service is live and verified by
+# this point, and a billing label is not worth tearing that down. It is reported
+# loudly instead, because untagged spend is invisible spend. The usual cause is
+# deploy credentials without tag permissions -- `lambda:TagResource`,
+# `iam:TagRole`, `logs:TagResource`, `apigateway:POST` on `/tags/*`,
+# `sns:TagResource`, `cloudwatch:TagResource`.
+UNTAGGED=""
+_tag() {  # human-readable resource label, then the command that tags it
+  local label="$1"
+  shift
+  "$@" >/dev/null 2>&1 || UNTAGGED="$UNTAGGED${UNTAGGED:+, }$label"
+}
+_tag "lambda function $FN" \
+  aws lambda tag-resource --region "$REGION" \
+  --resource "$UNQUALIFIED_ARN" --tags "$PROJECT_TAG_MAP"
+_tag "iam role $ROLE_NAME" \
+  aws iam tag-role --role-name "$ROLE_NAME" --tags "$PROJECT_TAG_LIST"
+_tag "log group $LOG_GROUP" \
+  aws logs tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:logs:$REGION:$ACCOUNT:log-group:$LOG_GROUP" \
+  --tags "$PROJECT_TAG_MAP"
+_tag "http api $API_ID" \
+  aws apigatewayv2 tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:apigateway:$REGION::/apis/$API_ID" \
+  --tags "$PROJECT_TAG_MAP"
+_tag "sns topic $FN-alerts" \
+  aws sns tag-resource --region "$REGION" \
+  --resource-arn "$TOPIC_ARN" --tags "$PROJECT_TAG_LIST"
+_tag "dynamodb table $RATE_LIMIT_TABLE" \
+  aws dynamodb tag-resource --region "$REGION" \
+  --resource-arn "arn:aws:dynamodb:$REGION:$ACCOUNT:table/$RATE_LIMIT_TABLE" \
+  --tags "$PROJECT_TAG_LIST"
+for alarm_suffix in handler-errors lambda-errors lambda-throttles \
+  unpriced-model-calls latency-p99 bedrock-surge; do
+  _tag "alarm $FN-$alarm_suffix" \
+    aws cloudwatch tag-resource --region "$REGION" \
+    --resource-arn "$(_alarm_arn "$alarm_suffix")" --tags "$PROJECT_TAG_LIST"
+done
+if [[ -n "$UNTAGGED" ]]; then
+  echo "WARNING: could not apply project=$PROJECT_TAG to: $UNTAGGED" >&2
+  echo "their spend stays in the untagged bucket, invisible to the fare-demo budget" >&2
+else
+  echo "cost allocation: project=$PROJECT_TAG applied to this deployment's resources"
+fi
+
+# A tag-scoped AWS Budget is the billing-authoritative spend backstop beneath
+# these; it needs billing permissions this role may lack, so it stays a one-time
+# manual step:
 #   aws budgets create-budget --account-id <id> --budget '{...}'  (see infra/README.md)
+# Budgets data lags actual usage by 8-12 hours, so it is a backstop and not a
+# circuit breaker. The control that stops spend in minutes is the breaker in
+# infra/deploy-cutoff.sh, driven by this deployment's own token-derived cost
+# metric. Deploy it once; it is not part of a routine release.
 
 echo "deployed: https://$API_ID.execute-api.$REGION.amazonaws.com/"
 echo "live Lambda version: $NEW_VERSION"
@@ -2324,6 +3029,10 @@ echo "content version: $CONTENT_VERSION"
 echo "snapshot version: $SNAPSHOT_VERSION"
 echo "config version: $CONFIG_VERSION"
 echo "release version: $RELEASE_VERSION"
+echo "promotion attestation sha256: $PROMOTION_ATTESTATION_SHA"
+echo "promotion evidence: $PROMOTION_ARCHIVE"
+echo "promotion evidence pointer: $EVAL_BUNDLE_POINTER"
 echo "disabled documents pending review: $DISABLED_DOC_IDS"
+echo "per-caller limiter table: $RATE_LIMIT_TABLE (TTL $RATE_LIMIT_TTL_STATUS at start of run)"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
 echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

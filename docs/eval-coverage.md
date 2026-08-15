@@ -6,13 +6,28 @@ Cells: number of eval cases touching that agency x program. `-` means the corpus
 
 | Agency | senior | disabled | medicare | veteran | youth/student | child free | regular |
 |---|---|---|---|---|---|---|---|
-| HTA | 7 | 1 | - | - | 5 | - | 5 |
-| MST | 21 | 3 | 7 | 14 | 4 | - | 7 |
-| SBMTD | 8 | 4 | 1 | - | 4 | 3 | 11 |
-| SacRT | 8 | 2 | - | - | 4 | - | 8 |
-| Yolobus | 9 | 5 | 4 | - | 12 | 6 | 5 |
+| AC Transit | 3 | 3 | - | - | 2 | 1 | 5 |
+| CCCTA | 5 | 4 | 2 | 2 | 2 | 2 | 8 |
+| E-tran | 5 | 2 | 2 | - | 1 | 1 | 3 |
+| FAX | 2 | 4 | 4 | 1 | 1 | 1 | 3 |
+| HTA | 9 | 1 | - | - | 5 | - | 5 |
+| MST | 23 | 5 | 7 | 15 | 5 | - | 8 |
+| Marin Transit | 1 | 2 | 1 | - | 1 | 1 | 4 |
+| SBMTD | 9 | 4 | 1 | - | 4 | 3 | 11 |
+| SCMTD | 6 | 5 | 2 | 1 | 3 | 1 | 7 |
+| SJRTD | 4 | 1 | 2 | 1 | 1 | 1 | 6 |
+| SLORTA | 6 | 4 | 2 | - | 3 | 1 | 5 |
+| SacRT | 10 | 3 | - | - | 4 | - | 10 |
+| SamTrans | 1 | 2 | 1 | - | 5 | 1 | 6 |
+| SolTrans | 5 | 4 | 3 | - | 4 | **0** | 4 |
+| VINE | 2 | 1 | 1 | - | 3 | - | 5 |
+| VTA | 4 | 3 | 3 | - | 4 | 1 | 4 |
+| WestCAT | 4 | 3 | 2 | 2 | 1 | - | 2 |
+| Yolobus | 9 | 5 | 4 | - | 13 | - | 5 |
 
-## Blind spots
+## Blind spots (1)
 
-None: every corpus-published program above is touched by at least one case.
+Corpus-published provisions with no eval case touching them:
+
+- **SolTrans** / child free
 

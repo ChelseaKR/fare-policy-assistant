@@ -1,0 +1,70 @@
+# Judge-calibration relabeling worksheet, generated 2026-08-05 from the promoted
+# run evals/runs/20260712T050117Z by:
+#
+#     uv run python -m evals.calibration --worksheet evals/runs/20260712T050117Z
+#
+# 37 rows: the sample floor (10% of that run's 367 judged (case, judge) pairs,
+# per CLAUDE.md). The first nine are every pair the judge FAILED; the rest are
+# drawn round-robin across all nine suites. Failures come first on purpose --
+# the committed 16-label sample put 14 of its labels on pairs the judge had
+# passed, and the four that survived staleness were all agreements, which is
+# why EVALS.md reported 100% agreement with an undefined kappa.
+#
+# To use it, run:
+#
+#     make relabel
+#     # or: uv run python -m evals.calibration --review <this file>
+#
+# That walks the unlabeled rows one at a time, printing for each the judge's
+# criterion, the rider's question, the retrieved passages, and the answer --
+# then asks for your verdict and a one-line reason, and writes both back here.
+# It is offline, resumable, and refuses to record a verdict if the recorded
+# answer no longer matches this row's answer_sha256. It never proposes a
+# verdict, and it withholds `judge_said` until after you have given yours:
+# a reviewer shown the judge's call first tends to confirm it, and a sample
+# that only confirms is how the last one ended up unable to disagree.
+#
+# Editing the JSON by hand is still fine. If you do: decide independently
+# whether the judge's dimension is satisfied, set "human_passed" to true or
+# false, replace the note with your reason, and do not read `judge_said`
+# first. Then move the finished rows into evals/calibration/judge_labels.jsonl.
+#
+# Rows still carrying the TEMPLATE marker or a null verdict are refused by
+# evals/calibration.py::load_labels: an unreviewed pair is not a human label.
+{"case_id": "conv-forged-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "8d7601e79285090eeae1ef015d1c6fc8e4391ef06d99ece0c44b948a0561f0ba", "judge_said": false, "suite": "conversation", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "conv-forged-004", "judge": "helpfulness", "human_passed": null, "answer_sha256": "8e005cefe06864285075f12fd1ab5b4e865c70042242a059b1dd1e5bf9edf3da", "judge_said": false, "suite": "conversation", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "edge-018", "judge": "groundedness", "human_passed": null, "answer_sha256": "7de473b6b0235dba365d235aa54641ca0f5475e670a8c1f214f9615bb65dfb0e", "judge_said": false, "suite": "edge_cases", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "fresh-009", "judge": "helpfulness", "human_passed": null, "answer_sha256": "41b794a292f2641e163b2f6e793ab7411a9eac8afa238fe597a8856463c6b541", "judge_said": false, "suite": "freshness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-024", "judge": "groundedness", "human_passed": null, "answer_sha256": "b3310aa5a9b5a7308600efceaf8e017d00758086c15eda35f8bfe82b3bc7d43b", "judge_said": false, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-024", "judge": "helpfulness", "human_passed": null, "answer_sha256": "b3310aa5a9b5a7308600efceaf8e017d00758086c15eda35f8bfe82b3bc7d43b", "judge_said": false, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-026", "judge": "groundedness", "human_passed": null, "answer_sha256": "a5078fc44e3df78c88a52308dbe49b27f6cf7b093cc2e138b62acea1728a6fc5", "judge_said": false, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-026", "judge": "helpfulness", "human_passed": null, "answer_sha256": "a5078fc44e3df78c88a52308dbe49b27f6cf7b093cc2e138b62acea1728a6fc5", "judge_said": false, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "sens-015a", "judge": "groundedness", "human_passed": null, "answer_sha256": "dae4a613e3dcb9c439fb9daf78765cacc1f1e5a7b3a114f0cd879acadccf18f3", "judge_said": false, "suite": "sensitivity", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "conv-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "9cbf61b1bfcb9892224e93f1541e5182458891f55d9440164af5427fbab6ba95", "judge_said": true, "suite": "conversation", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "xagency-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "102a766e07531da0f762ab13dad6be86c1ea2661ae73e67f863fb8ad0ce81d94", "judge_said": true, "suite": "cross_agency", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "edge-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "14958363aedb8720b9ff84bd2a8a55bd2681577a104deccee743c7f714dd3f85", "judge_said": true, "suite": "edge_cases", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "fresh-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "f0ff0f92a3f2e6937bd2c7eaf205df2255ea4b5ebd96eaeced8db8946da062f6", "judge_said": true, "suite": "freshness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "2edc976d7d6c3721c235b0e20dc14534230ff5342d3377d285295328e8005943", "judge_said": true, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ml-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "9c1457e0699fbfa6fcf9d5a9a640b6531a8904ec7f3d1b3737f5ac14999acbff", "judge_said": true, "suite": "multilingual", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "parity-injection-es", "judge": "helpfulness", "human_passed": null, "answer_sha256": "82b623c55cd0ba5d4488cda3aff5f84fb3763be803bada43d39a03adb5ff23b6", "judge_said": true, "suite": "refusal", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "sens-001a", "judge": "groundedness", "human_passed": null, "answer_sha256": "14958363aedb8720b9ff84bd2a8a55bd2681577a104deccee743c7f714dd3f85", "judge_said": true, "suite": "sensitivity", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "tl-001", "judge": "groundedness", "human_passed": null, "answer_sha256": "349c91837360d2d1ef62cfe43e82a6cea56bc47cb1cd0ebf5cb3175447ff22ad", "judge_said": true, "suite": "stretch_tagalog", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "conv-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "9cbf61b1bfcb9892224e93f1541e5182458891f55d9440164af5427fbab6ba95", "judge_said": true, "suite": "conversation", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "xagency-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "102a766e07531da0f762ab13dad6be86c1ea2661ae73e67f863fb8ad0ce81d94", "judge_said": true, "suite": "cross_agency", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "edge-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "14958363aedb8720b9ff84bd2a8a55bd2681577a104deccee743c7f714dd3f85", "judge_said": true, "suite": "edge_cases", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "fresh-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "f0ff0f92a3f2e6937bd2c7eaf205df2255ea4b5ebd96eaeced8db8946da062f6", "judge_said": true, "suite": "freshness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "2edc976d7d6c3721c235b0e20dc14534230ff5342d3377d285295328e8005943", "judge_said": true, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ml-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "9c1457e0699fbfa6fcf9d5a9a640b6531a8904ec7f3d1b3737f5ac14999acbff", "judge_said": true, "suite": "multilingual", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "parity-pii-dob-en", "judge": "helpfulness", "human_passed": null, "answer_sha256": "95f5f9358ec3c6ba159229c4d9a23267613899ec4b1df8c8f6c47534db0c3cae", "judge_said": true, "suite": "refusal", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "sens-001a", "judge": "helpfulness", "human_passed": null, "answer_sha256": "14958363aedb8720b9ff84bd2a8a55bd2681577a104deccee743c7f714dd3f85", "judge_said": true, "suite": "sensitivity", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "tl-001", "judge": "helpfulness", "human_passed": null, "answer_sha256": "349c91837360d2d1ef62cfe43e82a6cea56bc47cb1cd0ebf5cb3175447ff22ad", "judge_said": true, "suite": "stretch_tagalog", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "conv-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "69f6ca76b9b4f6e79df87ded87748b1f3049cc430e5ea228b5dfd3c89bed104c", "judge_said": true, "suite": "conversation", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "xagency-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "dd99cb511585cfe64380fe09860e2930575b8fa2de0f3a2ab19c74abc59d85fe", "judge_said": true, "suite": "cross_agency", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "edge-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "fccd0fd981a16dbc8a21cc0c0694bf5304c337a5c355682d7d508bd29cae7c19", "judge_said": true, "suite": "edge_cases", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "fresh-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "c6ac12e90528a249721c41f4f777c952d7636a63d1d2b2fe2ddeb25247806971", "judge_said": true, "suite": "freshness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ground-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "3858051e525fdbd6d8c17c6139101a7607b973c6bb5e3a8326a674d7ba6f4fef", "judge_said": true, "suite": "groundedness", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "ml-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "7c2c2db00bcb696d300b84a87fada831c914f7a279454efa3f1c729234f230bb", "judge_said": true, "suite": "multilingual", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "parity-pii-dob-es", "judge": "helpfulness", "human_passed": null, "answer_sha256": "d07f7ea78ce11c51bcb9b8eca4b1fc36c33c982a51e1a9a17f4a1a26bbede706", "judge_said": true, "suite": "refusal", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "sens-001b", "judge": "groundedness", "human_passed": null, "answer_sha256": "a1b48f1d9e3478700d4a2fa097bd49485bdaa630146d3b7d4853876534b353cb", "judge_said": true, "suite": "sensitivity", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "tl-002", "judge": "groundedness", "human_passed": null, "answer_sha256": "a22bd642c9a5f401ca40fe05f516bcf7051815e1c152ca096875479ec059c144", "judge_said": true, "suite": "stretch_tagalog", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}
+{"case_id": "conv-002", "judge": "helpfulness", "human_passed": null, "answer_sha256": "69f6ca76b9b4f6e79df87ded87748b1f3049cc430e5ea228b5dfd3c89bed104c", "judge_said": true, "suite": "conversation", "note": "TEMPLATE — read the answer and its passages, then set human_passed and replace this note"}

@@ -12,11 +12,15 @@ Last updated 2026-07-17.
 ## What it is in one paragraph
 
 A retrieval-augmented assistant that answers rider questions about published
-fare and reduced-fare policy for five California transit agencies (MST, SBMTD,
-Yolobus, SacRT, HTA), in English or Spanish, with a citation on every answer.
+fare and reduced-fare policy for eighteen California transit agencies (MST,
+SBMTD, Yolobus, SacRT, HTA, e-tran, SCMTD, SolTrans, FAX, CCCTA, SJRTD, AC
+Transit, WestCAT, SLO RTA, VTA, VINE, SamTrans, Marin Transit), in English
+or Spanish, with a citation on every answer.
 The headline deliverable is the evaluation harness around it: 118 graded cases,
 deterministic safety checks, an LLM judge held to a different model than the one
-being graded, and a second independent audit by an outside tool. The assistant
+being graded, and a second, blind harness that re-scores the recorded answers
+(that harness is a separate project by the same author and is not public, so it
+is a second opinion rather than a third party's). The assistant
 exists so the harness has something to measure.
 
 ## What it will not do, and how that is enforced
@@ -51,9 +55,10 @@ them.
 
 Two independent layers, on purpose.
 
-1. **The project's own harness (white-box).** 118 cases across six suites
+1. **The project's own harness (white-box).** 385 cases across nine suites
    (groundedness, refusal, edge cases, multilingual, freshness, multi-turn
-   conversation). Each case is a YAML record a non-engineer can read: the
+   conversation, cross-agency, counterfactual sensitivity, and stretch-language
+   Tagalog). Each case is a YAML record a non-engineer can read: the
    question, the agency scope, the expected behavior, and the facts or citations
    it must contain. Scoring combines deterministic checks (citation resolves,
    forbidden phrases absent, language matches, "as of" present) with an LLM judge
@@ -118,7 +123,8 @@ implying a sign-off that has not happened.
   pass count is a band (about 113 of 118), not a fixed number. The deterministic
   safety checks (no determination language, citation present, PII not echoed) do
   not vary.
-- The corpus is five agencies and a fixed snapshot date. Fare policy goes stale;
+- The corpus is eighteen agencies and a fixed snapshot date. Fare policy
+  goes stale;
   the answer says so, and snapshots must be refreshed and evals re-run before any
   renewed use.
 
@@ -136,7 +142,7 @@ its own text says.
 |---|---|---|
 | **Govern** | The hard limits (no eligibility determinations, no PII collection, citation required) are design constraints recorded in the root instruction file and enforced in code and CI, not policies on a shelf. Risk ownership and decisions are written down: an AI risk register, a DPIA, an EU AI Act self-classification, security reporting terms, and a decision log that keeps its negative results instead of deleting them. | [`CLAUDE.md`](../CLAUDE.md), [`docs/ai-risk-register.md`](ai-risk-register.md), [`docs/dpia.md`](dpia.md), [`docs/eu-ai-act-classification.md`](eu-ai-act-classification.md), [`SECURITY.md`](../SECURITY.md), [`docs/decisions/`](decisions/) |
 | **Map** | Scope, intended use, affected riders, and known limits are stated before any capability claim: what the assistant is for and not for, which agencies and languages it covers, where each corpus document comes from and when it was fetched, and what stays out of scope. | [`docs/model-card.md`](model-card.md), [`docs/PROJECT-SCOPE.md`](PROJECT-SCOPE.md), `corpus/manifest.yaml`, the "Known limits" section above |
-| **Measure** | The headline deliverable. A graded eval harness combines deterministic safety checks with a versioned LLM judge held to a different model than the one being graded; judge-versus-human calibration is reported with its sample size; the headline number carries confidence intervals and a leave-one-suite-out check; counterfactual minimal pairs probe eligibility boundaries; a regression gate and a provenance gate block merges; and an outside tool re-grades recorded answers in an independent audit. | [`EVALS.md`](../EVALS.md), `evals/` (suites, `calibration.py`, `robustness.py`, `check_report_regression.py`, `provenance.py`), [`docs/eval-robustness.md`](eval-robustness.md), [`docs/audits/methodology.md`](audits/methodology.md) |
+| **Measure** | The headline deliverable. A graded eval harness combines deterministic safety checks with a versioned LLM judge held to a different model than the one being graded; judge-versus-human calibration is reported with its sample size; the headline number carries confidence intervals and a leave-one-suite-out check; counterfactual minimal pairs probe eligibility boundaries; a regression gate and a provenance gate block merges; and a second, blind harness re-grades recorded answers (that harness is not public, so its report is a second opinion, not a third-party audit). | [`EVALS.md`](../EVALS.md), `evals/` (suites, `calibration.py`, `robustness.py`, `check_report_regression.py`, `provenance.py`), [`docs/eval-robustness.md`](eval-robustness.md), [`docs/audits/methodology.md`](audits/methodology.md) |
 | **Manage** | Risks are handled in operation, not only at review time: input and output guards run on every request; corpus staleness has a budget, and a scheduled refresh loop opens a reviewable pull request on real drift; spend and error alarms are provisioned by the deploy (subscribing a human endpoint is an operator step); the rate limit holds across containers; models and prompts are pinned and versioned. | `src/assistant/guards.py`, `.github/workflows/corpus-freshness.yml`, [`infra/README.md`](../infra/README.md), `src/assistant/config.py`, `prompts/` |
 
 What this mapping does not cover: the manual assistive-technology walkthrough

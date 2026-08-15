@@ -1,15 +1,26 @@
-# Publishes the evaluation report + improvement-curve to GitHub Pages.
+# Publish only a canonical, sanitized promotion-evidence manifest.
 #
-# One-time setup (manual, like branch protection): in the repository Settings →
-# Pages, set Source = "GitHub Actions". Then run this workflow from the Actions
-# tab. It is workflow_dispatch only on purpose, so it never runs (or fails)
-# automatically on a push before Pages is enabled.
+# One-time setup: Settings → Pages → Source = "GitHub Actions". The workflow
+# stays manual because the caller must bind one trusted source commit to one
+# separately reviewed evidence-only commit and its exact manifest digest.
 name: Pages
 
 on:
   workflow_dispatch:
+    inputs:
+      source_revision:
+        description: Full trusted source commit SHA containing the renderer
+        required: true
+        type: string
+      evidence_ref:
+        description: Full evidence-only commit SHA containing public-evidence.json
+        required: true
+        type: string
+      expected_public_manifest_sha256:
+        description: Lowercase SHA-256 of the exact canonical public-evidence.json
+        required: true
+        type: string
 
-# Least privilege at the top; the deploy job widens only what it needs.
 permissions:
   contents: read
 
@@ -22,20 +33,115 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      EVIDENCE_REF: ${{ inputs.evidence_ref }}
+      EXPECTED_PUBLIC_MANIFEST_SHA256: ${{ inputs.expected_public_manifest_sha256 }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-        with:
-          persist-credentials: false
-      - name: Assemble the site
+      - name: Validate immutable inputs
+        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p _site
-          cp docs/pages/index.html _site/index.html
-          cp docs/eval-report.html _site/report.html
-          cp docs/eval-history.svg _site/trend.svg
-          cp docs/pages/CNAME _site/CNAME
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
+          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EVIDENCE_REF" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_PUBLIC_MANIFEST_SHA256" =~ ^[0-9a-f]{64}$ ]]
+
+      - name: Check out trusted source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          ref: ${{ inputs.source_revision }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out evidence-only commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          ref: ${{ inputs.evidence_ref }}
+          path: evidence-checkout
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify commits and isolate the one-file evidence input
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_REVISION"
+          git -C source merge-base --is-ancestor \
+            "$SOURCE_REVISION" refs/remotes/origin/main
+          test "$(git -C evidence-checkout rev-parse HEAD)" = "$EVIDENCE_REF"
+          test -z "$(git -C source status --porcelain=v1 --untracked-files=all)"
+          test -z "$(git -C evidence-checkout status --porcelain=v1 --untracked-files=all)"
+
+          mapfile -t evidence_entries < <(
+            find evidence-checkout -mindepth 1 -maxdepth 1 ! -name .git -printf '%f\n' | sort
+          )
+          test "${#evidence_entries[@]}" -eq 1
+          test "${evidence_entries[0]}" = "public-evidence.json"
+          test -f evidence-checkout/public-evidence.json
+          test ! -L evidence-checkout/public-evidence.json
+
+          mkdir evidence
+          install -m 0644 evidence-checkout/public-evidence.json evidence/public-evidence.json
+          mapfile -t staged_entries < <(
+            find evidence -mindepth 1 -maxdepth 1 -printf '%f\n' | sort
+          )
+          test "${#staged_entries[@]}" -eq 1
+          test "${staged_entries[0]}" = "public-evidence.json"
+          actual_sha256="$(sha256sum evidence/public-evidence.json | cut -d ' ' -f 1)"
+          test "$actual_sha256" = "$EXPECTED_PUBLIC_MANIFEST_SHA256"
+
+      - name: Install the trusted renderer environment
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: false
+
+      - name: Synchronize locked dependencies
+        working-directory: source
+        run: uv sync --frozen --no-dev
+
+      - name: Verify fresh evidence and live runtime before rendering
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            https://fare.chelseakr.com/version \
+            --output live-version-before.json
+          cd source
+          uv run --no-sync python scripts/build_evidence_site.py compare-runtime \
+            --manifest ../evidence/public-evidence.json \
+            --version-json ../live-version-before.json \
+            --expected-source-revision "$SOURCE_REVISION"
+
+      - name: Render the sanitized site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          render_args=(
+            render
+            --manifest ../evidence/public-evidence.json
+            --template docs/pages/index.html
+            --output-dir ../_site
+            --expected-source-revision "$SOURCE_REVISION"
+          )
+          if [[ -f docs/eval-history.svg ]]; then
+            render_args+=(--history-svg docs/eval-history.svg)
+          fi
+          if [[ -f docs/pages/CNAME ]]; then
+            render_args+=(--cname docs/pages/CNAME)
+          fi
+          uv run --no-sync python scripts/build_evidence_site.py "${render_args[@]}"
+          test ! -e ../_site/results.jsonl
+          test ! -e ../_site/summary.json
+          test ! -e ../_site/promotion.json
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
+
+      - name: Upload sanitized Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
         with:
           path: _site
 
@@ -43,11 +149,101 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      EVIDENCE_REF: ${{ inputs.evidence_ref }}
+      EXPECTED_PUBLIC_MANIFEST_SHA256: ${{ inputs.expected_public_manifest_sha256 }}
     steps:
-      - id: deployment
+      - name: Deploy sanitized Pages artifact
+        id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4
+
+      - name: Check out trusted source for post-deploy verification
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          ref: ${{ inputs.source_revision }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out evidence-only commit for post-deploy verification
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          ref: ${{ inputs.evidence_ref }}
+          path: evidence-checkout
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Reverify immutable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_REVISION"
+          git -C source merge-base --is-ancestor \
+            "$SOURCE_REVISION" refs/remotes/origin/main
+          test "$(git -C evidence-checkout rev-parse HEAD)" = "$EVIDENCE_REF"
+          mapfile -t evidence_entries < <(
+            find evidence-checkout -mindepth 1 -maxdepth 1 ! -name .git -printf '%f\n' | sort
+          )
+          test "${#evidence_entries[@]}" -eq 1
+          test "${evidence_entries[0]}" = "public-evidence.json"
+          test -f evidence-checkout/public-evidence.json
+          test ! -L evidence-checkout/public-evidence.json
+          actual_sha256="$(
+            sha256sum evidence-checkout/public-evidence.json | cut -d ' ' -f 1
+          )"
+          test "$actual_sha256" = "$EXPECTED_PUBLIC_MANIFEST_SHA256"
+
+      - name: Install the trusted verifier environment
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: false
+
+      - name: Synchronize locked dependencies
+        working-directory: source
+        run: uv sync --frozen --no-dev
+
+      - name: Reverify fresh evidence and live runtime after deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            https://fare.chelseakr.com/version \
+            --output live-version-after.json
+          cd source
+          uv run --no-sync python scripts/build_evidence_site.py compare-runtime \
+            --manifest ../evidence-checkout/public-evidence.json \
+            --version-json ../live-version-after.json \
+            --expected-source-revision "$SOURCE_REVISION"
+
+      - name: Verify the published evidence bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          observed_sha256=""
+          for attempt in $(seq 1 20); do
+            : "$attempt"
+            if curl --fail --silent --show-error \
+              --proto '=https' --tlsv1.2 \
+              https://evals.chelseakr.com/public-evidence.json \
+              --output published-public-evidence.json; then
+              observed_sha256="$(
+                sha256sum published-public-evidence.json | cut -d ' ' -f 1
+              )"
+              if [[ "$observed_sha256" == "$EXPECTED_PUBLIC_MANIFEST_SHA256" ]]; then
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          echo "published evidence did not converge to the expected digest" >&2
+          echo "expected: $EXPECTED_PUBLIC_MANIFEST_SHA256" >&2
+          echo "observed: ${observed_sha256:-unavailable}" >&2
+          exit 1

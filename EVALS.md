@@ -1,13 +1,13 @@
 # Evaluation Report
 
-Generated from the run at `2026-07-12T05:01:17+00:00` (full, live).
+Generated from the run at `2026-07-12T05:01:17+00:00` (full, live provider — every model call served from cache).
 
 - Answer model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` · Judge model: `us.anthropic.claude-sonnet-4-6`
 - Judges ran: yes
 - Prompt versions: system v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance), answer_user v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure), judge_groundedness v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004), judge_helpfulness v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)
 - Corpus version: `0938fff0539a`
 - Duration: 0.7s
-- Cost (estimated): $3.1580 for 1,427,861 tokens — answer $0.9698, judge $2.1883 (exact tokens, list-price estimate)
+- Cost (estimated): $3.1580 for 1,427,861 tokens — answer $0.9698, judge $2.1883 (exact tokens; cache write/read 0/0, list-price estimate) — 553 of 553 model calls were served from the content-keyed eval cache and cost nothing this run
 
 ## Scoreboard
 
@@ -24,7 +24,13 @@ Generated from the run at `2026-07-12T05:01:17+00:00` (full, live).
 | stretch_tagalog | 15 | 15 | 100.0% |
 | **all** | **192** | **201** | **95.5%** |
 
-**Counterfactual sensitivity:** 13/15 boundary pairs correctly distinguished (a pair passes only if every variant passes across the boundary).
+**Counterfactual sensitivity:** 13/15 boundary pairs passed (a pair passes only if every variant passes across the boundary).
+
+**Of those pairs, 11/15 produced answers the per-variant checks can tell apart.** A pair passes when both variants pass their own checks; that is not the same as the two answers differing. For the rest, each variant's answer also satisfies its sibling's required facts and forbidden content, so a single answer would have passed both sides of the boundary and the pair demonstrates nothing about sensitivity to it.
+
+Interchangeable pairs: sens-003, sens-011, sens-013, sens-015.
+
+**Below-macro suite:** conversation at 80.0% vs macro 94.0% (floor 89.0%) — annotated expected-below-macro: 8/10 on the 2026-07-12 full live run. The two failures are conv-forged-002 (the re-grounded answer lists the SBMTD senior one-way fare as free where the passage says $1.25 — a real unsupported-figure failure under forged-history pressure, caught by the groundedness judge) and conv-forged-004 (the assistant refuses instead of correcting the fabricated free-student-fare claim with the actual Yolobus policy — scored unhelpful by design). Both are adversarial forged-history cases (FIX-08) documented in full in EVALS.md's representative-failures section; they are honest, visible failures on the hardest cases in the harness, not an equity gap between languages. Annotated 2026-07-17; remove when a live run brings conversation within 5 points of macro.
 
 ## Spanish parity
 
@@ -53,6 +59,14 @@ Generated from the run at `2026-07-12T05:01:17+00:00` (full, live).
 | ml-021 | ✓ | ground-027 | ✓ |
 | ml-022 | ✓ | edge-034 | ✓ |
 
+Parity delta: Spanish 22/22 vs mirrored English 22/22 → 0.0 pp. Gate (M-1): fails when the gap exceeds 5 points and 2 or more mirrored cases diverge; each gated suite must also stay within 5 points of the macro pass rate.
+
+## Native-Spanish answer quality
+
+**Not measured.** 0 of 28 Spanish answers rated; 28 to go (`evals/spanish/native_es_rubric_2026-08-05.jsonl`, filled with `make spanish-quality`). The parity table above is a pass/fail comparison between a Spanish answer and its English mirror; both verdicts come from checks that ask whether a citation resolves and a required fact appears. Neither asks whether the Spanish reads as Spanish, so a 0.0-point parity delta is consistent with Spanish of any quality.
+
+No native-Spanish question set has been sourced either: 0 of 28 rows carry an externally sourced question, so even once rated this describes the Spanish this repo wrote, not Spanish as riders write it.
+
 ## Stretch-language parity (Tagalog)
 
 Clearly non-parity by design (docs/ROADMAP.md P3-3): no corpus document is published in Tagalog, so every row below is a cross-lingual retrieval test, not a translated-source lookup like the Spanish table above. A lower pass rate here than in Spanish parity is the expected, honest result, not a regression.
@@ -80,7 +94,9 @@ Clearly non-parity by design (docs/ROADMAP.md P3-3): no corpus document is publi
 Human labels checked against this run's judge verdicts on 4 of 16 sampled (case, judge) pairs.
 
 - Raw agreement: **100.0%**
-- Cohen's κ: **1.000**
+- Cohen's κ: undefined — every scored label agreed, so there is no disagreement to chance-correct against
+- **Below the sample floor:** 4 scored labels against a floor of 37 (10% of the 367 (case, judge) pairs this run judged). Read the agreement and κ above as provisional; the sample is 33 labels short of the size that would make them evidence.
+- **No disagreement in the scored sample.** Every label that survived staleness agreed with the judge, so this sample can only report 100%. Read the stale list below before reading the agreement as a result: a sample that lost its disagreements to a prompt bump is the agreeing half of the set, not a clean one.
 - Stale labels skipped (answer changed since labeling): **12**
 - Note: small, pass-skewed sample; read agreement alongside n and kappa.
 - Stale (bound answer changed — relabel with `python -m evals.calibration --emit`): ground-001/groundedness, ground-006/groundedness, ground-016/groundedness, edge-007/groundedness, edge-008/groundedness, edge-002/groundedness, ml-004/groundedness, ground-024/groundedness, fresh-002/helpfulness, edge-001/helpfulness, ml-012/helpfulness, fresh-005/helpfulness
@@ -359,4 +375,4 @@ evals/check_report_regression.py (the `suites` scoreboard below, re-checked
 against the committed evals/baseline.json — fails if this committed report
 describes a regression that was never actually gated; see
 docs/audits/eval-regression-2026-06-30.md for why that check exists). -->
-<!-- provenance {"corpus_version": "0938fff0539a", "prompt_versions": {"answer_user": "v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure)", "judge_groundedness": "v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004)", "judge_helpfulness": "v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)", "system": "v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance)"}, "run_id": "2026-07-12T05:01:17+00:00", "suites": {"conversation": {"pass_rate": 80.0, "passed": 8, "total": 10}, "cross_agency": {"pass_rate": 100.0, "passed": 3, "total": 3}, "edge_cases": {"pass_rate": 95.8, "passed": 46, "total": 48}, "freshness": {"pass_rate": 90.0, "passed": 9, "total": 10}, "groundedness": {"pass_rate": 93.1, "passed": 27, "total": 29}, "multilingual": {"pass_rate": 100.0, "passed": 22, "total": 22}, "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34}, "sensitivity": {"pairs_passed": 13, "pairs_total": 15, "pass_rate": 93.3, "passed": 28, "total": 30}, "stretch_tagalog": {"pass_rate": 100.0, "passed": 15, "total": 15}}} -->
+<!-- provenance {"corpus_version": "0938fff0539a", "parity": {"delta_pp": 0.0, "mirror_passed": 22, "pairs": 22, "passed": 22, "suite": "multilingual"}, "prompt_versions": {"answer_user": "v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure)", "judge_groundedness": "v2 2026-07-02 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004)", "judge_helpfulness": "v3 2026-07-02 (v1 2026-06-11; v2 2026-06-12 stopped second-guessing documented policy — ml-010, fresh-007; v3 threads prior conversation turns and the case rationale so multi-turn answers are not graded blind — conv-004)", "system": "v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance)"}, "run_id": "2026-07-12T05:01:17+00:00", "suites": {"conversation": {"pass_rate": 80.0, "passed": 8, "total": 10}, "cross_agency": {"pass_rate": 100.0, "passed": 3, "total": 3}, "edge_cases": {"pass_rate": 95.8, "passed": 46, "total": 48}, "freshness": {"pass_rate": 90.0, "passed": 9, "total": 10}, "groundedness": {"pass_rate": 93.1, "passed": 27, "total": 29}, "multilingual": {"pass_rate": 100.0, "passed": 22, "total": 22}, "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34}, "sensitivity": {"pairs_passed": 13, "pairs_total": 15, "pass_rate": 93.3, "passed": 28, "total": 30}, "stretch_tagalog": {"pass_rate": 100.0, "passed": 15, "total": 15}}} -->

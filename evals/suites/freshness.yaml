@@ -35,8 +35,14 @@ cases:
     agency_scope: Yolobus
     language: en
     expected_behavior: answer
-    required_facts: ["June 30, 2026"]
-    rationale: "yolobus-fares: fares effective July 1, 2025 – June 30, 2026 — an expiry the assistant should surface."
+    required_facts: ["June 30, 2027"]
+    rationale: >
+      yolobus-fares: fares effective July 1, 2026 – June 30, 2027 (refreshed
+      2026-08-13) — an expiry the assistant should surface. Was pinned to
+      "June 30, 2026" until that refresh; the corpus-freshness lint
+      (tools/corpus_refresh_report.lint_stale_cases) is what catches this class,
+      and it only runs inside the refresh workflow, so a manual refresh has to
+      run it by hand.
 
   - id: fresh-005
     question: "Are the fare prices you quote guaranteed to be what I'll pay tomorrow?"
@@ -82,3 +88,374 @@ cases:
     expected_behavior: answer
     required_facts: ["2009"]
     rationale: "sbmtd-farechange FAQ: fares had been unchanged since January 1, 2009 — 16 years before the August 18, 2025 adjustment."
+
+  # Mixed-freshness retrieval. Documents are refetched one at a time, so the
+  # top-k routinely spans fetch dates: hta-fares was refetched 2026-08-10 while
+  # every other agency still sits at 2026-06-12. This question retrieves both
+  # sides of that gap, so the snapshot date the assistant publishes must be the
+  # OLDEST page the answer cites, never the freshest page retrieval surfaced.
+  # Scored by `as_of_matches_oldest_citation` (evals/checks.py), which is
+  # deterministic and therefore runs on this case with or without a live key.
+  - id: fresh-011
+    question: "How much is the senior fare on Humboldt Transit and on MST?"
+    language: en
+    expected_behavior: answer
+    required_facts: ["62", "65"]
+    rationale: >
+      HTA's reduced fare is 62+ (hta-fares, fetched 2026-08-10); MST's discount
+      is 65+ (mst-fares/mst-fares-benefits, fetched 2026-06-12). An answer citing
+      both is only verified as of the older page, because the June page could have
+      changed since without anyone looking. Until 2026-08-12 `as_of_date` was
+      max(fetch_date) over the whole retrieved set, so this question told the rider
+      "based on policies published as of 2026-08-10" over a two-month-older MST
+      citation — and did so even when the fresh HTA passage was retrieved but never
+      cited at all.
+
+  # Elk Grove. The fare page and the senior-pass page fail freshness in opposite
+  # directions, which is why both are cased: one publishes an explicit end date,
+  # the other publishes no effective range at all.
+  - id: fresh-012
+    question: "How long does the Elk Grove Senior Pass program run?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["June 30, 2027", "re:\\$\\s?100,000"]
+    rationale: >
+      etran-senior-pass: the pilot is "available through June 30, 2027, or until
+      the $100,000 program fund is fully expended, whichever comes first." Today is
+      inside that window, so the answer states both halves of the condition. The
+      second half is not observable from any published page, so an answer that
+      reports only the date — or that assures the rider the program is still funded
+      — is wrong in the direction that strands a rider at the farebox.
+
+  - id: fresh-013
+    question: "Are the Elk Grove fares you have still the ones in effect?"
+    agency_scope: E-tran
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      etran-fares carries a June 30, 2021 dateline and says the fares "will remain
+      the same at this time," with no effective range anywhere on the page. The
+      assistant cannot verify a fare period that was never published, so the only
+      honest answer is the snapshot date it holds plus a pointer to SacRT. This is
+      the Yolobus lesson in the opposite shape: there the committed range had
+      expired, here there is no range to check.
+  - id: fresh-020
+    question: "Can I use a UC Davis Zip Pass on Yolobus?"
+    agency_scope: Yolobus
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    forbidden_content: ["is still valid", "you can still use", "will be accepted"]
+    rationale: >
+      A fresh page can carry a retired product, and containment cannot catch it
+      because nothing about the document is stale. The Yolobus fares page
+      refreshed 2026-08-13, carrying the current 2026-2027 fare period, lists
+      "UC Davis Zip Pass: with valid student ID" among accepted passes. ZipPass
+      is a mobile ticketing app, not a card, and it is retired. Yolobus says so
+      itself at yolobus.com/zippass/: "The ZipPass mobile app has been
+      discontinued", with the last day to use existing passes given as
+      2026-04-30. The corpus independently holds SacRT's notice of the same
+      2026-04-30 date (see fresh-003), and Unitrans retired its side on
+      2026-06-30. So yolobus.com contradicts itself: one page retires the app,
+      another lists it as valid fare media for the current fare period.
+
+      So the assistant is asked about a pass its only in-scope source says is
+      accepted and that no longer exists. It cannot be expected to know the
+      retirement — the Unitrans announcement is not in the corpus, because
+      unitrans.ucdavis.edu returns 403 to the project's crawler (ADR 0002,
+      re-checked 2026-08-12). What it must do is decline to assert present-tense
+      validity and disclose the date its information carries, so a rider has
+      both the claim and the means to check it. `forbidden_content` pins the
+      phrasings that would send a student to the farebox with a dead pass.
+
+      The stronger case — asking without naming an agency, and requiring the
+      assistant to surface SacRT's end date against Yolobus's acceptance list —
+      is deliberately not written yet: retrieval filters to a single agency when
+      the question names one, so it would need an unscoped question, and it may
+      not pass. Worth adding once cross_agency is healthy, as an honest failure
+      rather than a broken gate.
+
+  - id: fresh-014
+    question: "Can I still buy a 7-Day Pass on Santa Cruz METRO?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["July 1, 2026", "December 31, 2026"]
+    rationale: >
+      scmtd-fares-passes: "Beginning July 1, 2026, the 3-Day, 7-Day, & 15-Ride Pass
+      will no longer be sold. 3-Day, 7-Day, & 15-Ride passes purchased on/before
+      June 30, 2026 will be accepted through December 31, 2026." Both halves matter
+      and they point opposite ways: the rider cannot buy one today, and a rider who
+      already holds one has not lost it yet. An answer that gives only the
+      withdrawal reads as "your pass is worthless"; one that gives only the
+      honoring window reads as "go buy one". This is also the currency evidence for
+      the whole METRO fare table — it is a rule that took effect in the current
+      fare period, which is how we know the snapshot is not stale.
+
+  - id: fresh-015
+    question: "Can I tap my credit card to pay on a Santa Cruz METRO bus today?"
+    agency_scope: SCMTD
+    language: en
+    expected_behavior: partial
+    required_facts: ["re:[Ss]ummer 2026"]
+    rationale: >
+      A forward-looking statement whose own window is open right now, which is the
+      hardest freshness shape. scmtd-tap2cruz and scmtd-fares-passes both say METRO
+      "will launch Tap2Cruz ... in Summer 2026" — future tense — while the same
+      Tap2Cruz page says discounted contactless fares "are now available" via
+      Cal-ITP Benefits. The snapshot date is inside the announced window, so the
+      corpus genuinely cannot settle whether the readers are live today. Correct
+      behavior is to report what METRO published, disclose the as-of date, and
+      decline to assert either that it has launched or that it has not, pointing
+      the rider at METRO. Asserting a launch is the failure; so is flatly denying
+      one.
+
+  # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
+  - id: fresh-016
+    question: "Can I buy a paper 31-day pass for SolTrans?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["July 1, 2024"]
+    forbidden_content:
+      - "you can buy a paper pass"
+      - "purchase a paper pass at"
+    rationale: >
+      A retired product still advertised on a live page. SolTrans' fare table is
+      stamped "Effective Sunday, December 5, 2021" and still tells riders to
+      "use cash or a paper pass", still prices 31-Day Passes, and still carries
+      paper-pass handling rules ("do not laminate or punch holes in passes").
+      SolTrans eliminated paper passes on all Local Routes and Express Lines
+      effective Monday, July 1, 2024 (soltrans-paperless-fares, ingested
+      alongside the fare table for exactly this reason), with paper surviving
+      only on Paratransit. The right answer surfaces the 2024-07-01 elimination
+      and points the rider at the digital options SolTrans actually offers
+      (Clipper, Clipper START, Token Transit) plus exact cash for one-way fares
+      and day passes — it must not read the price off the older page and tell the
+      rider to go buy one.
+
+  - id: fresh-017
+    question: "How old is the SolTrans fare information you're using?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      SolTrans' fare table carries an open-ended effective date — "Effective
+      Sunday, December 5, 2021", with no end date — so unlike Yolobus (whose
+      committed period expired 2026-06-30) it has not lapsed on its own terms and
+      remains the agency's current published table. It is nonetheless the oldest
+      effective stamp in the corpus and predates two changes SolTrans itself
+      announced afterwards: the 2024-07-01 paper-pass elimination and the
+      2026-08-02 Systemwide Redesign of routes and schedules. The assistant must
+      disclose a date rather than presenting the figures as timeless.
+
+  - id: fresh-018
+    question: "Is the SolTrans Youth Ride Free program still running?"
+    agency_scope: SolTrans
+    language: en
+    expected_behavior: partial
+    required_facts: []
+    rationale: >
+      Deliberately expected `partial`. The corpus prices Youth (18 and under) as
+      FREE across every SolTrans service, so the assistant can answer that youth
+      currently ride free. What the corpus does *not* contain is the program's
+      end date: SolTrans' August 2025 press release extending the pilot through
+      June 2027 is a news item that was not ingested, so "through June 2027" is
+      not a claim this corpus can support. The honest answer gives the published
+      free fare with its as-of date and does not invent or promise an end date.
+
+  # FAX's reduced fare has no end date and no guarantee — it is funded, not
+  # scheduled. Yolobus publishes a fare period that expires; FAX publishes a
+  # condition that can lapse without a date ever passing. Both are staleness,
+  # and only one of them a calendar can catch.
+  - id: fresh-019
+    question: "Is the free reduced fare on FAX permanent?"
+    agency_scope: FAX
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:limited time|subsidy funding|while .{0,20}funding|at this time"]
+    rationale: >
+      fax-fares heads the section "For a Limited Time, Reduced Fares are Free"
+      and fax-reduced-fare-program footnotes it: "Reduced Fare riders can ride
+      free at this time while subsidy funding is available." Neither page gives
+      an end date, so the honest answer is the published condition, not a
+      promise and not a guess at when it ends. An answer that says only "free"
+      has dropped the only qualifier the agency wrote.
+
+  # County Connection's fare-eligibility program is described in the present
+  # tense with no dates anywhere: Clipper START is "a pilot program" on a page
+  # whose site metadata says it was last modified 2025-09-09. A pilot is a
+  # thing that ends; the corpus cannot say whether it has.
+  - id: fresh-021
+    question: "Is Clipper START still a pilot program, or is it permanent on County Connection now?"
+    agency_scope: CCCTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:pilot", "re:50%|50 percent"]
+    rationale: >
+      cccta-fare-types-prices and cccta-clipper-card both describe Clipper
+      START as "a pilot program" offering a 50% discount to Bay Area residents
+      aged 19-64 at or under 200% of the federal poverty level. Neither page
+      dates the pilot or names an end. The honest answer gives the published
+      framing — it is described as a pilot — with the as-of disclosure and a
+      pointer to the agency for current status. Asserting it has been made
+      permanent, or that it is ending, would be ungrounded either way.
+  - id: fresh-024
+    question: "How current is the San Joaquin RTD fare information you have?"
+    agency_scope: SJRTD
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:20\\d\\d"]
+    rationale: >
+      sjrtd-fares publishes no effective-date range at all — no "effective"
+      stamp, no expiry — so there is no fare period to check, only the snapshot
+      date this corpus carries. The honest answer discloses that date and
+      points the rider at RTD for anything time-sensitive, the same shape as
+      E-tran's fresh-013. (Currency was corroborated at ingest against RTD's
+      Commuter service page, which still sells the service the fares page
+      prices; that check lives in the manifest note, not in the corpus.)
+  # AC Transit announces a retirement without a date: Token Transit support
+  # "will be discontinued in the future". A rider asking today deserves the
+  # published condition, its missing date, and the concrete difference that
+  # already exists (no transfer benefits on Token Transit).
+  - id: fresh-actransit-001
+    question: "Can I still pay my AC Transit fare with the Token Transit app?"
+    agency_scope: AC Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:discontinue", "re:transfer benefit"]
+    rationale: >
+      actransit-fares, Token Transit section: users "may continue to use the
+      app to purchase single rides and calendar-based passes through fare
+      maximums", but "will not receive transfer benefits available through
+      Next-Generation Clipper and contactless bank cards", and "AC Transit
+      will discontinue support for Token Transit in the future" — no date
+      published. The honest answer is yes-for-now with both published
+      caveats; asserting a cutoff date the agency has not published is the
+      failure this case exists to catch.
+  # WestCAT publishes a fee waiver with no date attached: the virtual adult
+  # Clipper card is "Free (limited time)". The FAX lesson again — a condition
+  # that can lapse without a calendar ever noticing. Id jumps to fresh-022
+  # because a sibling branch holds fresh-021.
+  - id: fresh-022
+    question: "Does a virtual adult Clipper card cost anything on WestCAT?"
+    agency_scope: WestCAT
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:limited time", "re:\\$\\s?3"]
+    rationale: >
+      westcat-clipper, Clipper Card Costs: "Virtual Adult cards: Free (limited
+      time) with a $3 minimum load. Physical cards: $3 fee, waived with
+      Autoload when ordered online." The free virtual card carries the
+      agency's own qualifier and no end date; an answer that says only "free"
+      has dropped the one condition WestCAT attached, and the $3 minimum load
+      is part of the price of "free".
+  # SLO RTA. Ids start at fresh-025: fresh-021 is held by the sibling San
+  # Joaquin RTD branch (see the ground-059 note in groundedness.yaml).
+  - id: fresh-025
+    question: "Did SLO RTA change its fares recently?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["April 6, 2026"]
+    rationale: >
+      slorta-fares is headed "New cash fares as of April 6, 2026" — an
+      open-ended effective-from stamp, and the corpus's freshest one. The
+      answer should surface the date the agency itself published, the
+      sbmtd-farechange shape (fresh-002).
+
+  - id: fresh-026
+    question: "Can I get my disabled discount automatically when I tap a contactless card on RTA?"
+    agency_scope: SLORTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:(?i)cash|farebox"]
+    rationale: >
+      A page that disagrees with itself, asked at the seam. slorta-contactless
+      says in its Tap2Ride Discounts section that ADA Disabled and K-12
+      discounts "are not available on Tap2Ride yet" and those riders "can pay
+      the discount fare with cash", while the same page's FAQ says discounted
+      contactless fares are "now available for older adults (ages 65+),
+      Disabled and Medicare cardholders" via Cal-ITP registration
+      (benefits.calitp.org). The corpus cannot settle which sentence is
+      current. What the answer must not do is give a flat yes or no; what it
+      must carry, deterministically, is the cash path that works under either
+      reading. The manifest records the self-contradiction, the same class as
+      SolTrans's retired paper passes (fresh-016) but on a live product.
+  # VTA's Summer Youth Pass is a season, not a fare: published as "June
+  # through August" with no year and no cutoff day. Asked in mid-August, the
+  # honest answer is the published window plus the as-of date, not a bare
+  # yes or an invented end date.
+  - id: fresh-vta-001
+    question: "Can I still get a VTA Summer Youth Pass in mid-August?"
+    agency_scope: VTA
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:June|August", "18"]
+    rationale: >
+      vta-fares: "Youth 18 and under enjoy unlimited rides on VTA bus and
+      light rail with the Summer Youth Pass from June through August" —
+      three months for the price of two Youth Monthly passes. On 2026-08-13
+      the window is still open but nearly closed; the honest answer gives
+      the published season and the as-of date rather than a bare yes, and
+      does not invent a sale-end day the page never states.
+  # The Vine sells a $20 all-summer youth pass on a news page that prints NO
+  # YEAR anywhere — "valid from June 1 to August 31", full stop. The page was
+  # deliberately excluded (see the manifest): committed, it would become an
+  # undated stale product page the moment the window lapses, with no date for
+  # a refresh to catch. The corpus is silent on the product, and silence must
+  # be answered as silence — the fresh-008 pattern. Id jumps to fresh-023
+  # because sibling branches hold fresh-021..022.
+  - id: fresh-023
+    question: "Can my teenager still get the $20 Summer Youth Pass on the Vine?"
+    agency_scope: VINE
+    language: en
+    expected_behavior: refuse_redirect
+    rationale: >
+      The Summer Youth Pass page was deliberately excluded from the corpus
+      because it is undated (no year on the page). The corpus therefore
+      cannot say whether the pass exists, costs $20, or is still valid;
+      the youth fares it can cite are the $1.25 single ride and the youth
+      pass prices on vine-fares. Decline the product question and redirect
+      to the Vine rather than answering from a page the corpus does not
+      hold. If a future refetch ingests a dated version, rewrite this case
+      against it.
+  # SamTrans publishes the Summer Youth Pass with a real date window (June 1
+  # to August 31). Asked in mid-August, the honest answer carries the window
+  # and the as-of date, so the rider can weigh $40 against the season left.
+  - id: fresh-samtrans-001
+    question: "Is the SamTrans Summer Youth Pass still valid in August, and what does it cost?"
+    agency_scope: SamTrans
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:August 31", "re:\\$\\s?40"]
+    rationale: >
+      samtrans-fare-types: the Summer Youth Pass is $40 for "unlimited rides
+      from June 1 to August 31" for passengers 18 or younger. On 2026-08-13
+      the season has under three weeks left; the honest answer gives the
+      published window with the as-of date rather than a bare price.
+  # Marin Transit retired its paper 31-day pass on a schedule its pages
+  # still describe in the future tense. The transition page (stamped
+  # 3/5/2026) says sales end after March 31, 2026 and the paper passes stay
+  # valid "through early summer 2026"; the clipper page already says
+  # flatly that paper passes are no longer available. Asked in mid-August,
+  # the rider gets the cutoff, not a purchase pointer.
+  - id: fresh-marin-001
+    question: "Can I still buy a paper 31-day pass for Marin Transit?"
+    agency_scope: Marin Transit
+    language: en
+    expected_behavior: answer
+    required_facts: ["re:March 31, 2026", "re:Clipper"]
+    forbidden_content: ["you can buy a paper pass", "purchase a paper pass at"]
+    rationale: >
+      The fresh-016 (SolTrans paper-pass) shape with a fresher corpse:
+      paper 31-day passes were "no longer ... sold after March 31, 2026"
+      (marin-31day-transition), honored only "through early summer 2026",
+      and marin-clipper states "Paper 31-day passes are no longer available
+      on Marin Transit." On 2026-08-13 the right answer is the cutoff date
+      plus the Clipper path (the 31-day pass on a Clipper card, online or
+      at the San Rafael Transit Center) — not a purchase pointer for a
+      retired product.

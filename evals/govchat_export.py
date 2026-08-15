@@ -16,6 +16,7 @@ family's eval-record → scripted pattern (civic-rag-starter-kit ADR-K8).
 
     uv run python -m evals.govchat_export            # live record → dataset
     uv run python -m evals.govchat_export --offline  # mock model (plumbing only)
+    uv run python -m evals.govchat_export --restamp-license  # metadata only
 
 Suite mapping (fare-policy-assistant → GovChat-Eval):
     groundedness  → groundedness   (claims entailed by retrieved passages)
@@ -34,6 +35,7 @@ import argparse
 import hashlib
 import json
 import re
+from pathlib import Path
 
 from assistant import config
 from assistant.answer import answer_question
@@ -47,6 +49,21 @@ OUT_DIR = config.REPO_ROOT / "evals" / "govchat"
 DATASET_PATH = OUT_DIR / "golden.jsonl"
 ADDED = "2026-06-16"  # date this dataset was recorded (kept out of per-run hashing)
 MAX_SOURCES = 6
+
+# What this dataset may be assumed to grant over the agency text it quotes:
+# nothing. Until 2026-08-12 this field read "public record — California transit
+# agency fare policy pages". "Public record" is a disclosure status under the
+# California Public Records Act (Gov. Code §7920 et seq.), not a copyright
+# license and not a public-domain dedication, and every source page carries its
+# own "all rights reserved" notice. Stamped on all 195 rows of a machine-readable
+# dataset built to be reused, it was the strongest license claim this project
+# made anywhere, and it was wrong. State the non-grant instead, and point at the
+# one document that explains it. See corpus/LICENSE-NOTE.md.
+LICENSE_NOTE = (
+    "no license granted by this project — source text remains the copyright of the "
+    "respective transit agency, reproduced here as short excerpts for evaluation and "
+    "analysis, not licensed for redistribution; see corpus/LICENSE-NOTE.md"
+)
 
 # Cases that are genuine jailbreak attempts the assistant must refuse outright,
 # tagged so GovChat-Eval's adversarial suite exercises them. refuse-019 is
@@ -131,7 +148,7 @@ def _provenance(result) -> dict[str, str]:
     )
     return {
         "source": f"{agency} published fare pages (see corpus/manifest.yaml)",
-        "license": "public record — California transit agency fare policy pages",
+        "license": LICENSE_NOTE,
         "added": ADDED,
         "note": "answer recorded from the deployed assistant pipeline",
     }
@@ -268,10 +285,59 @@ def write_dataset(items: list[dict]) -> None:
     print(f"sha256 → {digest}")
 
 
+def restamp_license(path: Path | None = None) -> int:
+    """Correct the per-row license note on an already-recorded dataset, in place.
+
+    The license note describes the source corpus, not the recording, so fixing it
+    must not become a re-record. `build_dataset` needs live model calls, and a
+    re-record would replace 195 committed answers — and invalidate the audit
+    report scored from them — to change one metadata string. It must equally not
+    restamp the `# provenance:` header, which states the corpus and prompt
+    versions the committed answers really were recorded against; rewriting that
+    would make a stale dataset claim to be current, which is the exact failure
+    `evals/provenance.py` exists to catch.
+
+    So this rewrites `provenance.license` and nothing else: the header and every
+    recorded answer stay byte-identical, and the `.sha256` sidecar the audit
+    validates against is refreshed from the same code path that writes it.
+    Returns the number of rows changed.
+    """
+    path = path or DATASET_PATH
+    rows = 0
+    changed = 0
+    out: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            out.append(line)
+            continue
+        rows += 1
+        item = json.loads(line)
+        prov = item.get("provenance")
+        if isinstance(prov, dict) and prov.get("license") != LICENSE_NOTE:
+            prov["license"] = LICENSE_NOTE
+            changed += 1
+        out.append(json.dumps(item, ensure_ascii=False))
+    path.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    path.with_suffix(".jsonl.sha256").write_text(digest + "\n", encoding="utf-8")
+    print(f"restamped the license note on {changed} of {rows} rows → {path}")
+    print(f"sha256 → {digest}")
+    return changed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--offline", action="store_true", help="mock model (plumbing only)")
+    parser.add_argument(
+        "--restamp-license",
+        action="store_true",
+        help="rewrite the committed dataset's license note only; no answers re-recorded",
+    )
     args = parser.parse_args()
+    if args.restamp_license:
+        restamp_license()
+        return
     write_dataset(build_dataset(offline=args.offline))
 
 
