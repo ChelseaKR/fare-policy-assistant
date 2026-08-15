@@ -76,24 +76,28 @@
 
   <section class="card" aria-labelledby="benchmark-heading">
     <h2 id="benchmark-heading">Published evaluation context</h2>
-    <p><strong>Committed promoted baseline: 192/201 (95.5%).</strong></p>
-    <p class="red"><strong>Latest observed: 190/201 overall and 175/186
-      production-core.</strong> The cross-agency promotion gate is red, so
-      the observed run has not replaced the committed baseline.</p>
-    <p><strong>What these scores do not cover.</strong> They were produced over
-      201 cases against five agencies. The suite now holds 385 cases across
-      eighteen agencies: Elk Grove e-tran, Santa Cruz METRO, SolTrans and
-      Fresno Area Express were added on 12&ndash;13 August 2026, and County
-      Connection, San Joaquin RTD, AC Transit, WestCAT, SLO RTA, VTA, Napa
-      VINE, SamTrans, and Marin Transit on 13&ndash;14 August 2026, and
-      <em>none of their cases
-      has been scored in a promoted run</em>. The scores also predate system
-      prompt v11, which widened the assistant's scope rule from five named
-      agencies to all in the corpus (and v12 through v20, which name the
-      newest nine);
-      every number above was produced under v10, which
-      instructed the model to decline the newer agencies. Treat this page as
-      evidence about the five agencies it measured, and about nothing else.</p>
+    <p><strong>Committed promoted baseline: 327/385 (84.9%).</strong> Produced
+      on 15 August 2026 over all eighteen agencies in the corpus, under system
+      prompt v21. It replaces a baseline of 192/201 that covered five agencies
+      and had not been re-scored since the corpus more than tripled.</p>
+    <p><strong>Spanish parity: &minus;7.5 points.</strong> The Spanish cases
+      scored ahead of their English mirrors, not behind. Fifteen experimental
+      Tagalog cases are scored and reported separately and are not part of the
+      385.</p>
+    <p class="red"><strong>Fifty-eight cases fail, and the gate clears
+      narrowly.</strong> Two suites sit below their own floor &mdash;
+      conversation at 7 of 10 and cross-agency at 16 of 21, each one case
+      short &mdash; and two is the most the noise floor tolerates before the
+      gate turns red. The failures concentrate in edge cases (23),
+      groundedness (11) and freshness (6). This is a passing run with very
+      little margin, not a comfortable one.</p>
+    <p><strong>What these scores do not cover.</strong> The corpus grew from
+      five agencies to eighteen between 12 and 14 August 2026, so most of these
+      cases have been scored in a promoted run exactly once. A score is
+      evidence about the documents in the corpus on the day it was produced,
+      not about an agency's current published fares. Treat this page as
+      evidence about eighteen California agencies as their pages read on
+      15 August 2026, and about nothing else.</p>
   </section>
 
   <section class="card" aria-labelledby="score-heading">
