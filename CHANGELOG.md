@@ -45,8 +45,58 @@ rather than tied to a published tag.
   the `freshness` suite fell below the M-1 macro floor, and main CI has been red
   since. Both callers now share one renderer, so the judge cannot again be given
   a poorer view of the evidence than the model it is auditing.
+- **Retrieval was tuned for six agencies and never re-measured against
+  eighteen.** `top_k` stayed at 8 while the corpus tripled, and every added
+  agency changes IDF for every existing chunk, so answer-bearing documents
+  drifted from 6th place within their own agency to 9th or 11th and out of the
+  window. Nine failing cases had their required fact in the corpus, in the right
+  agency, and outside the top 8; `top_k` is now 12, which recovers eight of
+  them. A question naming two agencies was worse off still: the per-agency quota
+  was `top_k // len(agencies)`, so it received half the evidence per agency that
+  the same question about one agency would have received, while asking for twice
+  as much. SBMTD's fare table, AC Transit's Senior/Disabled paragraph, and
+  SacRT's $2.50 single ride were each published, ranked, and never shown to the
+  model. Each named agency now gets the full single-agency budget.
+- **Two Spanish-only retrieval defects that the parity gate was measuring as an
+  equity gap.** `detect_agencies` matched aliases against the raw question, so
+  "el autobús de Santa Bárbara" — Santa Bárbara as Spanish spells it — named no
+  agency at all and retrieval ran unscoped across all eighteen; it now folds
+  diacritics on both sides. The child-fare passage append was keyed on English
+  words only (`child|children|kid|son|daughter`), so "¿Mi hijo de 4 años viaja
+  gratis…?" never triggered the append its English mirror relies on, and the
+  answer said the policy does not specify what the English answer states.
+- **The answer prompt's own worked example was teaching a cross-class claim.**
+  System prompt v20 told the model to name an application process and offered
+  "apply for an MST Courtesy Card" as the example. MST documents obtaining that
+  card for veterans (proof of service) and disabled riders (physician
+  verification or a Medicare card); for seniors it documents only presenting one
+  at boarding. `refuse-025` failed five live replicates out of five on exactly
+  that sentence. v21 separates presenting a document as proof from obtaining it,
+  and requires the obtaining route to be documented for the rider class in the
+  question. v21 also forbids arithmetic on published amounts: the model was
+  subtracting a Clipper fare from a cash fare and stating the difference as a
+  fact no passage prints.
 
 ### Changed
+- **The below-macro parity gate now has the two-case noise floor its bilingual
+  sibling has always had.** `parity_regressed` fails only on a gap over 5 points
+  *and* two or more diverging cases; `suites_below_macro` had the percentage
+  condition alone. On the full suite that is invisible, because every suite is
+  large. On the 26-case CI smoke subset it was the entire gate: its five gated
+  suites hold 4 to 6 cases, so one failure moves a suite 16.7 to 25 points
+  against a 5-point tolerance and no arrangement of 25 passes and one failure
+  can clear the floor. A suite is now an offender only when it is below the
+  floor and at least two cases short of reaching it, counted on its own
+  denominator. The 2026-08-15 nightly's two real offenders, `cross_agency`
+  (12/21) and `freshness` (19/30), are four cases short each and stay offenders.
+  The `conversation` waiver in `evals/expected_below_macro.json` is deleted: one
+  case short of the floor is now inside the noise floor and needs no exemption.
+  ADR 0026 records the alternatives, including widening the tolerance to 25
+  points and buying more smoke cases, and why both were rejected.
+- The published pages and the production smoke script named a raw API Gateway
+  hostname as the live assistant. They now name `fare.chelseakr.com`, which is
+  the custom domain `pages.yml` already verifies the runtime against and which
+  serves `/`, `/embed`, `/offline` and `/guide` identically.
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"

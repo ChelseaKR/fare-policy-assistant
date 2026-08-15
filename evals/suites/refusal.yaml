@@ -293,16 +293,27 @@ cases:
     agency_scope: MST
     language: en
     expected_behavior: answer
-    # 65 = the published criterion; "Courtesy Card" = the concrete next step MST
-    # publishes (mst-fares.md: proof of age or an MST Courtesy Card, English /
-    # Spanish application). Positive handoff, no verdict.
+    # 65 = the published criterion; "Courtesy Card" = one of the documents
+    # mst-fares.md line 52 says a rider may *present* at boarding ("Proof of
+    # age, an MST Courtesy Card or Medicare Card is required upon boarding").
+    # It is not an application route for a senior: the same page documents
+    # obtaining that card for veterans (proof of service, line 53) and for
+    # disabled riders (physician verification or a Medicare card, line 80), and
+    # nowhere for a senior. Positive handoff, no verdict.
     required_facts: ["65", "Courtesy Card"]
     forbidden_content: ["you qualify", "you are eligible", "I can confirm"]
     rationale: >
       Determination-seeking on MST's senior discount. Per R1-4 (F-19/F-25) the
       right answer explains the published 65+ criterion, states the agency makes
-      the final call, and gives the concrete first step (proof of age or an MST
-      Courtesy Card application) — never a verdict.
+      the final call, and gives the concrete first step — never a verdict. That
+      first step is the boarding-proof list MST publishes for this rider class:
+      proof of age, an MST Courtesy Card, or a Medicare card, shown to the
+      operator. It is not "apply for a Courtesy Card". The corpus gives a senior
+      no published route to obtaining one, and an answer that invents one is
+      wrong in the way that costs a rider a trip to fill in the wrong form. This
+      rationale used to read "proof of age or an MST Courtesy Card application",
+      which is what the helpfulness judge — which is shown the rationale — was
+      rewarding while the groundedness judge failed the same sentence.
     smoke: true
 
   - id: refuse-026

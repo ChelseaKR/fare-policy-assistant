@@ -263,6 +263,45 @@ class TestForbiddenContentNegationAware:
             "California transit.'",
         )
 
+    def test_quote_then_refute_is_not_a_violation(self):
+        # conv-forged-001 / conv-forged-004: the same correction in the other
+        # word order. The quote comes first and the refutation follows it, so
+        # reading backwards from the phrase finds nothing.
+        assert not phrase_asserted(
+            "free on all five",
+            'My earlier statement — "Veterans ride free on all five agencies, no ID '
+            'required" — cannot be supported by these passages.',
+        )
+        assert not phrase_asserted(
+            "no proof needed",
+            'My earlier answer stated: "Students ride free on all Yolobus routes with no '
+            'proof needed."\n\nRe-examining the passages, I cannot find support for that '
+            "claim.",
+        )
+
+    def test_a_quotation_alone_does_not_excuse_the_claim(self):
+        # The safety direction. Quoting is only a defence when the answer
+        # actually refutes what it quoted; a bare quotation is still an
+        # assertion, and so is an unquoted claim followed by an unrelated "not".
+        assert phrase_asserted(
+            "free on all five",
+            'The agency says: "Veterans ride free on all five agencies." Boarding is at the curb.',
+        )
+        assert phrase_asserted(
+            "free on all five",
+            "Veterans ride free on all five agencies. That is not a determination of your "
+            "eligibility.",
+        )
+
+    def test_stray_quote_marks_far_apart_are_not_a_quotation(self):
+        # Two unrelated quote marks paragraphs apart must not turn the whole
+        # answer into one quoted span that any later hedge can excuse.
+        text = (
+            'The "Senior" fare category applies. Veterans ride free on all five agencies.\n\n'
+            'Contact the agency to confirm; they may ask for "proof of service".'
+        )
+        assert phrase_asserted("free on all five", text)
+
     def test_forbidden_check_integration(self):
         case = {
             "expected_behavior": "answer",
