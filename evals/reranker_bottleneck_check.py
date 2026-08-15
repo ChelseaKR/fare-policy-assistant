@@ -5,7 +5,7 @@ retrieval — not generation or judge strictness — is the actual bottleneck.
 This makes that judgment call measurable instead of impressionistic.
 
 The generator is fed every chunk in a case's retrieved top-k as context
-(`_format_passages(results)` in `answer.py`); a reranker's only effect in
+(`format_passages(results)` in `answer.py`); a reranker's only effect in
 this pipeline is to change the *order* of chunks the model already sees, not
 which chunks it sees. So the question a reranker could possibly answer is:
 among cases whose eval failed, was the fact-bearing chunk simply *missing*

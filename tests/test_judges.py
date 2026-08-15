@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from assistant import config
+from assistant import answer, config
 from assistant.answer import AnswerResult
 from assistant.ingest import Chunk
 from assistant.models import Completion
@@ -76,6 +76,25 @@ class TestParsing:
     def test_passages_block_labels_each_doc(self):
         block = judges._passages_block(_result())
         assert "[doc:mst-fares]" in block and "Seniors 65+ pay $1.00." in block
+
+    def test_judge_sees_the_same_passage_rendering_as_the_answer_model(self):
+        """The judge's evidence must be byte-identical to the answerer's.
+
+        This is the fix for the freshness false-positive that held main red
+        from 2026-08-10: the judge used to be shown a stripped-down rendering
+        with no fetch date, then asked whether the answer's required
+        "as of <date>" disclosure was supported by the passages. It is not
+        supported by a copy the date was deleted from, so the judge called a
+        correct, deterministically-verified date a hallucination.
+        """
+        passages = _result().passages
+        assert judges._passages_block(_result()) == answer.format_passages(passages)
+
+    def test_passages_block_carries_the_fetch_date_the_answer_must_disclose(self):
+        block = judges._passages_block(_result())
+        assert "fetched 2026-06-12" in block
+        assert "Monterey-Salinas Transit" in block
+        assert "https://mst.org/fares/" in block
 
 
 class TestGroundedness:

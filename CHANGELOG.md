@@ -29,6 +29,23 @@ rather than tied to a published tag.
   Production contains the expired `yolobus-fares` snapshot through an
   operator-visible source kill switch.
 
+### Fixed
+- **The groundedness judge was shown less evidence than the answer model, and
+  scored the difference as hallucination.** `evals/judges.py` rendered its own
+  passage block containing only the doc id, the section heading, and the text;
+  the answer model's block (`assistant.answer.format_passages`) also carries the
+  agency, document title, source URL, and fetch date. Every answer in this
+  project is required to disclose the corpus snapshot date, and the deterministic
+  `as_of_matches_oldest_citation` check verifies that date against the corpus —
+  but the judge was asked whether that date was supported by a copy of the
+  passages the date had been stripped out of. On the freshness suite, whose cases
+  ask "how current is your fare information?", the judge therefore returned
+  `grounded: false` on correct answers about half the time. `fresh-001` flipped
+  from pass to fail on the 2026-08-11 nightly with no change to the assistant,
+  the `freshness` suite fell below the M-1 macro floor, and main CI has been red
+  since. Both callers now share one renderer, so the judge cannot again be given
+  a poorer view of the evidence than the model it is auditing.
+
 ### Changed
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California

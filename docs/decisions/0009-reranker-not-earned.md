@@ -23,7 +23,7 @@ current default BM25 retriever to ask two questions:
 2. **Rank** — if so, at what position?
 
 Rank matters here because `answer.py` feeds the *entire* retrieved top-k to
-the generator (`_format_passages(results)`), not just the top match. A
+the generator (`format_passages(results)`), not just the top match. A
 reranker in this pipeline can only reorder chunks the model already receives
 as context — it cannot make the model see a chunk that was outside the
 candidate set retrieval produced. So a failing case where the fact was

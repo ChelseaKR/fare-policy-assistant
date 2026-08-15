@@ -97,7 +97,19 @@ def _as_of_cited(citations: list[Citation]) -> str:
     return min((c.fetch_date for c in citations), default="")
 
 
-def _format_passages(results: list[ScoredChunk]) -> str:
+def format_passages(results: list[ScoredChunk]) -> str:
+    """Render retrieved passages for a model, provenance header included.
+
+    Public because the groundedness judge must be shown the *same* evidence the
+    answer model was shown. It previously rendered its own, poorer version —
+    doc id, section, and text, with the agency, document title, source URL, and
+    fetch date stripped out — and then was asked whether every claim in the
+    answer was supported by "the passages". The snapshot-date disclosure this
+    project requires on every answer (CLAUDE.md; the `as_of_disclosure` and
+    `as_of_matches_oldest_citation` checks) was therefore unverifiable to the
+    judge, which scored it as a hallucinated date roughly half the time.
+    One renderer means answer and judge cannot drift apart again.
+    """
     blocks = []
     for sc in results:
         c = sc.chunk
@@ -255,7 +267,7 @@ def answer_question(
         answer_user_prompt if answer_user_prompt is not None else config.load_prompt("answer_user")
     )
     user = _history_block(history) + prompt.format(
-        passages=_format_passages(results),
+        passages=format_passages(results),
         as_of_date=as_of_retrieved,
         question=question,
     )

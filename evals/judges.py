@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 
 from assistant import config
-from assistant.answer import AnswerResult
+from assistant.answer import AnswerResult, format_passages
 from assistant.models import Model
 
 _JSON_RE = re.compile(r"\{.*\}", re.S)
@@ -45,9 +45,16 @@ def _parse_json(text: str) -> dict | None:
 
 
 def _passages_block(result: AnswerResult) -> str:
-    return "\n\n".join(
-        f"[doc:{sc.chunk.doc_id}] {sc.chunk.section}\n{sc.chunk.text}" for sc in result.passages
-    )
+    """The passages, rendered exactly as the answer model saw them.
+
+    Delegates to `assistant.answer.format_passages` rather than re-rendering,
+    because a judge shown less evidence than the answerer will mark true claims
+    unsupported. It did: the provenance header (agency, document title, source
+    URL, fetch date) was dropped here, so the snapshot date every answer is
+    required to disclose had no support anywhere in the judge's copy, and the
+    groundedness judge scored that disclosure as a fabricated date.
+    """
+    return format_passages(result.passages)
 
 
 def _history_block(history: list[tuple[str, str]] | None) -> str:
