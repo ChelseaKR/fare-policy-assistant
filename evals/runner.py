@@ -2335,6 +2335,7 @@ PARITY_SUITE = "multilingual"
 PARITY_THRESHOLD_PP = 5.0
 PARITY_CASE_FLOOR = 2
 MACRO_THRESHOLD_PP = 5.0
+MACRO_CASE_FLOOR = 2
 _STRETCH_PREFIX = "stretch_"
 EXPECTED_BELOW_MACRO_PATH = config.REPO_ROOT / "evals" / "expected_below_macro.json"
 
@@ -2387,32 +2388,70 @@ def parity_regressed(
     return parity["delta_pp"] > threshold and gap_cases >= case_floor
 
 
-def suites_below_macro(suites: dict, threshold: float = MACRO_THRESHOLD_PP) -> dict[str, dict]:
+def suites_below_macro(
+    suites: dict,
+    threshold: float = MACRO_THRESHOLD_PP,
+    case_floor: int = MACRO_CASE_FLOOR,
+) -> dict[str, dict]:
     """The general per-suite form of the parity gate (AIEV-10): every gated
     suite's pass rate must be at least the macro pass rate minus `threshold`
     points, where macro is the unweighted mean over gated suites.
+
+    Two conditions, the same shape `parity_regressed` has always had: the suite
+    must sit below the floor AND be at least `case_floor` cases short of
+    reaching it. The percentage condition alone is not a gate a small suite can
+    ever satisfy. On the 26-case CI smoke subset the five gated suites hold 4 to
+    6 cases each, so one failed case moves a suite by 16.7 to 25 points against
+    a 5-point tolerance: with four cases in a suite and every other case in the
+    run passing, macro is 95% and the floor 90%, and that single failure is a
+    build break. The smoke gate was therefore unsatisfiable short of a perfect
+    run, while the parity form in this same module has carried a deliberate
+    two-case noise floor since it was written, for exactly the reason quoted
+    there — "one flipped pair out of 22 is 4.5 points and 1 case — noise, not
+    an equity finding". This is that floor, applied to the sibling form that
+    never got one.
+
+    The case floor does not soften the finding on a real suite: cross_agency at
+    12/21 against a 73.8% floor is four cases short, freshness at 19/30 is four
+    short, and both stay offenders.
 
     `stretch_*` suites are excluded from both the mean and the gate:
     docs/ROADMAP.md P3-3 and the report's stretch-parity section promise that a
     stretch language's score is reported honestly but never fails a build.
 
-    Returns {suite: {"pass_rate", "macro", "floor"}} for each offender; floors
-    are compared unrounded and rounded only for display.
+    Returns {suite: {"pass_rate", "macro", "floor", "cases_short"}} for each
+    offender; floors are compared unrounded and rounded only for display.
     """
     gated = {n: s for n, s in suites.items() if not n.startswith(_STRETCH_PREFIX)}
     if not gated:
         return {}
     macro = sum(s["pass_rate"] for s in gated.values()) / len(gated)
     floor = macro - threshold
-    return {
-        name: {
+    offenders = {}
+    for name, s in gated.items():
+        if s["pass_rate"] >= floor:
+            continue
+        # Cases this suite would have to flip to reach the floor. Computed on
+        # the suite's own denominator, so the noise floor scales with how much
+        # one case is worth in that suite rather than assuming a fixed size.
+        total = s.get("total")
+        passed = s.get("passed")
+        if total is None or passed is None:
+            # A scoreboard without a denominator cannot be case-counted; fall
+            # back to the percentage condition alone rather than waiving it.
+            cases_short = case_floor
+        else:
+            needed = math.ceil(floor * total / 100 - 1e-9)
+            cases_short = needed - passed
+        if cases_short < case_floor:
+            continue
+        offenders[name] = {
             "pass_rate": s["pass_rate"],
             "macro": round(macro, 1),
             "floor": round(floor, 1),
+            "cases_short": cases_short,
         }
-        for name, s in gated.items()
-        if s["pass_rate"] < floor
-    }
+    return offenders
 
 
 def expected_below_macro(path: Path | None = None) -> dict[str, str]:
@@ -2450,8 +2489,9 @@ def parity_problems(
             continue
         problems.append(
             f"{name}: {o['pass_rate']}% is below the macro floor {o['floor']}% "
-            f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) with no written "
-            "annotation in evals/expected_below_macro.json"
+            f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) by {o['cases_short']} "
+            f"cases, at or over the {MACRO_CASE_FLOOR}-case noise floor, with no "
+            "written annotation in evals/expected_below_macro.json"
         )
     problems += stale_annotations(suites, notes)
     return problems

@@ -14,6 +14,7 @@ import pytest
 
 from assistant import config
 from evals import provenance, runner
+from evals import report as report_module
 from evals.check_report_regression import _parity_from_table, check_parity_committed
 from evals.report import generate_markdown
 from evals.runner import (
@@ -135,6 +136,65 @@ def test_suite_far_below_macro_is_an_offender():
 def test_suites_within_five_points_of_macro_are_clean():
     suites = {"refusal": _suite(29, 30), "groundedness": _suite(28, 30)}
     assert suites_below_macro(suites) == {}
+
+
+def test_one_failed_case_in_a_small_suite_is_noise_not_a_gate_failure():
+    """The 26-case CI smoke subset in miniature. Its five gated suites hold 4 to
+    6 cases each, so one failure moves a suite 16.7 to 25 points against a
+    5-point tolerance. Before the case floor, a single failed smoke case was a
+    build break and the gate was unsatisfiable short of a perfect run."""
+    suites = {
+        "freshness": _suite(3, 4),  # 75% vs macro 95%, floor 90% — one case short
+        "refusal": _suite(6, 6),
+        "groundedness": _suite(5, 5),
+        "multilingual": _suite(6, 6),
+        "edge_cases": _suite(5, 5),
+    }
+    assert suites_below_macro(suites) == {}
+
+
+def test_two_failed_cases_in_a_small_suite_still_fail_the_gate():
+    """The floor absorbs one case, not a pattern."""
+    suites = {
+        "freshness": _suite(2, 4),
+        "refusal": _suite(6, 6),
+        "groundedness": _suite(5, 5),
+        "multilingual": _suite(6, 6),
+        "edge_cases": _suite(5, 5),
+    }
+    offenders = suites_below_macro(suites)
+    assert list(offenders) == ["freshness"]
+    assert offenders["freshness"]["cases_short"] == 2
+
+
+def test_the_case_floor_does_not_rescue_a_genuinely_broken_full_suite():
+    """The 2026-08-15 nightly's two real offenders, at their real sizes: the
+    case floor must not turn a four-case shortfall into noise."""
+    suites = {
+        "conversation": _suite(9, 10),
+        "cross_agency": _suite(12, 21),
+        "edge_cases": _suite(95, 124),
+        "freshness": _suite(19, 30),
+        "groundedness": _suite(59, 70),
+        "multilingual": _suite(30, 40),
+        "refusal": _suite(41, 45),
+        "sensitivity": _suite(28, 30),
+    }
+    offenders = suites_below_macro(suites)
+    assert sorted(offenders) == ["cross_agency", "freshness"]
+    assert offenders["cross_agency"]["cases_short"] == 4
+    assert offenders["freshness"]["cases_short"] == 4
+
+
+def test_a_scoreboard_without_a_denominator_keeps_the_percentage_gate():
+    """A synthetic or legacy summary carrying only pass rates cannot be
+    case-counted; it must not silently lose the gate."""
+    suites = {
+        "refusal": {"pass_rate": 100.0},
+        "groundedness": {"pass_rate": 100.0},
+        "conversation": {"pass_rate": 60.0},
+    }
+    assert list(suites_below_macro(suites)) == ["conversation"]
 
 
 def test_stretch_suites_neither_gate_nor_shift_the_macro():
@@ -297,7 +357,13 @@ def test_report_renders_the_delta_line_and_embeds_parity():
     assert payload is not None and payload["parity"]["pairs"] == 2
 
 
-def test_report_prints_the_below_macro_annotation():
+def test_report_prints_the_below_macro_annotation(monkeypatch):
+    # The annotation is injected rather than read from the committed file:
+    # evals/expected_below_macro.json legitimately holds no live entries most
+    # of the time, and this test is about the rendering, not the repo state.
+    monkeypatch.setattr(
+        report_module, "expected_below_macro", lambda: {"conversation": "a written rationale"}
+    )
     records = _records(es_pass=[True], en_pass=[True])
     summary = {
         "run_at": "2026-07-17T00:00:00+00:00",
@@ -457,7 +523,7 @@ def test_an_annotation_for_a_recovered_suite_is_flagged():
 
 def test_an_annotation_for_a_still_below_macro_suite_is_not_flagged():
     suites = {
-        "conversation": {"pass_rate": 80.0, "passed": 8, "total": 10},
+        "conversation": {"pass_rate": 60.0, "passed": 6, "total": 10},
         "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34},
         "edge_cases": {"pass_rate": 95.8, "passed": 46, "total": 48},
     }
@@ -471,9 +537,11 @@ def test_an_annotation_for_a_suite_that_did_not_run_is_out_of_view_not_stale():
     assert runner.stale_annotations(suites, {"conversation": "unrelated"}) == []
 
 
-def test_the_committed_annotation_still_describes_the_committed_report():
-    """The real repo state: `conversation` is annotated and is still below the
-    macro floor, so the waiver is doing work rather than sitting idle."""
+def test_no_committed_annotation_sits_over_a_recovered_suite():
+    """The real repo state, whatever it is: every live entry in
+    `expected_below_macro.json` must still describe a suite that is genuinely
+    below the floor in the committed EVALS.md. An empty file passes; a waiver
+    over a healthy suite does not."""
     import json
 
     payload = provenance.read_evals_md((config.REPO_ROOT / "EVALS.md").read_text(encoding="utf-8"))
