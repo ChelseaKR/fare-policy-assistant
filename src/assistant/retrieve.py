@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import statistics
+import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -66,15 +67,32 @@ class ConfidenceSignals:
     term_coverage: float
 
 
+def _fold_diacritics(text: str) -> str:
+    """Lowercase and strip combining marks, so a Spanish rider's spelling of a
+    place name matches the plain-ASCII alias table.
+
+    Every alias in the shipped profile is ASCII, but riders write the agency's
+    own city the way Spanish writes it: "el autobús de Santa Bárbara" never
+    matched `santa barbara`, so `detect_agencies` returned no scope, retrieval
+    ran unscoped across all eighteen agencies, and the answer-bearing SBMTD
+    passage never made top_k (eval case ml-016, whose English mirror edge-012
+    passes). Folding is applied to both sides, so a profile that does carry an
+    accented alias still matches an unaccented question.
+    """
+    return "".join(
+        ch for ch in unicodedata.normalize("NFD", text.lower()) if not unicodedata.combining(ch)
+    )
+
+
 def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> list[str]:
     """All known scopes named in the question, in order of first mention. The
     alias map defaults to the active profile's but can be injected (a different
     domain, or a test) without touching this logic."""
-    q = question.lower()
+    q = _fold_diacritics(question)
     selected_aliases = domain.get_profile().aliases if aliases is None else aliases
     matches: list[tuple[int, int, str]] = []
     for alias, agency in selected_aliases.items():
-        match = re.search(rf"\b{re.escape(alias)}\b", q)
+        match = re.search(rf"\b{re.escape(_fold_diacritics(alias))}\b", q)
         if match:
             # Text position defines behavior. Alias mapping insertion order is
             # deliberately irrelevant because canonical configuration identity
@@ -235,9 +253,20 @@ def _is_reduced_fare_query(question: str) -> bool:
 # it falls out of top_k. Same remedy as _close_the_loop: when the question is a
 # child-fare query and the provision passage is missing, append it so the answer
 # can state the actual rule (a height/age threshold) instead of declining.
+#
+# The trigger has to fire in every language the assistant answers in, or the
+# append is an English-only privilege: "¿Mi hijo de 4 años viaja gratis…?" and
+# "¿Los niños pequeños viajan gratis…?" asked exactly what their English
+# mirrors asked (edge-074, edge-012 — both pass), matched none of the English
+# words, got no appended provision passage, and were answered "the published
+# policy does not say" (ml-029, ml-016). Spanish and Tagalog child vocabulary
+# is listed here for the same reason the ES→EN lexicon exists above.
 _CHILD_FARE_QUERY = re.compile(
     r"\b(child|children|kid|kids|toddler|toddlers|infant|infants|baby|babies|"
-    r"son|daughter|\d+[- ]?year[- ]?olds?|years? old)\b",
+    r"son|daughter|\d+[- ]?year[- ]?olds?|years? old"
+    r"|ni[nñ][oa]s?|hij[oa]s?|beb[eé]s?"
+    r"|\d+\s*a[nñ]os"
+    r"|anak|bata|sanggol|taong gulang)\b",
     re.I,
 )
 _CHILD_FARE_PROVISION = re.compile(
@@ -366,7 +395,20 @@ class Retriever:
             # A question comparing agencies needs passages from each; a plain
             # union lets one agency's stronger lexical matches take every slot
             # (eval cases edge-004, edge-011). Give each agency an equal quota.
-            quota = max(2, self.cfg.top_k // len(agencies))
+            #
+            # That quota is the full single-agency budget, not a share of it.
+            # Splitting top_k across the named agencies gave a two-agency
+            # question *half* the evidence per agency that the same question
+            # about one agency would have got, while asking for twice as much:
+            # the answer-bearing chunk placed 5th-8th within its own agency and
+            # fell out of a quota of four. Three cross_agency cases failed
+            # exactly there — SBMTD's FARES table (xagency-017), AC Transit's
+            # Senior/Disabled paragraph (xagency-actransit-001), and SacRT's
+            # $2.50 single ride (xagency-016) — each with the fact published,
+            # ranked, and never shown to the model. Thirty of the 385 eval
+            # cases name two agencies and none names three, so the ceiling this
+            # sets is 2 x top_k passages.
+            quota = self.cfg.top_k
             picked: list[ScoredChunk] = []
             for ag in agencies:
                 picked.extend([sc for sc in ranked if sc.chunk.agency == ag][:quota])

@@ -161,13 +161,21 @@ cases:
       - "Humboldt Transit accepts Clipper"
       - "all of them accept Clipper"
     rationale: >
-      The direct form of xagency-009. SolTrans is the only Clipper participant
-      documented in this corpus; MST, SBMTD, Yolobus, SacRT, and HTA each publish
-      their own agency-local fare media (Courtesy Cards, Tap-to-Pay, stored-value
-      passes) and no corpus passage says any of them takes Clipper. The honest
-      answer names SolTrans, says the corpus does not establish Clipper status
-      for the others, and does not silently convert "not documented" into "does
-      not accept" for them either.
+      The direct form of xagency-009. Written when the corpus held six
+      agencies and SolTrans was its only documented Clipper participant;
+      restated 2026-08-15 for the eighteen-agency corpus, because the stale
+      version asserted a six-agency corpus and the helpfulness judge, which is
+      shown this rationale, marked a correct answer wrong for naming Bay Area
+      agencies it said were "not in the described corpus". Clipper is now
+      documented for AC Transit, County Connection, Marin Transit, SamTrans,
+      SolTrans, VTA, and WestCAT; Santa Cruz METRO publishes the opposite in
+      as many words ("Clipper Cards are not honored on METRO buses"); and MST,
+      SBMTD, Yolobus, SacRT, HTA, E-tran, FAX, San Joaquin RTD, SLO RTA, and
+      the Vine each publish their own agency-local fare media (Courtesy Cards,
+      Tap-to-Pay, stored-value passes) with no corpus passage saying they take
+      Clipper. The honest answer names the agencies the corpus documents,
+      reports METRO's published refusal as published, and does not silently
+      convert "not documented" into "does not accept" for the rest.
 
   - id: xagency-011
     question: "I'm 66. Do I pay the same senior fare on FAX and on Humboldt Transit?"

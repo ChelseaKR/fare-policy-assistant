@@ -320,7 +320,19 @@ class ModelConfig:
 class RetrievalConfig:
     # 8 rather than 6: fare-table chunks are number-heavy and rank low on
     # BM25 even when they hold the answer (eval cases ground-001, ground-014).
-    top_k: int = 8
+    #
+    # 12 rather than 8, for the same reason at three times the corpus. top_k=8
+    # was set when six agencies were indexed; eighteen are now, and each new
+    # agency changes IDF for every existing chunk, so a document that used to
+    # place 6th within its own agency now places 9th or 11th. Measured offline
+    # against the 2026-08-15 nightly's failures, nine cases whose required fact
+    # sits in the corpus, in the right agency, and above rank 12 were never
+    # shown it at rank 8: edge-056, edge-actransit-001, edge-actransit-004,
+    # fresh-004, ground-043, ml-028, ml-actransit-002, tl-001, and (at 16)
+    # refuse-019. Raising to 12 recovers eight of the nine; 16 recovers the
+    # ninth and doubles the token cost of every call, so 12 is where this sits
+    # until the next corpus growth moves it again.
+    top_k: int = 12
     # Mild preference for chunks in the question's language.
     language_boost: float = 1.2
     # FIX-07 / ADR 0013: the decline rule reads normalized, corpus-size-

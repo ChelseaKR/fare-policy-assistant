@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 from assistant import config
 
 EVIDENCE_HUB_URL = "https://evals.chelseakr.com/"
-ASSISTANT_URL = "https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/"
+ASSISTANT_URL = "https://fare.chelseakr.com/"
 
 README = config.REPO_ROOT / "README.md"
 EVIDENCE_INDEX = config.REPO_ROOT / "docs" / "pages" / "index.html"

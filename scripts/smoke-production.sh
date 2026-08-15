@@ -18,7 +18,7 @@
 # the narrowly scoped legacy mode; there is no implicit production fallback.
 set -euo pipefail
 
-DEFAULT_ASSISTANT_BASE_URL="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com"
+DEFAULT_ASSISTANT_BASE_URL="https://fare.chelseakr.com"
 DEFAULT_EVIDENCE_BASE_URL="https://evals.chelseakr.com"
 
 ASSISTANT_BASE_URL="${FPA_SMOKE_ASSISTANT_BASE_URL:-$DEFAULT_ASSISTANT_BASE_URL}"

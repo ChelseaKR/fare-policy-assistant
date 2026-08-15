@@ -8,7 +8,7 @@ evaluation, use the chatbot as the thing being evaluated.
 Keep these distinct public entrypoints open in two tabs before you start:
 
 - evaluation evidence hub: <https://evals.chelseakr.com/>
-- live AWS assistant: <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>
+- live AWS assistant: <https://fare.chelseakr.com/>
 
 ## The 30-second hook
 

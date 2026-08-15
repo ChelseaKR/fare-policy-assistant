@@ -10,7 +10,7 @@ is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
 
 **[Evaluation evidence hub](https://evals.chelseakr.com/)** ·
-**[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/)** ·
+**[Live AWS assistant](https://fare.chelseakr.com/)** ·
 [Evaluation report in the repository](EVALS.md)
 
 ## Status: Beta
@@ -263,7 +263,7 @@ These are two distinct public surfaces:
 
 - **[Evaluation evidence hub](https://evals.chelseakr.com/):** generated
   scoreboards, representative failures, trend history, and governance evidence.
-- **[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/):**
+- **[Live AWS assistant](https://fare.chelseakr.com/):**
   the rider-facing system those evaluations exercise.
 
 The live assistant states what it will not do, supports English and Spanish,
@@ -302,7 +302,7 @@ An agency can embed the assistant in its own fare page with one iframe pointing
 at `/embed`:
 
 ```html
-<iframe src="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/embed"
+<iframe src="https://fare.chelseakr.com/embed"
         title="Transit fare policy assistant"
         width="100%" height="520"
         style="border:1px solid #d6d3cb;border-radius:8px"></iframe>

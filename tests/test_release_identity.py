@@ -84,7 +84,10 @@ def config_case(tmp_path: Path) -> ConfigCase:
             temperature=0.0,
         ),
         retrieval=config.RetrievalConfig(
-            top_k=8,
+            # Mirrors the shipped default, because build_current_descriptor
+            # resolves the real config from the environment and this fixture
+            # must agree with it (see RetrievalConfig.top_k for why it is 12).
+            top_k=12,
             language_boost=1.2,
             decline_z_threshold=1.5,
             decline_coverage_floor=0.1,
@@ -192,15 +195,23 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # descriptor from this fixture against the merged profile, not lifted
     # from any branch or from a failure message. Before any of the 2026-08
     # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    #
+    # The sixteenth and current identity is not a domain change at all: raising
+    # RetrievalConfig.top_k from 8 to 12 on 2026-08-15 moved it, because the
+    # retrieval block is part of the behavior-complete config these goldens
+    # bind — which is the point of binding it. The eighteen-agency values
+    # immediately before that change were d52812b4…0c7e / fdf0a136…01a0 /
+    # bc0cee09…8cad. The values below were re-derived by building the
+    # descriptor from this fixture, not lifted from a failure message.
     assert (
-        first.config_version == "d52812b489572bacb51dfd043db3cd45b5246ea8df799c1bba87d5d9bcbf0c7e"
+        first.config_version == "f86fc4dade9cefb0f1db579dede1d0f9e8e11e11cfee3cdec720204c437588b3"
     )
     assert (
-        first.release_version == "fdf0a136ef202413e9a4d2d9f2547101f816fa66af7661d804f9b72d083101a0"
+        first.release_version == "f83bebe25eeabb73944369f07203e3360598f809a83c8d5709ed8d950e0ce91a"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "bc0cee09aa6f7400c4cc512331b2ce622feb8a84ccffa9c709d6fc9758348cad"
+        == "448bd91debbeacb7ebae81dab9c349acd0a3bfeaaf90028225e4157e22f14fee"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

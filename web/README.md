@@ -8,7 +8,7 @@ visible focus, `aria-live` results, 24px-minimum targets, works on a phone).
 Public entrypoints are deliberately separate:
 
 - evaluation evidence hub: <https://evals.chelseakr.com/>
-- live AWS assistant: <https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/>
+- live AWS assistant: <https://fare.chelseakr.com/>
 
 `a11y.py` is a pure-Python structural accessibility gate (page language,
 labeled controls, heading order, link text, zoom not disabled, target size). It
