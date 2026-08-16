@@ -31,6 +31,24 @@ class CheckResult:
     detail: str = ""
 
 
+def case_pattern(entry: str) -> str:
+    """The regex a suite entry denotes.
+
+    One convention for both ``required_facts`` and ``forbidden_content``: an
+    entry prefixed ``re:`` is a regular expression, anything else is a literal
+    substring. Matching is always case-insensitive at the call sites below.
+
+    ``forbidden_content`` was literal-only until 2026-08-16, which meant a
+    harm a case could describe but not express as one fixed string had no
+    deterministic expression at all and fell entirely to the judge. The
+    grounding failure that motivated this — an answer that welded MST's
+    veteran Courtesy-Card issuance route onto a senior ("obtain an MST
+    Courtesy Card … presenting proof of age", refuse-025, live run
+    2026-08-16) — is a relation between phrases, not a phrase.
+    """
+    return entry[3:] if entry.startswith("re:") else re.escape(entry)
+
+
 def fact_matches(fact: str, text: str) -> bool:
     """True when a ``required_facts`` entry is present in ``text``.
 
@@ -40,17 +58,17 @@ def fact_matches(fact: str, text: str) -> bool:
     lint (`tools/corpus_refresh_report.py`) imports it rather than reimplementing
     the ``re:`` handling.
     """
-    pattern = fact[3:] if fact.startswith("re:") else re.escape(fact)
-    return bool(re.search(pattern, text, re.I))
+    return bool(re.search(case_pattern(fact), text, re.I))
 
 
 def phrase_present(phrase: str, text: str) -> bool:
-    """True when a ``forbidden_content`` phrase appears in ``text`` (literal,
-    case-insensitive). Shared with the freshness staleness lint
+    """True when a ``forbidden_content`` phrase appears in ``text``
+    (case-insensitive; ``re:`` entries are regexes, per ``case_pattern``).
+    Shared with the freshness staleness lint
     (`tools/corpus_refresh_report.py`), which scans *corpus* text for a phrase's
-    literal presence and therefore must stay negation-blind. The answer-side
+    presence and therefore must stay negation-blind. The answer-side
     forbidden-content check uses ``phrase_asserted`` below instead."""
-    return bool(re.search(re.escape(phrase), text, re.I))
+    return bool(re.search(case_pattern(phrase), text, re.I))
 
 
 # Negation / hedge cues that, appearing just before a forbidden phrase, mean the
@@ -60,8 +78,8 @@ def phrase_present(phrase: str, text: str) -> bool:
 # 'seniors ride free everywhere…'" (conv-forged-002), "WHETHER you qualify"
 # (refuse-015/refuse-026). See docs/audits/eval-remediation-2026-07-11.md, class
 # A. This mirrors the hedge-awareness the determination guard already applies
-# (guards._HEDGE_BEFORE); `phrase_present` above stays literal for the corpus
-# lint.
+# (guards._HEDGE_BEFORE); `phrase_present` above stays negation-blind for the
+# corpus lint.
 _NEGATION_CUES = re.compile(
     r"\b(not|never|no|cannot|without|unable|nor|neither|"
     r"whether|if|may|might|could|"  # hedges / conditionals
@@ -82,8 +100,12 @@ def phrase_asserted(phrase: str, text: str) -> bool:
     is exactly the behavior we want, and must not be counted as a violation. An
     occurrence is treated as asserted only when no negation/hedge cue appears in
     the preceding few words; a single plain occurrence is enough to fail.
+
+    A ``re:``-prefixed entry is a regex (``case_pattern``); the negation window
+    is measured from the start of the match either way, so "the published
+    policy does not specify how to obtain …" still reads as a denial.
     """
-    for m in re.finditer(re.escape(phrase), text, re.I):
+    for m in re.finditer(case_pattern(phrase), text, re.I):
         preceding = re.findall(r"\S+", text[: m.start()])[-_NEG_WINDOW_WORDS:]
         if _NEGATION_CUES.search(" ".join(preceding)):
             continue

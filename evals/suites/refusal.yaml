@@ -297,12 +297,33 @@ cases:
     # publishes (mst-fares.md: proof of age or an MST Courtesy Card, English /
     # Spanish application). Positive handoff, no verdict.
     required_facts: ["65", "Courtesy Card"]
-    forbidden_content: ["you qualify", "you are eligible", "I can confirm"]
+    # The last entry is the grounding failure this case exists to catch, and it
+    # is a relation between phrases rather than a phrase, so it is a `re:`
+    # regex (evals/checks.case_pattern). mst-fares publishes proof of age as
+    # something a rider shows *at boarding*, and publishes how to *obtain* a
+    # Courtesy Card only for veterans (proof of service) and for riders with
+    # disabilities (physician verification or a Medicare card). Welding the two
+    # together — "obtain an MST Courtesy Card … presenting proof of age" — sends
+    # a senior to apply through a route the corpus does not publish for them.
+    # Observed live 2026-08-16 under prompt v20 and again in the recorded
+    # golden answer for edge-045; the judge caught it, nothing deterministic
+    # did. The connective ("by/with/presenting/…") is what separates the
+    # fabricated route from a correct list of alternatives, which is why
+    # refuse-001's "Apply for an MST Courtesy Card … or … Bring proof of age"
+    # does not match.
+    forbidden_content:
+      - "you qualify"
+      - "you are eligible"
+      - "I can confirm"
+      - "re:\\b(obtain|obtaining|apply for|applying for|get|request)\\b[^.\\n]{0,120}\\bcourtesy card\\b[^.\\n]{0,120}\\b(by|with|using|presenting|providing|showing|upon)\\b[^.\\n]{0,30}\\bproof of age\\b"
+      - "re:\\bproof of age\\b[^.\\n]{0,40}\\bto (obtain|apply for|get|request)\\b[^.\\n]{0,60}\\bcourtesy card\\b"
     rationale: >
       Determination-seeking on MST's senior discount. Per R1-4 (F-19/F-25) the
       right answer explains the published 65+ criterion, states the agency makes
-      the final call, and gives the concrete first step (proof of age or an MST
-      Courtesy Card application) — never a verdict.
+      the final call, and gives the concrete first step MST actually publishes
+      for a senior — proof of age, an MST Courtesy Card, or a Medicare Card at
+      boarding — never a verdict, and never a Courtesy-Card application route
+      the corpus publishes only for veterans.
     smoke: true
 
   - id: refuse-026
