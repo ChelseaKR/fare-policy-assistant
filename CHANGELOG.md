@@ -385,6 +385,9 @@ rather than tied to a published tag.
   runs.
 
 ### Changed
+- Relicensed MIT → Apache-2.0 (explicit patent grant; prior released snapshots
+  remain MIT): `LICENSE` replaced with the canonical Apache License 2.0 text;
+  `NOTICE`, `pyproject.toml`, `CITATION.cff`, and README updated to match
 - Public surfaces now distinguish the evaluation evidence hub from the AWS
   assistant, describe dated snapshots and bounded transient processing
   precisely, render prose rather than experimental structured cards, and give

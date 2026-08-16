@@ -65,7 +65,8 @@ does not place it in the public domain, and California's Public Records Act
 governs disclosure, not copyright.
 
 The project's own work in this repository (code, prompts, eval suites, docs, and
-the reports generated from them) is MIT licensed. The agency text is not, and
+the reports generated from them) is Apache-2.0 licensed. The agency text is not,
+and
 `NOTICE` carves it out of that grant explicitly.
 
 ## Why it is here at all

@@ -449,7 +449,7 @@ disallows everyone else, this fetcher included, so nothing was fetched at all
 
 None of that fare text belongs to this project. It is each agency's copyrighted
 work, snapshotted so a dated evaluation can be re-run against what it was scored
-on, and it is carved out of this repository's MIT License in
+on, and it is carved out of this repository's Apache License, Version 2.0, in
 [`NOTICE`](NOTICE). [`corpus/LICENSE-NOTE.md`](corpus/LICENSE-NOTE.md) states in
 plain English whose it is, what you may and may not assume about it, and where
 each agency's own site and terms of use are. `corpus/manifest.yaml` records the
@@ -500,5 +500,5 @@ Reference implementation. No accounts, no persistence of user queries.
 Fare information shown is based on policies published as of the dates in
 `corpus/manifest.yaml`; confirm anything time-sensitive with the agency.
 
-MIT licensed (see LICENSE). Corpus snapshots remain the work of their
+Apache-2.0 licensed (see LICENSE and NOTICE). Corpus snapshots remain the work of their
 respective transit agencies.

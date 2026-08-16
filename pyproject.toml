@@ -3,8 +3,8 @@ name = "fare-policy-assistant"
 version = "0.1.0"
 description = "Transit fare policy assistant with a public evaluation harness"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Chelsea Kelly-Reif" }]
 requires-python = ">=3.12"
 dependencies = [
