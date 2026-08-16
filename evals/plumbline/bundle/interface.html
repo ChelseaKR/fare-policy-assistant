@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transit Fare Policy Assistant — reference implementation</title>
+<style>
+  :root {
+    --ink: #1a1f24;
+    --muted: #4d5860;
+    --paper: #fafaf7;
+    --card: #ffffff;
+    --line: #d6d3cb;
+    --accent: #14532d;
+    --accent-ink: #ffffff;
+    --notice: #fff8e6;
+    --notice-line: #d9c27a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.55;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  .banner {
+    background: var(--notice);
+    border: 1px solid var(--notice-line);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+  }
+  .banner p { margin: 0; }
+  .banner .snapshot-note {
+    border-top: 1px solid var(--notice-line);
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+  }
+  h1 { font-size: 1.5rem; margin: 1.2rem 0 0.3rem; }
+  .sub { color: var(--muted); margin: 0 0 1rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  /* Highlighted eval-result line in the "How this is tested" card. Uses the
+     notice palette (AA contrast against black ink in both themes). */
+  .eval-figure {
+    background: var(--notice);
+    border: 1px solid var(--notice-line);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin: 0.5rem 0;
+  }
+  .eval-figure p { margin: 0.25rem 0; }
+  .eval-alert {
+    border-left: 4px solid #991b1b;
+    padding-left: 0.65rem;
+  }
+  ul { margin: 0.3rem 0 0.3rem 1.2rem; padding: 0; }
+  label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+  textarea {
+    width: 100%;
+    min-height: 4.5rem;
+    font: inherit;
+    padding: 0.6rem;
+    border: 1px solid #767676;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1a1f24;
+  }
+  .field-help { color: var(--muted); margin: 0.35rem 0 0; font-size: 0.9rem; }
+  textarea:focus-visible, button:focus-visible, a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 4px solid #1d4ed8;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff;
+  }
+  .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-top: 0.7rem; }
+  button {
+    font: inherit;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.55rem 1.1rem;
+    /* WCAG 2.2 AA 2.5.8 Target Size (Minimum): every control is at least 24px. */
+    min-height: 2.5rem;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button[disabled] { opacity: 0.6; cursor: wait; }
+  .examples { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  .examples button { font-size: 0.9rem; padding: 0.35rem 0.7rem; min-height: 1.75rem; }
+  #status { color: var(--muted); min-height: 1.4rem; margin-top: 0.6rem; }
+  #answer { white-space: normal; }
+  #answer p { margin: 0.5rem 0; }
+  .result-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .result-head h2 { margin: 0; }
+  #reset { font-size: 0.85rem; padding: 0.3rem 0.7rem; min-height: 1.75rem; }
+  .turn { border-top: 1px solid var(--line); padding-top: 0.8rem; margin-top: 0.8rem; }
+  .turn:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  /* A newly appended turn receives programmatic focus so keyboard and screen
+     reader users land on the answer. Keep that focus visible even when a
+     browser does not apply :focus-visible to script-initiated focus. */
+  .turn:focus {
+    outline: 4px solid #1d4ed8;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #ffffff;
+    border-radius: 4px;
+  }
+  .turn .q { font-weight: 600; margin: 0 0 0.4rem; }
+  .turn .q::before { content: "You: "; color: var(--muted); font-weight: 400; }
+  .sources { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.6rem; font-size: 0.95rem; }
+  /* The "Sources" caption is an h3 so screen-reader heading navigation reaches
+     it. It should still look like the inline bold caption it replaced, so the
+     visual size and spacing are pinned here rather than inherited from h3. */
+  .sources-h { font-size: inherit; font-weight: 700; margin: 0; }
+  .asof { color: var(--muted); font-size: 0.9rem; }
+  .feedback { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--muted); margin-top: 0.6rem; }
+  .feedback button { font-size: 0.85rem; padding: 0.3rem 0.8rem; min-height: 1.75rem; }
+  .error { color: #991b1b; }
+  .display-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .display-settings .group { display: flex; gap: 0.3rem; align-items: center; }
+  .display-settings button {
+    font-size: 0.9rem;
+    padding: 0.3rem 0.7rem;
+    min-height: 1.75rem;
+  }
+  .display-settings button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  /* Reader-set text scale. The whole page is rem/em based, so raising the root
+     size scales type, spacing, and targets together. Persisted per browser. */
+  html.tsize-large { font-size: 112.5%; }
+  html.tsize-xlarge { font-size: 125%; }
+  /* High-contrast mode only deepens existing colours; it never lowers contrast,
+     so it cannot regress the AA baseline the default theme already meets. */
+  body.contrast {
+    --ink: #000000;
+    --muted: #2b3036;
+    --paper: #ffffff;
+    --card: #ffffff;
+    --line: #5a5a5a;
+    --accent: #0b3d20;
+  }
+  body.contrast footer a, body.contrast .sources a { color: #0b3d91; }
+  footer {
+    border-top: 1px solid var(--line);
+    margin-top: 2rem;
+    padding-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  footer a, .sources a { color: #1d4ed8; }
+  .noscript-note { max-width: 44rem; margin: 1rem auto; padding: 0 1rem; }
+  @media (max-width: 480px) {
+    h1 { font-size: 1.3rem; }
+    .row { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="banner" role="note">
+    <p><strong>Reference implementation.</strong> This is a portfolio demonstration of how to
+      test an AI assistant, not an official service of any transit agency. Verify anything
+      important with the agency directly.</p>
+    <p class="snapshot-note" id="snapshot-note"><strong>Snapshot-backed, not live.</strong>
+      Answers use dated copies of published agency policy pages, not the agencies' live
+      websites. Every answer shows its source dates; confirm current fares and deadlines
+      with the agency.</p>
+  </div>
+
+  <h1>Transit Fare Policy Assistant</h1>
+  <p class="sub">
+    Answers questions about published fare and reduced-fare policies for five California
+    transit agencies: Monterey-Salinas Transit (MST), Santa Barbara MTD, Yolobus, SacRT,
+    and Humboldt Transit. Every answer cites the dated policy snapshots it used.
+    You can ask in English or Spanish.
+  </p>
+
+  <div class="display-settings" role="region" aria-label="Display settings">
+    <span class="group" role="group" aria-label="Text size">
+      <span id="tsize-label">Text size</span>
+      <button type="button" id="tsize-normal" aria-describedby="tsize-label" aria-pressed="true">A</button>
+      <button type="button" id="tsize-large" aria-describedby="tsize-label" aria-pressed="false">A+</button>
+      <button type="button" id="tsize-xlarge" aria-describedby="tsize-label" aria-pressed="false">A++</button>
+    </span>
+    <button type="button" id="contrast" aria-pressed="false">High contrast</button>
+  </div>
+
+  <section class="card" aria-labelledby="wnd">
+    <h2 id="wnd">What it will not do</h2>
+    <ul>
+      <li>It does not decide whether you qualify for a discount. It explains the published
+          criteria and how to apply.</li>
+      <li>It does not give medical, legal, or immigration advice.</li>
+      <li>It does not collect personal information. Please leave ID numbers and birth dates
+          out of your question.</li>
+    </ul>
+  </section>
+
+  <!-- Eval headline: update the figure alongside EVALS.md on each promoted run.
+       The linked report is always the source of truth. -->
+  <section class="card" aria-labelledby="tested">
+    <h2 id="tested">How this assistant is tested</h2>
+    <p>The evaluation harness is the point of this project. A full research run
+      has <strong>186 production-core cases plus 15 experimental Tagalog stretch
+      cases</strong> across nine suites — groundedness, refusal, eligibility edge
+      cases, Spanish parity, and freshness — scored by deterministic checks and
+      an independent LLM judge, one that differs from the model writing the
+      answers.</p>
+    <div class="eval-figure" role="note" aria-label="Evaluation status">
+      <p><strong>Committed promoted baseline: 192 of 201 passed (95.5%).</strong>
+        This is the reproducible comparison point in the repository, not the
+        latest observed run.</p>
+      <p class="eval-alert"><strong>Latest observed run: 190 of 201 overall;
+        175 of 186 production-core cases.</strong> Its cross-agency suite is
+        below the promotion gate, so the current evaluation status is red and
+        this run has not replaced the baseline.</p>
+    </div>
+    <p><a href="https://evals.chelseakr.com/">Explore the public evaluation evidence hub</a></p>
+  </section>
+
+  <section class="card" aria-labelledby="ask">
+    <h2 id="ask">Ask a question</h2>
+    <form id="form">
+      <label for="q">Your question</label>
+      <textarea id="q" name="question" maxlength="500" required aria-describedby="q-help"></textarea>
+      <p class="field-help" id="q-help">Example: What proof do I need for the veteran fare on MST?</p>
+      <div class="row">
+        <button type="submit" class="primary" id="submit">Ask</button>
+        <span class="asof">Answers cite their sources.</span>
+      </div>
+    </form>
+    <div class="examples" role="group" aria-label="Example questions">
+      <button type="button" data-q="Am I eligible for a senior discount on SBMTD?">Senior discount, SBMTD</button>
+      <button type="button" data-q="¿Cuánto cuesta el pasaje reducido en Yolobus?">Pasaje reducido, Yolobus</button>
+      <button type="button" data-q="Does MST cap how much I pay per day?">Daily fare cap, MST</button>
+    </div>
+    <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
+  </section>
+
+  <section class="card" id="result" hidden aria-labelledby="result-h">
+    <div class="result-head">
+      <h2 id="result-h">Conversation</h2>
+      <button type="button" id="reset" hidden>Start over</button>
+    </div>
+    <div id="transcript" role="log" aria-live="polite" aria-relevant="additions"
+      aria-label="Assistant conversation" aria-busy="false"></div>
+  </section>
+
+  <footer>
+    <p>Questions and conversation history are processed transiently. Their raw
+      text is not logged or used as a cache key. Successful answer payloads may
+      remain in a small in-memory cache until the serverless container is
+      recycled; refused, guarded, or personal-information-like inputs are not
+      cached.</p>
+    <p>No signal at the stop? Save the
+      <a href="/offline">offline fare reference</a> ahead of your trip.</p>
+    <p>Prefer to browse instead of chat? Try the
+      <a href="/guide">guided fare finder</a> — no typing required.</p>
+    <p>
+      <a href="https://github.com/ChelseaKR/fare-policy-assistant">Source code</a> ·
+      <a href="https://evals.chelseakr.com/">Evaluation evidence hub</a> ·
+      <a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/model-card.md">Model card</a>
+    </p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("form");
+  var input = document.getElementById("q");
+  var submit = document.getElementById("submit");
+  var status = document.getElementById("status");
+  var result = document.getElementById("result");
+  var transcript = document.getElementById("transcript");
+  var reset = document.getElementById("reset");
+
+  // The client holds the conversation; the server stores nothing. We send the
+  // last few turns with each follow-up so references resolve.
+  var MAX_TURNS = 3;
+  var conversation = [];
+
+  document.querySelectorAll(".examples button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      input.value = btn.getAttribute("data-q");
+      input.focus();
+    });
+  });
+
+  // Reader display settings: text size and high contrast. Stored only as a
+  // local preference in this browser; nothing is sent to the server.
+  var store;
+  try { store = window.localStorage; } catch (e) { store = null; }
+  function pref(key, value) {
+    if (!store) { return null; }
+    try {
+      if (value === undefined) { return store.getItem(key); }
+      store.setItem(key, value);
+    } catch (e) { /* private mode: settings still apply for this page load */ }
+    return value;
+  }
+
+  var SIZES = ["normal", "large", "xlarge"];
+  function applyTextSize(size) {
+    SIZES.forEach(function (s) {
+      document.documentElement.classList.toggle("tsize-" + s, s === size && s !== "normal");
+      var b = document.getElementById("tsize-" + s);
+      if (b) { b.setAttribute("aria-pressed", String(s === size)); }
+    });
+  }
+  SIZES.forEach(function (s) {
+    var b = document.getElementById("tsize-" + s);
+    if (b) { b.addEventListener("click", function () { applyTextSize(pref("fpa-tsize", s)); }); }
+  });
+  applyTextSize(pref("fpa-tsize") || "normal");
+
+  function applyContrast(on) {
+    document.body.classList.toggle("contrast", on);
+    var b = document.getElementById("contrast");
+    if (b) { b.setAttribute("aria-pressed", String(on)); }
+  }
+  var contrastBtn = document.getElementById("contrast");
+  if (contrastBtn) {
+    contrastBtn.addEventListener("click", function () {
+      var on = document.body.classList.contains("contrast") ? "" : "on";
+      applyContrast(pref("fpa-contrast", on) === "on");
+    });
+  }
+  applyContrast(pref("fpa-contrast") === "on");
+
+  reset.addEventListener("click", function () {
+    conversation = [];
+    transcript.innerHTML = "";
+    result.hidden = true;
+    reset.hidden = true;
+    input.focus();
+  });
+
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Surface corpus staleness: how long ago the cited policies were fetched.
+  function relativeAge(isoDate) {
+    var then = Date.parse(isoDate);
+    if (isNaN(then)) { return ""; }
+    var days = Math.floor((Date.now() - then) / 86400000);
+    if (days < 1) { return " Fetched today."; }
+    if (days < 60) { return " Fetched " + days + " day" + (days === 1 ? "" : "s") + " ago."; }
+    return " Fetched about " + Math.round(days / 30) + " months ago — confirm current fares with the agency.";
+  }
+
+  // Answers are plain text with single or combined [doc:id] markers, **bold**,
+  // and "- " bullets.
+  function render(text) {
+    var cleaned = text.replace(/\s*\[doc:[a-z0-9-]+(?:,\s*doc:[a-z0-9-]+)*\]/g, "");
+    var lines = cleaned.split(/\n/);
+    var html = "";
+    var inList = false;
+    lines.forEach(function (line) {
+      var t = line.trim();
+      var item = /^[-•]\s+/.test(t);
+      if (item && !inList) { html += "<ul>"; inList = true; }
+      if (!item && inList) { html += "</ul>"; inList = false; }
+      if (!t) { return; }
+      var body = esc(t.replace(/^[-•]\s+/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      html += item ? "<li>" + body + "</li>" : "<p>" + body + "</p>";
+    });
+    if (inList) { html += "</ul>"; }
+    return html;
+  }
+
+  // Privacy-safe feedback: sends only the verdict, the response kind, and the
+  // language. Never the question or the answer.
+  function feedbackRow(data) {
+    var row = document.createElement("p");
+    row.className = "feedback";
+    var label = document.createElement("span");
+    label.textContent = "Was this helpful?";
+    row.appendChild(label);
+    ["up", "down"].forEach(function (verdict) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = verdict === "up" ? "Yes" : "No";
+      b.setAttribute("aria-label", verdict === "up" ? "Yes, helpful" : "No, not helpful");
+      b.addEventListener("click", function () {
+        fetch("/api/feedback", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ verdict: verdict, kind: data.kind, language: data.language })
+        }).catch(function () {});
+        row.textContent = "Thanks for the feedback.";
+      });
+      row.appendChild(b);
+    });
+    return row;
+  }
+
+  function appendTurn(question, data) {
+    var turn = document.createElement("div");
+    turn.className = "turn";
+    turn.setAttribute("role", "article");
+    turn.setAttribute("aria-label", "Conversation turn " + (conversation.length + 1));
+
+    var q = document.createElement("p");
+    q.className = "q";
+    q.textContent = question;
+    turn.appendChild(q);
+
+    var ans = document.createElement("div");
+    // The API may expose an additive `structured` field for integration
+    // experiments. The public beta intentionally renders only the reviewed
+    // prose answer until that presentation contract has its own eval gate.
+    ans.innerHTML = render(data.answer);
+    ans.setAttribute("aria-label", "Assistant answer");
+    ans.setAttribute("lang", data.language || "en");
+    turn.appendChild(ans);
+
+    if ((data.citations || []).length) {
+      var src = document.createElement("div");
+      src.className = "sources";
+      // A heading, not a <strong>: this is the one landmark a screen-reader
+      // user navigates to when checking where an answer came from, and heading
+      // navigation is how they get there. h3 sits under the "Conversation" h2
+      // that contains the transcript. The recorded-transcript artifact the
+      // independent audit reads already used <h3>Sources</h3>; the page riders
+      // actually use did not, which is the wrong way round.
+      var label = document.createElement("h3");
+      label.className = "sources-h";
+      label.textContent = "Sources";
+      src.appendChild(label);
+      var ul = document.createElement("ul");
+      data.citations.forEach(function (c) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = c.url;
+        a.rel = "noopener";
+        a.textContent = c.agency + ": " + c.title;
+        li.appendChild(a);
+        li.appendChild(document.createTextNode(" (fetched " + c.fetch_date + ")"));
+        ul.appendChild(li);
+      });
+      src.appendChild(ul);
+      turn.appendChild(src);
+    }
+
+    // The headline freshness claim. `as_of_date` is the oldest fetch date among
+    // the passages this answer cites (assistant.answer._as_of_cited), so this
+    // line and relativeAge() below describe the evidence under the answer, not
+    // whatever else retrieval happened to surface beside it. Per-source dates
+    // are in the "(fetched …)" lines above.
+    if (data.as_of_date) {
+      var asof = document.createElement("p");
+      asof.className = "asof";
+      asof.textContent = "Based on policies published as of " + data.as_of_date + "." +
+        relativeAge(data.as_of_date);
+      turn.appendChild(asof);
+    }
+
+    turn.appendChild(feedbackRow(data));
+    transcript.appendChild(turn);
+    result.hidden = false;
+    reset.hidden = false;
+    transcript.setAttribute("aria-busy", "false");
+    turn.setAttribute("tabindex", "-1");
+    turn.focus();
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var question = input.value.trim();
+    if (!question) { return; }
+    // Remove rider text from the editable DOM as soon as the transient request
+    // value has been captured. A refused personal-information input is never
+    // reinserted into the transcript below.
+    input.value = "";
+    submit.disabled = true;
+    transcript.setAttribute("aria-busy", "true");
+    status.textContent = conversation.length
+      ? "Following up…" : "Looking through the published policies…";
+    status.className = "";
+
+    fetch("/api/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question: question, history: conversation.slice(-MAX_TURNS) })
+    }).then(function (resp) {
+      return resp.json().then(function (data) { return { ok: resp.ok, data: data }; });
+    }).then(function (r) {
+      submit.disabled = false;
+      if (!r.ok) {
+        transcript.setAttribute("aria-busy", "false");
+        status.textContent = r.data.error || "Something went wrong. Please try again.";
+        status.className = "error";
+        return;
+      }
+      status.textContent = "";
+      appendTurn(
+        r.data.kind === "refused_input" ? "Question withheld for privacy." : question,
+        r.data
+      );
+      // Store the whole turn, including the server's optional HMAC `sig` when
+      // present, so it is echoed back verbatim with the next follow-up. When the
+      // server issues no sig (default demo) the field is simply undefined and
+      // JSON.stringify drops it.
+      if (r.data.kind === "answered") {
+        conversation.push({ q: question, a: r.data.answer, sig: r.data.sig });
+      }
+    }).catch(function () {
+      submit.disabled = false;
+      transcript.setAttribute("aria-busy", "false");
+      status.textContent = "Could not reach the service. Please try again.";
+      status.className = "error";
+    });
+  });
+})();
+</script>
+<noscript><p class="noscript-note">
+  This demo needs JavaScript to send your question. The project, including every answer the
+  evaluation suite produced, can be read without JavaScript in the
+  <a href="https://github.com/ChelseaKR/fare-policy-assistant">source repository</a>.
+</p></noscript>
+</body>
+</html>

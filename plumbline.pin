@@ -1,0 +1,52 @@
+# The auditor that gates this repository's independent audit.
+#
+# One file, both callers: `make audit` on a laptop and the audit job in CI read
+# this and nothing else, so a local run and a CI run are the same run. There is
+# no second place recording a version.
+#
+# This replaced govchat-eval on 2026-08-16. That harness went private and
+# archived, which quietly turned the repo's central evidence claim — "an
+# independent tool audits this too" — into something no reader could check and
+# no contributor could re-run. Plumbline is public (Apache-2.0) and replay-only,
+# so anyone with this checkout can reproduce the verdict offline.
+#
+# 'ref' is an exact commit, never a branch or a tag, and the runner rejects
+# anything else. A moving ref would mean a green gate today could quietly mean
+# something different tomorrow, which is the opposite of what an audit record is
+# for. Bumping it is a reviewed diff like any other dependency upgrade: look at
+# whether src/ changed at all, then at whether the judge configuration hash
+# moved, then run the gate and compare the run id.
+#
+# KNOWN DEFECT IN THE PINNED COMMIT, and why the pin is here anyway:
+# `plumbline.bundle.hashed_files` walks the evidence directory with `iterdir()`,
+# so only top-level files are hashed. Anything inside a subdirectory of a bundle
+# is neither hashed nor reported as unlisted, which is an integrity hole in a
+# harness whose first promise is that it refuses to score tampered evidence.
+# This bundle is flat — five files, no subdirectories — so the hole is not open
+# here, and `evals/plumbline_export.py` seals with a recursive walk of its own so
+# it would not be open even if the bundle grew a directory. A fix is in flight
+# upstream. Advance this ref once it lands, and expect the bundle hash and the
+# run id to be unchanged when you do, because nothing about this evidence
+# depends on the buggy path.
+#
+# The harness is NOT a dependency of this project. It is resolved at run time
+# into .plumbline-cache/ and verified to be at the pinned commit. This repo's
+# uv.lock, install, lint and test path never touch it, and nothing in this
+# project's own dependency resolution can move the thing auditing it.
+#
+# If it cannot be resolved, the gate FAILS. It does not skip and it does not
+# report green: a gate that could not run is not a gate that passed. That is the
+# specific thing `make audit` did not do before — it printed
+# "govchat-eval not found; set EVAL_HARNESS=<path>" and exited 2, which reads to
+# a build log like a configuration problem rather than an unaudited release.
+
+repo = https://github.com/ChelseaKR/plumbline.git
+ref  = df95fce6eb8637bdaf46d0a4f03709b7ccce231f
+
+config = evals/plumbline/target.toml
+out = docs/audits/plumbline
+
+# The bar this repository holds, pinned from the run recorded in
+# docs/audits/plumbline/. A floor is a minimum; without a baseline a score can
+# decay a long way and stay green the whole time.
+baseline = evals/plumbline/baseline.json

@@ -1,0 +1,14 @@
+{
+  "format": "plumbline-checksums",
+  "format_version": 1,
+  "algorithm": "sha256",
+  "files": {
+    "interface.html": "bee9830d14dc6af0ec27f7c824148c6b2f1391bff26898287a4bfae4232fee32",
+    "items.jsonl": "39da2fa108d66530fc40e893acd82eb307b3a391e64c79d3eb6ccd6b8543e6cd",
+    "manifest.json": "e4ec437a0312309e957f6e4074b75f4f2678c8f1901d9ee6c10c77d589c63d66",
+    "responses.jsonl": "f170f3a4bf6b8f67783577c35e231118276cf8e528df1e0e8bb605f6f68972e6",
+    "sources.jsonl": "0e852e6d736ad3916f1c713aac26a75b5d907125a0927c5240495e0f78433e1b",
+    "transcripts.html": "310b87520456f167250bbc92132b5114ea91bd86ccdf6c96debe3a8201d69b56"
+  },
+  "bundle_sha256": "3eace230561e7228a17b1260e41dc4213cf34d7ed605e372bbece52f3aea4343"
+}

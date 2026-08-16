@@ -302,13 +302,27 @@ jobs:
             evals/runs/
 
   independent-audit:
-    # Advisory (not a merge gate): replay the committed GovChat-Eval dataset
-    # through the external harness and publish the report. It is skipped on PRs
-    # while GovChat-Eval remains private; the dataset is recorded answers,
-    # scored offline by the deterministic judge. See docs/audits/methodology.md.
-    if: github.event_name == 'schedule' && vars.ENABLE_INDEPENDENT_AUDIT == 'true'
+    # A merge gate, on every PR, and it was neither of those things before.
+    #
+    # This job used to clone govchat-eval, which went private and archived. It
+    # therefore ran only on a schedule, only when a repository variable was set,
+    # and with continue-on-error, which together mean it could not fail a build
+    # and no outside reader could reproduce it. "An independent tool audits this
+    # too" was a sentence in the README with nothing behind it.
+    #
+    # Plumbline is public and replay-only. The harness is resolved from
+    # plumbline.pin at run time and verified to be at the pinned commit; the
+    # evidence is committed; no model is called and no secret is needed. So it
+    # runs on pull requests like any other gate, with no continue-on-error.
+    #
+    # `plumbline gate` itself is allowed to report FAIL — several floors sit
+    # below the harness's defaults with written reasons and the audit's known
+    # hard failures are listed in evals/plumbline/acknowledged_findings.json.
+    # evals/plumbline_guard.py is what fails the build: any suite below the
+    # committed baseline, any hard failure nobody acknowledged, any
+    # acknowledgement that has stopped firing.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -316,20 +330,17 @@ jobs:
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
         with:
           enable-cache: true
-      - name: Clone GovChat-Eval
-        run: git clone --depth 1 https://github.com/ChelseaKR/govchat-eval.git ../govchat-eval
-      - name: Validate dataset
-        run: cd ../govchat-eval && uv run govchat-eval validate --dataset "$GITHUB_WORKSPACE/evals/govchat/golden.jsonl"
-      - name: Run audit
-        run: |
-          cd ../govchat-eval && uv run govchat-eval run \
-            --config "$GITHUB_WORKSPACE/evals/govchat/govchat-eval.toml" \
-            --dataset "$GITHUB_WORKSPACE/evals/govchat/golden.jsonl" \
-            --baseline "$GITHUB_WORKSPACE/evals/govchat/baseline.json" \
-            --out "$GITHUB_WORKSPACE/docs/audits"
+      - name: Evidence bundle matches the recording
+        run: uv run python -m evals.plumbline_export --check
+      - name: Run the pinned external harness
+        # Same file the laptop reads (plumbline.pin), same command. Its exit
+        # code is not the gate; see the job comment above.
+        run: ./plumbline-gate.sh --summary-file "$GITHUB_STEP_SUMMARY" || true
+      - name: Gate the audit report
+        run: uv run python -m evals.plumbline_guard
       - name: Upload audit report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: independent-audit
-          path: docs/audits/
+          path: docs/audits/plumbline/
