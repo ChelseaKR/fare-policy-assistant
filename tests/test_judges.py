@@ -275,3 +275,67 @@ class TestJudgeHistory:
         judges.judge_helpfulness(hj, _result(), "answer", _cfg())
         assert "Prior conversation" not in hj.last_user
         assert hj.last_user.startswith("Question:")
+
+
+class TestJudgeVerdictParsing:
+    """A judge that reasons in prose and then states a verdict must be read at
+    its verdict. On the 2026-08-16 full run eight groundedness judges were
+    recorded as "unparseable" — four because the greedy `{.*}` span joined two
+    JSON objects into invalid JSON, four because the 512-token ceiling cut the
+    object off mid-string. The first class is a parsing bug and is fixed here;
+    the second is a budget and is fixed by JUDGE_MAX_TOKENS."""
+
+    def test_last_object_wins_when_the_judge_revises_itself(self):
+        # The exact shape of edge-015 / fresh-005 / ground-002 / ground-026:
+        # a first verdict, more thinking, then a corrected verdict below it.
+        text = (
+            '```json\n{"grounded": true, "unsupported_claims": [], "reasoning": "first pass"}\n'
+            "```\n\nWait — the provenance line says 2026-06-12, not 2026-08-14.\n\n"
+            '```json\n{"grounded": false, "unsupported_claims": ["published as of 2026-08-14"], '
+            '"reasoning": "the stated fetch date is not in any provenance line"}\n```'
+        )
+        verdict = judges.judge_groundedness(ScriptedJudge(text), _result(), _cfg())
+        assert verdict.passed is False
+        assert "not in any provenance line" in verdict.detail
+
+    def test_prose_containing_braces_does_not_break_parsing(self):
+        text = (
+            "The answer cites {doc:mst-fares} loosely.\n\n"
+            '{"grounded": true, "unsupported_claims": [], "reasoning": "all supported"}'
+        )
+        verdict = judges.judge_groundedness(ScriptedJudge(text), _result(), _cfg())
+        assert verdict.passed is True
+
+    def test_braces_inside_strings_do_not_confuse_the_scanner(self):
+        text = '{"grounded": false, "unsupported_claims": ["a {literal} brace"], "reasoning": "x"}'
+        verdict = judges.judge_groundedness(ScriptedJudge(text), _result(), _cfg())
+        assert verdict.passed is False
+
+    def test_object_without_the_required_key_is_not_preferred(self):
+        # A trailing token-usage object must not shadow the real verdict.
+        text = (
+            '{"grounded": true, "unsupported_claims": [], "reasoning": "ok"}\n'
+            '{"note": "scoring complete"}'
+        )
+        verdict = judges.judge_groundedness(ScriptedJudge(text), _result(), _cfg())
+        assert verdict.passed is True
+
+    def test_truncated_object_is_still_an_error_not_a_pass(self):
+        # The safety property the module docstring promises: no silent pass.
+        text = 'Reasoning at length...\n```json\n{"grounded": false, "unsupported_claims": ["the'
+        verdict = judges.judge_groundedness(ScriptedJudge(text), _result(), _cfg())
+        assert verdict.passed is None
+        assert "unparseable" in verdict.detail
+
+    def test_helpfulness_reads_its_own_final_object(self):
+        text = (
+            '{"helpful": true, "score": 4, "reasoning": "first"}\n'
+            '{"helpful": false, "score": 2, "reasoning": "second, on reflection"}'
+        )
+        verdict = judges.judge_helpfulness(ScriptedJudge(text), _result(), "answer", _cfg())
+        assert verdict.passed is False
+        assert "on reflection" in verdict.detail
+
+    def test_judge_budget_allows_prose_before_the_verdict(self):
+        # The judges reason before answering; 512 truncated four of them.
+        assert config.JUDGE_MAX_TOKENS >= 1024

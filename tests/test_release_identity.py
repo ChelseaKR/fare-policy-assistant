@@ -192,15 +192,23 @@ def test_config_and_release_identity_have_stable_golden_values(config_case: Conf
     # descriptor from this fixture against the merged profile, not lifted
     # from any branch or from a failure message. Before any of the 2026-08
     # additions: 56ef528a…d337 / fbc9799c…e675 / 249b0835…907a.
+    #
+    # The sixteenth and current values below are the first move that is not a
+    # domain change: raising JUDGE_MAX_TOKENS from 512 to 1024 (2026-08-16) so
+    # a judge that reasons in prose before its JSON verdict stops being cut off
+    # mid-object. The judge request settings are behavior-complete config and
+    # belong in release identity, so the descriptor moves with them; the
+    # eighteen-entry `scopes` tuple and 87 aliases are unchanged. The fifteenth,
+    # immediately before this: d52812b4…0c7e / fdf0a136…01a0 / bc0cee09…8cad.
     assert (
-        first.config_version == "d52812b489572bacb51dfd043db3cd45b5246ea8df799c1bba87d5d9bcbf0c7e"
+        first.config_version == "57ec3906627623b9290ddf5b16335e814a6ab6819a47b43dd3a34898fd7f271c"
     )
     assert (
-        first.release_version == "fdf0a136ef202413e9a4d2d9f2547101f816fa66af7661d804f9b72d083101a0"
+        first.release_version == "857f0e7fe4f9f311ffd81789ddf0d5df7e7242e0ffcdb3dcc3b4f9a1cddc2168"
     )
     assert (
         hashlib.sha256(descriptor_bytes(first)).hexdigest()
-        == "bc0cee09aa6f7400c4cc512331b2ce622feb8a84ccffa9c709d6fc9758348cad"
+        == "4ace181b415e0f868b3581b957b5b6c2157a5aa9908094c3ee4c905fb548a936"
     )
     assert descriptor_bytes(first).endswith(b"\n")
     assert descriptor_bytes(first).count(b"\n") == 1

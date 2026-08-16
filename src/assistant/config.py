@@ -137,7 +137,16 @@ CALLER_DIGEST_SCHEMA = "fare-assistant.caller-digest.v1"
 
 # Both evaluator calls deliberately use the same bounded deterministic request
 # settings. Their prompt bytes and model ID remain distinct release inputs.
-JUDGE_MAX_TOKENS = 512
+#
+# The judge prompts ask for "JSON only" and the judge frequently reasons in
+# prose first anyway, emitting its verdict object last. At 512 the 2026-08-16
+# full run truncated four judges mid-object (xagency-014, edge-052, ml-011,
+# ground-actransit-002): the call was billed in full and produced no verdict,
+# and the case failed for a harness reason. A larger ceiling is close to free —
+# output tokens are billed as generated, not as reserved, so a judge that
+# already fits in 512 costs exactly what it did before, while a judge that
+# needs 600 now returns a usable verdict instead of a wasted call.
+JUDGE_MAX_TOKENS = 1024
 JUDGE_TEMPERATURE = 0.0
 
 
