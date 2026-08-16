@@ -78,6 +78,52 @@ class TestParsing:
         assert "[doc:mst-fares]" in block and "Seniors 65+ pay $1.00." in block
 
 
+class TestTheJudgeSeesWhatTheAnswerModelSaw:
+    """The two suites must not score the same sentence in opposite directions.
+
+    `prompts/system.txt` rule 4 obliges every answer to disclose the date its
+    corpus was fetched, and `evals/suites/freshness.yaml` fails an answer that
+    does not. That date lives in the passage header the answer model is given
+    (`assistant.answer._format_passages`), and the judge's own rendering used to
+    drop it — so fresh-001 disclosed "documents fetched on June 12, 2026" and
+    the groundedness judge failed it for a claim no passage stated. One suite
+    demanded what the other punished.
+
+    The repair is to show the judge the provenance rather than to excuse the
+    claim from scrutiny. These tests pin both halves of that: the judge sees the
+    dates, and it sees nothing else new.
+    """
+
+    def test_the_judge_sees_the_fetch_date_the_answer_must_disclose(self):
+        block = judges._passages_block(_result())
+        assert "fetched 2026-06-12" in block
+        assert "https://mst.org/fares/" in block
+
+    def test_the_judge_block_matches_the_answer_prompt_rendering(self):
+        """Byte-identical to what the answer model was given.
+
+        A judge scoring a different rendering of the same evidence is scoring a
+        different question. If `_format_passages` grows a field, this fails
+        until the judge is shown it too.
+        """
+        from assistant.answer import _format_passages
+
+        result = _result()
+        assert judges._passages_block(result) == _format_passages(result.passages)
+
+    def test_provenance_carries_no_fare_policy(self):
+        """Widening what the judge sees must not widen what counts as support.
+
+        The header adds identity and dates only. A price, age, or document
+        requirement still has to come from the passage text, so an answer cannot
+        become grounded by quoting a URL.
+        """
+        chunk = _chunk()
+        header_only = judges._passages_block(_result()).replace(chunk.text, "")
+        for policy_token in ("$", "65", "Medicare", "proof"):
+            assert policy_token not in header_only
+
+
 class TestGroundedness:
     def test_grounded_verdict_passes_and_carries_tokens(self):
         judge = ScriptedJudge('{"grounded": true, "reasoning": "all claims cited"}')
