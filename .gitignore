@@ -52,3 +52,8 @@ CLAUDE-fare-assistant.md
 # the corpus-freshness workflow, never committed. deploy.sh refuses a dirty
 # tree, so this must not linger after a local refresh.
 corpus/raw/fetch-failures.json
+
+# The independent audit's harness, resolved at run time from plumbline.pin and
+# verified to be at the pinned commit. Never a dependency of this project and
+# never committed: the pin is the record, the checkout is a cache.
+.plumbline-cache/

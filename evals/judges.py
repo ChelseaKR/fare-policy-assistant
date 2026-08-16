@@ -45,8 +45,33 @@ def _parse_json(text: str) -> dict | None:
 
 
 def _passages_block(result: AnswerResult) -> str:
+    """Render the retrieved passages for the judge exactly as the answer model
+    saw them, provenance header included.
+
+    Until 2026-08-16 this dropped the `(source: …, fetched …)` line that
+    `assistant.answer._format_passages` puts above every passage. The two
+    suites then contradicted each other. `prompts/system.txt` rule 4 *requires*
+    every answer to disclose the snapshot date, and `evals/suites/freshness.yaml`
+    scores the disclosure; but the groundedness judge was shown passage text
+    with the dates cut out, so the one claim the assistant is obliged to make
+    about its own limits was the one claim it could never support. fresh-001
+    ("How current is your MST fare information?") answered "documents fetched on
+    June 12, 2026" and the judge failed it for a claim no passage stated —
+    correctly, given what it was shown.
+
+    Exempting date claims from the judge would have been the wrong repair: it
+    turns an unverifiable claim into an unchecked one, and an invented fetch
+    date is exactly the sort of false reassurance this assistant exists not to
+    give. Showing the judge the provenance instead makes the claim checkable in
+    the same way every other claim is. Nothing is relaxed: the block carries
+    only doc id, section, source URL and fetch date — no price, age, document,
+    or program — so a fare-policy fact still has to come from the passage text.
+    """
     return "\n\n".join(
-        f"[doc:{sc.chunk.doc_id}] {sc.chunk.section}\n{sc.chunk.text}" for sc in result.passages
+        f"[doc:{sc.chunk.doc_id}] {sc.chunk.agency_full} — {sc.chunk.doc_title} — "
+        f"{sc.chunk.section}\n(source: {sc.chunk.url}, fetched {sc.chunk.fetch_date})\n"
+        f"{sc.chunk.text}"
+        for sc in result.passages
     )
 
 

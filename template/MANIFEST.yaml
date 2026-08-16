@@ -29,6 +29,8 @@ generic:
   - evals/check_report_regression.py
   - evals/calibration.py
   - evals/provenance.py
+  - evals/plumbline_guard.py
+  - plumbline-gate.sh
   - evals/retrieval_ablation.py
   - evals/backend_comparison.py
   - evals/cache.py
@@ -134,14 +136,28 @@ generic_edit:
   - path: evals/govchat_export.py
     marker: "Suite mapping (fare-policy-assistant"
     note: >
-      GovChat-Eval export plumbing is generic; the suite-name mapping in the
-      module docstring and the forbidden-term extraction are written against
-      this domain's suite names and must be re-stated for the new ones.
+      The recording plumbing is generic; the suite-name mapping in the module
+      docstring and the forbidden-term extraction are written against this
+      domain's suite names and must be re-stated for the new ones.
+  - path: evals/plumbline_export.py
+    marker: "Suite mapping (fare-policy-assistant"
+    note: >
+      The Plumbline adapter is generic apart from two things a new domain must
+      re-decide: the source-id scheme (here `doc:<doc_id>`, because this
+      assistant cites documents and Plumbline resolves citations by source id)
+      and which suites the evidence can honestly support. Read the "one shape
+      difference" section before changing either.
+  - path: plumbline.pin
+    marker: "config = evals/plumbline/target.toml"
+    note: >
+      Point `config`, `out` and `baseline` at the new repository's paths. Keep
+      `ref` an exact commit and re-read the KNOWN DEFECT note before bumping it.
   - path: Makefile
     marker: 'PACKAGE ?= assistant'
     note: >
-      Targets are generic. Update PACKAGE to the new import package name and
-      EVAL_HARNESS if the govchat-eval clone lives elsewhere.
+      Targets are generic. Update PACKAGE to the new import package name. The
+      audit target needs no path variable: it resolves its harness from
+      plumbline.pin at run time.
   - path: pyproject.toml
     marker: 'name = "fare-policy-assistant"'
     note: "Project name, description, and package discovery paths."
@@ -160,9 +176,14 @@ domain_specific:
   - web/guide.py                     # transit-specific guided fare finder
   - corpus/                          # manifest.yaml + raw/ snapshots
   - evals/suites/                    # case content written from this corpus
-  - evals/govchat/                   # exported golden.jsonl + baseline
+  - evals/govchat/                   # exported golden.jsonl + baseline (the recording)
+  - evals/plumbline/                 # evidence bundle, target config, baseline, acknowledged findings.
+                                     # Deliberately NOT extracted: every floor in target.toml is a
+                                     # measurement of this system, and copying those numbers would set
+                                     # a new domain a bar describing a different assistant. Author it
+                                     # from a first run, the way this one was.
   - evals/spanish/                   # rating census over this corpus's answers
-  - docs/audits/                     # GovChat-Eval run artifacts
+  - docs/audits/                     # second-harness run artifacts
   - prompts/                         # system/answer prompts naming transit
   - tests/test_domain.py
   - tests/test_corpus.py

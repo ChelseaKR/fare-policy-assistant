@@ -30,7 +30,8 @@ Package metadata checked in this pass:
 
 - corpus/ holds raw and processed fare material.
 - docs/decisions/ explains retrieval, model adapter, deployment, and ingest choices.
-- docs/audits/ holds eval, accessibility, and methodology records.
+- docs/audits/ holds eval, accessibility, and methodology records, and the
+  second-harness audit reports under docs/audits/plumbline/.
 - The package source contains the assistant, retrieval, provider, and eval code.
 - Makefile and workflows run the local gate set.
 
@@ -39,6 +40,7 @@ Observed source and operations surfaces:
 - `Makefile`
 - `corpus/`
 - `evals/`
+- `plumbline.pin`, `plumbline-gate.sh`  (the pinned external audit harness, resolved at run time)
 - `infra/`
 - `prompts/`
 - `pyproject.toml`
@@ -127,6 +129,7 @@ Representative test files checked:
 - `tests/test_corpus.py`
 - `tests/test_domain.py`
 - `tests/test_govchat_export.py`
+- `tests/test_plumbline_audit.py`
 - `tests/test_guards.py`
 - `tests/test_i18n.py`
 - `tests/test_ingest.py`

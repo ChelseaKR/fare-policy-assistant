@@ -26,8 +26,10 @@ document's exact fetch date is in `manifest.yaml` and in its
 
 `manifest.yaml` lists every document with its agency, source URL, and the fetch
 date. The same text also reaches `evals/govchat/golden.jsonl` (as retrieved
-passages), `evals/calibration/judge_label_packet_2026-07-11.md`, and short
-excerpts inside the failure traces in `EVALS.md` and `docs/eval-report.*`.
+passages), `evals/plumbline/bundle/sources.jsonl` (the same documents, reshaped
+for the second-harness audit), `evals/calibration/judge_label_packet_2026-07-11.md`,
+and short excerpts inside the failure traces in `EVALS.md` and
+`docs/eval-report.*`.
 
 ## Whose it is
 
@@ -90,7 +92,8 @@ Do not assume:
   several of these programs have changed before;
 - that this project grants you any right to copy, republish, redistribute, or
   train on the agency text. It holds no such right and grants none. The
-  `license` field in `evals/govchat/golden.jsonl` says so on every row;
+  `license` field in `evals/govchat/golden.jsonl` says so on every row, and
+  `evals/plumbline/bundle/manifest.json` says so once for the whole bundle;
 - that "public record" means "public domain", or that a robots.txt that allowed
   a polite fetch also permits republication. `manifest.yaml` records the
   robots/Content-Signal review separately from each agency's terms of use for

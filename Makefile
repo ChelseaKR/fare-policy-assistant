@@ -1,9 +1,12 @@
 # All targets run through uv; `uv sync` happens implicitly via `uv run`.
 
-# Path to a local govchat-eval clone for the independent audit (make audit).
-EVAL_HARNESS ?= ../govchat-eval
+# The independent audit resolves its harness from plumbline.pin at run time
+# (see `audit` below). There is deliberately no EVAL_HARNESS variable any more:
+# the old one pointed at a sibling govchat-eval checkout, which went private and
+# archived, so the audit could not be reproduced by anyone outside the project
+# and only by someone inside who still had the clone.
 
-.PHONY: fetch index ingest eval smoke report audit audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
+.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
 
 # The committed relabeling worksheet `make relabel` opens by default.
 WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
@@ -62,15 +65,33 @@ template:     ## Extract the domain-agnostic skeleton to TARGET (see template/MA
 history:      ## Regenerate corpus/version_history.json (git-backed changelog for the operator console, EXP-09)
 	uv run python -m assistant.corpus history > corpus/version_history.json
 
-audit:        ## Independent GovChat-Eval audit: record answers, then run the external harness
-	@test -d "$(EVAL_HARNESS)" || { echo "govchat-eval not found at $(EVAL_HARNESS); set EVAL_HARNESS=<path>"; exit 2; }
-	uv run python -m evals.govchat_export
-	cd "$(EVAL_HARNESS)" && uv run govchat-eval validate --dataset "$(CURDIR)/evals/govchat/golden.jsonl"
-	cd "$(EVAL_HARNESS)" && uv run govchat-eval run \
-		--config "$(CURDIR)/evals/govchat/govchat-eval.toml" \
-		--dataset "$(CURDIR)/evals/govchat/golden.jsonl" \
-		--baseline "$(CURDIR)/evals/govchat/baseline.json" \
-		--out "$(CURDIR)/docs/audits"
+audit:        ## Independent Plumbline audit: rebuild the evidence bundle, run the pinned external harness, then gate its report
+	# Offline and free. The audit replays the answers already recorded in
+	# evals/govchat/golden.jsonl; no model is called and no key is needed, so
+	# anyone with this checkout can reproduce the verdict. The harness itself is
+	# resolved at run time from plumbline.pin into .plumbline-cache/ and verified
+	# to be at the pinned commit; it is never a dependency of this project.
+	#
+	# Three steps, and the third is the merge gate:
+	#   1. the committed bundle must be what the recording produces;
+	#   2. `plumbline gate` scores it and writes docs/audits/plumbline/<run>/;
+	#   3. evals/plumbline_guard.py fails on any suite below the committed
+	#      baseline, any hard failure nobody acknowledged, and any
+	#      acknowledgement that has stopped firing.
+	#
+	# Step 2's own exit code is deliberately not the gate. Several floors in
+	# evals/plumbline/target.toml sit below the harness's defaults, with reasons,
+	# and the audit's 76 hard failures across five suites are recorded in
+	# evals/plumbline/acknowledged_findings.json rather than hidden by lowering
+	# something. `plumbline gate` therefore reports FAIL today and will until
+	# those findings are fixed; the guard is what decides whether the build
+	# stops. `|| true` on that line is the one place this is written down.
+	uv run python -m evals.plumbline_export --check
+	./plumbline-gate.sh || true
+	uv run python -m evals.plumbline_guard
+
+audit-record:  ## Re-derive the Plumbline bundle from the recording (offline; run after evals/govchat_export or a suite edit)
+	uv run python -m evals.plumbline_export
 
 audit-restamp-license: ## Rewrite the committed golden.jsonl's per-row license note from evals/govchat_export.LICENSE_NOTE (offline; no answers re-recorded, provenance header untouched, .sha256 refreshed)
 	uv run python -m evals.govchat_export --restamp-license

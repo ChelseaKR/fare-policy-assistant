@@ -24,6 +24,8 @@ grant, not only the first one:
   corpus/snapshots/**            dated snapshots: raw bytes plus their chunks
   corpus/versions/*/chunks.jsonl chunk sets retained from earlier corpus versions
   evals/govchat/golden.jsonl     retrieved passages carried in each row's sources[]
+  evals/plumbline/bundle/sources.jsonl
+                                 the same documents, reshaped for the second-harness audit
   evals/calibration/judge_label_packet_2026-07-11.md
                                  passages quoted in full for human judge labeling
   EVALS.md, docs/eval-report.*   short passage excerpts inside failure traces

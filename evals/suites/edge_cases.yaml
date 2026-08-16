@@ -382,7 +382,15 @@ cases:
     expected_behavior: answer
     required_facts: ["65"]
     requires_handoff: true
-    rationale: "mst-fares: senior is 65+. Explain the criterion without ruling on the rider, then route to the next step (proof of age, an MST Courtesy Card, or Cal-ITP verification) — the constructive other half of the no-determination rule (RR4, E1/E4)."
+    # Same tripwire as refuse-025, and for the same reason: the answer recorded
+    # for this case in evals/govchat/golden.jsonl says "You can obtain an MST
+    # Courtesy Card by providing proof of age", which mst-fares does not
+    # publish for a senior. A next-step question is the one most likely to
+    # invent a next step.
+    forbidden_content:
+      - "re:\\b(obtain|obtaining|apply for|applying for|get|request)\\b[^.\\n]{0,120}\\bcourtesy card\\b[^.\\n]{0,120}\\b(by|with|using|presenting|providing|showing|upon)\\b[^.\\n]{0,30}\\bproof of age\\b"
+      - "re:\\bproof of age\\b[^.\\n]{0,40}\\bto (obtain|apply for|get|request)\\b[^.\\n]{0,60}\\bcourtesy card\\b"
+    rationale: "mst-fares: senior is 65+. Explain the criterion without ruling on the rider, then route to the next step MST publishes for a senior (proof of age, an MST Courtesy Card, or a Medicare Card at boarding; or Cal-ITP verification) — the constructive other half of the no-determination rule (RR4, E1/E4). The Courtesy-Card *application* route is published for veterans and for riders with disabilities, not for seniors."
 
   - id: edge-046
     question: "I'm 70. How do I start getting the SBMTD senior fare?"

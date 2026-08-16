@@ -67,25 +67,38 @@ Two independent layers, on purpose.
    an error, not a pass. Current scores, the per-run cost, and judge-versus-human
    agreement are in [`EVALS.md`](../EVALS.md).
 
-2. **An outside audit (black-box).** The deployed pipeline's answers are recorded
-   into a content-hashed dataset and replayed through GovChat-Eval, a separate
-   project that sees only questions, recorded answers, and declared ground truth.
-   A tool graded only by its author is a weaker claim than one an outside tool
-   also checks. The committed audit and its method are in
-   [`docs/audits/`](audits/methodology.md).
+2. **A second-harness audit (black-box), which you can rerun.** The deployed
+   pipeline's answers are recorded once, then replayed through
+   [Plumbline](https://github.com/ChelseaKR/plumbline), a separate, public,
+   Apache-2.0 harness that sees only questions, recorded answers, sources, and
+   declared ground truth. A tool graded only by the harness tuned against it is
+   a weaker claim than one a second, blind harness also checks. It is not a
+   third-party audit — same author — but it is reproducible by anyone:
+   `make audit` resolves the harness from a pinned commit, scores the committed
+   evidence offline with no keys, and gates the result. The committed audit and
+   its method are in [`docs/audits/`](audits/methodology.md).
 
 ### Reading the audit scores honestly
 
-The committed GovChat-Eval run uses its deterministic lexical judge. That judge
-cannot tell a faithful paraphrase or a redirect from a fabricated claim, so its
-groundedness number floors near zero even though the white-box LLM-judge
-groundedness suite scores at the top of its range, and its cross-language number
-is held to a lexical proxy. The other suites (prompt-injection resistance, no
-determination language or PII echoed, accessibility of transcripts, golden-fact
-accuracy, refusal) pass. The point of committing the low lexical number rather
-than hiding it is the project's whole thesis: show the method and its limits, do
-not cherry-pick. The `--judge llm` path produces the real signal and is
-documented in the audit methodology.
+The committed Plumbline run uses its deterministic lexical judge. That makes it
+reproducible without credentials and it is a floor, not a benchmark. Three of
+the twelve suite scores are mostly measuring the instrument rather than the
+assistant, and the audit methodology says which and why: accuracy (0.0591)
+compares a paragraph against a bag of required facts; adversarial (0.0000) and
+part of refusal (0.8615) turn on a refusal-marker list that does not contain
+this assistant's decline wording, so three correctly-refused jailbreak probes
+score zero; cross-language (0.3864) counts a phone number the English answer
+carries and the Spanish one does not as a disagreement about the same fact.
+
+The audit also produced 76 hard failures that no floor hides, every one of them
+listed with a cause and an owner in
+`evals/plumbline/acknowledged_findings.json`. Two are now fixed defects rather
+than notes: the snapshot-date disclosure being scored as an invented number, and
+a phone number the corpus cleaner broke into "805. 963.3364". The point of
+committing the low numbers and the finding list rather than hiding them is the
+project's whole thesis: show the method and its limits, do not cherry-pick.
+`evals/plumbline_guard.py`, not the harness's own exit code, is the merge gate,
+so a score that decays below the committed baseline stops the build.
 
 ## Accessibility status (read before any "production-ready" claim)
 

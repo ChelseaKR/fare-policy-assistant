@@ -1,0 +1,22 @@
+{
+  "description": "Answers recorded from the fare-policy-assistant pipeline on 2026-06-16 against corpus version 0938fff0539a, with the published fare documents they were retrieved from. Reshaped from evals/govchat/golden.jsonl by evals/plumbline_export.py; no model was called to produce this bundle. Source text remains the copyright of the respective transit agency (see corpus/LICENSE-NOTE.md); it is reproduced here as short excerpts for evaluation, not licensed for redistribution.",
+  "files": {
+    "interface": "interface.html",
+    "items": "items.jsonl",
+    "responses": "responses.jsonl",
+    "sources": "sources.jsonl"
+  },
+  "format": "plumbline-bundle",
+  "format_version": 1,
+  "name": "fare-policy-assistant",
+  "provenance": {
+    "corpus_version": "0938fff0539a",
+    "prompt_versions": {
+      "answer_user": "v7 2026-07-11 (v6 bound proof/contact details to the exact class/product; v7 adds the canonical Tagalog snapshot-date disclosure)",
+      "system": "v10 2026-07-11 (v9 added two-path disambiguation; v10 requires the exact published criterion before process details on attribute-based eligibility questions and adds explicit Tagalog language/date guidance)"
+    },
+    "run_id": "2026-06-16"
+  },
+  "synthetic": false,
+  "version": "1.0.0"
+}

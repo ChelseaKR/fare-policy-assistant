@@ -17,7 +17,10 @@ Done: 4-agency dated corpus with transposed-table normalization (ADR 0005);
 BM25 retrieval with EN/ES query expansion and agency filter; guarded answer
 pipeline (PII, scope, injection, determination-language, as-of); 103-case eval
 harness across five suites at 97/103 with an LLM judge and a regression gate;
-an independent GovChat-Eval audit; an accessible single-page demo on Lambda +
+a second-harness audit (GovChat-Eval originally; moved to the public, replay-only
+Plumbline on 2026-08-16 when GovChat-Eval went private and archived, which is
+also when it became a per-PR merge gate rather than an advisory scheduled job);
+an accessible single-page demo on Lambda +
 HTTP API with layered cost guards; CI (lint, types, tests, smoke evals);
 model card and five ADRs.
 
@@ -37,6 +40,9 @@ bug for this repo specifically.
 > fixed (combined-citation parsing). A prompt attempt at `ground-026` and
 > `refuse-018` regressed other cases and was reverted; both stay documented.
 > The GovChat-Eval audit runs in CI as an advisory job. Net: 97 → 98/103.
+> **Superseded 2026-08-16:** advisory was too weak and the harness went private.
+> The audit is now Plumbline, pinned to an exact commit, and it gates every PR;
+> see docs/audits/methodology.md.
 >
 > **Status (2026-07-02):** EXP-02 (item 4) done. A 15-pair counterfactual
 > sensitivity suite (`evals/suites/sensitivity.yaml`) scores minimal pairs
