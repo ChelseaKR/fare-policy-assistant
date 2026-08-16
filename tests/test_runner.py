@@ -1946,3 +1946,94 @@ def test_flip_case_floor_scales_with_measured_rate_and_never_below_two():
     assert runner.flip_case_floor(0.10, 50) == 5
     assert runner.flip_case_floor(0.0, 50) == 2
     assert runner.flip_case_floor(0.01, 10) == 2  # ceil(0.1) == 1, floored to 2
+
+
+class TestNotApplicableCoverage:
+    """Cases whose supporting document the operator has disabled never received
+    the evidence they were written against, so they measure the source policy
+    rather than the assistant. They leave the denominator — but they are named
+    in the summary, and the share of a run they may consume is capped, so the
+    mechanism cannot be used to make a failing gate pass by disabling whatever
+    the suite is unhappy about."""
+
+    def test_no_withheld_cases_is_clean(self):
+        assert runner.coverage_problems({"total": {"total": 385}}) == []
+        assert (
+            runner.coverage_problems(
+                {"total": {"total": 385}, "not_applicable": {"count": 0, "reasons": []}}
+            )
+            == []
+        )
+
+    def test_a_contained_source_under_the_ceiling_passes(self):
+        # The 2026-08-16 shape: 42 of 385 withheld by `source_disabled:yolobus-fares`.
+        summary = {
+            "total": {"total": 343},
+            "not_applicable": {
+                "count": 42,
+                "reasons": ["source_disabled:yolobus-fares"],
+            },
+        }
+        assert 42 / 385 < runner.COVERAGE_NOT_APPLICABLE_CEILING
+        assert runner.coverage_problems(summary) == []
+
+    def test_hollowing_out_the_run_is_a_finding(self):
+        summary = {
+            "total": {"total": 200},
+            "not_applicable": {
+                "count": 185,
+                "reasons": ["source_disabled:yolobus-fares", "source_disabled:mst-fares"],
+            },
+        }
+        problems = runner.coverage_problems(summary)
+        assert len(problems) == 1
+        assert "above the 15% ceiling" in problems[0]
+        assert "source_disabled:mst-fares" in problems[0]
+
+    def _hollowed(self, tmp_runs, name, mode):
+        run_dir = _write_run(
+            tmp_runs / name, {"refusal": {"passed": 1, "total": 1, "pass_rate": 100.0}}
+        )
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+        summary["mode"] = mode
+        summary["not_applicable"] = {
+            "count": 99,
+            "reasons": ["source_disabled:yolobus-fares"],
+            "cases": [],
+        }
+        (run_dir / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
+        return run_dir
+
+    def test_check_coverage_exits_on_a_hollowed_full_run(self, tmp_runs):
+        with pytest.raises(SystemExit):
+            runner.check_coverage(self._hollowed(tmp_runs, "hollow-full", "full"))
+
+    def test_a_suite_subset_is_not_held_to_the_ceiling(self, tmp_runs):
+        # `--suite conversation` is 30% Yolobus by construction; that is the
+        # subset's shape, not a coverage regression, and it must not exit 1.
+        runner.check_coverage(self._hollowed(tmp_runs, "hollow-subset", "suite:conversation"))
+
+    def test_an_unmeasured_suite_does_not_drag_the_macro_floor_down(self):
+        # A suite whose every case was withheld has pass_rate None. Treating
+        # that as 0% would fail every other suite against a phantom mean.
+        suites = {
+            "refusal": {"passed": 45, "total": 45, "pass_rate": 100.0},
+            "freshness": {"passed": 28, "total": 30, "pass_rate": 93.3},
+            "yolobus_only": {"passed": 0, "total": 0, "pass_rate": None, "not_applicable": 8},
+        }
+        assert runner.suites_below_macro(suites) == {}
+
+    def test_a_withheld_variant_drops_its_whole_sensitivity_pair(self):
+        records = [
+            {"case_id": "sens-001a", "pair_id": "sens-001", "passed": True},
+            {
+                "case_id": "sens-001b",
+                "pair_id": "sens-001",
+                "passed": False,
+                "not_applicable": True,
+            },
+            {"case_id": "sens-002a", "pair_id": "sens-002", "passed": True},
+            {"case_id": "sens-002b", "pair_id": "sens-002", "passed": True},
+        ]
+        # sens-001 proves nothing about discrimination: one side never ran.
+        assert runner.pair_verdicts(records) == {"sens-002": True}

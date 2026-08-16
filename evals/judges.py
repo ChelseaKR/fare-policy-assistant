@@ -19,6 +19,53 @@ from assistant.models import Model
 _JSON_RE = re.compile(r"\{.*\}", re.S)
 
 
+def _json_objects(text: str) -> list[dict]:
+    """Every balanced, parseable JSON object in `text`, in order.
+
+    The judge writes prose and then a fenced JSON verdict, and it does not
+    always write exactly one: on the 2026-08-16 full run four judges reasoned
+    to `{"grounded": true …}`, kept thinking, and emitted a corrected
+    `{"grounded": false …}` below it. A greedy `\\{.*\\}` spans from the first
+    brace to the last, which across two objects is not JSON at all, so a
+    verdict the judge did state was recorded as "unparseable" and failed the
+    case for a harness reason. Scanning for balanced objects and keeping the
+    last one takes the judge's final answer, which is the one it meant.
+    """
+    objects: list[dict] = []
+    depth = 0
+    start = -1
+    in_string = False
+    escaped = False
+    for index, ch in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif ch == "}":
+            if depth:
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    try:
+                        candidate = json.loads(text[start : index + 1])
+                    except json.JSONDecodeError:
+                        pass
+                    else:
+                        if isinstance(candidate, dict):
+                            objects.append(candidate)
+                    start = -1
+    return objects
+
+
 @dataclass
 class JudgeVerdict:
     name: str
@@ -34,7 +81,21 @@ class JudgeVerdict:
     cache_read_input_tokens: int = 0
 
 
-def _parse_json(text: str) -> dict | None:
+def _parse_json(text: str, *, required_key: str | None = None) -> dict | None:
+    """The judge's verdict object, or None when it did not state one.
+
+    Prefers the last balanced object that carries `required_key`, so a judge
+    that revises itself is read at its conclusion rather than its first draft.
+    Falls back to the last object of any shape, then to the original greedy
+    span, so nothing that parsed before stops parsing now.
+    """
+    objects = _json_objects(text)
+    if required_key is not None:
+        keyed = [obj for obj in objects if required_key in obj]
+        if keyed:
+            return keyed[-1]
+    if objects:
+        return objects[-1]
     m = _JSON_RE.search(text)
     if not m:
         return None
@@ -114,7 +175,7 @@ def judge_groundedness(
         "cache_creation_input_tokens": completion.cache_creation_input_tokens,
         "cache_read_input_tokens": completion.cache_read_input_tokens,
     }
-    data = _parse_json(completion.text)
+    data = _parse_json(completion.text, required_key="grounded")
     if data is None or "grounded" not in data or type(data["grounded"]) is not bool:
         return JudgeVerdict(
             "groundedness",
@@ -169,7 +230,7 @@ def judge_helpfulness(
         "cache_creation_input_tokens": completion.cache_creation_input_tokens,
         "cache_read_input_tokens": completion.cache_read_input_tokens,
     }
-    data = _parse_json(completion.text)
+    data = _parse_json(completion.text, required_key="helpful")
     if data is None or "helpful" not in data or type(data["helpful"]) is not bool:
         return JudgeVerdict(
             "helpfulness",

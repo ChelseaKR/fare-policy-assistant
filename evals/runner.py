@@ -669,10 +669,14 @@ def pair_verdicts(records: list[dict]) -> dict[str, bool]:
     grouped: dict[str, list[bool]] = {}
     for r in records:
         pid = r.get("pair_id")
-        if not pid:
+        # A pair with a withheld variant proves nothing about discrimination:
+        # one side never got its evidence. Drop the whole pair rather than
+        # judge the boundary on the half that ran.
+        if not pid or r.get("not_applicable"):
             continue
         grouped.setdefault(pid, []).append(bool(r["passed"]))
-    return {pid: all(v) for pid, v in grouped.items()}
+    incomplete = {r.get("pair_id") for r in records if r.get("pair_id") and r.get("not_applicable")}
+    return {pid: all(v) for pid, v in grouped.items() if pid not in incomplete}
 
 
 def _have_credentials(provider: str) -> bool:
@@ -1447,7 +1451,36 @@ def _run_case(
         facts_by_doc,
         structured_fares_by_agency,
     )
+    # A case whose supporting document the operator has disabled was never
+    # given the evidence it was written against: `answer.answer_question`
+    # fails closed on a disabled source (the containment path added by
+    # "restore rider trust boundaries"), so the assistant returns the
+    # no-support message no matter how good it is. Scoring that as a failure
+    # measures the source policy, not the assistant. Record it as *not
+    # applicable* under this source policy, keep the trace, and spend no judge
+    # tokens on a verdict that cannot mean anything. When the source is
+    # reviewed and re-enabled the case returns to the denominator by itself.
+    disabled_sources = sorted(
+        flag.split(":", 1)[1] for flag in result.guard_flags if flag.startswith("source_disabled:")
+    )
     verdicts = []
+    if disabled_sources:
+        record = _case_record(
+            case,
+            question=question,
+            result=result,
+            checks=checks,
+            verdicts=verdicts,
+            answer_models_served=answer_models_served,
+            passed=False,
+        )
+        record["not_applicable"] = True
+        record["not_applicable_reason"] = "source_disabled:" + ",".join(disabled_sources)
+        usage["answer"][0] += result.input_tokens
+        usage["answer"][1] += result.output_tokens
+        usage["answer"][2] += result.cache_creation_input_tokens
+        usage["answer"][3] += result.cache_read_input_tokens
+        return record, usage
     if run_judges:
         if case["expected_behavior"] in ("answer", "partial") and result.kind == "answered":
             verdicts.append(
@@ -1475,14 +1508,38 @@ def _run_case(
     usage["answer"][1] += result.output_tokens
     usage["answer"][2] += result.cache_creation_input_tokens
     usage["answer"][3] += result.cache_read_input_tokens
-    if result.model:
-        answer_models_served.add(result.model)
     for v in verdicts:
         usage["judge"][0] += v.input_tokens
         usage["judge"][1] += v.output_tokens
         usage["judge"][2] += v.cache_creation_input_tokens
         usage["judge"][3] += v.cache_read_input_tokens
-    record = {
+    record = _case_record(
+        case,
+        question=question,
+        result=result,
+        checks=checks,
+        verdicts=verdicts,
+        answer_models_served=answer_models_served,
+        passed=passed,
+    )
+    return record, usage
+
+
+def _case_record(
+    case: dict,
+    *,
+    question: str,
+    result,
+    checks,
+    verdicts,
+    answer_models_served: set[str],
+    passed: bool,
+) -> dict:
+    """The trace record for one scored case. Shared by the scored path and the
+    not-applicable (disabled-source) path so both write the same shape."""
+    if result.model:
+        answer_models_served.add(result.model)
+    return {
         "case_id": case["id"],
         "suite": case["suite"],
         "pair_id": case.get("pair_id"),
@@ -1521,7 +1578,6 @@ def _run_case(
         "judge_models_served": sorted({v.model for v in verdicts if v.model}),
         "passed": passed,
     }
-    return record, usage
 
 
 def run(
@@ -1958,6 +2014,7 @@ def _run_resolved(
     # path, so results.jsonl is stable run to run for the same case set.
     reused_by_id = {r["case_id"]: r for r in reused}
     records = []
+    not_applicable: list[dict[str, str]] = []
     for case in ordered_cases:
         if case["id"] in fresh_by_id:
             record, case_usage, passes = fresh_by_id[case["id"]]
@@ -1982,6 +2039,20 @@ def _run_resolved(
         )
         records.append(record)
         t = totals.setdefault(case["suite"], {"passed": 0, "total": 0})
+        if record.get("not_applicable"):
+            # Out of the denominator, never silently: the case is counted and
+            # named under `not_applicable` in the summary so a reader can see
+            # exactly how much of the suite this run did not measure.
+            t["not_applicable"] = t.get("not_applicable", 0) + 1
+            not_applicable.append(
+                {
+                    "case_id": case["id"],
+                    "suite": case["suite"],
+                    "reason": record.get("not_applicable_reason", ""),
+                }
+            )
+            print(f"N/A   {case['id']}  ({record.get('not_applicable_reason', '')})")
+            continue
         t["total"] += 1
         # Count a case as passed by majority vote across replicates (== the
         # single pass at N=1), so passed/total stays interpretable.
@@ -2003,6 +2074,11 @@ def _run_resolved(
     cache.save()
 
     def _suite_entry(name: str, t: dict[str, int]) -> dict:
+        # A suite every one of whose cases was withheld by the source policy has
+        # no measured rate. Report it as null rather than inventing 0% (which
+        # reads as "the assistant failed") or 100% (which reads as "verified").
+        if not t["total"]:
+            return {**t, "pass_rate": None}
         entry = {**t, "pass_rate": round(100 * t["passed"] / t["total"], 1)}
         if replicates > 1:
             # Report the mean pass rate over all replicate trials and its Wilson
@@ -2020,6 +2096,8 @@ def _run_resolved(
         "passed": sum(t["passed"] for t in totals.values()),
         "total": sum(t["total"] for t in totals.values()),
     }
+    if not_applicable:
+        total_summary["not_applicable"] = len(not_applicable)
     summary: dict[str, object] = {
         "run_id": run_dir.name,
         "run_at": _rfc3339_utc(started_at),
@@ -2059,6 +2137,14 @@ def _run_resolved(
         },
         "suites": suite_summary,
         "total": total_summary,
+        # Cases the run could not measure because the operator has disabled the
+        # source they depend on. Named individually: this is a coverage hole,
+        # and a coverage hole that is only a number is one nobody chases down.
+        "not_applicable": {
+            "count": len(not_applicable),
+            "reasons": sorted({na["reason"] for na in not_applicable}),
+            "cases": not_applicable,
+        },
     }
     if replicates > 1:
         summary["replicates"] = replicates
@@ -2081,6 +2167,15 @@ def _run_resolved(
     _write_summary(run_dir, summary)
 
     print(f"\n{total_summary['passed']}/{total_summary['total']} passed → {run_dir}")
+    if not_applicable:
+        by_reason: dict[str, int] = {}
+        for na in not_applicable:
+            by_reason[na["reason"]] = by_reason.get(na["reason"], 0) + 1
+        detail = ", ".join(f"{r} ({n})" for r, n in sorted(by_reason.items()))
+        print(
+            f"{len(not_applicable)} case(s) not applicable under the active source "
+            f"policy and excluded from the denominator: {detail}"
+        )
     return run_dir
 
 
@@ -2354,11 +2449,11 @@ def parity_delta(records: list[dict], suite: str = PARITY_SUITE) -> dict | None:
     complete pair exists, so partial runs skip the gate loudly rather than
     tripping on noise.
     """
-    by_id = {r["case_id"]: r for r in records}
+    by_id = {r["case_id"]: r for r in records if not r.get("not_applicable")}
     pairs = [
         (r, by_id[r["mirror_of"]])
         for r in records
-        if r["suite"] == suite and r.get("mirror_of") in by_id
+        if r["suite"] == suite and not r.get("not_applicable") and r.get("mirror_of") in by_id
     ]
     if not pairs:
         return None
@@ -2399,7 +2494,13 @@ def suites_below_macro(suites: dict, threshold: float = MACRO_THRESHOLD_PP) -> d
     Returns {suite: {"pass_rate", "macro", "floor"}} for each offender; floors
     are compared unrounded and rounded only for display.
     """
-    gated = {n: s for n, s in suites.items() if not n.startswith(_STRETCH_PREFIX)}
+    # A suite with no measured rate (every case withheld by the source policy)
+    # carries no signal and must not drag the macro mean down as if it were 0%.
+    gated = {
+        n: s
+        for n, s in suites.items()
+        if not n.startswith(_STRETCH_PREFIX) and s.get("pass_rate") is not None
+    }
     if not gated:
         return {}
     macro = sum(s["pass_rate"] for s in gated.values()) / len(gated)
@@ -2480,6 +2581,62 @@ def stale_annotations(suites: dict, notes: dict[str, str]) -> list[str]:
         for name in sorted(notes)
         if name in suites and name not in offenders
     ]
+
+
+# The share of a run that may be withheld by the source policy before the run
+# stops being an evaluation of the product. Excluding a handful of cases whose
+# source is under review is honest bookkeeping; excluding a fifth of the suite
+# and still calling the remainder a promotion gate is not.
+COVERAGE_NOT_APPLICABLE_CEILING = 0.15
+
+
+def coverage_problems(summary: Mapping[str, object]) -> list[str]:
+    """Findings for the coverage gate; empty is clean.
+
+    The not-applicable mechanism exists so a deliberately contained source does
+    not read as an assistant failure. It must never become a way to make a
+    failing gate pass by disabling whatever the suite is unhappy about, so the
+    escape hatch is itself bounded and the bound is enforced here.
+    """
+    na = summary.get("not_applicable") or {}
+    assert isinstance(na, Mapping)
+    withheld = int(na.get("count", 0) or 0)
+    if not withheld:
+        return []
+    total = summary.get("total") or {}
+    assert isinstance(total, Mapping)
+    measured = int(total.get("total", 0) or 0)
+    considered = measured + withheld
+    if not considered:
+        return []
+    share = withheld / considered
+    if share <= COVERAGE_NOT_APPLICABLE_CEILING:
+        return []
+    reasons = ", ".join(str(r) for r in (na.get("reasons") or []))
+    return [
+        f"{withheld}/{considered} cases ({share:.1%}) were withheld by the active "
+        f"source policy, above the {COVERAGE_NOT_APPLICABLE_CEILING:.0%} ceiling — "
+        f"the run no longer covers enough of the product to gate a release "
+        f"({reasons}). Restore the source, or re-scope the suite."
+    ]
+
+
+def check_coverage(run_dir: Path) -> None:
+    """Fail (exit 1) when the source policy has hollowed out the run.
+
+    Only a full run gates a release, so only a full run is held to the ceiling.
+    A `--suite` subset concentrates whatever it is about — `--suite conversation`
+    is 30% Yolobus — and failing it for that would report the subset's shape as
+    a coverage problem. The withheld cases are still counted and named in every
+    mode; what a subset does not do is block on them.
+    """
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    if summary.get("mode") != "full":
+        return
+    problems = coverage_problems(summary)
+    if problems:
+        print("COVERAGE GATE:\n  " + "\n  ".join(problems), file=sys.stderr)
+        raise SystemExit(1)
 
 
 def check_parity(run_dir: Path, *, require_complete: bool = False) -> None:
@@ -2685,6 +2842,7 @@ def main() -> None:
         # Parity is within-run (ES vs mirrored EN of the same run), so unlike the
         # baseline regression gate it applies even when the baseline is being
         # deliberately re-set — a re-baseline must not silence an equity gap.
+        check_coverage(run_dir)
         check_parity(run_dir, require_complete=args.promotion)
         if args.update_baseline:
             update_baseline(run_dir)
