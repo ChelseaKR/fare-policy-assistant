@@ -78,10 +78,18 @@ jobs:
             echo "These manifest URLs did not answer. The refresh kept everything else."
             echo
             echo '```'
-            python -c 'import json;[print(f"{f[\"doc_id\"]}: {f[\"error\"]}") for f in json.load(open("corpus/raw/fetch-failures.json"))["failed"]]'
+            python -c '
+          import json
+          for f in json.load(open("corpus/raw/fetch-failures.json"))["failed"]:
+              print(f["doc_id"] + ": " + f["error"])
+          '
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          python -c 'import json;[print(f"::warning title=corpus source unreachable::{f[\"doc_id\"]}: {f[\"error\"]}") for f in json.load(open("corpus/raw/fetch-failures.json"))["failed"]]'
+          python -c '
+          import json
+          for f in json.load(open("corpus/raw/fetch-failures.json"))["failed"]:
+              print("::warning title=corpus source unreachable::" + f["doc_id"] + ": " + f["error"])
+          '
 
       # Key the change decision on corpus_version, not a raw `git diff -- corpus/`:
       # furniture-only churn that leaves the policy text intact opens nothing. On a
