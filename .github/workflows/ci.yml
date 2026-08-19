@@ -40,7 +40,7 @@ jobs:
         with:
           enable-cache: true
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
       - name: Lint
         run: uv run ruff check src tests evals web
       - name: Format check
@@ -85,7 +85,7 @@ jobs:
       # G2-lite (POT committed & current), G7 (msgfmt --check), G6/G5 (EN/ES
       # key-parity + completeness + placeholder parity), G3 (BCP 47 validity).
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
       - name: Install gettext (msgfmt)
         run: sudo apt-get update && sudo apt-get install -y gettext
       - name: i18n catalog gate (make i18n)
@@ -119,7 +119,7 @@ jobs:
         with:
           enable-cache: true
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
       # `/offline`, `/guide`, and `/embed` are generated from the committed
       # corpus and a module constant — no network, no model call, no
       # credentials — so they render here exactly as they are served. Emitting
@@ -167,7 +167,7 @@ jobs:
         with:
           enable-cache: true
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
       - name: Prove evaluator gates catch planted defects offline
         run: make eval-selftest
 
@@ -194,7 +194,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
       - name: Restore the answer/judge model cache
         # The cache is content-keyed on the *rendered* system and user prompts
         # (evals/cache.py), so a hit is only possible when the prompt bytes,

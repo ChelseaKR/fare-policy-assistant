@@ -83,7 +83,7 @@ jobs:
       - name: Lockfile drift check
         # Fails if uv.lock is stale relative to pyproject.toml (CQ-09) before
         # auditing a lockfile that might not even describe what CI installs.
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
       - name: Export locked dependencies (excluding the root project itself)
         # pip-audit resolves every audited name against PyPI; the root project
         # itself (fare-policy-assistant) is not published there and would be
