@@ -262,6 +262,39 @@ def _is_application_passage(chunk: Chunk) -> bool:
     return bool(_APPLICATION_PASSAGE.search(f"{chunk.section} {chunk.text}"))
 
 
+# Eligibility-criterion "close the loop" (issue #150/#138): the chunk that
+# states an agency's actual age/eligibility cutoff is often short and
+# term-sparse next to the same agency's "how to pay" / "ways to pay" / pass
+# chunks, which repeat fare, discount, and payment vocabulary densely and
+# routinely outrank it on BM25 — sometimes out of the *entire* per-agency
+# top_k, not just a multi-agency quota. Reproduced offline: for "I'm 70 years
+# old. What senior discount do I get on AC Transit, and how do I pay for it?"
+# scoped to AC Transit alone (top_k=8, no quota split), actransit-discounts#1
+# ("Riders aged 65 and older ... eligible for Senior/Disabled fares") ranks
+# 10th; six lower-signal chunks about passes, Clipper START, and payment
+# methods rank above it. On a two-agency comparison the same chunk additionally
+# has to survive the per-agency quota (xagency-actransit-001), compounding the
+# problem. Patterns below are grounded in the corpus's own phrasings (grep of
+# corpus/processed/*.md): "aged 65 and older", "age 65 or older", "62+",
+# "age 80 and above are eligible", "years of age or older".
+_ELIGIBILITY_CRITERION = re.compile(
+    # "+" endings never take a trailing \b: "+" is itself non-word, so when
+    # it is followed by whitespace or a line break (the common case, e.g.
+    # "65+\nValid Medicare Card..."), both sides of that position are
+    # non-word and \b never asserts there. Verified against a live corpus
+    # miss ("65+\n" in soltrans-fare-table#2) before landing.
+    r"\bage[ds]?\s*\d{2}\s*\+"
+    r"|\bage[ds]?\s*\d{2}\s*(and\s+(older|above|up)|or\s+(older|above))\b"
+    r"|\b\d{2}\s*\+"
+    r"|\byears?\s*(of\s+age\s*)?(and|or)\s*(older|up|above)\b",
+    re.I,
+)
+
+
+def _is_eligibility_criterion_passage(chunk: Chunk) -> bool:
+    return bool(_ELIGIBILITY_CRITERION.search(f"{chunk.section} {chunk.text}"))
+
+
 _RIDER_CLASS_PATTERNS = {
     "veteran": re.compile(r"\b(veteran\w*|veteran[oa]s?)\b", re.I),
     "senior": re.compile(
@@ -382,7 +415,51 @@ class Retriever:
             or _application_matches_question(question, sc.chunk)
         ]
         results = self._close_the_loop(question, agencies, results, ranked)
+        results = self._ensure_eligibility_passage(question, agencies, results, ranked)
         return self._ensure_child_fare_passage(question, agencies, results, ranked)
+
+    def _ensure_eligibility_passage(
+        self,
+        question: str,
+        agencies: list[str],
+        results: list[ScoredChunk],
+        ranked: list[ScoredChunk],
+    ) -> list[ScoredChunk]:
+        """Issue #150/#138: on a reduced-fare/eligibility query, make sure the
+        agency's own age/eligibility-criterion passage survives — not just its
+        application/where-to-apply passage (that's `_close_the_loop`'s job).
+        The criterion chunk is often short and term-sparse next to the same
+        agency's payment-method chunks ("Ways to Pay", "Token Transit"), which
+        repeat fare/discount/payment vocabulary densely and routinely outrank
+        it on BM25, sometimes out of the per-agency top_k entirely — and on a
+        multi-agency question, the per-agency quota (`search()` above)
+        compounds it further. Mirrors `_close_the_loop` exactly: append at
+        most one best-ranked criterion passage per relevant agency, never
+        remove anything."""
+        if not _is_reduced_fare_query(question):
+            return results
+        targets = list(agencies)
+        if not targets and results:
+            targets = [results[0].chunk.agency]
+        present = {sc.chunk.chunk_id for sc in results}
+        additions: list[ScoredChunk] = []
+        for ag in targets:
+            has_criterion = any(
+                _is_eligibility_criterion_passage(sc.chunk)
+                for sc in results
+                if sc.chunk.agency == ag
+            )
+            if has_criterion:
+                continue  # the agency's own criterion passage is already in hand
+            for sc in ranked:
+                if (
+                    sc.chunk.agency == ag
+                    and sc.chunk.chunk_id not in present
+                    and _is_eligibility_criterion_passage(sc.chunk)
+                ):
+                    additions.append(sc)
+                    break
+        return results + additions
 
     def _ensure_child_fare_passage(
         self,

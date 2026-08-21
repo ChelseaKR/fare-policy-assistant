@@ -30,6 +30,36 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Fixed a retrieval bug behind two of #138's nine named cross_agency
+  failures (#150): an agency's own age/eligibility-criterion passage could
+  be crowded out of retrieval by that same agency's payment-method chunks.**
+  Reproduced offline against the real corpus: for a plain single-agency
+  question ("I'm 70 years old. What senior discount do I get on AC Transit,
+  and how do I pay for it?"), `actransit-discounts#1` ("Riders aged 65 and
+  older ... eligible for Senior/Disabled fares") ranked outside AC Transit's
+  own `top_k=8` entirely — six chunks about passes, Clipper START, and "Ways
+  to Pay on Tempo" outrank the short criterion sentence on BM25 because they
+  repeat fare/discount/payment vocabulary more densely. On a two-agency
+  comparison (`xagency-actransit-001`) the per-agency retrieval quota
+  compounds the same crowding. `Retriever._ensure_eligibility_passage`
+  (`src/assistant/retrieve.py`) mirrors the existing `_close_the_loop`
+  companion-passage pattern: on a reduced-fare/eligibility query, append the
+  best-ranked age/eligibility-criterion passage per named agency if it fell
+  out of the retrieved set, the same way `_close_the_loop` already does for
+  the where-to-apply passage. Verified two ways: seven new `tests/test_retrieve.py`
+  cases pin the exact reproduction, and the project's own offline retrieval-recall
+  method (`evals/retrieval_ablation.py`'s approach, run manually across all 333
+  eval cases with `required_facts`) went from 309/333 to 313/333 with zero new
+  misses — a strictly non-regressive improvement (the extra 4 beyond the two
+  targeted cases came from a regex fix needed along the way: `\d{2}\s*\+\b`
+  never matches "65+" followed by whitespace or a newline, since neither side
+  of that position is a word character, so `\b` cannot assert there).
+  `xagency-010` (the corpus-wide Clipper-participant enumeration question,
+  also in #150) is untouched — its question names no agency and matches none
+  of the reduced-fare trigger vocabulary, so this companion step never runs
+  for it; #150 already flags it as a design decision (retrieval strategy for
+  enumerative questions vs. a documented decline) rather than a retrieval bug,
+  and this change does not resolve or presume that decision.
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"
