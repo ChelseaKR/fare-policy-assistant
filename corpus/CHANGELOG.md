@@ -322,3 +322,52 @@ County Connection, San Joaquin RTD, AC Transit, WestCAT, SLO RTA, VTA, the
 Vine, and SamTrans landed first, and `make ingest` over the full
 eighteen-agency union re-stamped this heading, as the 2026-08-12/13
 additions did.
+
+## 10deac978967 (2026-08-21)
+
+Re-fetched all three Yolobus documents together: `yolobus-fares`,
+`yolobus-purchasing`, `yolobus-reduced-fare-id`. No fare amount changed
+(630 fare facts before and after, byte-identical `facts.jsonl`) and no
+agency was added or removed; this is a same-agency coherence fix.
+
+`yolobus-fares` was refreshed on its own by #114 (2026-08-12,
+corpus_version 74b05330cb39), rolling the fare period to July 2026-June
+2027 and updating the Yolobus Customer Service Center's hours to Mon-Fri
+7:00 am-7:00 pm / Sat 9:00 am-3:00 pm. `yolobus-purchasing` and
+`yolobus-reduced-fare-id` were not refreshed in that PR and kept the
+retired Mon-Thu 9am-noon/1-4pm hours, the old Yolo Transportation District
+street address, and the old office phone number — the exact
+same-agency-contradicts-itself failure mode PR #117 (opened independently,
+same day, and closed as superseded by #114 without merging) warned about:
+a rider asking where to get a reduced-fare ID would be told hours the
+office no longer keeps.
+
+Live-refetched 2026-08-21 with the project's own tooling
+(`assistant.ingest fetch yolobus-fares yolobus-purchasing
+yolobus-reduced-fare-id`, then `assistant.ingest process`), from a
+residential network. Re-processing reproduced byte-identical chunks for
+every one of the other fifty non-Yolobus documents.
+
+What changed on the two previously-unrefreshed pages, both now matching
+`yolobus-fares`'s hours:
+
+| | Before | After |
+|---|---|---|
+| YTD office address | 350 Industrial Way, Woodland | 352 Industrial Way, Woodland |
+| YTD office phone | (530) 661-0816 | (530) 666-BUSS (2877) |
+| Customer service hours | Mon-Thu 9:00 am-Noon, 1:00-4:00 pm | Mon-Fri 7:00 am-7:00 pm, Sat 9:00 am-3:00 pm |
+
+`yolobus-fares` itself moved one more line since its 2026-08-12 fetch: the
+unlimited-ride pass table dropped the "UC Davis Zip Pass" row entirely
+(previously listed as accepted with a valid student ID). Yolobus's own
+zippass page has said the app is discontinued since before that date, so
+this is the site's self-contradiction resolving itself, not a new one.
+`evals/suites/freshness.yaml::fresh-020` was written against that
+contradiction and is flagged in place (not rewritten) as a case whose
+tested premise may no longer hold — see the comment on the case.
+
+Two eval cases updated to match, since their required facts were the
+retired hours/address rather than the policy the case exists to test:
+`edge_cases::edge-034` (rationale only; its required_facts already matched
+coincidentally) and `edge_cases::edge-047` (required_facts: `350 Industrial
+Way` to `352 Industrial Way`).
