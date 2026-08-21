@@ -30,6 +30,24 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Widened passage provenance in `results.jsonl`, the human relabeling
+  worksheet, and the report's failure traces (#142).** Until now the judge
+  saw a passage's `(source: …, fetched …)` header (fixed 2026-08-16 for
+  `fresh-001`) but two other renderers of the same retrieved passages did
+  not: `evals/calibration.py::_passages_block` (what `make relabel` shows a
+  human reviewer) and `evals/report.py`'s "Retrieved passages" block in
+  `EVALS.md`/the HTML report. Both read from the `passages` array persisted
+  in `results.jsonl` by `evals/runner.py`, which only ever carried
+  `chunk_id`/`section`/`score`/`text` — the dates were never recorded, so no
+  amount of template editing in the two renderers could have shown them.
+  `results.jsonl` now also records `doc_id`, `agency`, `doc_title`, `url`,
+  and `fetch_date` per passage; both renderers show them. Without this, a
+  reviewer working the judge-calibration worksheet (#143) would be asked to
+  judge a dated freshness claim against undated passages — the exact
+  condition that produced the wrong judge verdict on `fresh-001` — and a
+  human agreeing with a wrong verdict for the same missing-provenance reason
+  would not calibrate anything. Landed ahead of the labeling pass, per #142's
+  own note ("do this before the 37 rows are labeled, not after").
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"
