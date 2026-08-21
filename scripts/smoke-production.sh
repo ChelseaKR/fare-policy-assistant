@@ -18,6 +18,8 @@
 # the narrowly scoped legacy mode; there is no implicit production fallback.
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 DEFAULT_ASSISTANT_BASE_URL="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com"
 DEFAULT_EVIDENCE_BASE_URL="https://evals.chelseakr.com"
 
@@ -464,15 +466,28 @@ if [[ "$CHECK_EVIDENCE" == "true" ]]; then
 fi
 
 # Every public, read-only rider entrypoint.
+#
+# The Yolobus containment checks below assert against a marker sentence
+# derived from the corpus at HEAD (scripts/yolobus_fare_period_marker.py)
+# rather than a hand-written fare-period literal. A literal like "All below
+# fares are effective July 1, 2025" breaks every time Yolobus republishes its
+# fares page -- it already has twice -- and a marker that matches no text in
+# the corpus cannot match a page rendered from that corpus, so a stale
+# literal makes this check pass whether or not the document is actually
+# exposed (issue #145). Computed once and reused for both pages.
+YOLOBUS_MARKER=""
+if requires_disabled_document "yolobus-fares"; then
+  YOLOBUS_MARKER="$(cd "$ROOT" && uv run python scripts/yolobus_fare_period_marker.py)" \
+    || fail "could not derive the Yolobus containment marker from corpus/processed/chunks.jsonl"
+fi
+
 check_assistant_html "/" "Transit Fare Policy Assistant"
 check_assistant_html "/offline" "Offline fare reference"
-if requires_disabled_document "yolobus-fares" \
-  && grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
+if [[ -n "$YOLOBUS_MARKER" ]] && grep -Fq "$YOLOBUS_MARKER" "$LAST_BODY"; then
   fail "assistant /offline exposes the contained Yolobus fare period"
 fi
 check_assistant_html "/guide" "Which fare applies to me?"
-if requires_disabled_document "yolobus-fares" \
-  && grep -Fq "All below fares are effective July 1, 2025" "$LAST_BODY"; then
+if [[ -n "$YOLOBUS_MARKER" ]] && grep -Fq "$YOLOBUS_MARKER" "$LAST_BODY"; then
   fail "assistant /guide exposes the contained Yolobus fare period"
 fi
 check_assistant_html "/embed" "Transit fare policy assistant" true

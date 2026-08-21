@@ -46,6 +46,91 @@ rather than tied to a published tag.
   public link was touched — republishing either needs a real promotable run,
   which needs the cross_agency regression addressed and a paid live pass,
   both outside what a documentation fix can do.
+- **Fixed `scripts/smoke-production.sh`'s Yolobus containment assertion,
+  which could no longer fire (#145).** It proved the contained
+  `yolobus-fares` document was not exposed on `/offline` and `/guide` by
+  grepping for the literal "All below fares are effective July 1, 2025" —
+  wording PR #114 replaced on 2026-08-13 when it ingested the 2026-2027 fare
+  page. A marker that matches no text in the corpus cannot match a page
+  rendered from that corpus, so the check reported success whether or not
+  the document was actually exposed, on every run since. `tests/test_web.py`
+  hit the identical failure mode in the unit suite and was fixed the same day
+  by deriving the marker from `chunks.jsonl` at runtime instead of hardcoding
+  it; the shell script did not get the same treatment, and nothing in CI
+  exercises it to have caught that.  New `scripts/yolobus_fare_period_marker.py`
+  does the same derivation for the shell script: the shortest sentence unique
+  to `yolobus-fares` among all corpus chunks (excluding markdown table rows
+  and split-mid-abbreviation fragments), verified to actually render on both
+  `/offline` and `/guide`. A new integration test
+  (`tests/test_smoke_production.py::test_offline_page_leaking_the_contained_yolobus_marker_fails_the_smoke_check`)
+  derives the real current marker, injects it into a fake leaking `/offline`
+  response, and asserts the smoke script actually fails — closing the gap
+  where the existing fake-curl fixture could never have exercised this branch
+  either way, since its stub bodies never carried real corpus text.
+- **Widened passage provenance in `results.jsonl`, the human relabeling
+  worksheet, and the report's failure traces (#142).** Until now the judge
+  saw a passage's `(source: …, fetched …)` header (fixed 2026-08-16 for
+  `fresh-001`) but two other renderers of the same retrieved passages did
+  not: `evals/calibration.py::_passages_block` (what `make relabel` shows a
+  human reviewer) and `evals/report.py`'s "Retrieved passages" block in
+  `EVALS.md`/the HTML report. Both read from the `passages` array persisted
+  in `results.jsonl` by `evals/runner.py`, which only ever carried
+  `chunk_id`/`section`/`score`/`text` — the dates were never recorded, so no
+  amount of template editing in the two renderers could have shown them.
+  `results.jsonl` now also records `doc_id`, `agency`, `doc_title`, `url`,
+  and `fetch_date` per passage; both renderers show them. Without this, a
+  reviewer working the judge-calibration worksheet (#143) would be asked to
+  judge a dated freshness claim against undated passages — the exact
+  condition that produced the wrong judge verdict on `fresh-001` — and a
+  human agreeing with a wrong verdict for the same missing-provenance reason
+  would not calibrate anything. Landed ahead of the labeling pass, per #142's
+  own note ("do this before the 37 rows are labeled, not after").
+- **Fixed a retrieval bug behind two of #138's nine named cross_agency
+  failures (#150): an agency's own age/eligibility-criterion passage could
+  be crowded out of retrieval by that same agency's payment-method chunks.**
+  Reproduced offline against the real corpus: for a plain single-agency
+  question ("I'm 70 years old. What senior discount do I get on AC Transit,
+  and how do I pay for it?"), `actransit-discounts#1` ("Riders aged 65 and
+  older ... eligible for Senior/Disabled fares") ranked outside AC Transit's
+  own `top_k=8` entirely — six chunks about passes, Clipper START, and "Ways
+  to Pay on Tempo" outrank the short criterion sentence on BM25 because they
+  repeat fare/discount/payment vocabulary more densely. On a two-agency
+  comparison (`xagency-actransit-001`) the per-agency retrieval quota
+  compounds the same crowding. `Retriever._ensure_eligibility_passage`
+  (`src/assistant/retrieve.py`) mirrors the existing `_close_the_loop`
+  companion-passage pattern: on a reduced-fare/eligibility query, append the
+  best-ranked age/eligibility-criterion passage per named agency if it fell
+  out of the retrieved set, the same way `_close_the_loop` already does for
+  the where-to-apply passage. Verified two ways: seven new `tests/test_retrieve.py`
+  cases pin the exact reproduction, and the project's own offline retrieval-recall
+  method (`evals/retrieval_ablation.py`'s approach, run manually across all 333
+  eval cases with `required_facts`) went from 309/333 to 313/333 with zero new
+  misses — a strictly non-regressive improvement (the extra 4 beyond the two
+  targeted cases came from a regex fix needed along the way: `\d{2}\s*\+\b`
+  never matches "65+" followed by whitespace or a newline, since neither side
+  of that position is a word character, so `\b` cannot assert there).
+  `xagency-010` (the corpus-wide Clipper-participant enumeration question,
+  also in #150) is untouched — its question names no agency and matches none
+  of the reduced-fare trigger vocabulary, so this companion step never runs
+  for it; #150 already flags it as a design decision (retrieval strategy for
+  enumerative questions vs. a documented decline) rather than a retrieval bug,
+  and this change does not resolve or presume that decision.
+- **CQ-05: turned on ruff's C90 (mccabe complexity) at `max-complexity = 10`,
+  the standard's own gate, instead of leaving it off.** Draft PR #89 tried to
+  land this with an in-place refactor in July; by the time issue #137 measured
+  it in August the branch was 54 commits behind main, its own six-file
+  refactor no longer cleared the gate against the current tree (11 residual
+  violations in files it never touched), and the corpus/prompt surface it
+  restructured had grown functions the branch predated. Closed as stale
+  rather than force a rebase that would have re-derived the refactor blind.
+  This lands the gate itself first, per #137's phased plan: `C90` is selected
+  and enforced repo-wide today, with a per-file `[tool.ruff.lint.per-file-ignores]`
+  ceiling holding the 44 functions currently over 10 (one file, one entry
+  each) so the rule blocks *new* complexity immediately without a large,
+  risky single-PR refactor. Retiring the ignore list is follow-up work,
+  biggest offender first (`evals/runner.py::_run_resolved` at 49, a third of
+  the debt by itself and the function the eval harness's correctness rests
+  on — worth doing carefully and alone, not blocked on this PR).
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"

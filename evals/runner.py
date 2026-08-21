@@ -1564,9 +1564,22 @@ def _case_record(
         "cache_read_input_tokens": result.cache_read_input_tokens,
         "raw_model_answer": result.raw_model_answer,
         "citations": [asdict(c) for c in result.citations],
+        # doc_id/agency/doc_title/url/fetch_date (issue #142): the human
+        # relabeling worksheet and the report's failure traces are both
+        # rendered from this persisted record, not from the live AnswerResult,
+        # so a reviewer checking a dated claim needs the same provenance line
+        # assistant.answer._format_passages puts in front of the answer model
+        # and evals.judges._passages_block puts in front of the judge. Without
+        # it, a reviewer sees the same undated passages that produced the
+        # fresh-001 judge miscalibration this worksheet exists to catch.
         "passages": [
             {
                 "chunk_id": sc.chunk.chunk_id,
+                "doc_id": sc.chunk.doc_id,
+                "agency": sc.chunk.agency,
+                "doc_title": sc.chunk.doc_title,
+                "url": sc.chunk.url,
+                "fetch_date": sc.chunk.fetch_date,
                 "section": sc.chunk.section,
                 "score": round(sc.score, 2),
                 "text": sc.chunk.text[:600],

@@ -142,6 +142,22 @@ cases:
       the Yolobus lesson in the opposite shape: there the committed range had
       expired, here there is no range to check.
   - id: fresh-020
+    # STALE PREMISE, left unedited on purpose (evaluation design decision, not
+    # a fact fix): the 2026-08-21 sibling-document refresh (see
+    # corpus/CHANGELOG.md) re-fetched yolobus-fares.md live and it no longer
+    # lists "UC Davis Zip Pass" among accepted passes at all. The
+    # self-contradiction this case exists to test — one Yolobus page retiring
+    # the app while another still lists it as valid fare media — appears to be
+    # resolved on Yolobus's own site. required_facts/forbidden_content below
+    # are untouched and still mechanically satisfiable (any retrieved passage
+    # citing a year, no affirmative-validity phrasing), so this is not a
+    # measured regression. But the rationale's factual premise ("lists 'UC
+    # Davis Zip Pass: with valid student ID' among accepted passes") is no
+    # longer true of the corpus, and whether this case should now test
+    # something else (a pass named in a *question* but absent from every
+    # retrieved passage — closer to a not-in-corpus refusal than a
+    # stale-but-fresh disclosure) is a reviewer call, not one to make silently
+    # inside an unrelated corpus-refresh PR.
     question: "Can I use a UC Davis Zip Pass on Yolobus?"
     agency_scope: Yolobus
     language: en
