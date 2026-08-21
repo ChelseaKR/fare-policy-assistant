@@ -60,6 +60,22 @@ rather than tied to a published tag.
   for it; #150 already flags it as a design decision (retrieval strategy for
   enumerative questions vs. a documented decline) rather than a retrieval bug,
   and this change does not resolve or presume that decision.
+- **CQ-05: turned on ruff's C90 (mccabe complexity) at `max-complexity = 10`,
+  the standard's own gate, instead of leaving it off.** Draft PR #89 tried to
+  land this with an in-place refactor in July; by the time issue #137 measured
+  it in August the branch was 54 commits behind main, its own six-file
+  refactor no longer cleared the gate against the current tree (11 residual
+  violations in files it never touched), and the corpus/prompt surface it
+  restructured had grown functions the branch predated. Closed as stale
+  rather than force a rebase that would have re-derived the refactor blind.
+  This lands the gate itself first, per #137's phased plan: `C90` is selected
+  and enforced repo-wide today, with a per-file `[tool.ruff.lint.per-file-ignores]`
+  ceiling holding the 44 functions currently over 10 (one file, one entry
+  each) so the rule blocks *new* complexity immediately without a large,
+  risky single-PR refactor. Retiring the ignore list is follow-up work,
+  biggest offender first (`evals/runner.py::_run_resolved` at 49, a third of
+  the debt by itself and the function the eval harness's correctness rests
+  on — worth doing carefully and alone, not blocked on this PR).
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"
