@@ -6,6 +6,7 @@ from assistant.retrieve import (
     _expand_query,
     _is_application_passage,
     _is_child_fare_query,
+    _is_eligibility_criterion_passage,
     _is_reduced_fare_query,
     detect_agencies,
     detect_agency,
@@ -202,3 +203,71 @@ class TestChildFareCompanion:
         # beyond ordinary ranking; the companion step stays silent.
         assert not _is_child_fare_query("What is the regular adult fare on SBMTD?")
         assert results  # sanity: ordinary retrieval still returns passages
+
+
+class TestEligibilityCriterionCompanion:
+    """Issue #150/#138: an agency's own age/eligibility-criterion passage must
+    survive even when the same agency's payment-method chunks ("Ways to Pay",
+    "Token Transit") outrank it on BM25. Reproduced against the real corpus:
+    actransit-discounts#1 ("Riders aged 65 and older ... eligible for
+    Senior/Disabled fares") ranks outside AC Transit's own top 8 on a plain
+    single-agency query, and outside its multi-agency quota on a two-agency
+    comparison — in both cases behind chunks about passes, Clipper START, and
+    payment methods that share more surface vocabulary with "senior discount"
+    and "pay" than the short criterion sentence does."""
+
+    @pytest.fixture
+    def corpus_retriever(self):
+        return Retriever(cfg=config.RetrievalConfig(use_dense=False))
+
+    def test_signal_matches_real_criterion_sections(self):
+        from assistant.ingest import load_chunks
+
+        by_id = {c.chunk_id: c for c in load_chunks()}
+        # "aged 65 and older"
+        assert _is_eligibility_criterion_passage(by_id["actransit-discounts#1"])
+        assert _is_eligibility_criterion_passage(by_id["soltrans-fare-table#2"])  # "65+" tier
+        # A payment-method passage that never states an age/eligibility cutoff
+        # is not a criterion passage, even though it mentions "senior" cards.
+        # "Ways to Pay on Tempo"
+        assert not _is_eligibility_criterion_passage(by_id["actransit-fares#7"])
+
+    def test_criterion_passage_appended_single_agency(self, corpus_retriever):
+        # Without the companion step this ranks outside AC Transit's own
+        # top_k=8: six payment/pass chunks outrank it on this exact wording.
+        results = corpus_retriever.search(
+            "I'm 70 years old. What senior discount do I get on AC Transit, "
+            "and how do I pay for it?",
+            agency="AC Transit",
+        )
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert "actransit-discounts#1" in ids
+        assert any("65" in sc.chunk.text for sc in results)
+
+    def test_criterion_passage_appended_per_agency_in_comparison(self, corpus_retriever):
+        # xagency-actransit-001: the per-agency quota on a two-agency
+        # comparison compounds the same crowding.
+        results = corpus_retriever.search(
+            "What age counts as a senior on AC Transit, and is it the same on SolTrans?"
+        )
+        ac_ids = [sc.chunk.chunk_id for sc in results if sc.chunk.agency == "AC Transit"]
+        assert "actransit-discounts#1" in ac_ids
+
+    def test_no_companion_appended_for_plain_fare_query(self, corpus_retriever):
+        results = corpus_retriever.search(
+            "What is the regular adult cash fare on AC Transit?", agency="AC Transit"
+        )
+        assert "actransit-discounts#1" not in [sc.chunk.chunk_id for sc in results]
+
+    def test_companion_not_duplicated_when_already_present(self, corpus_retriever):
+        results = corpus_retriever.search(
+            "Riders aged 65 and older discount on AC Transit", agency="AC Transit"
+        )
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert ids.count("actransit-discounts#1") <= 1
+
+    def test_does_not_pull_in_a_different_agencys_criterion(self, corpus_retriever):
+        # The companion is per-agency, scoped the same way _close_the_loop is:
+        # a Yolobus-only question must not gain an AC Transit chunk.
+        results = corpus_retriever.search("What age counts as a senior on Yolobus?")
+        assert all(sc.chunk.agency == "Yolobus" for sc in results)
