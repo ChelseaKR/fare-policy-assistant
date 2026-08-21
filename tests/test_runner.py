@@ -327,6 +327,14 @@ def test_offline_suite_run_writes_traces_and_scoreboard(tmp_runs):
     records = [json.loads(x) for x in (run_dir / "results.jsonl").read_text().splitlines()]
     assert len(records) == summary["suites"]["refusal"]["total"]
     assert all("checks" in r and "passages" in r for r in records)
+    # Issue #142: every persisted passage carries the provenance fields the
+    # calibration worksheet and report failure traces render, not just
+    # chunk_id/section/score/text.
+    assert any(r["passages"] for r in records), "sanity: at least one case retrieved something"
+    for r in records:
+        for p in r["passages"]:
+            assert {"doc_id", "agency", "doc_title", "url", "fetch_date"} <= p.keys()
+            assert p["doc_id"] and p["agency"] and p["url"] and p["fetch_date"]
     assert all("answer_models_served" in r and "judge_models_served" in r for r in records)
     assert all(
         r["run_context_version"] == summary["attestation"]["context_version"]

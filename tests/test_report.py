@@ -63,6 +63,41 @@ def test_offline_run_is_labeled():
 def test_variance_section_always_documents_the_tooling():
     md = generate_markdown(SUMMARY, RECORDS)
     assert "## Measuring variance" in md
+
+
+def test_failure_trace_shows_passage_provenance():
+    """Issue #142: an outside reader checking a dated claim in a failure trace
+    needs the same source/fetch-date provenance the answer model and judge
+    were shown, not just chunk id and score."""
+    records = [
+        {
+            "case_id": "fresh-999",
+            "suite": "groundedness",
+            "mirror_of": None,
+            "passed": False,
+            "question": "how much is the pass?",
+            "rationale": "fare table",
+            "answer": "no idea",
+            "kind": "answered",
+            "passages": [
+                {
+                    "chunk_id": "mst-fares#1",
+                    "doc_id": "mst-fares",
+                    "agency": "MST",
+                    "doc_title": "Fares",
+                    "url": "https://mst.org/fares/",
+                    "fetch_date": "2026-06-12",
+                    "section": "Fares",
+                    "score": 9.1,
+                    "text": "x" * 300,
+                }
+            ],
+            "checks": [],
+            "judges": [],
+        }
+    ]
+    md = generate_markdown(SUMMARY, records)
+    assert "Fares — Fares, score 9.1, fetched 2026-06-12" in md
     assert "--replicates" in md
     assert "evals.compare" in md
 
