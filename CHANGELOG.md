@@ -30,6 +30,22 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Stated the deployment lag above the fold instead of leaving a visitor to
+  discover it by asking the live assistant about an agency it's never heard
+  of (#139, #140).** The README's first sentence and its two public
+  entrypoint links did not say that either link was behind HEAD. Verified
+  live 2026-08-21: the deployed assistant's own `/version` endpoint reports
+  corpus_version `35ec70d6359d` and five agencies (HTA, MST, SBMTD, SacRT,
+  Yolobus), not the eighteen the README describes; the evidence hub's
+  `report.html` still opens "Generated from the run at
+  `2026-07-12T05:01:17+00:00`" with `cross_agency` at 3/3. Both gaps have the
+  same root cause, stated in the new paragraph: `infra/deploy.sh` requires a
+  promoted, full, live evaluation (ADR 0023) to deploy, and the nightly full
+  run has been red on `cross_agency` since the eighteen-agency expansion
+  (#138), so there is no fresher run to promote, deploy, or publish. Neither
+  public link was touched — republishing either needs a real promotable run,
+  which needs the cross_agency regression addressed and a paid live pass,
+  both outside what a documentation fix can do.
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"

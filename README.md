@@ -13,6 +13,25 @@ evaluate.
 **[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/)** ·
 [Evaluation report in the repository](EVALS.md)
 
+**Both public links above lag this repository's HEAD, and that gap is stated
+here rather than left for a visitor to discover by asking about an agency
+that isn't there** (#139, #140). The live assistant is pinned to
+corpus_version `35ec70d6359d` and serves five agencies — HTA, MST, SBMTD,
+SacRT, Yolobus, verified against its own `/version` endpoint — not the
+eighteen this README describes. `infra/deploy.sh` only promotes a build
+backed by a promoted, full, live evaluation (ADR 0023), and the nightly full
+run has been red on the `cross_agency` gate since the corpus's
+eighteen-agency expansion (#138), so there is currently no fresher run to
+promote and deploy. The evidence hub is further behind still: it serves the
+`2026-07-12` promoted run (201 cases, `cross_agency` 3/3) and has not been
+republished since, for the same reason — `scripts/build_evidence_site.py`
+refuses to publish evidence past its own freshness budget, so a rebuild with
+today's still-July-12 promoted evidence would fail that gate rather than
+quietly serve a report that claims to be current. The unpromoted picture —
+eighteen agencies, 385 cases, `cross_agency` currently well below floor — is
+in [EVALS.md](EVALS.md) and the nightly run artifact, not on either public
+link above.
+
 ## Status: Beta
 
 Deployed and evaluated (use the two public entrypoints above), but not
