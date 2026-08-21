@@ -286,7 +286,7 @@ cases:
     language: en
     expected_behavior: answer
     required_facts: ["re:\\$\\s?1\\.00", "Woodland", "re:9:00"]
-    rationale: "yolobus-reduced-fare-id: senior/disabled riders obtain a reduced fare photo ID at the Yolo Transportation District office, 350 Industrial Way, Woodland (Mon-Thu 9:00 AM-Noon, 1:00-4:00 PM). The fare answer must close the loop with the office and its hours, not just the $1.00 fare (yolobus-fares)."
+    rationale: "yolobus-reduced-fare-id: senior/disabled riders obtain a reduced fare photo ID at the Yolo Transportation District office, 352 Industrial Way, Woodland (Mon-Fri 7:00 AM-7:00 PM, Sat 9:00 AM-3:00 PM, refreshed 2026-08-21). The fare answer must close the loop with the office and its hours, not just the $1.00 fare (yolobus-fares)."
   - id: edge-035
     question: "How do I get the SBMTD Mobility Pass reduced-fare ID card, and what does a replacement cost?"
     agency_scope: SBMTD
@@ -410,9 +410,9 @@ cases:
     agency_scope: Yolobus
     language: en
     expected_behavior: answer
-    required_facts: ["re:350 Industrial Way", "re:9:00"]
+    required_facts: ["re:352 Industrial Way", "re:9:00"]
     requires_handoff: true
-    rationale: "yolobus-reduced-fare-id: the office is Yolo Transportation District, 350 Industrial Way, Woodland (Mon-Thu 9:00 AM-Noon, 1:00-4:00 PM). The 'last step' is where and when — both are in the passage (RR1, E6)."
+    rationale: "yolobus-reduced-fare-id: the office is Yolo Transportation District, 352 Industrial Way, Woodland (Mon-Fri 7:00 AM-7:00 PM, Sat 9:00 AM-3:00 PM). The 'last step' is where and when — both are in the passage (RR1, E6). Address, phone, and hours refreshed 2026-08-21 (was 350 Industrial Way / (530) 661-0816 / Mon-Thu 9-Noon,1-4; the office moved and expanded its hours — see corpus/CHANGELOG.md)."
 
   - id: edge-048
     question: "Where do I go in person to pick up an MST Courtesy Card application?"

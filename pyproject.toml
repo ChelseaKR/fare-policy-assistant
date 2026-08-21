@@ -57,7 +57,42 @@ target-version = "py312"
 extend-exclude = ["src/assistant/_vendor"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+# CQ-04/CQ-05: C90 (mccabe complexity) is on, gated at the standard's
+# max-complexity = 10. The per-file-ignores below are today's debt, not a
+# blanket exemption — see issue #137 and CHANGELOG for the retirement plan.
+select = ["E", "F", "I", "UP", "B", "C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# CQ-05 debt ceiling, frozen at the count measured in issue #137 (2026-08-15)
+# plus normal drift since. Retire file by file rather than widen; a file
+# dropped from this list must stay off it. `evals/runner.py::_run_resolved`
+# (49) is the single biggest offender and is called out in #137 as worth
+# doing on its own, carefully, since eval-run correctness rests on it.
+"evals/runner.py" = ["C901"]
+"tests/test_promotion_evidence.py" = ["C901"]
+"src/assistant/promotion_evidence.py" = ["C901"]
+"src/assistant/release_identity.py" = ["C901"]
+"src/assistant/gtfs.py" = ["C901"]
+"web/handler.py" = ["C901"]
+"web/console.py" = ["C901"]
+"src/assistant/snapshots.py" = ["C901"]
+"src/assistant/identity.py" = ["C901"]
+"src/assistant/corpus.py" = ["C901"]
+"evals/attestation.py" = ["C901"]
+"web/a11y.py" = ["C901"]
+"tests/test_build_evidence_site.py" = ["C901"]
+"src/assistant/i18n.py" = ["C901"]
+"evals/spanish_quality.py" = ["C901"]
+"evals/report.py" = ["C901"]
+"evals/plumbline_guard.py" = ["C901"]
+"evals/plumbline_export.py" = ["C901"]
+"evals/judges.py" = ["C901"]
+"evals/history.py" = ["C901"]
+"evals/checks.py" = ["C901"]
+"evals/calibration.py" = ["C901"]
 
 [tool.mypy]
 python_version = "3.12"

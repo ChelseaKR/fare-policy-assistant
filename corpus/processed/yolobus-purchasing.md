@@ -1,5 +1,5 @@
 # Purchasing a Ticket or Pass — Yolobus
-Source: https://yolobus.com/purchasing-a-ticket-or-pass/ (fetched 2026-06-12)
+Source: https://yolobus.com/purchasing-a-ticket-or-pass/ (fetched 2026-08-21)
 
 ## How to Pay
 
@@ -20,7 +20,8 @@ All Yolobus vehicles have fareboxes to accept cash payments. Exact change is req
 In-Person Ticket and Pass Sales
 The Yolobus Customer Service Center in Woodland offers transit fare sales and Connect Card services.
 Business Hours
-Monday through Thursday, excluding holidays 9am – 12pm; 1pm – 4pm
+Monday through Friday, excluding holidays 7:00 am – 7:00 pm
+Saturday 9:00 am – 3:00 pm
 Connect Card Services Offered
 Issue New or Replacement Connect Cards for all riders, including eligible Discount Riders (Seniors, Persons with Disabilities)
 Load Cash Value, Tickets, and/or Passes onto Connect Cards
