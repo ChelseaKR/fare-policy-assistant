@@ -112,6 +112,14 @@ else:
     }
     path = "/" + url.split("/", 3)[-1] if url.count("/") >= 3 else "/"
     body = f"<html><title>{markers[path]}</title></html>"
+    # Simulates a genuine containment leak: yolobus-fares stays in
+    # disabled_documents (containment is still required), but the page's
+    # rendered body somehow carries the contained document's own marker
+    # text anyway. FAKE_LEAK_PATHS names which page(s) leak.
+    leak_marker = os.environ.get("FAKE_LEAK_MARKER", "")
+    leak_paths = os.environ.get("FAKE_LEAK_PATHS", "").split(",")
+    if leak_marker and path in leak_paths:
+        body = f"<html><title>{markers[path]}</title><p>{leak_marker}</p></html>"
     response_headers = security
     if path != "/embed":
         response_headers.append("x-frame-options: DENY")
@@ -228,6 +236,52 @@ def test_explicit_empty_disabled_documents_skips_yolobus_containment(tmp_path):
     assert result.returncode == 0, result.stderr
     assert "Yolobus containment" not in result.stdout
     assert result.stdout.rstrip().endswith("smoke: PASS")
+
+
+def test_offline_page_leaking_the_contained_yolobus_marker_fails_the_smoke_check(tmp_path):
+    """Issue #145: the containment assertion must actually detect a leak, not
+    just pass on a fake body that was never going to contain the old literal
+    either. Derives the real marker the same way the script does, so this
+    test does not itself go stale the next time Yolobus republishes."""
+    from assistant import config as assistant_config
+
+    marker_script = assistant_config.REPO_ROOT / "scripts" / "yolobus_fare_period_marker.py"
+    marker = subprocess.run(
+        ["uv", "run", "python", str(marker_script)],
+        cwd=config.REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert marker  # sanity: a marker was actually derived
+
+    fake_bin = _install_fake_curl(tmp_path)
+    result = subprocess.run(
+        [
+            str(SMOKE_SCRIPT),
+            "--assistant-only",
+            "--assistant-base-url",
+            "http://assistant.test",
+            "--allow-legacy-release-identity",
+        ],
+        cwd=config.REPO_ROOT,
+        env={
+            **os.environ,
+            "LC_ALL": "C",
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            # yolobus-fares stays disabled (containment is still required);
+            # the page body leaks its marker anyway.
+            "FAKE_LEAK_MARKER": marker,
+            "FAKE_LEAK_PATHS": "/offline",
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "exposes the contained Yolobus fare period" in result.stderr
 
 
 def test_default_disabled_document_requirement_detects_missing_containment(tmp_path):

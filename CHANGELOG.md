@@ -30,6 +30,27 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Fixed `scripts/smoke-production.sh`'s Yolobus containment assertion,
+  which could no longer fire (#145).** It proved the contained
+  `yolobus-fares` document was not exposed on `/offline` and `/guide` by
+  grepping for the literal "All below fares are effective July 1, 2025" —
+  wording PR #114 replaced on 2026-08-13 when it ingested the 2026-2027 fare
+  page. A marker that matches no text in the corpus cannot match a page
+  rendered from that corpus, so the check reported success whether or not
+  the document was actually exposed, on every run since. `tests/test_web.py`
+  hit the identical failure mode in the unit suite and was fixed the same day
+  by deriving the marker from `chunks.jsonl` at runtime instead of hardcoding
+  it; the shell script did not get the same treatment, and nothing in CI
+  exercises it to have caught that.  New `scripts/yolobus_fare_period_marker.py`
+  does the same derivation for the shell script: the shortest sentence unique
+  to `yolobus-fares` among all corpus chunks (excluding markdown table rows
+  and split-mid-abbreviation fragments), verified to actually render on both
+  `/offline` and `/guide`. A new integration test
+  (`tests/test_smoke_production.py::test_offline_page_leaking_the_contained_yolobus_marker_fails_the_smoke_check`)
+  derives the real current marker, injects it into a fake leaking `/offline`
+  response, and asserts the smoke script actually fails — closing the gap
+  where the existing fake-curl fixture could never have exercised this branch
+  either way, since its stub bodies never carried real corpus text.
 - **Widened passage provenance in `results.jsonl`, the human relabeling
   worksheet, and the report's failure traces (#142).** Until now the judge
   saw a passage's `(source: …, fetched …)` header (fixed 2026-08-16 for
