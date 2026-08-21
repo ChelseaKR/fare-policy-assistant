@@ -30,6 +30,24 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Gave the below-macro parity gate (`suites_below_macro`, AIEV-10) a case
+  floor, closing #146 (ADR 0026).** On the 26-case smoke suite that runs on
+  every PR, the gate's 5-point tolerance was unsatisfiable by anything short
+  of a perfect run: the smallest gated suite (freshness) is 4 cases, so one
+  failure is a 25-point swing. Every red smoke push since 2026-08-10 was
+  exactly this — one case failing under ordinary judge variance, not a
+  regression. Now mirrors `parity_regressed`/`suite_regressed`'s existing
+  two-condition shape: a suite is an offender only if it's also at least
+  `SUITE_CASE_FLOOR = 2` cases behind the macro rate applied to its own size,
+  not the numeric floor — an earlier version of this fix measured distance to
+  the *floor* instead and would have silently stopped requiring the
+  committed `conversation` suite's annotation (8/10, two real, separately
+  investigated failures) in `evals/expected_below_macro.json`, because that
+  suite sits only one case above its own floor even though it's two cases
+  behind the macro. Pinned by
+  `tests/test_parity_gate.py::test_a_real_regression_a_single_case_from_the_percentage_floor_still_flags`.
+  Inert on the full suite, where every gated suite is large enough that a
+  genuine breach already implies two or more cases.
 - **Corrected a false license assertion. Every one of the 195 rows in
   `evals/govchat/golden.jsonl` stamped `"license": "public record — California
   transit agency fare policy pages"` over quoted agency text.** "Public record"
