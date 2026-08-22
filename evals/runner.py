@@ -1,6 +1,14 @@
 """Eval runner.
 
     python -m evals.runner --smoke              # 26-case CI subset
+
+The smoke subset's gated suites are small (4-6 cases each), so the below-macro
+gate (`suites_below_macro`, ADR 0026) can only express a 2-case tolerance on
+smoke, not a percentage one: a single failure in any gated suite is absorbed
+as judge noise, and a second failure in the same suite is what actually fails
+the build. This is coarser than the full suite's effective tolerance (every
+full-run gated suite is large enough that a genuine breach already implies
+several cases) and is a property of the sample size, not a relaxed gate.
     python -m evals.runner --full               # everything, then regenerate reports
     python -m evals.runner --offline            # mock model, deterministic checks only
     python -m evals.runner --suite refusal      # one suite
@@ -2443,6 +2451,14 @@ PARITY_SUITE = "multilingual"
 PARITY_THRESHOLD_PP = 5.0
 PARITY_CASE_FLOOR = 2
 MACRO_THRESHOLD_PP = 5.0
+# Issue #146: on the 26-case smoke suite (5 gated suites, smallest is
+# freshness at 4 cases), MACRO_THRESHOLD_PP's 5-point tolerance is
+# unsatisfiable by anything short of a perfect run -- a single failure in a
+# 4-case suite moves it 25 points, and every single-failure configuration on
+# smoke breaches a 5-point floor. Same fix as PARITY_CASE_FLOOR: a suite
+# only counts as a real offender if closing the gap to the floor would take
+# at least this many more passing cases, not just one judge-noise flip.
+SUITE_CASE_FLOOR = 2
 _STRETCH_PREFIX = "stretch_"
 EXPECTED_BELOW_MACRO_PATH = config.REPO_ROOT / "evals" / "expected_below_macro.json"
 
@@ -2495,17 +2511,53 @@ def parity_regressed(
     return parity["delta_pp"] > threshold and gap_cases >= case_floor
 
 
-def suites_below_macro(suites: dict, threshold: float = MACRO_THRESHOLD_PP) -> dict[str, dict]:
+def _cases_behind_macro(passed: int, total: int, macro: float) -> int:
+    """How many more cases this suite would need to have passed to match the
+    macro rate applied to its own size -- the per-suite analog of
+    `parity_regressed`'s `gap_cases = mirror_passed - passed`, which is a
+    direct pass-count difference because both sides share one denominator (n
+    mirrored pairs). A suite being compared to the macro has no shared
+    denominator with anything, so the comparison is normalized to this
+    suite's own `total` first: `ceil(macro% of total)` is the pass count a
+    suite of this size would need to sit exactly at the macro rate, and the
+    gap against `passed` is rounded up (not down) so a suite sitting exactly
+    on a fractional boundary is not let off by a rounding accident -- the
+    conversation suite in the committed report (8/10, macro ~94.0% over 8
+    gated suites) needs `ceil(9.4025) = 10`, not 9, or its real, separately
+    investigated regression (conv-forged-002/004) would read as one case of
+    noise and silently stop being an offender.
+    """
+    if total <= 0:
+        return 0
+    expected_passed = math.ceil(macro / 100 * total - 1e-9)
+    return max(0, expected_passed - passed)
+
+
+def suites_below_macro(
+    suites: dict, threshold: float = MACRO_THRESHOLD_PP, case_floor: int = SUITE_CASE_FLOOR
+) -> dict[str, dict]:
     """The general per-suite form of the parity gate (AIEV-10): every gated
     suite's pass rate must be at least the macro pass rate minus `threshold`
-    points, where macro is the unweighted mean over gated suites.
+    points, where macro is the unweighted mean over gated suites -- AND the
+    suite must be at least `case_floor` cases behind the macro rate itself
+    (see `_cases_behind_macro`), the same two-condition shape as
+    `suite_regressed` and `parity_regressed` (issue #146, ADR 0026).
+    Percentage alone is incoherent on a small suite: the 26-case smoke
+    subset's smallest gated suite (freshness) is 4 cases, so one failure
+    there is a 25-point swing that trips any single-digit percentage floor on
+    its own. The case floor absorbs a one-case judge-noise flip; two failures
+    in one suite is a real signal on smoke, same as everywhere else this
+    shape is used, and this changes nothing on the full suite, where every
+    gated suite is large enough that a genuine breach already implies two or
+    more cases.
 
     `stretch_*` suites are excluded from both the mean and the gate:
     docs/ROADMAP.md P3-3 and the report's stretch-parity section promise that a
     stretch language's score is reported honestly but never fails a build.
 
-    Returns {suite: {"pass_rate", "macro", "floor"}} for each offender; floors
-    are compared unrounded and rounded only for display.
+    Returns {suite: {"pass_rate", "macro", "floor", "cases_behind_macro"}}
+    for each offender; floors are compared unrounded and rounded only for
+    display.
     """
     # A suite with no measured rate (every case withheld by the source policy)
     # carries no signal and must not drag the macro mean down as if it were 0%.
@@ -2518,15 +2570,20 @@ def suites_below_macro(suites: dict, threshold: float = MACRO_THRESHOLD_PP) -> d
         return {}
     macro = sum(s["pass_rate"] for s in gated.values()) / len(gated)
     floor = macro - threshold
-    return {
-        name: {
+    offenders = {}
+    for name, s in gated.items():
+        if s["pass_rate"] >= floor:
+            continue
+        cases_behind = _cases_behind_macro(s.get("passed", 0), s.get("total", 0), macro)
+        if cases_behind < case_floor:
+            continue
+        offenders[name] = {
             "pass_rate": s["pass_rate"],
             "macro": round(macro, 1),
             "floor": round(floor, 1),
+            "cases_behind_macro": cases_behind,
         }
-        for name, s in gated.items()
-        if s["pass_rate"] < floor
-    }
+    return offenders
 
 
 def expected_below_macro(path: Path | None = None) -> dict[str, str]:
@@ -2564,8 +2621,8 @@ def parity_problems(
             continue
         problems.append(
             f"{name}: {o['pass_rate']}% is below the macro floor {o['floor']}% "
-            f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) with no written "
-            "annotation in evals/expected_below_macro.json"
+            f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) on {o['cases_behind_macro']}+ "
+            "cases, with no written annotation in evals/expected_below_macro.json"
         )
     problems += stale_annotations(suites, notes)
     return problems

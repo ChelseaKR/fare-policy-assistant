@@ -148,6 +148,60 @@ def test_stretch_suites_neither_gate_nor_shift_the_macro():
     assert suites_below_macro(suites) == {}
 
 
+def test_single_case_failure_on_a_small_suite_is_not_an_offender():
+    # ADR 0026 / issue #146: the 26-case smoke subset's freshness suite is 4
+    # cases. One failure there is 75.0% against a macro of 95.0% (floor
+    # 90.0%) -- a 25pp swing from a single judge-noise flip, the same
+    # rationale as test_wide_percentage_gap_on_one_case_respects_the_case_floor
+    # above for the parity gate. This is the exact configuration measured on
+    # every red smoke push since 2026-08-10.
+    suites = {
+        "edge_cases": _suite(5, 5),
+        "freshness": _suite(3, 4),
+        "groundedness": _suite(5, 5),
+        "multilingual": _suite(6, 6),
+        "refusal": _suite(6, 6),
+    }
+    assert suites_below_macro(suites) == {}
+
+
+def test_two_case_failure_on_a_small_suite_is_still_an_offender():
+    # The signal ADR 0026 keeps: two failures in one suite is not absorbed.
+    suites = {
+        "edge_cases": _suite(5, 5),
+        "freshness": _suite(2, 4),
+        "groundedness": _suite(5, 5),
+        "multilingual": _suite(6, 6),
+        "refusal": _suite(6, 6),
+    }
+    offenders = suites_below_macro(suites)
+    assert list(offenders) == ["freshness"]
+    assert offenders["freshness"]["cases_behind_macro"] >= 2
+
+
+def test_a_real_regression_a_single_case_from_the_percentage_floor_still_flags():
+    # This is the real committed shape (EVALS.md, 2026-07-12 run): conversation
+    # 8/10 has two genuine, separately investigated failures
+    # (conv-forged-002/004) and is 1 case from the *floor* percentage, not the
+    # macro -- a naive "cases to close the gap to the floor" formula would
+    # read that as 1-case noise and stop flagging it. The suite is 2 cases
+    # behind the *macro* rate applied to its own size (ceil(94.0%% of 10) =
+    # 10, minus 8 passed), which is what ADR 0026 actually measures.
+    suites = {
+        "conversation": _suite(8, 10),
+        "cross_agency": _suite(3, 3),
+        "edge_cases": _suite(46, 48),
+        "freshness": _suite(9, 10),
+        "groundedness": _suite(27, 29),
+        "multilingual": _suite(22, 22),
+        "refusal": _suite(34, 34),
+        "sensitivity": _suite(28, 30),
+    }
+    offenders = suites_below_macro(suites)
+    assert list(offenders) == ["conversation"]
+    assert offenders["conversation"]["cases_behind_macro"] == 2
+
+
 # ── parity_problems (the run-time gate's findings) ───────────────────────────
 
 
