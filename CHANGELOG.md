@@ -30,6 +30,37 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **Answer corpus-wide enumeration questions across agencies instead of
+  depth-first (ADR 0027, issue #150 stays open).** "Which agencies in your
+  corpus take Clipper?" names no agency, so retrieval fell through to a plain
+  global top_k and handed the model eight chunks from whichever agency
+  mentioned Clipper densest. `search()` now takes the single best chunk per
+  agency for enumeration-form questions with no agency named, ranked on the
+  question minus its enumeration scaffolding. On the 2026-08-22 full live run
+  the answer went from four enumerated agencies to eight, each with a
+  resolvable citation to that agency's own Clipper document, and surfaced
+  SCMTD's documented "Clipper Cards are not honored on METRO buses" for the
+  first time. **The case still fails and the suite did not improve** —
+  cross_agency 9/21, and `xagency-010` failed both before and after — because
+  the case's ground truth predates the eighteen-agency corpus and because the
+  answer's prose `as_of` disagrees with its structured `as_of`. Containment is
+  measured, not asserted: of 349 suite questions exactly two retrieve
+  differently, and the test asserting that also asserts it is able to fail.
+- **Measured a full live run on 2026-08-22: 312/385 (81.0%), recorded in
+  `docs/audits/eval-full-live-2026-08-22.md` and deliberately not promoted.**
+  Cold (`--refresh-cache`), 369 answer calls and 730 judge calls, $8.50.
+  Answer `us.anthropic.claude-haiku-4-5-20251001-v1:0`, judge
+  `global.anthropic.claude-sonnet-4-6` on Bedrock, corpus `10deac978967`.
+  `EVALS.md` still carries the 2026-07-12 run, because a promoted report has
+  to hold the bilingual parity gate and this one does not: Spanish 30/40
+  against mirrored English 33/40, a 7.5-point gap with no waiver by design
+  (#165). cross_agency is 42.9%, below both the 57.1% in #138's title and the
+  same morning's nightly at 47.6%; the single differing case is untouched by
+  anything in this release, so that spread is judge variance between a cached
+  and a cold run, not a new regression. Also measured exactly, closing #151:
+  the Yolobus containment hole is 42 cases, and all 42 scored live at 36
+  passed — containment was hiding six real failures, not just withholding
+  passes.
 - **Gave the below-macro parity gate (`suites_below_macro`, AIEV-10) a case
   floor, closing #146 (ADR 0026).** On the 26-case smoke suite that runs on
   every PR, the gate's 5-point tolerance was unsatisfiable by anything short
