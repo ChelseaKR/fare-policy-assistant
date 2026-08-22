@@ -295,6 +295,138 @@ def _is_eligibility_criterion_passage(chunk: Chunk) -> bool:
     return bool(_ELIGIBILITY_CRITERION.search(f"{chunk.section} {chunk.text}"))
 
 
+# Corpus-wide enumeration questions (issue #150, xagency-010): "Which agencies
+# in your corpus take Clipper?" names no agency, so `detect_agencies` returns
+# nothing and `search()` falls back to the plain global top_k — 8 chunks out of
+# a 301-chunk, 18-agency corpus, which structurally cannot support an answer
+# that enumerates across agencies. The strongest-matching agency's documents
+# take every slot (for Clipper: SolTrans and Marin, which mention it densest)
+# and the model is forced to either under-enumerate or reach past its evidence.
+#
+# The remedy is a different selection shape, not a bigger k: on an
+# enumeration-form question with no agency named, take the single best-ranked
+# positive-scoring chunk PER AGENCY, in global score order. Every agency whose
+# text has any term overlap with the query contributes exactly one passage, so
+# the answer model sees a corpus-wide cross-section (bounded by the agency
+# count, ≤18 today) and can attribute per agency under system-prompt rule 7 —
+# including negative statements ("Clipper Cards are not honored on METRO
+# buses"), which for that agency IS the best-matching chunk. Depth is traded
+# for breadth deliberately: an enumeration answer needs one passage per
+# agency, not eight passages about one agency.
+_ENUMERATION_QUERY = re.compile(
+    r"\b(which|what|list( of| all)?|how many|name( the| all)?)\b[^?.\n]{0,60}"
+    r"\b(agencies|agency|operators?|systems|networks|transit providers?)\b"
+    r"|\b(qué|cuáles|cuántas)\b[^?.\n]{0,60}\b(agencias?|operador\w*|sistemas?)\b",
+    re.I,
+)
+
+
+def _is_enumeration_query(question: str) -> bool:
+    return bool(_ENUMERATION_QUERY.search(question))
+
+
+# The enumeration scaffolding itself ("which agencies", "in your corpus")
+# must not decide which chunk represents an agency: those tokens match fare
+# tables and boilerplate ("participating agencies", "transit systems") more
+# densely than the actual topic does. Measured on the real corpus with the
+# scaffolding left in, CCCTA's representative chunk for "Which agencies in
+# your corpus take Clipper?" was its RTC-discount page rather than its
+# dedicated Clipper page, and SCMTD's was an accessibility page rather than
+# the chunk stating "Clipper Cards are not honored on METRO buses". The
+# per-agency pick therefore ranks against the question minus these tokens
+# ("Clipper"), while the reported scores stay on the original-question
+# scale so `confidence_signals` keeps comparing like with like.
+#
+# Generic question verbs (take/accept/offer/have/…) are scaffolding too, and
+# measurably worse than the noun scaffolding: BM25's IDF makes a rare generic
+# verb decisive. Measured before adding them: "take" appears in so few chunks
+# that WestCAT's representative chunk for the Clipper question became a
+# pass-purchasing page scoring 7.1 on "take" alone, ahead of every dedicated
+# WestCAT Clipper chunk (max 4.9), and SCMTD's became a troubleshooting page.
+# The verb is redundant with its object for retrieval — "Clipper" alone finds
+# acceptance passages; "free youth fares" alone finds free-fare provisions.
+_ENUMERATION_SCAFFOLD_TOKENS = frozenset(
+    {
+        # English scaffolding — question form
+        "which",
+        "what",
+        "list",
+        "how",
+        "many",
+        "name",
+        "all",
+        "agencies",
+        "agency",
+        "operator",
+        "operators",
+        "system",
+        "systems",
+        "network",
+        "networks",
+        "provider",
+        "providers",
+        "transit",
+        "corpus",
+        "your",
+        "the",
+        "does",
+        "are",
+        # English scaffolding — generic question verbs
+        "take",
+        "takes",
+        "taking",
+        "accept",
+        "accepts",
+        "accepting",
+        "offer",
+        "offers",
+        "offering",
+        "have",
+        "has",
+        "honor",
+        "honors",
+        "honour",
+        "honours",
+        "use",
+        "uses",
+        "using",
+        "provide",
+        "provides",
+        "sell",
+        "sells",
+        "support",
+        "supports",
+        # Spanish scaffolding
+        "qué",
+        "cuales",
+        "cuáles",
+        "cuantas",
+        "cuántas",
+        "agencia",
+        "agencias",
+        "sistema",
+        "sistemas",
+        "aceptan",
+        "acepta",
+        "ofrecen",
+        "ofrece",
+        "tienen",
+        "tiene",
+        "usan",
+        "usa",
+        "venden",
+        "vende",
+    }
+)
+
+
+def _enumeration_topic(question: str) -> str:
+    """The question with the enumeration scaffolding removed — what the rider
+    is actually enumerating over ("take Clipper", "free youth fares")."""
+    kept = [tok for tok in _tokenize(question) if tok not in _ENUMERATION_SCAFFOLD_TOKENS]
+    return " ".join(kept)
+
+
 _RIDER_CLASS_PATTERNS = {
     "veteran": re.compile(r"\b(veteran\w*|veteran[oa]s?)\b", re.I),
     "senior": re.compile(
@@ -404,6 +536,30 @@ class Retriever:
             for ag in agencies:
                 picked.extend([sc for sc in ranked if sc.chunk.agency == ag][:quota])
             results = sorted(picked, key=lambda sc: sc.score, reverse=True)
+        elif _is_enumeration_query(question):
+            # Corpus-wide enumeration (issue #150, xagency-010): one chunk per
+            # agency, so the answer can enumerate across the whole corpus
+            # instead of seeing eight chunks from whichever agency matched
+            # densest. WHICH chunk represents each agency is decided by the
+            # topic ranking (scaffolding stripped — see _enumeration_topic);
+            # the chunk's REPORTED score is its original-question score, so
+            # downstream confidence math stays on one scale. See
+            # _ENUMERATION_QUERY above for the full rationale.
+            topic = _enumeration_topic(question)
+            topical = self._rank_all(topic) if topic.strip() else ranked
+            original_score = {sc.chunk.chunk_id: sc.score for sc in ranked}
+            seen_agencies: set[str] = set()
+            picked_enum: list[ScoredChunk] = []
+            for sc in topical:
+                if sc.score <= 0:
+                    break  # topical is sorted; nothing below has term overlap
+                if sc.chunk.agency in seen_agencies:
+                    continue
+                picked_enum.append(
+                    ScoredChunk(chunk=sc.chunk, score=original_score[sc.chunk.chunk_id])
+                )
+                seen_agencies.add(sc.chunk.agency)
+            results = sorted(picked_enum, key=lambda sc: sc.score, reverse=True)
         else:
             results = ranked[: self.cfg.top_k]
         # Remove application instructions explicitly scoped to a different
