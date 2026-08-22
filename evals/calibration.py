@@ -481,12 +481,27 @@ def binding_problem(row: dict, record: dict | None) -> str | None:
 
 
 def _passages_block(record: dict) -> str:
+    """Render exactly the provenance a reviewer needs to check a dated claim:
+    doc id, agency, title, section, score, source URL and fetch date, then
+    the text — the same fields `assistant.answer._format_passages` shows the
+    answer model and `evals.judges._passages_block` shows the judge (issue
+    #142). Before this, a reviewer saw `chunk_id`/`section`/`score`/`text`
+    only, which is the same blind spot that made the groundedness judge fail
+    fresh-001: asked to check a dated claim against passages the dates had
+    been stripped from. Four of the worksheet's 37 rows are freshness cases;
+    a human agreeing with a wrong verdict for the same missing-provenance
+    reason would not calibrate anything.
+    """
     passages = record.get("passages") or []
     if not passages:
         return "  (none retrieved)"
     out = []
     for p in passages:
-        head = f"  [{p.get('chunk_id')}] {p.get('section')} (score {p.get('score')})"
+        head = (
+            f"  [{p.get('chunk_id')}] {p.get('agency', '')} — "
+            f"{p.get('doc_title', '')} — {p.get('section')} (score {p.get('score')})\n"
+            f"  (source: {p.get('url', '')}, fetched {p.get('fetch_date', '')})"
+        )
         body = "\n".join(f"    {line}" for line in str(p.get("text", "")).splitlines())
         out.append(f"{head}\n{body}")
     return "\n\n".join(out)

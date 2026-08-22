@@ -444,8 +444,15 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 "",
             ]
             for p in r["passages"][:3]:
+                # doc_title/fetch_date (issue #142): an outside reader checking
+                # a freshness/dated claim in a failure trace needs the same
+                # provenance the answer model and judge were shown, not just
+                # chunk id and score.
+                title = p.get("doc_title", "")
+                fetched = p.get("fetch_date", "")
                 lines.append(
-                    f"- `{p['chunk_id']}` ({p['section']}, score {p['score']}): {p['text'][:200]}…"
+                    f"- `{p['chunk_id']}` ({title} — {p['section']}, score {p['score']}, "
+                    f"fetched {fetched}): {p['text'][:200]}…"
                 )
             lines += [
                 "",

@@ -4,6 +4,7 @@ from evals.calibration import (
     LABELS_PATH,
     Label,
     _cohen_kappa,
+    _passages_block,
     answer_hash,
     apply_label,
     binding_problem,
@@ -597,6 +598,45 @@ def test_review_finds_its_run_directory_from_the_worksheet_header(tmp_path):
     found = run_dir_from_header(entries)
     assert found is not None and found.name == "20260712T050117Z"
     assert run_dir_from_header([e for e in entries if e.row is not None]) is None
+
+
+def test_passages_block_shows_source_and_fetch_date_when_present():
+    """Issue #142: a reviewer checking a dated claim (fresh-001's failure mode)
+    needs the same provenance line the answer model and judge are shown, not
+    just chunk id/section/score."""
+    record = {
+        "passages": [
+            {
+                "chunk_id": "yolobus-fares#2",
+                "doc_id": "yolobus-fares",
+                "agency": "Yolobus",
+                "doc_title": "Fares",
+                "url": "https://yolobus.com/fares/",
+                "fetch_date": "2026-08-21",
+                "section": "BeeLine On-Demand Transit Fares",
+                "score": 19.41,
+                "text": "Woodland | $3.00 | $1.50",
+            }
+        ]
+    }
+    block = _passages_block(record)
+    assert "Yolobus" in block
+    assert "Fares" in block
+    assert "https://yolobus.com/fares/" in block
+    assert "fetched 2026-08-21" in block
+
+
+def test_passages_block_degrades_gracefully_without_provenance_fields():
+    """A pre-fix worksheet/run (doc_id/agency/url/fetch_date absent) must not
+    crash the reviewer tool; it just renders blank provenance."""
+    record = {
+        "passages": [
+            {"chunk_id": "yolobus-fares#2", "section": "BeeLine", "score": 19.41, "text": "x"}
+        ]
+    }
+    block = _passages_block(record)
+    assert "yolobus-fares#2" in block
+    assert "fetched" in block  # label present even though the value is blank
 
 
 def test_review_labels_a_helpfulness_row_and_marks_passages_as_context(tmp_path):

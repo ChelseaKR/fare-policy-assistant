@@ -13,6 +13,25 @@ evaluate.
 **[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/)** ·
 [Evaluation report in the repository](EVALS.md)
 
+**Both public links above lag this repository's HEAD, and that gap is stated
+here rather than left for a visitor to discover by asking about an agency
+that isn't there** (#139, #140). The live assistant is pinned to
+corpus_version `35ec70d6359d` and serves five agencies — HTA, MST, SBMTD,
+SacRT, Yolobus, verified against its own `/version` endpoint — not the
+eighteen this README describes. `infra/deploy.sh` only promotes a build
+backed by a promoted, full, live evaluation (ADR 0023), and the nightly full
+run has been red on the `cross_agency` gate since the corpus's
+eighteen-agency expansion (#138), so there is currently no fresher run to
+promote and deploy. The evidence hub is further behind still: it serves the
+`2026-07-12` promoted run (201 cases, `cross_agency` 3/3) and has not been
+republished since, for the same reason — `scripts/build_evidence_site.py`
+refuses to publish evidence past its own freshness budget, so a rebuild with
+today's still-July-12 promoted evidence would fail that gate rather than
+quietly serve a report that claims to be current. The unpromoted picture —
+eighteen agencies, 385 cases, `cross_agency` currently well below floor — is
+in [EVALS.md](EVALS.md) and the nightly run artifact, not on either public
+link above.
+
 ## Status: Beta
 
 Deployed and evaluated (use the two public entrypoints above), but not
@@ -70,7 +89,7 @@ rather than as something an outside reader can check against the rubric.
 | Standard | Applies? | State |
 |---|---|---|
 | Quality & Metrics | Applies | Partial. Coverage gate (90% branch) is green; DORA ledger and AI-capabilities checklist not yet started. No tracking issue filed yet — this row is the gap record until one is. |
-| Code Quality | Applies | Partial. `ruff format --check`, pytest strict flags, and `.python-version` landed 2026-07-05; mypy strict mode and ruff's full pinned rule set (`S`, `C90`) are not yet on; no pre-commit config; no CODEOWNERS-enforced review. No tracking issue filed yet. |
+| Code Quality | Applies | Partial. `ruff format --check`, pytest strict flags, and `.python-version` landed 2026-07-05; `C90` (mccabe, `max-complexity = 10`, CQ-05) landed 2026-08-21 with a per-file debt ceiling for the 44 functions over budget at the time, retired file by file rather than all at once (issue #137); `S` (bandit rules) and mypy strict mode are still not on; no pre-commit config; no CODEOWNERS-enforced review. No tracking issue filed yet for the remainder. |
 | Security & Supply-Chain | Applies | Partial. SAST (Semgrep) and secret-scan (gitleaks) are blocking; dependency-vulnerability scanning (`pip-audit`) landed 2026-07-05 (see `security.yml`). CodeQL (python + actions) and zizmor landed 2026-08-13; zizmor reports no findings at high severity across all nine workflows, which matters because `security.yml` already cited zizmor findings by name without the tool ever running. No ASVS level declared. **Scorecard is deliberately not added**: the OpenSSF action publishes to a public API and several of its checks (Branch-Protection, and the signed-releases and CII-Best-Practices probes) only score meaningfully on a public repository, so running it here would produce noise rather than a posture. It belongs with the decision about making this repo public, not before it. No tracking issue filed yet. |
 | CI/CD | Applies | Partial. OIDC-only credentials, SHA-pinned actions, per-job least-privilege permissions (including `corpus-freshness.yml`, fixed 2026-07-05). No branch-ruleset artifact, no CODEOWNERS-enforced review (`CODEOWNERS` file added 2026-07-05; the hosted branch-protection setting itself is a manual, human action — see the 2026-07-05 execution log in the audit folder). No tracking issue filed yet. |
 | Release & Versioning | Applies | Partial. `.github/workflows/release.yml` (added 2026-07-10) is tag-triggered on `v*`: checks the tag matches `pyproject.toml`'s version, re-runs `make verify` at the tagged commit, builds sdist+wheel, generates a CycloneDX 1.7 SBOM, attests SLSA build provenance, and creates a GitHub Release with the matching `CHANGELOG.md` section as notes. Nothing is published to a package index (no PyPI project registered, no other repo pins this one), so the GitHub Release is the publish target, not Trusted Publishing — the pipeline still exists so the deployed artifact is traceable to a signed, tested, tagged build. No tracking issue filed yet. |
