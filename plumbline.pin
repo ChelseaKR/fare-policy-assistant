@@ -41,7 +41,7 @@
 # a build log like a configuration problem rather than an unaudited release.
 
 repo = https://github.com/ChelseaKR/plumbline.git
-ref  = df95fce6eb8637bdaf46d0a4f03709b7ccce231f
+ref  = a258b2e2e3cd859b1f80caaeb417ad579ade9ac2
 
 config = evals/plumbline/target.toml
 out = docs/audits/plumbline
