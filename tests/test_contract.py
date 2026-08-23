@@ -76,6 +76,33 @@ class TestBuildStructuredAnswer:
         structured = build_structured_answer(result)
         assert structured.next_step == ""
 
+    def test_next_step_skips_a_negated_next_step_verb(self):
+        """Live-model finding (2026-08-23): an unpunctuated bulleted proof
+        list merges into one regex "sentence" with a trailing disclaimer —
+        "The published policy does not specify where to apply..." — whose
+        only next-step verb ("apply") is negated. The real next step is the
+        following sentence. Picking the negated sentence would put the
+        rider-facing next_step field on an explicit statement of absence
+        rather than an actual instruction."""
+        result = _answered(
+            "You may obtain an MST Courtesy Card with proof of service "
+            "[doc:mst-fares]\n\n- DD Form 214\n- VA ID card\n\n"
+            "The published policy does not specify where to apply for the "
+            "MST Courtesy Card, any application cost, or office hours. "
+            "For details on how to apply, contact MST directly through "
+            "their website."
+        )
+        structured = build_structured_answer(result)
+        assert "does not specify" not in structured.next_step
+        assert "For details on how to apply" in structured.next_step
+
+    def test_next_step_falls_through_when_every_verb_in_a_sentence_is_negated(self):
+        result = _answered(
+            "The fare is $2.00 [doc:mst-fares]. You do not need to apply or register for this fare."
+        )
+        structured = build_structured_answer(result)
+        assert structured.next_step == ""
+
     def test_decision_owner_is_the_cited_agency_not_the_assistant(self):
         result = _answered("The fare is $2.00 [doc:mst-fares].")
         structured = build_structured_answer(result)

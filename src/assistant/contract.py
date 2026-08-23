@@ -50,6 +50,22 @@ _NEXT_STEP_RE = re.compile(
     re.I,
 )
 
+# Negation cues that, appearing shortly before a next-step verb, mean the
+# sentence is denying that step exists rather than directing the rider to take
+# it — e.g. "the published policy does not specify where to apply". Mirrors
+# the negation-window approach `evals.checks._NEGATION_CUES`/`phrase_asserted`
+# already uses for `forbidden_content`, kept local here (assistant must not
+# import the evals package) rather than shared. Without this, an unpunctuated
+# bulleted list can merge into one regex "sentence" with a later disclaimer
+# clause, and the first next-step verb found — even a negated one — wins.
+_NEXT_STEP_NEGATION_RE = re.compile(
+    r"\b(not|never|no|cannot|can'?t|does\s*n't|doesn'?t|did\s*n't|didn'?t|"
+    r"without|unable|nor|neither|"
+    r"no|nunca|sin|ni)\b",
+    re.I,
+)
+_NEXT_STEP_NEG_WINDOW_WORDS = 6
+
 _CITATION_TAG_RE = re.compile(r"\s*" + guards.CITATION_TAG_RE.pattern)
 
 
@@ -130,9 +146,18 @@ def _extract_prices(sentences: list[str]) -> list[Price]:
 
 
 def _extract_next_step(sentences: list[str]) -> str:
+    """The first sentence that *directs* the rider to a next step.
+
+    A sentence is only a match when at least one next-step verb inside it is
+    not itself negated a few words earlier ("does not specify where to
+    apply" must not win over a later sentence that actually tells the rider
+    to apply) — see `_NEXT_STEP_NEGATION_RE`.
+    """
     for s in sentences:
-        if _NEXT_STEP_RE.search(s):
-            return s
+        for m in _NEXT_STEP_RE.finditer(s):
+            preceding = re.findall(r"\S+", s[: m.start()])[-_NEXT_STEP_NEG_WINDOW_WORDS:]
+            if not _NEXT_STEP_NEGATION_RE.search(" ".join(preceding)):
+                return s
     return ""
 
 
