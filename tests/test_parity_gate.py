@@ -537,3 +537,166 @@ def test_the_committed_annotation_still_describes_the_committed_report():
     )
     notes = {k: v for k, v in notes.items() if not k.startswith("_")}
     assert runner.stale_annotations(payload["suites"], notes) == []
+
+
+# ── a waiver may only waive the failures it names ────────────────────────────
+#
+# `stale_annotations` above expires a waiver when its whole suite climbs back
+# above the macro floor. That leaves the case the file's own instruction is
+# really about: the entry goes on saying "the two failures are X and Y" long
+# after X was fixed, and while it sits there it covers whatever drags the suite
+# down next. These tests pin both directions of the case-level anchor.
+
+_KNOWN = {"conv-forged-002": "conversation", "conv-forged-004": "conversation"}
+
+
+def test_a_waiver_that_names_no_failing_case_is_flagged(tmp_path):
+    """The pre-2026-08-26 file shape: a bare rationale string, with nothing a
+    gate can hold it to. It parses, and reads as a waiver that names nothing."""
+    import json
+
+    path = tmp_path / "expected_below_macro.json"
+    path.write_text(
+        json.dumps({"_purpose": "commentary", "conversation": "prose only"}), encoding="utf-8"
+    )
+    assert runner.expected_below_macro(path) == {"conversation": "prose only"}
+    declared = runner.annotation_cases(path)
+    assert declared == {"conversation": []}
+    (problem,) = runner.stale_annotation_cases(declared, {}, _KNOWN)
+    assert "names no failing case" in problem
+
+
+def test_the_object_entry_shape_round_trips(tmp_path):
+    import json
+
+    path = tmp_path / "expected_below_macro.json"
+    path.write_text(
+        json.dumps({"conversation": {"cases": ["conv-forged-002"], "rationale": "why"}}),
+        encoding="utf-8",
+    )
+    assert runner.expected_below_macro(path) == {"conversation": "why"}
+    assert runner.annotation_cases(path) == {"conversation": ["conv-forged-002"]}
+
+
+def test_a_waiver_naming_a_case_that_no_longer_exists_is_flagged():
+    (problem,) = runner.stale_annotation_cases({"conversation": ["conv-retired-009"]}, {}, _KNOWN)
+    assert "no longer a case in evals/suites/" in problem
+
+
+def test_a_waiver_naming_a_case_that_now_passes_is_flagged():
+    """The real 2026-08-26 finding: the entry named conv-forged-004 as one of
+    the two failures it covers, and conv-forged-004 passes."""
+    outcomes = {"conv-forged-002": False, "conv-forged-004": True}
+    (problem,) = runner.stale_annotation_cases(
+        {"conversation": ["conv-forged-002", "conv-forged-004"]}, outcomes, _KNOWN
+    )
+    assert "conv-forged-004 passed in this run" in problem
+
+
+def test_a_waiver_naming_a_case_the_source_policy_withheld_is_flagged():
+    """Not applicable is neither a pass nor a failure, so a waiver resting on a
+    withheld case is resting on nothing."""
+    outcomes: dict[str, bool | None] = {"conv-forged-002": False, "conv-forged-004": None}
+    (problem,) = runner.stale_annotation_cases(
+        {"conversation": ["conv-forged-002", "conv-forged-004"]}, outcomes, _KNOWN
+    )
+    assert "was not applicable in this run" in problem
+
+
+def test_a_waiver_naming_a_still_failing_case_is_clean():
+    outcomes = {"conv-forged-002": False, "conv-forged-004": False}
+    assert (
+        runner.stale_annotation_cases(
+            {"conversation": ["conv-forged-002", "conv-forged-004"]}, outcomes, _KNOWN
+        )
+        == []
+    )
+
+
+def test_a_named_case_that_did_not_run_is_out_of_view_not_stale():
+    """A `--suite` subset legitimately omits most cases; a named case that did
+    not run says nothing either way, the same rule `stale_annotations` uses."""
+    assert runner.stale_annotation_cases({"conversation": ["conv-forged-002"]}, {}, _KNOWN) == []
+
+
+def test_without_per_case_outcomes_only_the_structural_findings_apply():
+    """The committed-report check has a scoreboard and no results, so it can
+    still refuse an unnamed or vanished case but must not guess at pass/fail."""
+    assert runner.stale_annotation_cases({"conversation": ["conv-forged-002"]}, None, _KNOWN) == []
+    assert runner.stale_annotation_cases({"conversation": []}, None, _KNOWN)
+
+
+def test_a_waived_offending_suite_cannot_absorb_a_failure_it_never_named():
+    """The hazard the entry's own text warns about, arriving through the door
+    the coarse staleness check does not watch: the suite stays below the floor,
+    so the waiver keeps applying, but it is below the floor for a new reason."""
+    records = [
+        _rec("conv-forged-002", "conversation", False),
+        _rec("conv-003", "conversation", False),
+        _rec("conv-001", "conversation", True),
+    ]
+    suites = {
+        "conversation": {"pass_rate": 40.0, "passed": 4, "total": 10},
+        "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34},
+    }
+    assert "conversation" in suites_below_macro(suites)
+    (problem,) = runner.unnamed_failures_under_annotation(
+        records, suites, {"conversation": ["conv-forged-002"]}
+    )
+    assert "conv-003" in problem and "conv-forged-002" not in problem
+
+
+def test_a_waived_suite_above_the_floor_reports_no_unnamed_failures():
+    """A suite comfortably above the floor is not being waived by anything, so
+    its other failures are the ordinary business of the report."""
+    records = [_rec("conv-003", "conversation", False)]
+    suites = {
+        "conversation": {"pass_rate": 80.0, "passed": 8, "total": 10},
+        "refusal": {"pass_rate": 82.0, "passed": 41, "total": 50},
+    }
+    assert (
+        runner.unnamed_failures_under_annotation(records, suites, {"conversation": ["conv-x"]})
+        == []
+    )
+
+
+def test_a_not_applicable_case_is_not_an_unnamed_failure():
+    records = [
+        _rec("conv-forged-002", "conversation", False),
+        {**_rec("conv-forged-004", "conversation", False), "not_applicable": True},
+    ]
+    suites = {
+        "conversation": {"pass_rate": 40.0, "passed": 4, "total": 10},
+        "refusal": {"pass_rate": 100.0, "passed": 34, "total": 34},
+    }
+    assert "conversation" in suites_below_macro(suites)
+    assert (
+        runner.unnamed_failures_under_annotation(
+            records, suites, {"conversation": ["conv-forged-002"]}
+        )
+        == []
+    )
+
+
+def test_case_outcomes_separates_withheld_from_failed():
+    records = [
+        _rec("a-001", "conversation", True),
+        _rec("a-002", "conversation", False),
+        {**_rec("a-003", "conversation", False), "not_applicable": True},
+    ]
+    assert runner.case_outcomes(records) == {"a-001": True, "a-002": False, "a-003": None}
+
+
+def test_the_committed_annotation_names_cases_that_still_exist():
+    """The real repo state, checkable offline: every case id the committed
+    waiver names is still a case in `evals/suites/`, and the entry names at
+    least one. This is the half of the anchor a pull request can enforce."""
+    assert runner.stale_annotation_cases(runner.annotation_cases()) == []
+
+
+def test_the_committed_annotation_does_not_rest_on_a_case_that_passes():
+    """conv-forged-004 passed in the 2026-08-22 full live run and in the
+    2026-08-26 nightly. Naming it again would put the waiver back over a
+    failure that no longer exists."""
+    outcomes = {"conv-forged-002": False, "conv-forged-004": True, "conv-003": False}
+    assert runner.stale_annotation_cases(runner.annotation_cases(), outcomes) == []

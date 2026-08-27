@@ -44,8 +44,10 @@ import sys
 from assistant import config
 from evals import provenance
 from evals.runner import (
+    annotation_cases,
     expected_below_macro,
     parity_regressed,
+    stale_annotation_cases,
     stale_annotations,
     suite_regressed,
     suites_below_macro,
@@ -146,7 +148,9 @@ def _parity_from_table(evals_md_text: str) -> dict | None:
 
 
 def check_parity_committed(
-    evals_md_text: str, annotations: dict[str, str] | None = None
+    evals_md_text: str,
+    annotations: dict[str, str] | None = None,
+    declared_cases: dict[str, list[str]] | None = None,
 ) -> list[str]:
     """Parity findings for the *committed* EVALS.md; empty is clean.
 
@@ -155,8 +159,15 @@ def check_parity_committed(
     complete mirror pair) skips the delta half with a note on stdout — partial
     runs are legitimate — but the below-macro half still applies whenever the
     suites scoreboard is embedded.
+
+    The committed report is a scoreboard, not a set of per-case results, so the
+    waiver-evidence check (`stale_annotation_cases`) runs here in its structural
+    form only: every waiver must name failing cases, and every case it names
+    must still exist in `evals/suites/`. Whether a named case still fails is a
+    question only a run can answer, and `runner.parity_problems` asks it there.
     """
     notes = expected_below_macro() if annotations is None else annotations
+    declared = annotation_cases() if declared_cases is None else declared_cases
     payload = provenance.read_evals_md(evals_md_text) or {}
     problems = []
     parity = payload.get("parity") or _parity_from_table(evals_md_text)
@@ -178,6 +189,7 @@ def check_parity_committed(
             "evals/expected_below_macro.json"
         )
     problems += stale_annotations(suites, notes)
+    problems += stale_annotation_cases(declared)
     return problems
 
 
