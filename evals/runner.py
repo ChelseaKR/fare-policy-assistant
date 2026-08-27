@@ -2586,25 +2586,189 @@ def suites_below_macro(
     return offenders
 
 
+def _read_annotations(path: Path | None = None) -> dict[str, dict]:
+    """Parse `expected_below_macro.json` into {suite: {"rationale", "cases"}}.
+
+    Two entry shapes are accepted. The original is a bare string: the written
+    rationale, and nothing a gate can hold it to. The current one is an object
+    carrying that same rationale plus `cases`, the failing case ids the waiver
+    claims to cover, so the waiver is anchored to evidence rather than to prose
+    (see `stale_annotation_cases`). A bare string still parses, and reads as a
+    waiver that names no case, which is itself a finding.
+    """
+    p = path or EXPECTED_BELOW_MACRO_PATH
+    if not p.exists():
+        return {}
+    data = json.loads(p.read_text(encoding="utf-8"))
+    parsed = {}
+    for suite, entry in data.items():
+        if suite.startswith("_"):
+            continue  # file commentary
+        if isinstance(entry, str):
+            parsed[suite] = {"rationale": entry, "cases": []}
+            continue
+        parsed[suite] = {
+            "rationale": str(entry.get("rationale", "")),
+            "cases": [str(c) for c in entry.get("cases") or []],
+        }
+    return parsed
+
+
 def expected_below_macro(path: Path | None = None) -> dict[str, str]:
     """The loud escape hatch for the below-macro form: a committed JSON file
     mapping suite name → written rationale (keys starting with "_" are file
     commentary). An annotated suite is reported, not failed — mirroring the
     `stale_acknowledged.json` pattern: a gap may be accepted, but only in
     writing, in the diff, deleted when the suite recovers."""
-    p = path or EXPECTED_BELOW_MACRO_PATH
-    if not p.exists():
-        return {}
-    data = json.loads(p.read_text(encoding="utf-8"))
-    return {k: v for k, v in data.items() if not k.startswith("_")}
+    return {suite: entry["rationale"] for suite, entry in _read_annotations(path).items()}
+
+
+def annotation_cases(path: Path | None = None) -> dict[str, list[str]]:
+    """The failing case ids each below-macro annotation declares it covers.
+
+    A rationale is prose and can say anything; `cases` is the part a gate can
+    check. It is what turns "does this waiver still describe something real"
+    into a decidable question rather than a reading exercise.
+    """
+    return {suite: entry["cases"] for suite, entry in _read_annotations(path).items()}
+
+
+def suite_case_ids() -> dict[str, str]:
+    """{case id: suite} over the committed suites, so a gate can tell a case
+    that still exists from one that was renamed or deleted."""
+    return {case["id"]: case["suite"] for suite in load_suites() for case in suite["cases"]}
+
+
+def case_outcomes(records: Sequence[Mapping]) -> dict[str, bool | None]:
+    """{case id: passed} for one run's records, with None where the source
+    policy withheld the case — not applicable is neither a pass nor a
+    failure."""
+    return {
+        str(r["case_id"]): None if r.get("not_applicable") else bool(r.get("passed"))
+        for r in records
+        if r.get("case_id")
+    }
+
+
+def stale_annotation_cases(
+    declared: Mapping[str, Sequence[str]],
+    outcomes: Mapping[str, bool | None] | None = None,
+    known_cases: Mapping[str, str] | None = None,
+) -> list[str]:
+    """Waivers whose declared evidence no longer holds; empty is clean.
+
+    `stale_annotations` expires a waiver when its whole suite climbs back above
+    the macro floor. That is the coarse form, and it misses the case the file's
+    own instruction is really about: an entry goes on saying "the two failures
+    are X and Y" long after X was fixed, and while it sits there it covers
+    *whatever* drags the suite down next, including a regression nobody has
+    looked at. A waiver may only waive the failures it names, so:
+
+    * a waiver that names no failing case cannot be checked and cannot expire;
+      it is not a waiver so much as a standing exemption;
+    * a named case id that is no longer in `evals/suites/` describes a failure
+      that can no longer happen;
+    * a named case that ran and did not fail — it passed, or the source policy
+      withheld it — is evidence that has gone away.
+
+    `outcomes` maps case id → True (passed), False (failed), None (ran but was
+    not applicable). Pass None for it where per-case results do not exist (a
+    committed-report check has only a scoreboard) and the two structural
+    findings still apply. A named case simply absent from `outcomes` did not
+    run: a `--suite` subset legitimately omits it, so it is out of view rather
+    than stale, the same rule `stale_annotations` uses.
+    """
+    known = suite_case_ids() if known_cases is None else known_cases
+    problems = []
+    for suite in sorted(declared):
+        cases = declared[suite]
+        if not cases:
+            problems.append(
+                f"{suite}: annotated in evals/expected_below_macro.json, but the entry's "
+                "`cases` list names no failing case — a waiver that names no failure can "
+                "never expire and silently covers whatever drags the suite down next. "
+                "Name the case ids the rationale is about"
+            )
+            continue
+        for case_id in cases:
+            if case_id not in known:
+                problems.append(
+                    f"{suite}: the annotation in evals/expected_below_macro.json names "
+                    f"{case_id}, which is no longer a case in evals/suites/ — the waiver "
+                    "describes a failure that can no longer happen. Rewrite it against the "
+                    "failures the suite actually has, or delete it"
+                )
+            elif outcomes is not None and case_id in outcomes:
+                outcome = outcomes[case_id]
+                if outcome is None:
+                    problems.append(
+                        f"{suite}: the annotation in evals/expected_below_macro.json names "
+                        f"{case_id} as a failure it covers, but {case_id} was not applicable "
+                        "in this run, so it is not a failure this waiver is holding open"
+                    )
+                elif outcome:
+                    problems.append(
+                        f"{suite}: the annotation in evals/expected_below_macro.json names "
+                        f"{case_id} as a failure it covers, but {case_id} passed in this run. "
+                        "That evidence is gone, and until the entry is rewritten the waiver "
+                        "stands over a failure that no longer exists"
+                    )
+    return problems
+
+
+def unnamed_failures_under_annotation(
+    records: Sequence[Mapping],
+    suites: dict,
+    declared: Mapping[str, Sequence[str]],
+) -> list[str]:
+    """Failures an annotated, still-offending suite has that its waiver never
+    named; empty is clean.
+
+    The other half of "a waiver may only waive the failures it names." A waiver
+    keeps a suite off the gate for as long as the suite stays below the macro
+    floor, and nothing checked *why* it was below. So a fresh regression in an
+    annotated suite landed inside an exemption written about two entirely
+    different cases, and the build stayed green: the "silently waive the next
+    real regression" outcome the entry's own text warns about, arriving through
+    the door the coarse staleness check does not watch.
+
+    Only offending suites are considered. A suite comfortably above the floor
+    is not being waived by anything, so its other failures are the ordinary
+    business of the report, not something the waiver is hiding.
+    """
+    offenders = suites_below_macro(suites)
+    problems = []
+    for suite in sorted(declared):
+        if suite not in offenders:
+            continue
+        named = set(declared[suite])
+        unnamed = sorted(
+            str(r["case_id"])
+            for r in records
+            if r.get("suite") == suite and not r.get("not_applicable") and not r.get("passed")
+            if str(r["case_id"]) not in named
+        )
+        if unnamed:
+            plural = "s are" if len(unnamed) > 1 else " is"
+            problems.append(
+                f"{suite}: waived below the macro floor by evals/expected_below_macro.json, "
+                f"but {len(unnamed)} of the failures it is carrying ({', '.join(unnamed)}) "
+                f"{plural} not named by that entry — a waiver covers the failures it names "
+                "and nothing else. Investigate and add them to the rationale, or fix them"
+            )
+    return problems
 
 
 def parity_problems(
-    records: list[dict], suites: dict, annotations: dict[str, str] | None = None
+    records: list[dict],
+    suites: dict,
+    annotations: dict[str, str] | None = None,
+    declared_cases: dict[str, list[str]] | None = None,
 ) -> list[str]:
     """All parity-gate findings for one run; empty is clean. Pure so the
     committed-report checker and tests can exercise it without a run dir."""
     notes = expected_below_macro() if annotations is None else annotations
+    declared = annotation_cases() if declared_cases is None else declared_cases
     problems = []
     parity = parity_delta(records)
     if parity is None:
@@ -2625,6 +2789,8 @@ def parity_problems(
             "cases, with no written annotation in evals/expected_below_macro.json"
         )
     problems += stale_annotations(suites, notes)
+    problems += stale_annotation_cases(declared, case_outcomes(records))
+    problems += unnamed_failures_under_annotation(records, suites, declared)
     return problems
 
 

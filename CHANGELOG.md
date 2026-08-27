@@ -30,6 +30,33 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Changed
+- **A below-macro waiver may only waive the failures it names (ADR 0028).**
+  The M-1 parity gate's escape hatch, `evals/expected_below_macro.json`, kept a
+  suite off the gate on the strength of prose, and its one automatic expiry
+  (`stale_annotations`, 2026-08-05) asks only whether the suite is back above
+  the macro floor. The `conversation` entry read "the two failures were
+  conv-forged-002 and conv-forged-004"; in the 2026-08-22 full live run and the
+  2026-08-26 nightly, `conv-forged-004` passes and the suite's other failure is
+  `conv-003`, which the entry never named. The nightly had printed "the
+  annotation no longer describes anything ... or it will silently waive the
+  next real regression" for five consecutive nights, and the entry still could
+  not be deleted, because the same file gates the committed 2026-07-12
+  `EVALS.md` where the annotation is still load-bearing: removing it fails
+  `make verify` with "conversation: 80.0% in the committed EVALS.md is below
+  the macro floor 89.0% ... with no written annotation". Each entry now carries
+  `cases`, the failing case ids it covers, alongside its `rationale`.
+  `runner.stale_annotation_cases` fails the gate when a named case no longer
+  exists in `evals/suites/`, when a named case passes or turns not-applicable
+  in the run being gated, or when an entry names no case at all;
+  `runner.unnamed_failures_under_annotation` fails it when a waived, still
+  below-floor suite is failing cases the entry never named, which is the door
+  the coarse check does not watch. The structural half runs offline on every
+  pull request through `check_report_regression`; the pass/fail half needs
+  per-case records and runs in `runner.parity_problems`. `stale_annotations` is
+  unchanged and nothing is relaxed. The `conversation` entry is re-anchored to
+  `conv-forged-002`, which still fails in both recorded live runs, and is
+  marked for deletion in the change that promotes a fresher report (#138, #140,
+  #165). Until then the nightly will go on reporting it as stale, correctly.
 - **Answer corpus-wide enumeration questions across agencies instead of
   depth-first (ADR 0027, issue #150 stays open).** "Which agencies in your
   corpus take Clipper?" names no agency, so retrieval fell through to a plain
