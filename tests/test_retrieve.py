@@ -325,6 +325,79 @@ class TestEnumerationRetrieval:
         # top_k of 8 chunks drawn from one or two dense-matching agencies.
         assert len(agencies) > 2
 
+    def test_enumeration_augmentation_reaches_every_agency_not_the_top_scored_one(
+        self, corpus_retriever
+    ):
+        """Issue #169: the one-chunk-per-agency guarantee broke on any
+        enumeration question that also used reduced-fare vocabulary.
+
+        `search()` builds the enumeration set with no agency named, then runs
+        `_close_the_loop`, `_ensure_eligibility_passage`, and
+        `_ensure_child_fare_passage` over it. All three fell back to
+        `results[0].chunk.agency` when no agency was named, so exactly one
+        agency — whichever of eighteen scored highest, VTA on the committed
+        corpus — was handed a second, better-supported passage and the other
+        seventeen kept their bare enumeration pick. The model then had the
+        retrieved evidence to write a fuller, better-cited sentence about one
+        arbitrary agency.
+
+        The invariant is not "no agency gets a second passage" (that would throw
+        away the criterion passages these helpers exist to supply); it is that an
+        agency gets one for a reason that holds of the corpus rather than of the
+        BM25 ranking. So: every enumerated agency whose corpus contains an
+        eligibility-criterion passage must be served one.
+
+        `test_enumeration_spans_the_corpus_one_chunk_per_agency` above pins the
+        plain case and never ran on a question that reaches this interaction —
+        which is why the defect survived it.
+        """
+        from assistant.corpus import load_chunks
+        from assistant.retrieve import _is_eligibility_criterion_passage, _is_reduced_fare_query
+
+        question = "How many agencies offer a senior discount?"
+        # Precondition: this really is the both-branches-match shape. Without it
+        # the test would pass by never exercising the interaction at all.
+        assert _is_enumeration_query(question)
+        assert _is_reduced_fare_query(question)
+
+        results = corpus_retriever.search(question)
+        enumerated = {sc.chunk.agency for sc in results}
+        assert len(enumerated) > 2
+
+        in_corpus = {c.agency for c in load_chunks() if _is_eligibility_criterion_passage(c)}
+        served = {sc.chunk.agency for sc in results if _is_eligibility_criterion_passage(sc.chunk)}
+        missing = (enumerated & in_corpus) - served
+        assert not missing, (
+            f"{sorted(missing)} were enumerated and have an eligibility-criterion passage in "
+            "the corpus, but were not served one. Before #169 only the top-scored agency was."
+        )
+
+    def test_augmentation_targets_pick_the_right_agencies(self, corpus_retriever):
+        """The shared fallback the three append-one-passage helpers now use.
+
+        Four behaviours, and the third is #169: an enumeration question has no
+        agency it is "about", so `results[0].chunk.agency` is not a stand-in for
+        one, it is a tie-break winner.
+        """
+        enumeration = "How many agencies offer a senior discount?"
+        ordinary = "What is the senior fare on Yolobus?"
+        pool = corpus_retriever.search(enumeration)[:2]
+        top, second = pool[0].chunk.agency, pool[1].chunk.agency
+        assert top != second
+
+        # A named agency always wins: the helpers act on what was asked about.
+        assert corpus_retriever._augmentation_targets(enumeration, [second], pool) == [second]
+        # An ordinary unscoped question keeps the single best-scored agency as a
+        # stand-in, because a plain top_k is dominated by one agency anyway.
+        assert corpus_retriever._augmentation_targets(ordinary, [], pool) == [top]
+        # An enumeration question targets every agency in the result set.
+        assert corpus_retriever._augmentation_targets(enumeration, [], pool) == sorted(
+            {top, second}
+        )
+        # Nothing retrieved, nothing to augment. Guarded explicitly, because all
+        # three call sites would otherwise index `results[0]`.
+        assert corpus_retriever._augmentation_targets(enumeration, [], []) == []
+
     def test_enumeration_reaches_agencies_a_plain_top_k_never_shows(self, corpus_retriever):
         """The negative statement is the point: SCMTD's best Clipper passage
         says Clipper is NOT honored, and an enumerating answer needs it."""

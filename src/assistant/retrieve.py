@@ -574,6 +574,44 @@ class Retriever:
         results = self._ensure_eligibility_passage(question, agencies, results, ranked)
         return self._ensure_child_fare_passage(question, agencies, results, ranked)
 
+    def _augmentation_targets(
+        self, question: str, agencies: list[str], results: list[ScoredChunk]
+    ) -> list[str]:
+        """Which agencies the three append-one-passage helpers below act on.
+
+        The named agencies, when the question names any. Otherwise the single
+        best-scored agency stands in, which is reasonable for an ordinary
+        unscoped question because a plain top_k is normally dominated by one
+        agency anyway.
+
+        An enumeration question is the exception, and it is why this is a shared
+        helper rather than three copies of the same fallback (issue #169).
+        `search()` has just built one passage per agency across the whole corpus
+        (ADR 0027), so `results[0].chunk.agency` is not standing in for "the
+        agency this question is about" — there is no such agency. It is whichever
+        of eighteen happened to score highest. Giving that one a second,
+        better-supported passage while the other seventeen keep only their bare
+        enumeration pick is arbitrary: the model then has retrieved evidence to
+        write a fuller, better-cited sentence about one agency for no reason a
+        rider could name, and it breaks the one-passage-per-agency guarantee the
+        enumeration branch exists to provide.
+
+        Targeting every enumerated agency keeps the asymmetry principled: an
+        agency gets a second passage when its own enumeration pick lacks the
+        criterion (or application, or child-fare) passage the question is about
+        and its corpus has one, which is a fact about the corpus rather than
+        about BM25 tie-breaking. The helpers themselves are unchanged: each still
+        appends at most one passage per agency and never removes anything.
+        """
+
+        if agencies:
+            return list(agencies)
+        if not results:
+            return []
+        if _is_enumeration_query(question):
+            return sorted({sc.chunk.agency for sc in results})
+        return [results[0].chunk.agency]
+
     def _ensure_eligibility_passage(
         self,
         question: str,
@@ -594,9 +632,7 @@ class Retriever:
         remove anything."""
         if not _is_reduced_fare_query(question):
             return results
-        targets = list(agencies)
-        if not targets and results:
-            targets = [results[0].chunk.agency]
+        targets = self._augmentation_targets(question, agencies, results)
         present = {sc.chunk.chunk_id for sc in results}
         additions: list[ScoredChunk] = []
         for ag in targets:
@@ -630,7 +666,7 @@ class Retriever:
         passage per relevant agency and never removes anything."""
         if not _is_child_fare_query(question):
             return results
-        targets = list(agencies) or ([results[0].chunk.agency] if results else [])
+        targets = self._augmentation_targets(question, agencies, results)
         present = {sc.chunk.chunk_id for sc in results}
         additions: list[ScoredChunk] = []
         for ag in targets:
@@ -660,9 +696,7 @@ class Retriever:
         so the answer can state where to apply, the ID cost, and office hours."""
         if not _is_reduced_fare_query(question):
             return results
-        targets = list(agencies)
-        if not targets and results:
-            targets = [results[0].chunk.agency]
+        targets = self._augmentation_targets(question, agencies, results)
         present = {sc.chunk.chunk_id for sc in results}
         additions: list[ScoredChunk] = []
         for ag in targets:
