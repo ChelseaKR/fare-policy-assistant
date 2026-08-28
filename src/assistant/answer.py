@@ -97,6 +97,79 @@ def _as_of_cited(citations: list[Citation]) -> str:
     return min((c.fetch_date for c in citations), default="")
 
 
+# The rider-facing freshness sentence, in the three languages the prompts
+# mandate it in: "based on policies published as of <date>"
+# (prompts/system.txt, prompts/answer_user.txt), "según las políticas
+# publicadas al <date>", "batay sa mga patakaran na inilathala noong <date>".
+# Only the date immediately following one of those lead-ins is matched. Other
+# dates in an answer mean different things and must not be touched: "the corpus
+# snapshot date is <date>" is the deadline-reasoning date (correctly the newest
+# retrieved), and "documents fetched on <date>" is a per-document claim.
+#
+# `[0-9]` rather than `\d`: `\d` also matches non-ASCII decimal digits, which
+# would let a fullwidth or Devanagari date through this alignment untouched.
+_AS_OF_PROSE = re.compile(
+    r"(?P<lead>(?:published as of|publicadas al|inilathala noong)[ \t]*\**[ \t]*)"
+    r"(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})",
+    re.IGNORECASE,
+)
+
+
+def prose_as_of_dates(text: str) -> list[str]:
+    """Every date an answer renders in its rider-facing freshness sentence.
+
+    Public because `evals.checks.as_of_prose_matches_structured` has to read the
+    sentence with the *same* pattern `_align_as_of_prose` rewrites it with. A
+    check that recognised a different set of phrasings than the normalizer would
+    be green precisely where the normalizer had already missed something.
+    """
+
+    return [match.group("date") for match in _AS_OF_PROSE.finditer(text)]
+
+
+def _align_as_of_prose(text: str, as_of: str) -> tuple[str, list[str]]:
+    """Make the freshness sentence say the same date the contract carries.
+
+    The prompt is handed `as_of_retrieved` — the newest fetch date across the
+    retrieved set, which is the right date for reasoning about whether a
+    published deadline has passed — and is told to render that value in the
+    rider-facing "based on policies published as of <date>" line. The structured
+    `as_of_date` on an answered response is `_as_of_cited(citations)`: the
+    *oldest* passage the answer actually stands on. Those two are different
+    numbers whenever the cited set is older than the freshest thing retrieval
+    surfaced, which is the ordinary case, because documents are refetched one at
+    a time.
+
+    Nothing compared them. `as_of_matches_oldest_citation` reads the structured
+    field only, so it passed while the sentence the rider reads overstated the
+    freshness of the evidence. Measured on the 2026-08-22 full live run
+    (`evals/runs/20260822T131246Z/results.jsonl`): 28 of the 345 answers that
+    render the line disagreed with their own structured date, several of them by
+    ten weeks (prose 2026-08-21 over evidence fetched 2026-06-12). Issue #163;
+    issue #165 attributes two of the four Spanish parity failures to it.
+
+    The realignment only ever moves the claim *older*, toward the evidence, and
+    it is recorded as a guard flag rather than applied silently. The per-citation
+    "(fetched ...)" lines are untouched and still carry each document's own date.
+    """
+
+    if not as_of:
+        return text, []
+    replaced: list[str] = []
+
+    def _swap(match: re.Match[str]) -> str:
+        stated = match.group("date")
+        if stated == as_of:
+            return match.group(0)
+        replaced.append(stated)
+        return f"{match.group('lead')}{as_of}"
+
+    aligned = _AS_OF_PROSE.sub(_swap, text)
+    if not replaced:
+        return text, []
+    return aligned, [f"as_of_prose_realigned:{stated}->{as_of}" for stated in sorted(set(replaced))]
+
+
 def _format_passages(results: list[ScoredChunk]) -> str:
     blocks = []
     for sc in results:
@@ -339,6 +412,14 @@ def answer_question(
         for doc_id in sorted(cited_ids)
         if doc_id in by_id
     ]
+    # Dated by the evidence, not by the retrieval: `citations` is the exact set
+    # validated against `by_id` just above, so the freshness the rider is shown
+    # is the freshness of the passages the answer stands on. The prose sentence
+    # is then pulled onto that same date, because the model was handed the
+    # newest *retrieved* date and cannot know the cited one (issue #163).
+    as_of = _as_of_cited(citations)
+    text, as_of_flags = _align_as_of_prose(text, as_of)
+    guard_flags = guard_flags + as_of_flags
     return AnswerResult(
         question=question,
         answer=text,
@@ -347,10 +428,7 @@ def answer_question(
         passages=results,
         guard_flags=guard_flags,
         model=completion.model,
-        # Dated by the evidence, not by the retrieval: `citations` is the exact
-        # set validated against `by_id` just above, so the freshness the rider
-        # is shown is the freshness of the passages the answer stands on.
-        as_of_date=_as_of_cited(citations),
+        as_of_date=as_of,
         input_tokens=completion.input_tokens,
         output_tokens=completion.output_tokens,
         cache_creation_input_tokens=completion.cache_creation_input_tokens,

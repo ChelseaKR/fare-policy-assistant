@@ -327,6 +327,23 @@ def _scenarios() -> list[Scenario]:
             # rest on, while the citation under it was months older.
             mutate=lambda r: replace(r, as_of_date=max(sc.chunk.fetch_date for sc in r.passages)),
         ),
+        Scenario(
+            name="the sentence the rider reads is dated later than the evidence under it",
+            check="as_of_prose_matches_structured",
+            case={"expected_behavior": "answer", "language": "en"},
+            clean=replace(_clean(doc_id, base_answer), passages=_mixed_freshness_passages(doc_id)),
+            # The mutation is the pre-fix behaviour of issue #163, verbatim: the
+            # prompt is handed max(fetch_date) over the retrieved set and told to
+            # render it in "based on policies published as of <date>", while the
+            # structured as_of stays on the oldest cited passage. The structured
+            # check above still passes on this mutant, which is the whole point:
+            # it validates a field, and the rider reads a sentence. 28 of 345
+            # answers in the 2026-08-22 full live run diverged this way.
+            mutate=lambda r: replace(
+                r,
+                answer=r.answer.replace(AS_OF, max(sc.chunk.fetch_date for sc in r.passages)),
+            ),
+        ),
     ]
 
 

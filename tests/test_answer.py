@@ -287,6 +287,126 @@ class TestAsOfDate:
         assert result.as_of_date == "2026-06-12"
 
 
+class TestAsOfProseAlignment:
+    """The sentence the rider reads must carry the same date as the contract.
+
+    Issue #163. The prompt is handed `as_of_retrieved` (the newest fetch date in
+    the retrieved set, which is what deadline reasoning needs) and told to render
+    it in "based on policies published as of <date>", while the structured
+    `as_of_date` is the *oldest cited* passage. Nothing compared the two, and
+    `as_of_matches_oldest_citation` reads only the structured field, so an answer
+    could tell a rider its evidence was ten weeks fresher than it was and pass
+    every gate. 28 of the 345 answers that render the line in the 2026-08-22 full
+    live run (`evals/runs/20260822T131246Z`) disagreed with their own structured
+    date.
+    """
+
+    def test_prose_date_is_pulled_back_onto_the_cited_evidence(self, chunks):
+        retriever = TestAsOfDate._mixed_freshness_retriever(chunks)
+        result = answer_question(
+            "Do youth ride free on Yolobus?",
+            # The model renders the newest *retrieved* date, which is exactly
+            # what the prompt hands it and what these answers really did.
+            model=ScriptedModel(
+                "Youth ages 0-18 ride free [doc:yolobus-fares], based on policies "
+                "published as of 2026-08-10."
+            ),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.kind == "answered"
+        assert result.as_of_date == "2026-06-12"
+        assert "published as of 2026-06-12" in result.answer
+        assert "2026-08-10" not in result.answer
+        # Never silent: the trace says what was changed and keeps what the model
+        # actually wrote.
+        assert "as_of_prose_realigned:2026-08-10->2026-06-12" in result.guard_flags
+        assert "published as of 2026-08-10" in result.raw_model_answer
+
+    def test_a_correctly_dated_answer_is_left_exactly_as_written(self, chunks):
+        retriever = TestAsOfDate._mixed_freshness_retriever(chunks)
+        text = (
+            "Youth ages 0-18 ride free [doc:yolobus-fares], based on policies "
+            "published as of 2026-06-12."
+        )
+        result = answer_question(
+            "Do youth ride free on Yolobus?",
+            model=ScriptedModel(text),
+            retriever=retriever,
+            cfg=_cfg(),
+        )
+        assert result.answer == text
+        assert not [flag for flag in result.guard_flags if flag.startswith("as_of_prose")]
+
+    def test_only_the_freshness_sentence_is_rewritten(self):
+        from assistant.answer import _align_as_of_prose
+
+        # Three dates, three different meanings. Only the disclosure line is a
+        # claim about the evidence under the answer; the snapshot date drives
+        # deadline reasoning and the per-document line is that document's own
+        # fetch date. Rewriting either of those would corrupt a true statement.
+        text = (
+            "The summer pass deadline was 2026-07-31. Since the corpus snapshot "
+            "date is 2026-08-10, that deadline has passed. This page was fetched "
+            "on 2026-08-10. Based on policies published as of 2026-08-10, the "
+            "fare is $2.00."
+        )
+        aligned, flags = _align_as_of_prose(text, "2026-06-12")
+        assert "corpus snapshot date is 2026-08-10" in aligned
+        assert "fetched on 2026-08-10" in aligned
+        assert "published as of 2026-06-12" in aligned
+        assert "deadline was 2026-07-31" in aligned
+        assert flags == ["as_of_prose_realigned:2026-08-10->2026-06-12"]
+
+    def test_the_spanish_and_tagalog_sentences_are_realigned_too(self):
+        from assistant.answer import _align_as_of_prose
+
+        # #165 attributes two of the four Spanish parity failures on the
+        # 2026-08-22 run to this defect, so the Spanish phrasing is not optional
+        # coverage.
+        spanish, es_flags = _align_as_of_prose(
+            "Según las políticas publicadas al 2026-08-10, la tarifa es $2.00.", "2026-06-12"
+        )
+        assert "publicadas al 2026-06-12" in spanish
+        assert es_flags == ["as_of_prose_realigned:2026-08-10->2026-06-12"]
+
+        tagalog, tl_flags = _align_as_of_prose(
+            "Batay sa mga patakaran na inilathala noong 2026-08-10, ang pamasahe ay $2.00.",
+            "2026-06-12",
+        )
+        assert "inilathala noong 2026-06-12" in tagalog
+        assert tl_flags == ["as_of_prose_realigned:2026-08-10->2026-06-12"]
+
+    def test_an_answer_with_no_structured_date_is_untouched(self):
+        from assistant.answer import _align_as_of_prose
+
+        text = "Based on policies published as of 2026-08-10, the fare is $2.00."
+        assert _align_as_of_prose(text, "") == (text, [])
+
+    def test_bold_markup_between_the_lead_in_and_the_date_is_handled(self):
+        from assistant.answer import _align_as_of_prose
+
+        # Answers in the recorded runs render the date bare and bolded both.
+        aligned, flags = _align_as_of_prose(
+            "Based on policies published as of **2026-08-10**, the fare is $2.00.", "2026-06-12"
+        )
+        assert "published as of **2026-06-12**" in aligned
+        assert flags == ["as_of_prose_realigned:2026-08-10->2026-06-12"]
+
+    def test_the_check_reads_the_sentence_with_the_pattern_the_fix_rewrites(self):
+        # One definition, deliberately: a backstop check that recognised fewer
+        # phrasings than the normalizer would be green exactly where the
+        # normalizer had already missed something.
+        from assistant.answer import _AS_OF_PROSE, prose_as_of_dates
+
+        text = (
+            "Based on policies published as of 2026-08-10. "
+            "Según las políticas publicadas al 2026-06-12."
+        )
+        assert prose_as_of_dates(text) == ["2026-08-10", "2026-06-12"]
+        assert [m.group("date") for m in _AS_OF_PROSE.finditer(text)] == prose_as_of_dates(text)
+
+
 class TestMultiTurn:
     def test_retrieval_query_inherits_prior_turn(self):
         from assistant.answer import _retrieval_query
