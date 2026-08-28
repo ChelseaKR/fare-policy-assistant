@@ -1,103 +1,221 @@
 {
-  "generated": "2026-07-08T07:49:36.292871+00:00",
+  "generated": "2026-08-28T22:56:52.902000+00:00",
   "records": [
     {
       "agency": "MST",
       "fare_id": "Regular",
       "name": "Regular",
       "feed_amount": "2.00",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 4
     },
     {
       "agency": "MST",
       "fare_id": "Free",
       "name": "Free",
       "feed_amount": "0.00",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 3
     },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_standard_cash_fare",
       "name": "Standard One-way Cash Fare",
       "feed_amount": "2.50",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 6
     },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_reduced_cash_fare",
       "name": "Reduced One-way Cash Fare",
       "feed_amount": "1.25",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 1
     },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_child_free_fare",
       "name": "Free Child Fare",
       "feed_amount": "0.00",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 6
     },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_standard_contactless_fare",
       "name": "Standard One-way Contactless Fare",
       "feed_amount": "2.50",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 6
     },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_reduced_contactless_fare",
       "name": "Reduced One-way Contactless Fare",
       "feed_amount": "1.25",
-      "feed_agrees": "yes"
+      "feed_agrees": "yes",
+      "prose_matches": 1
     },
     {
       "agency": "SBMTD",
       "fare_id": "downtown_waterfront_shuttle_standard_cash_fare",
       "name": "Waterfront Shuttle One-way Cash Fare",
       "feed_amount": "0.50",
-      "feed_agrees": "no"
+      "feed_agrees": "no",
+      "prose_matches": 0
     },
     {
       "agency": "SBMTD",
       "fare_id": "downtown_waterfront_reduced_cash_fare",
       "name": "Waterfront Shuttle Reduced One-way Cash Fare",
       "feed_amount": "0.25",
-      "feed_agrees": "no"
+      "feed_agrees": "no",
+      "prose_matches": 0
     },
     {
       "agency": "SBMTD",
       "fare_id": "downtown_waterfront_shuttle_standard_contactless_fare",
       "name": "Waterfront Shuttle One-way Contactless Fare",
       "feed_amount": "0.50",
-      "feed_agrees": "no"
+      "feed_agrees": "no",
+      "prose_matches": 0
     },
     {
       "agency": "SBMTD",
       "fare_id": "downtown_waterfront_reduced_contactless_fare",
       "name": "Waterfront Shuttle Reduced One-way Contactless Fare",
       "feed_amount": "0.25",
-      "feed_agrees": "no"
+      "feed_agrees": "no",
+      "prose_matches": 0
+    },
+    {
+      "agency": "AC Transit",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "CCCTA",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "E-tran",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "FAX",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
     },
     {
       "agency": "HTA",
       "fare_id": "(no feed configured)",
       "name": "(no feed configured)",
       "feed_amount": null,
-      "feed_agrees": "no_feed"
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "Marin Transit",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "SLORTA",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
     },
     {
       "agency": "SacRT",
       "fare_id": "(no feed configured)",
       "name": "(no feed configured)",
       "feed_amount": null,
-      "feed_agrees": "no_feed"
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "SamTrans",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "SolTrans",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "VINE",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "VTA",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
+    },
+    {
+      "agency": "WestCAT",
+      "fare_id": "(no feed configured)",
+      "name": "(no feed configured)",
+      "feed_amount": null,
+      "feed_agrees": "no_feed",
+      "prose_matches": null
     },
     {
       "agency": "Yolobus",
       "fare_id": "(no feed configured)",
       "name": "(no feed configured)",
       "feed_amount": null,
-      "feed_agrees": "no_feed"
+      "feed_agrees": "no_feed",
+      "prose_matches": null
     }
   ]
 }
