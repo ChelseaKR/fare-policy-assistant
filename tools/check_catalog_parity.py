@@ -50,6 +50,71 @@ def _fields(text: str) -> set[str]:
     return set(_FIELD.findall(text))
 
 
+def _plural_message_errors(name: str, message: Message) -> list[str]:
+    """G5 for a pluralizable msgid: every form non-empty, placeholders preserved."""
+    src_fields = _fields(_key(message)) | _fields(message.id[1])
+    forms = message.string if isinstance(message.string, (tuple, list)) else ()
+    if not forms or any(not s for s in forms):
+        return [f"G5: {name} has an empty plural form for {_key(message)!r}"]
+    return [
+        f"G5: {name} placeholder mismatch in plural {_key(message)!r}: "
+        f"{_fields(form)} != {src_fields}"
+        for form in forms
+        if _fields(form) != src_fields
+    ]
+
+
+def _singular_message_errors(name: str, message: Message) -> list[str]:
+    """G5 for a non-pluralizable msgid: msgstr non-empty, placeholders preserved."""
+    target = message.string
+    if isinstance(target, (tuple, list)):
+        # Babel types `Message.string` as str-or-sequence, and a catalog that
+        # carries plural msgstrs under a non-plural msgid is malformed rather
+        # than merely oddly typed: `gettext()` would return the wrong shape to
+        # a rider-facing `.format()`. Report it instead of narrowing it away.
+        return [
+            f"G5: {name} has plural msgstrs under the non-plural msgid {message.id!r}; "
+            "re-extract with `make i18n`"
+        ]
+    if not target:
+        return [f"G5: {name} has an empty msgstr for {message.id!r}"]
+    src_fields = _fields(_key(message))
+    if _fields(target) != src_fields:
+        return [
+            f"G5: {name} placeholder mismatch in {message.id!r}: {_fields(target)} != {src_fields}"
+        ]
+    return []
+
+
+def _completeness_errors(name: str, catalog: Catalog) -> list[str]:
+    """G5 over one catalog: every msgstr non-empty with placeholders preserved."""
+    errors: list[str] = []
+    for message in catalog:
+        if not message.id:
+            continue
+        if isinstance(message.id, (tuple, list)):
+            errors += _plural_message_errors(name, message)
+        else:
+            errors += _singular_message_errors(name, message)
+    return errors
+
+
+def _key_parity_errors(pot_ids: set[str], ids_by_name: dict[str, set[str]]) -> list[str]:
+    """G6 both ways: no catalog invents a msgid, none is missing one."""
+    errors: list[str] = []
+    for name, ids in ids_by_name.items():
+        extra = ids - pot_ids
+        if extra:
+            errors.append(f"G6: {name} has msgids absent from the template: {sorted(extra)}")
+    for name, ids in ids_by_name.items():
+        missing = pot_ids - ids
+        if missing:
+            errors.append(
+                f"G5: {name} is missing msgids present in the template: {sorted(missing)}"
+            )
+    return errors
+
+
 def main() -> int:
     errors: list[str] = []
 
@@ -74,48 +139,9 @@ def main() -> int:
             "removed, this gate has nothing left to protect and should be removed with them"
         )
 
-    # G6: every supported catalog has exactly the template's key set.
-    for name, ids in ids_by_name.items():
-        extra = ids - pot_ids
-        if extra:
-            errors.append(f"G6: {name} has msgids absent from the template: {sorted(extra)}")
-
-    # Structural completeness: every template msgid present in each catalog.
-    for name, ids in ids_by_name.items():
-        missing = pot_ids - ids
-        if missing:
-            errors.append(
-                f"G5: {name} is missing msgids present in the template: {sorted(missing)}"
-            )
-
-    # G5: every msgstr (each plural form) non-empty, placeholders preserved.
+    errors += _key_parity_errors(pot_ids, ids_by_name)
     for name, catalog in catalogs.items():
-        for message in catalog:
-            if not message.id:
-                continue
-            src_fields = _fields(_key(message))
-            if isinstance(message.id, (tuple, list)):
-                src_fields |= _fields(message.id[1])
-                forms = message.string if isinstance(message.string, (tuple, list)) else ()
-                if not forms or any(not s for s in forms):
-                    errors.append(f"G5: {name} has an empty plural form for {_key(message)!r}")
-                    continue
-                for form in forms:
-                    if _fields(form) != src_fields:
-                        errors.append(
-                            f"G5: {name} placeholder mismatch in plural {_key(message)!r}: "
-                            f"{_fields(form)} != {src_fields}"
-                        )
-            else:
-                target = message.string
-                if not target:
-                    errors.append(f"G5: {name} has an empty msgstr for {message.id!r}")
-                    continue
-                if _fields(target) != src_fields:
-                    errors.append(
-                        f"G5: {name} placeholder mismatch in {message.id!r}: "
-                        f"{_fields(target)} != {src_fields}"
-                    )
+        errors += _completeness_errors(name, catalog)
 
     if errors:
         print("catalog parity FAILED:", file=sys.stderr)

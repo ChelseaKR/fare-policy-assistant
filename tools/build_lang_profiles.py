@@ -22,13 +22,14 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from collections import Counter
 from pathlib import Path
 
 # Import the *same* normalization/trigram code the classifier uses, so the
-# profiles can never drift from how inputs are tokenized at detect time.
-import sys
-
+# profiles can never drift from how inputs are tokenized at detect time. The
+# sys.path insert below has to run before that import, which is why it carries
+# an explicit E402 waiver rather than being hoisted.
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
 
@@ -53,14 +54,12 @@ SAMPLES: dict[str, list[str]] = {
         "The reduced fare is for seniors sixty five and older and riders with a "
         "disability who qualify.",
         "What documents do I need to get the discount card and where do I apply?",
-        "The day pass costs two dollars and the monthly pass is available at the "
-        "transit center.",
+        "The day pass costs two dollars and the monthly pass is available at the transit center.",
         "You may qualify for the reduced fare if you are a student or a veteran; "
         "please check the published policy.",
         "Children under five ride free with a paying adult and the fare is the "
         "same on every route.",
-        "Do I need proof of age and income to receive the reduced fare on this "
-        "transit agency.",
+        "Do I need proof of age and income to receive the reduced fare on this transit agency.",
         "The regular one way fare is paid with cash or a card when you board the "
         "bus or the light rail.",
         "Please contact the customer service office of the transit agency for the "
@@ -77,12 +76,10 @@ SAMPLES: dict[str, list[str]] = {
         "would cost for a week of rides.",
     ],
     "es": [
-        "¿Cuánto cuesta el pasaje en el autobús y aplica el descuento para "
-        "personas mayores?",
+        "¿Cuánto cuesta el pasaje en el autobús y aplica el descuento para personas mayores?",
         "La tarifa reducida es para adultos mayores de sesenta y cinco años y "
         "para personas con discapacidad que califican.",
-        "¿Qué documentos necesito para obtener la tarjeta de descuento y dónde "
-        "debo solicitarla?",
+        "¿Qué documentos necesito para obtener la tarjeta de descuento y dónde debo solicitarla?",
         "El pase diario cuesta dos dólares y el pase mensual está disponible en "
         "el centro de tránsito.",
         "Usted puede calificar para la tarifa reducida si es estudiante o "
@@ -109,12 +106,10 @@ SAMPLES: dict[str, list[str]] = {
         "tarifa reducida y qué necesito.",
     ],
     "tl": [
-        "Magkano ang pamasahe sa bus at mayroon bang diskwento para sa mga "
-        "senior citizen?",
+        "Magkano ang pamasahe sa bus at mayroon bang diskwento para sa mga senior citizen?",
         "Ang pinababang pamasahe ay para sa mga matatanda na animnapu't lima "
         "pataas at sa mga may kapansanan na kwalipikado.",
-        "Anong mga dokumento ang kailangan ko para makuha ang diskwento at saan "
-        "ako mag-aaplay?",
+        "Anong mga dokumento ang kailangan ko para makuha ang diskwento at saan ako mag-aaplay?",
         "Ang day pass ay nagkakahalaga ng dalawang dolyar at ang buwanang pass "
         "ay makukuha sa transit center.",
         "Maaari kang maging kwalipikado sa pinababang pamasahe kung ikaw ay "
@@ -152,10 +147,7 @@ def _profile(texts: list[str]) -> tuple[dict[str, float], float]:
     vocab = len(counts)
     denom = total + vocab + 1
     top = counts.most_common(TOP_K)
-    profile = {
-        gram: round(math.log((count + 1) / denom), 6)
-        for gram, count in top
-    }
+    profile = {gram: round(math.log((count + 1) / denom), 6) for gram, count in top}
     floor = round(math.log(1 / denom), 6)
     return profile, floor
 
