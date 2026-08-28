@@ -23,6 +23,21 @@ SUPPORTED_LOCALES := en es tl
 # sits a few points below to absorb Python-version / optional-extra drift in CI.
 COV_MIN ?= 90
 
+# The linted and typechecked trees, named once. CI's `checks` job calls these
+# same targets rather than re-spelling the paths, and tests/test_lint_coverage.py
+# fails the build when a directory holding first-party .py files is missing from
+# LINT_PATHS. Both guards exist because of a real hole: `tools/` (the
+# merge-blocking i18n gates) was linted and typechecked by nothing at all, and
+# `scripts/` (the evidence-site and promotion-attestation builders) was in the
+# Makefile but not in CI, so from 2026-08-21 to 2026-08-28 CQ-05 was structurally
+# unable to report on it and `make verify` was red on main while CI was green.
+#
+# TYPE_PATHS is deliberately narrower: `tests/` and `evals/` are not under mypy
+# yet (mypy strict mode is still off repo-wide, see the README's Code Quality
+# row). Narrower is a decision; missing is the defect this names.
+LINT_PATHS := src tests evals web scripts tools
+TYPE_PATHS := src web scripts tools
+
 fetch:        ## Snapshot corpus documents listed in corpus/manifest.yaml
 	uv run python -m assistant.ingest fetch
 
@@ -103,11 +118,11 @@ test:         ## Run the unit suite with the branch-coverage gate (offline; no p
 cov: test     ## Alias for the coverage-gated test run
 
 lint:
-	uv run ruff check src tests evals web scripts
-	uv run ruff format --check src tests evals web scripts
+	uv run ruff check $(LINT_PATHS)
+	uv run ruff format --check $(LINT_PATHS)
 
 typecheck:
-	uv run mypy src web scripts
+	uv run mypy $(TYPE_PATHS)
 
 check: lint typecheck test
 

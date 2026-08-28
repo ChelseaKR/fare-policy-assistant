@@ -41,31 +41,42 @@ jobs:
           enable-cache: true
       - name: Verify uv.lock is current (CQ-09 lockfile-drift gate)
         run: uv sync --locked --all-groups
-      - name: Lint
-        run: uv run ruff check src tests evals web
-      - name: Format check
-        run: uv run ruff format --check src tests evals web
-      - name: Typecheck
-        run: uv run mypy src web
-      - name: Tests (with branch-coverage gate)
-        run: >-
-          uv run pytest -q --cov=assistant --cov=web --cov=evals --cov-branch
-          --cov-report=term-missing --cov-fail-under=90
-      - name: Accessibility (structural gate)
-        run: uv run python -m web.a11y
+      # Each step below invokes the Makefile target a contributor runs, instead
+      # of re-spelling its command line here. Until 2026-08-28 these were
+      # hand-copied `uv run ...` lines, and they had silently drifted: the
+      # Makefile linted `src tests evals web scripts` and typechecked
+      # `src web scripts` while CI omitted `scripts` from both. So the CQ-05
+      # complexity gate (landed 2026-08-21, e3b91b1) had never been able to
+      # report on the evidence-site builder or the promotion-attestation
+      # builder, four C901 violations sat there for a week, and `make verify`
+      # — the entrypoint CONTRIBUTING.md documents — was red on main while CI
+      # was green over the same tree.
+      #
+      # tests/test_workflow_safety.py now fails the build if any step in this
+      # job stops resolving to the make target it claims, and
+      # tests/test_lint_coverage.py fails it if a first-party Python directory
+      # falls outside the linted/typechecked set.
+      - name: Lint and format check (make lint)
+        run: make lint
+      - name: Typecheck (make typecheck)
+        run: make typecheck
+      - name: Tests with branch-coverage gate (make test)
+        run: make test
+      - name: Accessibility structural gate (make a11y)
+        run: make a11y
       - name: Committed-report regression check
         # Offline, no model calls: re-checks the *committed* EVALS.md's
         # scoreboard against the *committed* baseline, so a regressed report
         # that slipped past a local `make eval` run's exit code (see
         # docs/audits/eval-regression-2026-06-30.md) now fails PR-time CI too,
         # not just a nightly job that only uploads an artifact.
-        run: uv run python -m evals.check_report_regression
+        run: make report-regression
       - name: Provenance gate (published artifacts vs HEAD)
         # Offline, no model calls: EVALS.md, evals/baseline.json, and
         # evals/govchat/golden.jsonl must declare the prompt+corpus versions
         # HEAD actually ships, or carry a documented, reasoned waiver in
         # evals/stale_acknowledged.json (FIX-01/M-2; promoted from advisory).
-        run: uv run python -m evals.provenance
+        run: make provenance
 
   i18n:
     name: i18n (gettext catalog gate)

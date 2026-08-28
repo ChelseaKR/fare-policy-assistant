@@ -21,14 +21,18 @@ repos:
         args: ["--fix"]
       - id: ruff-format
 
-  # Matches the mypy version pinned in uv.lock (2.1.0) and the CI typecheck
-  # scope (`make typecheck` = mypy src web).
+  # Matches the mypy version pinned in uv.lock (2.1.0) and the typecheck scope
+  # (`make typecheck` = mypy $(TYPE_PATHS)). This was the third hand-written copy
+  # of that path list and it had gone stale: it read `^(src|web)/` while the
+  # Makefile also covered `scripts`, and neither covered `tools`.
+  # tests/test_lint_coverage.py now fails the build when this pattern stops
+  # matching every directory in TYPE_PATHS.
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: d2823d321df3af8f878f7ee3414dc94d037145b9  # v2.1.0
     hooks:
       - id: mypy
         additional_dependencies: ["types-PyYAML"]
-        files: ^(src|web)/
+        files: ^(src|web|scripts|tools)/
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: 43fae355e6fe4d99d2a7b240a224b85e2903aeb4  # v8.21.2

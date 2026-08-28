@@ -130,3 +130,36 @@ def test_paid_eval_jobs_are_never_promotion_evidence():
         "promotion must still run its own full, uncached evaluation independent of "
         "the routine CI jobs' caching"
     )
+
+
+def test_ci_checks_job_calls_the_makefile_gate_targets_rather_than_respelling_them():
+    """The `checks` job and `make verify` must be one definition, not two copies.
+
+    They were two copies until 2026-08-28, and they had drifted: the Makefile
+    linted `src tests evals web scripts` and typechecked `src web scripts` while
+    this job omitted `scripts` from both. `C90` (CQ-05) had therefore never been
+    able to report a finding in the evidence-site or promotion-attestation
+    builders, four C901 violations sat there for a week, `make verify` was red on
+    `main`, and every CI run over that same tree was green.
+
+    Re-spelling a command line here is what allowed that, so the gate is: every
+    step in this job that has a local Makefile equivalent must invoke it.
+    """
+    _, workflow = _ci_workflow()
+    steps = workflow["jobs"]["checks"]["steps"]
+    commands = [step.get("run", "").strip() for step in steps if "run" in step]
+
+    for target in ("lint", "typecheck", "test", "a11y", "report-regression", "provenance"):
+        assert f"make {target}" in commands, (
+            f"the checks job no longer calls `make {target}`. Re-spelling the command "
+            "here is how CI and the Makefile drifted before; call the target instead."
+        )
+    respelled = [
+        command
+        for command in commands
+        if command.startswith("uv run ") and ("ruff" in command or "mypy" in command)
+    ]
+    assert not respelled, (
+        f"these steps bypass the Makefile's LINT_PATHS/TYPE_PATHS: {respelled}. "
+        "A hand-copied path list is the exact drift this job is guarded against."
+    )
