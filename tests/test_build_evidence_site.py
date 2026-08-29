@@ -549,6 +549,8 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         "public-evidence.json",
         "release.json",
         "report.html",
+        "robots.txt",
+        "sitemap.xml",
     }
     assert first_files["CNAME"] == b"evals.chelseakr.com\n"
     combined = b"\n".join(first_files.values())
@@ -1010,3 +1012,99 @@ def test_every_pages_action_is_pinned_to_a_full_commit_sha() -> None:
     assert uses
     assert all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", value) for value in uses)
     assert not re.search(r"uses:\s*[^@\s]+@v[0-9]", text)
+
+
+# --- what the published pages say about where they are ---------------------------
+
+
+def _rendered(tmp_path: Path, *, cname: str | None = None) -> Path:
+    cname_path = None
+    if cname is not None:
+        cname_path = tmp_path / "CNAME"
+        cname_path.write_text(f"{cname}\n", encoding="ascii")
+    return site.render_evidence_site(
+        manifest_path=_write_manifest(tmp_path / "public.json"),
+        template_path=_TEMPLATE,
+        output_dir=tmp_path / "site",
+        cname_path=cname_path,
+    )
+
+
+def test_every_published_page_carries_a_canonical_pointing_at_itself(tmp_path: Path) -> None:
+    """A canonical naming another page hands a crawler the wrong address."""
+    output = _rendered(tmp_path)
+    expected = {
+        "index.html": f"{site.SITE_ORIGIN}/",
+        "report.html": f"{site.SITE_ORIGIN}/report.html",
+    }
+    for name, url in expected.items():
+        soup = BeautifulSoup((output / name).read_text(encoding="utf-8"), "html.parser")
+        link = soup.find("link", rel="canonical")
+        assert link is not None, name
+        assert link.get("href") == url, name
+
+
+def test_the_share_card_says_what_the_page_says(tmp_path: Path) -> None:
+    """A card that differs from the page is a second description nobody rereads."""
+    output = _rendered(tmp_path)
+    for name in site.INDEXABLE_PAGES:
+        soup = BeautifulSoup((output / name).read_text(encoding="utf-8"), "html.parser")
+        title = soup.title.get_text(strip=True) if soup.title else ""
+        description = soup.find("meta", attrs={"name": "description"})
+        assert description is not None and description.get("content"), name
+        canonical = soup.find("link", rel="canonical")
+        assert canonical is not None
+        card = {
+            tag.get("property") or tag.get("name"): tag.get("content")
+            for tag in soup.find_all("meta")
+            if (tag.get("property") or "").startswith("og:")
+            or (tag.get("name") or "").startswith("twitter:")
+        }
+        assert card["og:title"] == title, name
+        assert card["twitter:title"] == title, name
+        assert card["og:description"] == description["content"], name
+        assert card["twitter:description"] == description["content"], name
+        assert card["og:url"] == canonical["href"], name
+        assert card["twitter:card"] == "summary", name
+        # No image is published, so none may be promised.
+        assert "og:image" not in card and "twitter:image" not in card, name
+
+
+def test_no_published_description_is_long_enough_to_be_cut(tmp_path: Path) -> None:
+    output = _rendered(tmp_path)
+    for name in site.INDEXABLE_PAGES:
+        soup = BeautifulSoup((output / name).read_text(encoding="utf-8"), "html.parser")
+        description = soup.find("meta", attrs={"name": "description"})
+        assert description is not None
+        assert len(description["content"]) <= 160, (name, len(description["content"]))
+
+
+def test_robots_allows_everything_and_advertises_the_sitemap(tmp_path: Path) -> None:
+    lines = (_rendered(tmp_path) / "robots.txt").read_text(encoding="utf-8").split("\n")
+    assert [line for line in lines if line] == [
+        "User-agent: *",
+        "Allow: /",
+        f"Sitemap: {site.SITE_ORIGIN}/sitemap.xml",
+    ]
+
+
+def test_the_sitemap_lists_the_pages_and_only_the_pages(tmp_path: Path) -> None:
+    """The manifest, the receipt and the history SVG are data, not pages."""
+    output = _rendered(tmp_path)
+    listed = re.findall(r"<loc>(.*?)</loc>", (output / "sitemap.xml").read_text(encoding="utf-8"))
+    assert listed == [f"{site.SITE_ORIGIN}/", f"{site.SITE_ORIGIN}/report.html"]
+    for url in listed:
+        name = url[len(site.SITE_ORIGIN) + 1 :] or "index.html"
+        assert (output / name).is_file(), url
+
+
+def test_a_cname_naming_another_host_is_refused(tmp_path: Path) -> None:
+    """Every address this site publishes is SITE_ORIGIN's; the domain must be too."""
+    with pytest.raises(site.EvidenceSiteError, match="CNAME hostname differs"):
+        _rendered(tmp_path, cname="evidence.example.com")
+
+
+def test_the_cname_this_repository_ships_matches_the_origin(tmp_path: Path) -> None:
+    committed = (_TEMPLATE.parent / "CNAME").read_text(encoding="ascii").strip()
+    assert committed == site.SITE_ORIGIN.removeprefix("https://")
+    assert (_rendered(tmp_path, cname=committed) / "CNAME").is_file()
