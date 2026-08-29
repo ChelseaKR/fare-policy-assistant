@@ -457,6 +457,64 @@ def test_consumers_recompute_freshness_and_reject_replayed_manifest(tmp_path: Pa
     assert not (tmp_path / "replayed-site").exists()
 
 
+def test_a_stale_receipt_has_no_publishable_state_not_even_a_warning(
+    tmp_path: Path,
+) -> None:
+    """The pipeline can publish "fresh", or nothing. It cannot publish "old".
+
+    ``validate_public_manifest`` accepts ``status: warning`` with
+    ``warnings: ["evaluation.stale"]``, ``_template_html`` renders it as
+    "Verified with freshness warning", and ``docs/pages/index.html`` styles
+    ``.notice.warning`` for it. That state is unreachable: ``_template_html``'s
+    only caller is ``render_evidence_site``, which runs
+    ``require_current_public_evidence`` first, and that rejects every status
+    other than ``verified``.
+
+    The consequence is the one worth pinning. When the published evidence goes
+    stale there is no way to publish a page that says so, because a staleness
+    notice would have to carry the stale receipt it is describing. The page
+    that is up can only be replaced, never corrected. See
+    docs/publishing-the-evidence-hub.md; changing this loosens an
+    outward-facing gate and is the repository owner's decision, so this test
+    should be edited deliberately rather than repaired.
+    """
+
+    stale = _evidence(stale=True)
+    assert stale["status"] == "warning"
+    assert stale["warnings"] == ["evaluation.stale"]
+    manifest_path = _write_manifest(tmp_path / "public.json", _manifest(stale))
+
+    # The manifest itself is well formed: the schema models the warning state.
+    manifest = site.load_public_manifest(manifest_path)
+    evidence = manifest["evidence"]
+    assert isinstance(evidence, dict)
+    assert evidence["status"] == "warning"
+
+    # Every consumer refuses it, so no page can ever carry that status.
+    for consume in (
+        lambda: site.require_current_public_evidence(manifest),
+        lambda: site.render_evidence_site(
+            manifest_path=manifest_path,
+            template_path=_TEMPLATE,
+            output_dir=tmp_path / "warning-site",
+        ),
+        lambda: site.compare_runtime_version(
+            manifest_path=manifest_path,
+            version_response_path=_write_manifest(
+                tmp_path / "version.json",
+                _version_response(stale),  # type: ignore[arg-type]
+            ),
+        ),
+    ):
+        with pytest.raises(
+            site.EvidenceSiteError,
+            match="already stale when it was exported",
+        ):
+            consume()
+
+    assert not (tmp_path / "warning-site").exists()
+
+
 def test_bounded_reader_rejects_wrong_missing_directory_and_oversized_inputs(
     tmp_path: Path,
 ) -> None:

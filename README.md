@@ -24,13 +24,52 @@ run has been red on the `cross_agency` gate since the corpus's
 eighteen-agency expansion (#138), so there is currently no fresher run to
 promote and deploy. The evidence hub is further behind still: it serves the
 `2026-07-12` promoted run (201 cases, `cross_agency` 3/3) and has not been
-republished since, for the same reason — `scripts/build_evidence_site.py`
-refuses to publish evidence past its own freshness budget, so a rebuild with
-today's still-July-12 promoted evidence would fail that gate rather than
-quietly serve a report that claims to be current. The unpromoted picture —
-eighteen agencies, 385 cases, `cross_agency` currently well below floor — is
-in [EVALS.md](EVALS.md) and the nightly run artifact, not on either public
-link above.
+republished since. The unpromoted picture, eighteen agencies, 385 cases,
+`cross_agency` currently well below floor, is in [EVALS.md](EVALS.md) and the
+nightly run artifact, not on either public link above.
+
+The evidence hub cannot currently be republished at all, and that is a
+stronger statement than "it is behind". `.github/workflows/pages.yml` has run
+exactly once in the repository's history, on 2026-07-12, under its previous
+definition, which copied four static files into `_site`. The evidence-pinned
+definition that replaced it landed on 2026-07-30 and has never run. Three
+things independently block a dispatch today, each verified rather than
+inferred:
+
+1. There is no `evidence_ref` to pass. The workflow requires a commit whose
+   whole tree is one `public-evidence.json`. No such file exists in any
+   commit, branch, or ref of this repository, and no Makefile target or
+   workflow invokes `build_evidence_site.py export`, which has therefore
+   never been run.
+2. `require_current_public_evidence` recomputes age from `run_at` at render
+   time and refuses evidence past its budget, so the still-July-12 promoted
+   receipt is refused rather than quietly served as current.
+3. Independently of freshness, the July promoted run attests corpus_version
+   `0938fff0539a`, while the live runtime's `/version` serves
+   `35ec70d6359d`. `compare-runtime` compares corpus_version among the eight
+   attested runtime fields and fails on the mismatch, so an operator who
+   widened the freshness budget to get past (2) would still be stopped here.
+
+The consequence is the part worth stating plainly on a project about honest
+evaluation: **there is no way to publish a correction.** Both surfaces that
+could mark the hub stale are gated on evidence that is fresh and matches the
+live runtime, and stale evidence is exactly what a staleness notice would
+have to carry. The manifest schema and the page template both model a
+`warning` status ("Verified with freshness warning"), but
+`require_current_public_evidence` rejects `status: warning` before
+`_template_html` is ever reached, so that state is unreachable in the
+published pipeline. `tests/test_build_evidence_site.py` pins this.
+
+What a visitor to <https://evals.chelseakr.com/> sees meanwhile: an index page
+carrying no date, no scoreboard, and no agency count, linking to a
+`report.html` that does state its own run
+(`2026-07-12T05:01:17+00:00`, corpus `0938fff0539a`) beside an `EVALS.md`
+link that tracks `main` and describes a different, larger, currently-failing
+suite. `public-evidence.json` and `release.json`, which the current template
+links, both return 404 there, because the site now up predates the pipeline
+that would have written them. The dated caveats in `docs/pages/index.html`
+about the eighteen-agency expansion have never reached the published page.
+See [docs/publishing-the-evidence-hub.md](docs/publishing-the-evidence-hub.md).
 
 ## Status: Beta
 
