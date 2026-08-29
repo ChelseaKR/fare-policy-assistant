@@ -93,6 +93,7 @@ _TEMPLATE_FIELDS = frozenset(
         "FUNCTION_VERSION",
         "PROMOTED_AT",
         "RELEASE_VERSION",
+        "RUN_DATE",
         "RUN_AT",
         "SOURCE_REVISION",
         "STATUS_CLASS",
@@ -795,6 +796,7 @@ def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bo
         "PROMOTED_AT": html.escape(str(evidence["promoted_at"])),
         "RELEASE_VERSION": html.escape(str(runtime["release_version"])),
         "RUN_AT": html.escape(str(evidence["run_at"])),
+        "RUN_DATE": html.escape(str(evidence["run_at"])[:10]),
         "SOURCE_REVISION": html.escape(str(runtime["source_revision"])),
         "STATUS_CLASS": "warning" if warning else "verified",
         "STATUS_DETAIL": (
@@ -845,6 +847,7 @@ def _report_html(evidence: Mapping[str, object]) -> bytes:
         for item in cases
     )
     report_url = _page_url("report.html")
+    report_description = _report_description(str(evidence["run_at"])[:10])
     page = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -853,9 +856,9 @@ def _report_html(evidence: Mapping[str, object]) -> bytes:
 <meta http-equiv="Content-Security-Policy"
   content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>{_REPORT_TITLE}</title>
-<meta name="description" content="{_REPORT_DESCRIPTION}">
+<meta name="description" content="{report_description}">
 <link rel="canonical" href="{report_url}">
-{_social_meta(title=_REPORT_TITLE, description=_REPORT_DESCRIPTION, url=report_url)}
+{_social_meta(title=_REPORT_TITLE, description=report_description, url=report_url)}
 <style>
 body {{ margin: 0; color: #17201b; background: #f7faf8; font: 1rem/1.55 system-ui, sans-serif; }}
 main {{ max-width: 68rem; margin: auto; padding: 1.5rem 1rem 4rem; }}
@@ -961,10 +964,20 @@ def _validated_cname(path: Path) -> bytes:
 #: does not is a second, unreviewed description of this project, published where
 #: nobody rereads it. Both sentences are the page's own words.
 _REPORT_TITLE: Final = "Verified evaluation report — Transit Fare Policy Assistant"
-_REPORT_DESCRIPTION: Final = (
-    "Aggregate scores by evaluation suite and per-case outcomes for the promoted run. "
-    "Contains no evaluation questions, model responses, prompts, or passages."
-)
+
+
+def _report_description(run_date: str) -> str:
+    """The report page's description, carrying the date of the run it reports.
+
+    A search result and a link preview strip a page of everything but its title
+    and this sentence. On a page whose whole subject is a dated artifact -- and
+    which nothing expires once it is published -- a description that does not
+    carry the date is the one part that cannot go stale visibly.
+    """
+    return (
+        f"Aggregate scores by evaluation suite and per-case outcomes for the run of "
+        f"{run_date}. Contains no evaluation questions, model responses, or passages."
+    )
 
 
 def _social_meta(*, title: str, description: str, url: str) -> str:

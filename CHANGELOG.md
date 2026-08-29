@@ -31,6 +31,13 @@ rather than tied to a published tag.
     Every canonical and every sitemap entry names that origin, so a CNAME pointing
     the domain elsewhere would publish a site whose pages all claim to live at an
     address it does not answer on.
+  - Both descriptions carry the date of the run they describe. A search result
+    and a link preview strip a page of everything but its title and that
+    sentence, and nothing expires this site once it is published:
+    `require_current_public_evidence` refuses to *render* stale evidence, but a
+    page rendered inside the budget goes on saying so for as long as it is
+    served. The live page has said "Verified" since 2026-07-12. The date is the
+    part of a snippet that ages visibly.
   - `tests/test_build_evidence_site.py` checks each of these against a rendered
     site, and the existing exact-file-set assertion was updated deliberately
     rather than loosened -- it caught the two new files the moment they appeared,

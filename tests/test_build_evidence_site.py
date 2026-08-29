@@ -1079,6 +1079,25 @@ def test_no_published_description_is_long_enough_to_be_cut(tmp_path: Path) -> No
         assert len(description["content"]) <= 160, (name, len(description["content"]))
 
 
+def test_every_published_description_carries_the_date_of_the_run(tmp_path: Path) -> None:
+    """A snippet is the page stripped of everything but its title and description.
+
+    Nothing expires this site once it is published: `require_current_public_evidence`
+    refuses to render stale evidence, but a page rendered inside the budget keeps
+    saying so for as long as it is served. The date in the description is the part
+    of a search result or a link preview that ages visibly.
+    """
+    output = _rendered(tmp_path)
+    run_date = "2026-07-30"
+    for name in site.INDEXABLE_PAGES:
+        soup = BeautifulSoup((output / name).read_text(encoding="utf-8"), "html.parser")
+        description = soup.find("meta", attrs={"name": "description"})
+        assert description is not None
+        assert run_date in description["content"], (name, description["content"])
+        card = soup.find("meta", attrs={"property": "og:description"})
+        assert card is not None and run_date in card["content"], name
+
+
 def test_robots_allows_everything_and_advertises_the_sitemap(tmp_path: Path) -> None:
     lines = (_rendered(tmp_path) / "robots.txt").read_text(encoding="utf-8").split("\n")
     assert [line for line in lines if line] == [
