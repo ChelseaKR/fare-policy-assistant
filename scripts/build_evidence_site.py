@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final, Never
+from urllib.parse import urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -74,6 +75,17 @@ _HOSTNAME = re.compile(
     r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*"
     r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$"
 )
+#: The address this site answers on. A canonical link and a sitemap both publish
+#: absolute addresses, so this cannot be inferred from the output directory; it is
+#: written down, and `render_evidence_site` refuses to publish a CNAME naming a
+#: different host, so the two can never quietly disagree.
+SITE_ORIGIN = "https://evals.chelseakr.com"
+
+#: The pages offered for indexing, in the order the sitemap lists them. The other
+#: three published files -- the evidence manifest, the release receipt and the
+#: history SVG -- are data a reader reaches through these pages, not pages.
+INDEXABLE_PAGES: tuple[str, ...] = ("index.html", "report.html")
+
 _PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 _TEMPLATE_FIELDS = frozenset(
     {
@@ -81,6 +93,7 @@ _TEMPLATE_FIELDS = frozenset(
         "FUNCTION_VERSION",
         "PROMOTED_AT",
         "RELEASE_VERSION",
+        "RUN_DATE",
         "RUN_AT",
         "SOURCE_REVISION",
         "STATUS_CLASS",
@@ -783,6 +796,7 @@ def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bo
         "PROMOTED_AT": html.escape(str(evidence["promoted_at"])),
         "RELEASE_VERSION": html.escape(str(runtime["release_version"])),
         "RUN_AT": html.escape(str(evidence["run_at"])),
+        "RUN_DATE": html.escape(str(evidence["run_at"])[:10]),
         "SOURCE_REVISION": html.escape(str(runtime["source_revision"])),
         "STATUS_CLASS": "warning" if warning else "verified",
         "STATUS_DETAIL": (
@@ -832,6 +846,8 @@ def _report_html(evidence: Mapping[str, object]) -> bytes:
         "</tr>"
         for item in cases
     )
+    report_url = _page_url("report.html")
+    report_description = _report_description(str(evidence["run_at"])[:10])
     page = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -839,7 +855,10 @@ def _report_html(evidence: Mapping[str, object]) -> bytes:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy"
   content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<title>Verified evaluation report — Transit Fare Policy Assistant</title>
+<title>{_REPORT_TITLE}</title>
+<meta name="description" content="{report_description}">
+<link rel="canonical" href="{report_url}">
+{_social_meta(title=_REPORT_TITLE, description=report_description, url=report_url)}
 <style>
 body {{ margin: 0; color: #17201b; background: #f7faf8; font: 1rem/1.55 system-ui, sans-serif; }}
 main {{ max-width: 68rem; margin: auto; padding: 1.5rem 1rem 4rem; }}
@@ -940,6 +959,86 @@ def _validated_cname(path: Path) -> bytes:
     return hostname.lower().encode("ascii") + b"\n"
 
 
+#: The two pages' own titles and descriptions. They are here rather than inline
+#: because the share card repeats them exactly: a card saying something the page
+#: does not is a second, unreviewed description of this project, published where
+#: nobody rereads it. Both sentences are the page's own words.
+_REPORT_TITLE: Final = "Verified evaluation report — Transit Fare Policy Assistant"
+
+
+def _report_description(run_date: str) -> str:
+    """The report page's description, carrying the date of the run it reports.
+
+    A search result and a link preview strip a page of everything but its title
+    and this sentence. On a page whose whole subject is a dated artifact -- and
+    which nothing expires once it is published -- a description that does not
+    carry the date is the one part that cannot go stale visibly.
+    """
+    return (
+        f"Aggregate scores by evaluation suite and per-case outcomes for the run of "
+        f"{run_date}. Contains no evaluation questions, model responses, or passages."
+    )
+
+
+def _social_meta(*, title: str, description: str, url: str) -> str:
+    """The OpenGraph and Twitter tags for one page.
+
+    No ``og:image``. This site publishes a fixed list of files and none of them is
+    an image a card could use, and an ``og:image`` naming a file that is not there
+    is worse than none at all.
+    """
+    return "\n".join(
+        (
+            '<meta property="og:type" content="website">',
+            '<meta property="og:site_name" content="Transit Fare Policy Assistant">',
+            '<meta property="og:locale" content="en_US">',
+            f'<meta property="og:url" content="{html.escape(url)}">',
+            f'<meta property="og:title" content="{html.escape(title)}">',
+            f'<meta property="og:description" content="{html.escape(description)}">',
+            '<meta name="twitter:card" content="summary">',
+            f'<meta name="twitter:title" content="{html.escape(title)}">',
+            f'<meta name="twitter:description" content="{html.escape(description)}">',
+        )
+    )
+
+
+def _page_url(name: str) -> str:
+    """The address a published page answers on. The root is the bare origin.
+
+    A canonical naming ``index.html`` would publish a second address for a page
+    that already has one, which is the thing a canonical exists to prevent.
+    """
+    return f"{SITE_ORIGIN}/" if name == "index.html" else f"{SITE_ORIGIN}/{name}"
+
+
+def _robots_txt() -> bytes:
+    """What a crawler is told at ``/robots.txt``.
+
+    Nothing is disallowed. Everything this site publishes is published on purpose:
+    the renderer writes a fixed list of files and the workflow asserts the private
+    ones are absent, so there is no path here that wants hiding.
+    """
+    return f"User-agent: *\nAllow: /\n\nSitemap: {SITE_ORIGIN}/sitemap.xml\n".encode()
+
+
+def _sitemap_xml() -> bytes:
+    """The two pages, as a sitemap.
+
+    No ``lastmod``. The evidence carries its own dates -- the run, the promotion,
+    the runtime release -- and they are on the page; a build date stamped here
+    would be a third date, about the rendering rather than about the evidence,
+    and a sitemap date is worth publishing only while it is true.
+    """
+    locations = "".join(
+        f"<url><loc>{html.escape(_page_url(name))}</loc></url>" for name in INDEXABLE_PAGES
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{locations}</urlset>\n"
+    ).encode()
+
+
 def _write_site_file(root: Path, name: str, payload: bytes) -> None:
     target = root / name
     descriptor = os.open(
@@ -988,6 +1087,11 @@ def render_evidence_site(
     )
     history = _validated_svg(history_svg_path) if history_svg_path is not None else None
     cname = _validated_cname(cname_path) if cname_path is not None else None
+    if cname is not None and cname.decode("ascii").strip() != urlsplit(SITE_ORIGIN).netloc:
+        # Every canonical link and every sitemap entry on this site names
+        # SITE_ORIGIN. A CNAME pointing the domain somewhere else would publish a
+        # site whose pages all claim to live at an address it does not answer on.
+        _fail("CNAME hostname differs from the origin this site publishes")
     if output_dir.is_symlink() or output_dir.exists():
         _fail("output directory must not already exist")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -1012,6 +1116,8 @@ def render_evidence_site(
             "public-evidence.json",
             _canonical_bytes(manifest),
         )
+        _write_site_file(temporary, "robots.txt", _robots_txt())
+        _write_site_file(temporary, "sitemap.xml", _sitemap_xml())
         if history is not None:
             _write_site_file(temporary, "eval-history.svg", history)
         if cname is not None:

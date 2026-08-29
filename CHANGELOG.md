@@ -8,6 +8,41 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Added
+- **The evidence hub can say where it is** (2026-08-28). A technical SEO audit of
+  `evals.chelseakr.com` found neither published page carrying a meta description,
+  a canonical link, or a share card, and `/robots.txt` and `/sitemap.xml` both
+  404. The hub is a public artifact the README leads with, and nothing on it said
+  which of the two addresses for its root page was the one to keep.
+  - `SITE_ORIGIN` names the address the site answers on, and
+    `build_evidence_site.py` now writes `robots.txt` and `sitemap.xml` beside the
+    pages it already wrote. Nothing is disallowed: the renderer writes a fixed
+    list of files and the Pages workflow asserts the private ones are absent, so
+    there is no path here that wants hiding. The sitemap carries no `lastmod` --
+    the evidence carries its own dates and they are on the page; a build date
+    here would be a third date, about the rendering rather than the evidence.
+  - Both pages carry a self-referencing canonical, a description, and the
+    OpenGraph and Twitter tags derived from the page's own title and description.
+    Not a second set written for a card: a card that says something the page does
+    not is an unreviewed description of this project published where nobody
+    rereads it. There is deliberately no `og:image`; this site publishes a fixed
+    list of files and none of them is an image.
+  - `render_evidence_site` refuses a CNAME whose hostname is not `SITE_ORIGIN`'s.
+    Every canonical and every sitemap entry names that origin, so a CNAME pointing
+    the domain elsewhere would publish a site whose pages all claim to live at an
+    address it does not answer on.
+  - Both descriptions carry the date of the run they describe. A search result
+    and a link preview strip a page of everything but its title and that
+    sentence, and nothing expires this site once it is published:
+    `require_current_public_evidence` refuses to *render* stale evidence, but a
+    page rendered inside the budget goes on saying so for as long as it is
+    served. The live page has said "Verified" since 2026-07-12. The date is the
+    part of a snippet that ages visibly.
+  - `tests/test_build_evidence_site.py` checks each of these against a rendered
+    site, and the existing exact-file-set assertion was updated deliberately
+    rather than loosened -- it caught the two new files the moment they appeared,
+    which is what it is for.
+
 ### Security
 - Update the optional dense-retrieval toolchain to Torch 2.13.0 and setuptools
   83.0.0, clearing the setuptools path-traversal advisory while preserving the
