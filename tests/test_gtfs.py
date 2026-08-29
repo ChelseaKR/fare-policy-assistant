@@ -434,7 +434,9 @@ def test_cross_check_agrees_when_feed_amount_in_prose(tmp_path, monkeypatch):
 
     records = gtfs.cross_check(chunks)
 
-    assert records == [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes")]
+    # One prose chunk carries $2.00, so the agreement is a specific match rather
+    # than a collision — the number is what says which (#141).
+    assert records == [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1)]
 
 
 def test_cross_check_flags_disagreement_when_feed_amount_absent_from_prose(tmp_path, monkeypatch):
@@ -513,12 +515,65 @@ def test_cross_check_no_feed_configured_for_corpus_agency(tmp_path, monkeypatch)
     ]
 
 
+def test_a_colliding_agreement_says_how_many_chunks_it_matched(tmp_path, monkeypatch):
+    """Issue #141: the dry run across eleven agencies found zero disagreements.
+
+    That reads as corroboration and is not: the comparison only asks whether the
+    feed's amount appears *somewhere* in the agency's prose, so on a fare page
+    dense with dollar figures a match is close to guaranteed. The record now
+    carries how many chunks it matched, which is the difference between "this
+    program's fare agrees" and "this number is published on the site".
+    """
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text("fare_id,price\nRegular,2.00\n")
+    monkeypatch.setattr(
+        gtfs, "load_gtfs_manifest", lambda: [{"agency": "MST", "url": "https://mst.org/g.zip"}]
+    )
+    chunks = [
+        _chunk("MST", "Regular Fixed Route fare is $2.00."),
+        _chunk("MST", "A day pass is $2.00 more than a single ride."),
+        _chunk("MST", "Replacement cards cost $2.00."),
+    ]
+
+    (record,) = gtfs.cross_check(chunks)
+
+    assert record.feed_agrees == "yes"
+    assert record.prose_matches == 3
+
+
+def test_a_no_feed_record_counts_nothing(tmp_path, monkeypatch):
+    _point_config_at(tmp_path, monkeypatch)
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: [])
+    (record,) = gtfs.cross_check([_chunk("MST", "The fare is $2.00.")])
+    assert record.feed_agrees == "no_feed"
+    assert record.prose_matches is None
+
+
+def test_an_amount_repeated_inside_one_chunk_counts_once(tmp_path, monkeypatch):
+    """The unit is the chunk, not the occurrence: a table that prints $2.00 in
+    four columns of one section is one place the number is published."""
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text("fare_id,price\nRegular,2.00\n")
+    monkeypatch.setattr(
+        gtfs, "load_gtfs_manifest", lambda: [{"agency": "MST", "url": "https://mst.org/g.zip"}]
+    )
+    chunks = [_chunk("MST", "Adult $2.00 / Senior $2.00 / Youth $2.00 / Disabled $2.00")]
+
+    (record,) = gtfs.cross_check(chunks)
+
+    assert record.prose_matches == 1
+
+
 # ── report + CLI ─────────────────────────────────────────────────────────────
 
 
 def test_write_report_shape(tmp_path, monkeypatch):
     _, processed = _point_config_at(tmp_path, monkeypatch)
-    records = [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes")]
+    records = [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1)]
 
     gtfs.write_report(records)
 
@@ -530,6 +585,7 @@ def test_write_report_shape(tmp_path, monkeypatch):
             "name": "Regular",
             "feed_amount": "2.00",
             "feed_agrees": "yes",
+            "prose_matches": 1,
         }
     ]
     assert "generated" in payload

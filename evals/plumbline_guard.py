@@ -44,9 +44,22 @@ ACK_PATH = config.REPO_ROOT / "evals" / "plumbline" / "acknowledged_findings.jso
 # the replay is deterministic, so a real change moves the number.
 TOLERANCE = 0.0005
 
-# Suite detail keys that hold per-item hard failures, across the suites that
-# have them. Plumbline names them per suite rather than uniformly.
-_HARD_FAILURE_KEYS = (
+# Extra suite *detail* keys this project treats as hard failures on top of the
+# harness's own `hard_failures` verdict. Plumbline names these per suite rather
+# than uniformly, and on the committed report the union is stricter than the
+# harness: seven items across `adversarial` and `privacy` are hard failures here
+# that Plumbline does not call hard failures, and all seven are acknowledged.
+#
+# Being stricter is a choice; being *narrower* would be the defect. Until
+# 2026-08-28 this tuple was the only thing `hard_failures()` read, so it was a
+# hand-maintained re-derivation of a verdict the report already states outright
+# (`suite["hard_failures"]`, plumbline/src/plumbline/report.py). A pinned-harness
+# bump that renamed a key, or added a suite whose hard failures land under a key
+# not listed here, would have made those failures invisible to the merge gate
+# with nothing to notice — the guard would have gone on passing over exactly the
+# findings it exists to stop. The union below cannot be narrower than the
+# harness's own answer, and `tests/test_plumbline_audit.py` pins that.
+_EXTRA_HARD_FAILURE_KEYS = (
     "load_bearing_failures",
     "fabricated_citation_failures",
     "behavior_failures",
@@ -69,11 +82,18 @@ def latest_report(audit_dir: Path = AUDIT_DIR) -> Path:
 
 
 def hard_failures(report: dict) -> dict[str, list[str]]:
-    """suite id -> the item ids the harness called hard failures."""
+    """suite id -> the item ids that must be acknowledged or fixed.
+
+    The harness's own per-suite `hard_failures` verdict, unioned with the extra
+    detail keys this project also refuses to let pass. Reading the harness's
+    field first is what stops the guard from ever seeing *less* than the tool it
+    is gating; the union is what keeps it stricter where the project has chosen
+    to be.
+    """
     out: dict[str, list[str]] = {}
     for suite in report["suites"]:
-        found: list[str] = []
-        for key in _HARD_FAILURE_KEYS:
+        found: list[str] = list(suite.get("hard_failures") or [])
+        for key in _EXTRA_HARD_FAILURE_KEYS:
             found.extend(suite.get("details", {}).get(key) or [])
         # cross_language records a fact id per pair rather than an item id.
         if found:

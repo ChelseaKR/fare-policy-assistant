@@ -184,6 +184,35 @@ class TestTheGuardIsTheGate:
         problems = guard.check(report, self._baseline(), self._acknowledged())
         assert any("nobody has acknowledged" in p and "brand-new-item" in p for p in problems)
 
+    def test_a_hard_failure_the_harness_names_is_seen_even_under_an_unknown_key(self) -> None:
+        """The guard must never see less than the tool it is gating.
+
+        Until 2026-08-28 `hard_failures()` read only `_EXTRA_HARD_FAILURE_KEYS`,
+        a hand-maintained list of *detail* keys, and ignored the per-suite
+        `hard_failures` verdict the report already states outright
+        (plumbline/src/plumbline/report.py). A pinned-harness bump that renamed
+        a key, or a new suite whose hard failures land under a key nobody added
+        here, would have made those findings invisible to the merge gate with
+        nothing to notice.
+        """
+        report = self._report()
+        for suite in report["suites"]:
+            if suite["suite"] == "smoke":
+                suite["hard_failures"] = ["planted-load-bearing-item"]
+                suite["details"]["a_key_this_guard_has_never_heard_of"] = ["planted-under-new-key"]
+        problems = guard.check(report, self._baseline(), self._acknowledged())
+        assert any("planted-load-bearing-item" in p for p in problems), problems
+
+    def test_the_derived_set_is_never_narrower_than_the_harness_verdict(self) -> None:
+        report = self._report()
+        derived = guard.hard_failures(report)
+        for suite in report["suites"]:
+            named = set(suite.get("hard_failures") or [])
+            assert named <= set(derived.get(suite["suite"], [])), (
+                f"{suite['suite']}: the harness calls {sorted(named)} hard failures and the "
+                "guard does not see all of them"
+            )
+
     def test_an_acknowledgement_that_stopped_firing_fails(self) -> None:
         acknowledged = self._acknowledged()
         acknowledged["privacy"] = dict(acknowledged["privacy"], **{"already-fixed": "reason"})

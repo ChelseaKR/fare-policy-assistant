@@ -11,8 +11,16 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+# `fare_table` is imported as an explicit submodule rather than as
+# `from assistant import fare_table`: the latter only resolves for a type
+# checker when something else already in the build graph imported the
+# submodule, so the same line passed or failed depending on which directories
+# mypy happened to be pointed at (it started failing the moment `tools/` was
+# added to the checked set on 2026-08-28). Runtime behaviour is identical.
+import assistant.fare_table as fare_table
+from assistant import answer as answer_module
 from assistant import facts as facts_module
-from assistant import fare_table, guards
+from assistant import guards
 from assistant.answer import AnswerResult
 from assistant.contract import build_structured_answer
 from assistant.facts import FareFact
@@ -232,6 +240,31 @@ def structured_fare_contradictions(
     return contradictions
 
 
+def _format_age_claim(claim: tuple[int | None, int | None]) -> str:
+    """An age range, written so an open side reads as open.
+
+    Issue #170. The previous form interpolated an empty string for a missing
+    bound and then appended the hyphen unconditionally, so an upper-bound-only
+    claim like "riders under 18" — `(None, 17)` — rendered as `age -17`. That is
+    a string-concatenation artifact, not a negative age, and it is visually
+    identical to one: it sent the #138 triage of `xagency-008` looking for a
+    parse defect in `assistant.facts` that was never there.
+
+    A check's `detail` is what a human reads when deciding whether a failure is
+    the model's fault or the harness's, so an unreadable one costs exactly the
+    investigation it was supposed to shorten.
+    """
+
+    low, high = claim
+    if low is not None and high is not None:
+        return f"age {low}-{high}"
+    if low is not None:
+        return f"age {low}+"
+    if high is not None:
+        return f"age {high} and under"
+    return "age unbounded"
+
+
 def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[FareFact]) -> bool:
     claim_min, claim_max = claim
     if claim_min is None and claim_max is None:
@@ -371,6 +404,33 @@ def run_checks(
                 )
             )
 
+        # 6b. The date the rider actually reads must be the date the contract
+        # carries. `as_of_matches_oldest_citation` above validates the structured
+        # field and nothing else, so until 2026-08-28 an answer could render
+        # "based on policies published as of 2026-08-21" over evidence fetched
+        # 2026-06-12 and pass: 28 of the 345 answers in the 2026-08-22 full live
+        # run did exactly that (issue #163, and two of the four Spanish parity
+        # failures in #165).
+        #
+        # `assistant.answer._align_as_of_prose` now pulls the sentence onto the
+        # structured date in the pipeline, so this check is the backstop for the
+        # case that fix cannot cover: a phrasing the normalizer does not
+        # recognise, in a language it does not know. It reads the sentence with
+        # the same pattern the normalizer rewrites, and stays silent when the
+        # answer renders no freshness date at all — that absence is what the
+        # freshness suite's own expected-behavior cases are for.
+        if result.kind == "answered":
+            prose_dates = sorted(set(answer_module.prose_as_of_dates(answer)))
+            if prose_dates:
+                out.append(
+                    CheckResult(
+                        "as_of_prose_matches_structured",
+                        prose_dates == [result.as_of_date],
+                        f"prose as-of={prose_dates}, structured as_of_date="
+                        f"{result.as_of_date or 'none'}",
+                    )
+                )
+
         # 7. Required facts (verbatim or regex with re: prefix) appear.
         missing = []
         for fact in case.get("required_facts", []):
@@ -397,8 +457,7 @@ def run_checks(
                     )
                 ]
                 unverified += [
-                    f"age {'' if claim[0] is None else claim[0]}-"
-                    f"{'' if claim[1] is None else claim[1]}"
+                    _format_age_claim(claim)
                     for claim in facts_module.parse_age_claims(answer)
                     if not _age_claim_supported(claim, candidates)
                 ]

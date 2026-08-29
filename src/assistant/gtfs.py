@@ -122,6 +122,19 @@ class CrossCheckRecord:
     name: str
     feed_amount: str | None
     feed_agrees: str  # "yes" | "no" | "no_feed"
+    # How much that verdict is worth (issue #141). The comparison is coarse by
+    # construction — see the module docstring — so a bare "yes" only means "this
+    # amount appears somewhere in this agency's prose", never "this program's
+    # fare agrees". `prose_matches` is how many distinct corpus chunks for this
+    # agency the amount was found in: 1 is a specific match, 12 is a collision
+    # in a page full of dollar figures and the "yes" proves close to nothing.
+    # None on a `no_feed` record, where nothing was compared.
+    #
+    # Published rather than inferred, because the dry run in #141 found zero
+    # disagreements across eleven agencies and read as agreement when it was
+    # really the check being nearly vacuous. A number a reader can see is the
+    # difference between those two readings.
+    prose_matches: int | None = None
 
 
 class GTFSStorageError(ValueError):
@@ -979,19 +992,36 @@ def _parse_fares_v2(agency_dir: Path, agency: str) -> list[FeedFare]:
 # ── cross-check ──────────────────────────────────────────────────────────────
 
 
-def prose_fare_amounts(agency: str, chunks: list[ingest.Chunk] | None = None) -> set[Decimal]:
-    """Every dollar amount mentioned anywhere in the agency's prose corpus."""
+def prose_amount_chunk_counts(
+    agency: str, chunks: list[ingest.Chunk] | None = None
+) -> dict[Decimal, int]:
+    """Each dollar amount in the agency's prose corpus → how many chunks state it.
+
+    The count is the part `prose_fare_amounts` throws away, and it is what makes
+    a coarse agreement readable: an amount found in one chunk is a specific
+    match, the same amount found in twelve is a collision on a page dense with
+    dollar figures. See `CrossCheckRecord.prose_matches` and issue #141.
+    """
     chunks = chunks if chunks is not None else ingest.load_chunks()
-    amounts: set[Decimal] = set()
+    counts: dict[Decimal, int] = {}
     for chunk in chunks:
         if chunk.agency != agency:
             continue
+        seen_in_chunk: set[Decimal] = set()
         for match in _DOLLAR_RE.finditer(chunk.text):
             try:
-                amounts.add(Decimal(match.group(1).replace(",", "")))
+                amount = Decimal(match.group(1).replace(",", ""))
             except InvalidOperation:
                 continue
-    return amounts
+            seen_in_chunk.add(amount)
+        for amount in seen_in_chunk:
+            counts[amount] = counts.get(amount, 0) + 1
+    return counts
+
+
+def prose_fare_amounts(agency: str, chunks: list[ingest.Chunk] | None = None) -> set[Decimal]:
+    """Every dollar amount mentioned anywhere in the agency's prose corpus."""
+    return set(prose_amount_chunk_counts(agency, chunks))
 
 
 def cross_check(chunks: list[ingest.Chunk] | None = None) -> list[CrossCheckRecord]:
@@ -1016,15 +1046,22 @@ def cross_check(chunks: list[ingest.Chunk] | None = None) -> list[CrossCheckReco
                 CrossCheckRecord(agency, "(no snapshot)", "(no snapshot)", None, "no_feed")
             )
             continue
-        prose_amounts = prose_fare_amounts(agency, chunks)
-        prose_mentions_free = any(_FREE_RE.search(c.text) for c in chunks if c.agency == agency)
+        prose_counts = prose_amount_chunk_counts(agency, chunks)
+        free_chunks = sum(1 for c in chunks if c.agency == agency and _FREE_RE.search(c.text))
         for fare in fares:
             if fare.amount == _ZERO:
-                agrees = "yes" if prose_mentions_free else "no"
+                matches = free_chunks
             else:
-                agrees = "yes" if fare.amount in prose_amounts else "no"
+                matches = prose_counts.get(fare.amount, 0)
             records.append(
-                CrossCheckRecord(agency, fare.fare_id, fare.name, str(fare.amount), agrees)
+                CrossCheckRecord(
+                    agency,
+                    fare.fare_id,
+                    fare.name,
+                    str(fare.amount),
+                    "yes" if matches else "no",
+                    matches,
+                )
             )
 
     for agency in sorted(corpus_agencies - fed_agencies):
@@ -1055,9 +1092,21 @@ def main() -> None:
         records = cross_check()
         write_report(records)
         for r in records:
-            print(f"{r.feed_agrees:8} {r.agency:10} {r.name} ({r.feed_amount})")
+            strength = "" if r.prose_matches is None else f"  [{r.prose_matches} prose chunk(s)]"
+            print(f"{r.feed_agrees:8} {r.agency:10} {r.name} ({r.feed_amount}){strength}")
         disagreements = [r for r in records if r.feed_agrees == "no"]
         print(f"\nwrote {len(records)} record(s) -> {CROSS_CHECK_PATH}")
+        # An agreement backed by one prose chunk is evidence; the same agreement
+        # backed by a dozen is a collision. Say which this run produced rather
+        # than letting a wall of "yes" read as corroboration (#141).
+        agreed = [r for r in records if r.feed_agrees == "yes" and r.prose_matches is not None]
+        weak = [r for r in agreed if r.prose_matches and r.prose_matches > 1]
+        if agreed:
+            print(
+                f"{len(agreed)} agreement(s), of which {len(weak)} matched an amount that "
+                "appears in more than one chunk of the same agency's prose — those prove the "
+                "amount is published somewhere, not that this program's fare agrees."
+            )
         if disagreements:
             print(f"{len(disagreements)} disagreement(s) found.", file=sys.stderr)
     else:

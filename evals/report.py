@@ -19,9 +19,11 @@ from evals.runner import (
     MACRO_THRESHOLD_PP,
     PARITY_CASE_FLOOR,
     PARITY_THRESHOLD_PP,
+    annotation_scopes,
     expected_below_macro,
     pair_discrimination,
     parity_delta,
+    run_scoped,
     suites_below_macro,
 )
 
@@ -363,7 +365,11 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
     # annotation if one is committed, or flagged as the gate failure it is.
     offenders = suites_below_macro(summary["suites"])
     if offenders:
-        notes = expected_below_macro()
+        # Run-scoped annotations only. A `committed_report`-scoped entry says
+        # nothing about this run (ADR 0029), and printing it here would label a
+        # live below-macro suite "annotated" on the strength of a rationale
+        # written about a different, older run.
+        notes = run_scoped(expected_below_macro(), annotation_scopes())
         lines.append("")
         for name, o in sorted(offenders.items()):
             note = notes.get(name)

@@ -251,6 +251,100 @@ def _jsonl_lines(text: str) -> list[str]:
     return lines
 
 
+def _scoreboard_record(
+    line: str,
+    line_number: int,
+    *,
+    context_version: str,
+    expected: Mapping[str, object],
+    case_ids: set[str],
+) -> tuple[str, str, bool, tuple[str, ...], tuple[str, ...]]:
+    """One exact results record, checked against its ordered case_manifest entry.
+
+    Split out of `_results_scoreboard` for CQ-05 (max-complexity 10). Every
+    check, its order, and its message are unchanged. Returns
+    ``(case_id, suite, passed, answer_models, judge_models)``.
+    """
+
+    if not line.strip():
+        raise PromotionAttestationBuildError(
+            f"results line {line_number} must contain one JSON object"
+        )
+    value = _parse_json_text(line, f"results line {line_number}")
+    record = _mapping(value, f"results line {line_number}")
+    case_id = _trimmed_string(
+        _required(record, "case_id", f"results line {line_number}"),
+        f"results line {line_number}.case_id",
+    )
+    if not _CASE_ID.fullmatch(case_id):
+        raise PromotionAttestationBuildError(
+            f"results line {line_number}.case_id must be a 1-128 character safe identifier"
+        )
+    # Uniqueness is checked here, not in the caller's loop, so that the error a
+    # duplicate raises stays the duplicate error rather than whichever later
+    # per-record check the second copy happens to trip first
+    # (tests/test_build_promotion_attestation.py::test_rejects_duplicate_case_ids_across_suites).
+    if case_id in case_ids:
+        raise PromotionAttestationBuildError(f"results contains duplicate case_id: {case_id}")
+    case_ids.add(case_id)
+    suite = _trimmed_string(
+        _required(record, "suite", f"results line {line_number}"),
+        f"results line {line_number}.suite",
+    )
+    passed = _required(record, "passed", f"results line {line_number}")
+    if type(passed) is not bool:
+        raise PromotionAttestationBuildError(f"results line {line_number}.passed must be a boolean")
+    expected_case_id = _trimmed_string(
+        expected["case_id"],
+        f"summary.attestation.evidence.case_manifest[{line_number - 1}].case_id",
+    )
+    if not hmac.compare_digest(case_id, expected_case_id):
+        raise PromotionAttestationBuildError(
+            f"results line {line_number}.case_id does not match the ordered case_manifest"
+        )
+    result_context = _sha256(
+        _required(record, "run_context_version", f"results line {line_number}"),
+        f"results line {line_number}.run_context_version",
+    )
+    if not hmac.compare_digest(result_context, context_version):
+        raise PromotionAttestationBuildError(
+            f"results line {line_number}.run_context_version does not match "
+            "summary.attestation.context_version"
+        )
+    result_semantics = _sha256(
+        _required(record, "case_semantics_version", f"results line {line_number}"),
+        f"results line {line_number}.case_semantics_version",
+    )
+    expected_semantics = _sha256(
+        expected["case_semantics_version"],
+        f"summary.attestation.evidence.case_manifest[{line_number - 1}].case_semantics_version",
+    )
+    if not hmac.compare_digest(result_semantics, expected_semantics):
+        raise PromotionAttestationBuildError(
+            f"results line {line_number}.case_semantics_version does not match "
+            "the ordered case_manifest"
+        )
+    answer = _model_list(
+        _required(record, "answer_models_served", f"results line {line_number}"),
+        f"results line {line_number}.answer_models_served",
+    )
+    judge = _model_list(
+        _required(record, "judge_models_served", f"results line {line_number}"),
+        f"results line {line_number}.judge_models_served",
+    )
+    if "answer_model_served" in record and record["answer_model_served"] is not None:
+        final_answer = _trimmed_string(
+            record["answer_model_served"],
+            f"results line {line_number}.answer_model_served",
+        )
+        if final_answer not in answer:
+            raise PromotionAttestationBuildError(
+                f"results line {line_number}.answer_model_served is absent from "
+                "answer_models_served"
+            )
+    return case_id, suite, passed, answer, judge
+
+
 def _results_scoreboard(
     results: bytes,
     *,
@@ -272,85 +366,16 @@ def _results_scoreboard(
     answer_models: set[str] = set()
     judge_models: set[str] = set()
     for line_number, line in enumerate(lines, 1):
-        if not line.strip():
-            raise PromotionAttestationBuildError(
-                f"results line {line_number} must contain one JSON object"
-            )
-        value = _parse_json_text(line, f"results line {line_number}")
-        record = _mapping(value, f"results line {line_number}")
-        case_id = _trimmed_string(
-            _required(record, "case_id", f"results line {line_number}"),
-            f"results line {line_number}.case_id",
+        _case_id, suite, passed, answer, judge = _scoreboard_record(
+            line,
+            line_number,
+            context_version=context_version,
+            expected=_mapping(
+                case_manifest[line_number - 1],
+                f"summary.attestation.evidence.case_manifest[{line_number - 1}]",
+            ),
+            case_ids=case_ids,
         )
-        if not _CASE_ID.fullmatch(case_id):
-            raise PromotionAttestationBuildError(
-                f"results line {line_number}.case_id must be a 1-128 character safe identifier"
-            )
-        if case_id in case_ids:
-            raise PromotionAttestationBuildError(f"results contains duplicate case_id: {case_id}")
-        case_ids.add(case_id)
-
-        suite = _trimmed_string(
-            _required(record, "suite", f"results line {line_number}"),
-            f"results line {line_number}.suite",
-        )
-        passed = _required(record, "passed", f"results line {line_number}")
-        if type(passed) is not bool:
-            raise PromotionAttestationBuildError(
-                f"results line {line_number}.passed must be a boolean"
-            )
-        expected = _mapping(
-            case_manifest[line_number - 1],
-            f"summary.attestation.evidence.case_manifest[{line_number - 1}]",
-        )
-        expected_case_id = _trimmed_string(
-            expected["case_id"],
-            f"summary.attestation.evidence.case_manifest[{line_number - 1}].case_id",
-        )
-        if not hmac.compare_digest(case_id, expected_case_id):
-            raise PromotionAttestationBuildError(
-                f"results line {line_number}.case_id does not match the ordered case_manifest"
-            )
-        result_context = _sha256(
-            _required(record, "run_context_version", f"results line {line_number}"),
-            f"results line {line_number}.run_context_version",
-        )
-        if not hmac.compare_digest(result_context, context_version):
-            raise PromotionAttestationBuildError(
-                f"results line {line_number}.run_context_version does not match "
-                "summary.attestation.context_version"
-            )
-        result_semantics = _sha256(
-            _required(record, "case_semantics_version", f"results line {line_number}"),
-            f"results line {line_number}.case_semantics_version",
-        )
-        expected_semantics = _sha256(
-            expected["case_semantics_version"],
-            f"summary.attestation.evidence.case_manifest[{line_number - 1}].case_semantics_version",
-        )
-        if not hmac.compare_digest(result_semantics, expected_semantics):
-            raise PromotionAttestationBuildError(
-                f"results line {line_number}.case_semantics_version does not match "
-                "the ordered case_manifest"
-            )
-        answer = _model_list(
-            _required(record, "answer_models_served", f"results line {line_number}"),
-            f"results line {line_number}.answer_models_served",
-        )
-        judge = _model_list(
-            _required(record, "judge_models_served", f"results line {line_number}"),
-            f"results line {line_number}.judge_models_served",
-        )
-        if "answer_model_served" in record and record["answer_model_served"] is not None:
-            final_answer = _trimmed_string(
-                record["answer_model_served"],
-                f"results line {line_number}.answer_model_served",
-            )
-            if final_answer not in answer:
-                raise PromotionAttestationBuildError(
-                    f"results line {line_number}.answer_model_served is absent from "
-                    "answer_models_served"
-                )
         answer_models.update(answer)
         judge_models.update(judge)
         counts = suites.setdefault(suite, {"passed": 0, "total": 0})
@@ -557,6 +582,124 @@ def _validate_served_models(
             )
 
 
+# `build_attestation` below is a long sequence of independent validations over
+# one summary. Each block is extracted here for CQ-05 (max-complexity 10), in
+# the order the original executed them; no check, message, or precedence
+# changed. tests/test_build_promotion_attestation.py exercises each rejection
+# path by message, which is what pins that.
+
+
+def _validate_summary_shape(summary: Mapping[str, object]) -> int:
+    """The run-shape preconditions a promotable summary must declare."""
+
+    if _required(summary, "mode", "summary") != "full":
+        raise PromotionAttestationBuildError("summary.mode must be 'full'")
+    _required_false(summary, "offline", "summary")
+    _required_true(summary, "judges_ran", "summary")
+    _required_true(summary, "promotion_requested", "summary")
+    if _required(summary, "gate_status", "summary") != "passed":
+        raise PromotionAttestationBuildError("summary.gate_status must be 'passed'")
+    executed_cases = _validate_execution(summary)
+    if "replicates" in summary:
+        replicates = summary["replicates"]
+        if type(replicates) is not int or replicates != 1:
+            raise PromotionAttestationBuildError("summary.replicates must be 1 when present")
+    return executed_cases
+
+
+def _validate_subject(subject: Mapping[str, object]) -> None:
+    """The attested subject must be a clean, verified, non-drifting checkout."""
+
+    if subject["source_state"] != "clean":
+        raise PromotionAttestationBuildError(
+            "summary.attestation.subject.source_state must be 'clean'"
+        )
+    if subject["descriptor_verified"] is not True:
+        raise PromotionAttestationBuildError(
+            "summary.attestation.subject.descriptor_verified must be true"
+        )
+    if subject["head_revision"] != subject["source_revision"]:
+        raise PromotionAttestationBuildError(
+            "summary.attestation.subject.head_revision must equal source_revision"
+        )
+
+
+def _validate_promotion_flags(promotion: Mapping[str, object]) -> None:
+    """Every promotion flag true, and no reason recorded against promoting."""
+
+    required_promotion_flags = ("eligible", "live", "uncached", "judges_ran", "gates_passed")
+    false_promotion_flags = [
+        field for field in required_promotion_flags if promotion[field] is not True
+    ]
+    if false_promotion_flags:
+        raise PromotionAttestationBuildError(
+            "summary.attestation.promotion flags must be true ("
+            + ", ".join(false_promotion_flags)
+            + ")"
+        )
+    if promotion["reasons"] != []:
+        raise PromotionAttestationBuildError("summary.attestation.promotion.reasons must be empty")
+
+
+def _validate_protocol(summary: Mapping[str, object]) -> None:
+    """The recorded protocol must describe a full, online, single-replicate run."""
+
+    protocol = _mapping(
+        _mapping(summary["attestation"], "summary.attestation")["protocol"],
+        "summary.attestation.protocol",
+    )
+    if protocol.get("mode") != "full":
+        raise PromotionAttestationBuildError("summary.attestation.protocol.mode must be 'full'")
+    if protocol.get("offline") is not False:
+        raise PromotionAttestationBuildError("summary.attestation.protocol.offline must be false")
+    if "replicates" in protocol:
+        protocol_replicates = protocol["replicates"]
+        if type(protocol_replicates) is not int or protocol_replicates != 1:
+            raise PromotionAttestationBuildError(
+                "summary.attestation.protocol.replicates must be 1"
+            )
+
+
+def _evaluated_release(subject: Mapping[str, object], runtime: RuntimeRelease) -> LogicalRelease:
+    """The release the evaluation ran against, required to equal the runtime's."""
+
+    try:
+        evaluated_release = LogicalRelease(
+            **{field: subject[field] for field in _LOGICAL_RELEASE_FIELDS}  # type: ignore[arg-type]
+        )
+    except (PromotionAttestationError, TypeError, ValueError) as exc:
+        raise PromotionAttestationBuildError(
+            "summary.attestation.subject release identity is invalid"
+        ) from exc
+    mismatches = [
+        field
+        for field in _LOGICAL_RELEASE_FIELDS
+        if not hmac.compare_digest(getattr(runtime, field), getattr(evaluated_release, field))
+    ]
+    if mismatches:
+        raise PromotionAttestationBuildError(
+            "runtime and evaluated release identities differ (" + ", ".join(mismatches) + ")"
+        )
+    return evaluated_release
+
+
+def _validate_run_at(summary: Mapping[str, object], promotion: Mapping[str, object]) -> datetime:
+    """`promotion.evaluated_at` must be the same instant, and the same text, as `run_at`."""
+
+    run_at_value = _required(summary, "run_at", "summary")
+    run_at = _utc_timestamp(run_at_value, "summary.run_at", require_z=True)
+    evaluated_at = _utc_timestamp(
+        promotion["evaluated_at"],
+        "summary.attestation.promotion.evaluated_at",
+        require_z=True,
+    )
+    if promotion["evaluated_at"] != run_at_value or evaluated_at != run_at:
+        raise PromotionAttestationBuildError(
+            "summary.attestation.promotion.evaluated_at must equal summary.run_at"
+        )
+    return run_at
+
+
 def build_attestation(
     runtime_payload: Mapping[str, object],
     summary_bytes: bytes,
@@ -582,93 +725,15 @@ def build_attestation(
     runtime = _runtime_release(runtime_payload)
     summary = parse_json_object(summary_bytes, "summary")
 
-    if _required(summary, "mode", "summary") != "full":
-        raise PromotionAttestationBuildError("summary.mode must be 'full'")
-    _required_false(summary, "offline", "summary")
-    _required_true(summary, "judges_ran", "summary")
-    _required_true(summary, "promotion_requested", "summary")
-    if _required(summary, "gate_status", "summary") != "passed":
-        raise PromotionAttestationBuildError("summary.gate_status must be 'passed'")
-    executed_cases = _validate_execution(summary)
-
-    if "replicates" in summary:
-        replicates = summary["replicates"]
-        if type(replicates) is not int or replicates != 1:
-            raise PromotionAttestationBuildError("summary.replicates must be 1 when present")
-
+    executed_cases = _validate_summary_shape(summary)
     eval_attestation, subject, promotion, evidence = _validate_eval_attestation(
         _required(summary, "attestation", "summary")
     )
-    if subject["source_state"] != "clean":
-        raise PromotionAttestationBuildError(
-            "summary.attestation.subject.source_state must be 'clean'"
-        )
-    if subject["descriptor_verified"] is not True:
-        raise PromotionAttestationBuildError(
-            "summary.attestation.subject.descriptor_verified must be true"
-        )
-    if subject["head_revision"] != subject["source_revision"]:
-        raise PromotionAttestationBuildError(
-            "summary.attestation.subject.head_revision must equal source_revision"
-        )
-
-    required_promotion_flags = ("eligible", "live", "uncached", "judges_ran", "gates_passed")
-    false_promotion_flags = [
-        field for field in required_promotion_flags if promotion[field] is not True
-    ]
-    if false_promotion_flags:
-        raise PromotionAttestationBuildError(
-            "summary.attestation.promotion flags must be true ("
-            + ", ".join(false_promotion_flags)
-            + ")"
-        )
-    if promotion["reasons"] != []:
-        raise PromotionAttestationBuildError("summary.attestation.promotion.reasons must be empty")
-
-    protocol = _mapping(
-        _mapping(summary["attestation"], "summary.attestation")["protocol"],
-        "summary.attestation.protocol",
-    )
-    if protocol.get("mode") != "full":
-        raise PromotionAttestationBuildError("summary.attestation.protocol.mode must be 'full'")
-    if protocol.get("offline") is not False:
-        raise PromotionAttestationBuildError("summary.attestation.protocol.offline must be false")
-    if "replicates" in protocol:
-        protocol_replicates = protocol["replicates"]
-        if type(protocol_replicates) is not int or protocol_replicates != 1:
-            raise PromotionAttestationBuildError(
-                "summary.attestation.protocol.replicates must be 1"
-            )
-
-    try:
-        evaluated_release = LogicalRelease(
-            **{field: subject[field] for field in _LOGICAL_RELEASE_FIELDS}  # type: ignore[arg-type]
-        )
-    except (PromotionAttestationError, TypeError, ValueError) as exc:
-        raise PromotionAttestationBuildError(
-            "summary.attestation.subject release identity is invalid"
-        ) from exc
-    mismatches = [
-        field
-        for field in _LOGICAL_RELEASE_FIELDS
-        if not hmac.compare_digest(getattr(runtime, field), getattr(evaluated_release, field))
-    ]
-    if mismatches:
-        raise PromotionAttestationBuildError(
-            "runtime and evaluated release identities differ (" + ", ".join(mismatches) + ")"
-        )
-
-    run_at_value = _required(summary, "run_at", "summary")
-    run_at = _utc_timestamp(run_at_value, "summary.run_at", require_z=True)
-    evaluated_at = _utc_timestamp(
-        promotion["evaluated_at"],
-        "summary.attestation.promotion.evaluated_at",
-        require_z=True,
-    )
-    if promotion["evaluated_at"] != run_at_value or evaluated_at != run_at:
-        raise PromotionAttestationBuildError(
-            "summary.attestation.promotion.evaluated_at must equal summary.run_at"
-        )
+    _validate_subject(subject)
+    _validate_promotion_flags(promotion)
+    _validate_protocol(summary)
+    evaluated_release = _evaluated_release(subject, runtime)
+    run_at = _validate_run_at(summary, promotion)
 
     result_suites, observed_models = _results_scoreboard(
         results,

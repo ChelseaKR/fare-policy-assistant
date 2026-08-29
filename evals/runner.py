@@ -2610,8 +2610,62 @@ def _read_annotations(path: Path | None = None) -> dict[str, dict]:
         parsed[suite] = {
             "rationale": str(entry.get("rationale", "")),
             "cases": [str(c) for c in entry.get("cases") or []],
+            "scope": str(entry.get("scope") or "run"),
         }
     return parsed
+
+
+ANNOTATION_SCOPES = ("run", "committed_report")
+
+
+def annotation_scopes(path: Path | None = None) -> dict[str, str]:
+    """Which gate each below-macro annotation claims to waive.
+
+    `run` (the default, and what every entry meant before 2026-08-28) waives a
+    live run's scoreboard and, through `check_report_regression`, the committed
+    report's as well. `committed_report` waives the committed EVALS.md alone.
+
+    The second scope exists because one entry was being asked to be true of two
+    different runs at once, and could not be. The `conversation` waiver has to
+    stay for the PR-time gate, which reads a 2026-07-12 report where the suite
+    is 8/10 against a macro floor of 89.0%; on every nightly since, the same
+    suite is at 80.0% against a floor of 72.6%, so `stale_annotations` correctly
+    reported it as describing nothing and failed the run. The entry's own
+    rationale documents the bind ("Delete it in the same change that promotes a
+    fresher report"), and there was no way out of it: deleting the entry turns
+    the PR gate red over an artifact that cannot be regenerated until a live run
+    is clean enough to promote (#138, #140, #165).
+
+    Scoping is strictly stricter for a live run, not a loophole: a
+    `committed_report` entry no longer waives a live suite at all, so a genuine
+    conversation regression tonight is reported rather than absorbed by a
+    rationale written about July. See ADR 0029.
+    """
+    return {suite: entry["scope"] for suite, entry in _read_annotations(path).items()}
+
+
+def invalid_annotation_scopes(scopes: Mapping[str, str]) -> list[str]:
+    """Annotations whose declared scope is not one this gate understands.
+
+    Reported rather than defaulted. Silently reading an unrecognised scope as
+    `run` would turn a typo into the widest possible waiver, which is the one
+    direction this file must never fail in.
+    """
+    return [
+        f"{suite}: unknown scope {scope!r} in evals/expected_below_macro.json; "
+        f"use one of {', '.join(ANNOTATION_SCOPES)}"
+        for suite, scope in sorted(scopes.items())
+        if scope not in ANNOTATION_SCOPES
+    ]
+
+
+def run_scoped[Entry](entries: Mapping[str, Entry], scopes: Mapping[str, str]) -> dict[str, Entry]:
+    """`entries` restricted to the annotations that speak about a live run.
+
+    An unknown scope is excluded here and reported by `invalid_annotation_scopes`
+    instead: an entry nobody can interpret waives nothing.
+    """
+    return {name: value for name, value in entries.items() if scopes.get(name, "run") == "run"}
 
 
 def expected_below_macro(path: Path | None = None) -> dict[str, str]:
@@ -2764,12 +2818,28 @@ def parity_problems(
     suites: dict,
     annotations: dict[str, str] | None = None,
     declared_cases: dict[str, list[str]] | None = None,
+    scopes: dict[str, str] | None = None,
 ) -> list[str]:
     """All parity-gate findings for one run; empty is clean. Pure so the
     committed-report checker and tests can exercise it without a run dir."""
     notes = expected_below_macro() if annotations is None else annotations
     declared = annotation_cases() if declared_cases is None else declared_cases
-    problems = []
+    # Scopes come from the committed file only when the annotations do. Reading
+    # the file's scopes over an injected `annotations` dict would silently mix
+    # two sources and let a committed entry re-scope a caller's test fixture.
+    if scopes is not None:
+        entry_scopes = scopes
+    elif annotations is None:
+        entry_scopes = annotation_scopes()
+    else:
+        entry_scopes = {}
+    # A `committed_report`-scoped annotation describes the committed EVALS.md,
+    # not this run: it waives nothing here, is not expired by this run's numbers,
+    # and its named cases are checked structurally only (see ADR 0029).
+    run_notes = run_scoped(notes, entry_scopes)
+    run_declared = run_scoped(declared, entry_scopes)
+    report_declared = {name: cases for name, cases in declared.items() if name not in run_declared}
+    problems = list(invalid_annotation_scopes(entry_scopes))
     parity = parity_delta(records)
     if parity is None:
         print("no complete Spanish/English mirror pairs in this run; parity skipped")
@@ -2781,16 +2851,17 @@ def parity_problems(
         )
     offenders = suites_below_macro(suites)
     for name, o in sorted(offenders.items()):
-        if name in notes:
+        if name in run_notes:
             continue
         problems.append(
             f"{name}: {o['pass_rate']}% is below the macro floor {o['floor']}% "
             f"(macro {o['macro']}% − {MACRO_THRESHOLD_PP:g} pp) on {o['cases_behind_macro']}+ "
             "cases, with no written annotation in evals/expected_below_macro.json"
         )
-    problems += stale_annotations(suites, notes)
-    problems += stale_annotation_cases(declared, case_outcomes(records))
-    problems += unnamed_failures_under_annotation(records, suites, declared)
+    problems += stale_annotations(suites, run_notes)
+    problems += stale_annotation_cases(run_declared, case_outcomes(records))
+    problems += stale_annotation_cases(report_declared)
+    problems += unnamed_failures_under_annotation(records, suites, run_declared)
     return problems
 
 

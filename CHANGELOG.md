@@ -29,7 +29,115 @@ rather than tied to a published tag.
   Production contains the expired `yolobus-fares` snapshot through an
   operator-visible source kill switch.
 
+### Fixed
+- **The lint and typecheck gates were aimed at a tree they did not cover, and
+  `make verify` had been red on `main` for a week.** CI's `checks` job ran
+  `ruff check src tests evals web` and `mypy src web` while the Makefile ran
+  `ruff check src tests evals web scripts` and `mypy src web scripts`, so
+  `scripts/` — the evidence-site builder and the promotion-attestation builder,
+  the code that decides what gets published and what gets promoted — was linted
+  by nothing CI could see. `C90` (CQ-05) was selected repo-wide on 2026-08-21
+  and had been structurally unable to report a finding there ever since; four
+  C901 violations accumulated, and the entrypoint `CONTRIBUTING.md` documents
+  exited 2 on a clean checkout while every CI run over the same tree was green.
+  `tools/`, which holds the merge-blocking i18n gates, was linted and
+  typechecked by neither. Both directories are now in one named list
+  (`LINT_PATHS`, `TYPE_PATHS` in the Makefile); CI invokes `make lint` /
+  `make typecheck` / `make test` / `make a11y` rather than re-spelling their
+  command lines; the four `scripts/` violations are retired by extracting named
+  helpers rather than by widening the per-file ignore ceiling; and
+  `tests/test_lint_coverage.py` plus a new invariant in
+  `tests/test_workflow_safety.py` fail the build if a first-party Python
+  directory falls outside the gate or if a step in `checks` stops resolving to
+  its make target. Widening the typecheck surfaced and fixed two real mypy
+  errors in `tools/check_catalog_parity.py`; the malformed-catalog case one of
+  them was hiding is now a reported finding rather than a narrowing.
+  `.pre-commit-config.yaml`, a third copy of the same path list, had gone stale
+  at `^(src|web)/` and is now held to `TYPE_PATHS` by the same test.
+- **The rider-facing "as of" date could be newer than the evidence under it
+  (#163).** The answer prompt is handed `as_of_retrieved`, the newest fetch date
+  across the retrieved set, and told to render it in "based on policies
+  published as of <date>"; the structured `as_of_date` on an answered response
+  is the *oldest cited* passage. Nothing compared the two, and
+  `as_of_matches_oldest_citation` validates the structured field only, so the
+  sentence a rider reads could overstate the freshness of the evidence and pass
+  every gate. Measured on the 2026-08-22 full live run
+  (`evals/runs/20260822T131246Z`): 28 of the 345 answers that render the line
+  disagreed with their own structured date, several by ten weeks — prose
+  2026-08-21 over passages fetched 2026-06-12. `assistant.answer` now pulls the
+  freshness sentence onto the structured date in all three supported answer
+  languages, recording the change as a guard flag and keeping the model's
+  original text in the trace; other dates in an answer (the corpus snapshot
+  date, per-document fetch dates) are deliberately untouched. A new
+  deterministic check, `as_of_prose_matches_structured`, is the backstop for a
+  phrasing the normalizer does not recognise, and reads the sentence with the
+  same pattern the normalizer rewrites. #165 attributes two of the four Spanish
+  parity failures on that run to this defect.
+- **`fare_facts_consistent` rendered an upper-bound-only age claim as
+  `age -17` (#170).** The detail string interpolated an empty lower bound and
+  then appended the hyphen unconditionally, so "riders under 18" — `(None, 17)`
+  — printed as something visually identical to a negative age. It sent the #138
+  triage of `xagency-008` looking for a parse defect in `assistant.facts` that
+  did not exist. An open bound now reads as open (`age 65+`,
+  `age 17 and under`).
+- **Enumeration retrieval's one-passage-per-agency guarantee broke on any
+  question that also used reduced-fare vocabulary (#169).** `_close_the_loop`,
+  `_ensure_eligibility_passage`, and `_ensure_child_fare_passage` each fell back
+  to `results[0].chunk.agency` when no agency was named, which on an enumeration
+  question is not "the agency this question is about" but whichever of eighteen
+  scored highest. One arbitrary agency was handed a second, better-supported
+  passage while the other seventeen kept their bare enumeration pick. The three
+  now share `_augmentation_targets`, which on an enumeration question targets
+  every agency in the result set, so an agency gets a second passage for a
+  reason that holds of the corpus rather than of the BM25 ranking. On the
+  committed corpus, "How many agencies offer a senior discount?" goes from 19
+  passages (one agency doubled) to 26 (every agency with a criterion passage
+  served one); the answer-quality effect is unmeasured, because that needs a
+  live run.
+- **The independent audit's guard re-derived a verdict the report already
+  states.** `evals/plumbline_guard.hard_failures` read only a hand-maintained
+  tuple of per-suite *detail* keys and ignored each suite's own `hard_failures`
+  field. A pinned-harness bump that renamed a key, or a new suite whose hard
+  failures land under a key nobody added to the tuple, would have made those
+  findings invisible to the merge gate with nothing to notice. The guard now
+  unions the harness's own verdict with the extra keys this project also
+  refuses to let pass, so it can be stricter than the harness and never
+  narrower.
+- **The committed-report regression gate passed when its own input was
+  missing.** `evals/check_report_regression.main` returned 0 whenever
+  `evals/baseline.json` did not exist, so deleting the baseline turned the gate
+  green and silent — the one place in the repo that did not follow
+  `plumbline_guard`'s own rule that "a guard with nothing to read is not a guard
+  that passed". The skip has a legitimate use, since this module ships in
+  `template/MANIFEST.yaml` and a freshly extracted repository has no baseline
+  yet, so the two cases are now distinguished rather than the skip removed: a
+  tree that has never been evaluated has no committed scoreboard either. A
+  missing baseline beside a committed `EVALS.md` scoreboard exits 1 and says
+  which of the two happened.
+- **The GTFS cross-check reported agreement it had not earned (#141).** The
+  comparison asks only whether a feed's amount appears somewhere in the agency's
+  prose, which on a page dense with dollar figures is close to guaranteed — the
+  dry run across eleven agencies in #141 found zero disagreements and read as
+  corroboration. Each record now carries `prose_matches`, the number of distinct
+  corpus chunks the amount was found in, and `make gtfs-check` says how many of
+  its agreements were collisions. On the committed corpus, 5 of the 7 agreements
+  are. The regenerated report also covers all eighteen agencies' `no_feed`
+  status rather than the three it carried from a six-agency corpus.
+
 ### Changed
+- **A below-macro waiver declares which gate it waives (ADR 0029, proposed).**
+  An entry in `evals/expected_below_macro.json` may now carry
+  `scope: "committed_report"`, meaning it waives the committed `EVALS.md` alone:
+  it waives nothing in a live run, is not expired by anything a live run
+  measures, and its named cases are checked structurally rather than against
+  tonight's outcomes. The default is unchanged. This resolves the deadlock ADR
+  0028 left standing deliberately — the `conversation` entry was load-bearing
+  for the PR-time gate and stale for every nightly, and no edit satisfied both
+  — and it makes the live gate stricter rather than quieter: the entry no
+  longer waives the conversation suite in a live run at all. ADR 0029 records
+  why this is not the alternative ADR 0028 rejected, and is marked **proposed**
+  rather than accepted because it revisits that decision two days later and the
+  call belongs to the repository owner.
 - **A below-macro waiver may only waive the failures it names (ADR 0028).**
   The M-1 parity gate's escape hatch, `evals/expected_below_macro.json`, kept a
   suite off the gate on the strength of prose, and its one automatic expiry

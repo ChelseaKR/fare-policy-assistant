@@ -28,6 +28,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final, Never
@@ -176,7 +177,15 @@ def _fingerprint(value: os.stat_result) -> tuple[int, int, int, int, int]:
     )
 
 
-def _read_regular(path: Path, *, limit: int, context: str) -> bytes:
+def _lstat_regular(path: Path, *, limit: int, context: str) -> os.stat_result:
+    """Pre-open checks: a real Path, a regular non-symlink file, within budget.
+
+    Split out of `_read_regular` for CQ-05 (max-complexity 10). Order and
+    messages are unchanged; the caller still opens with O_NOFOLLOW and
+    re-verifies the fingerprint, so this is a cheap early reject, not the
+    security boundary on its own.
+    """
+
     if not isinstance(path, Path):
         _fail(f"{context} path must be a pathlib.Path")
     try:
@@ -187,27 +196,44 @@ def _read_regular(path: Path, *, limit: int, context: str) -> bytes:
         _fail(f"{context} must be a regular non-symlink file")
     if before.st_size > limit:
         _fail(f"{context} exceeds its {limit}-byte limit")
+    return before
+
+
+def _read_bounded(descriptor: int, *, limit: int, context: str) -> bytes:
+    """Read a descriptor to EOF, refusing to buffer more than `limit` bytes.
+
+    Reads one byte past the limit deliberately, so a file that grew past the
+    budget between lstat and read is caught rather than silently truncated.
+    """
+
+    chunks: list[bytes] = []
+    consumed = 0
+    while True:
+        chunk = os.read(descriptor, min(_READ_CHUNK_BYTES, limit - consumed + 1))
+        if not chunk:
+            break
+        consumed += len(chunk)
+        if consumed > limit:
+            _fail(f"{context} exceeds its {limit}-byte limit")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _read_regular(path: Path, *, limit: int, context: str) -> bytes:
+    before = _lstat_regular(path, limit=limit, context=context)
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
         descriptor = os.open(path, flags)
     except OSError as exc:
         raise EvidenceSiteError(f"{context} could not be opened safely") from exc
-    chunks: list[bytes] = []
+    payload = b""
     opened: os.stat_result | None = None
     after: os.stat_result | None = None
     try:
         opened = os.fstat(descriptor)
         if not stat.S_ISREG(opened.st_mode) or _fingerprint(opened) != _fingerprint(before):
             _fail(f"{context} changed while it was opened")
-        consumed = 0
-        while True:
-            chunk = os.read(descriptor, min(_READ_CHUNK_BYTES, limit - consumed + 1))
-            if not chunk:
-                break
-            consumed += len(chunk)
-            if consumed > limit:
-                _fail(f"{context} exceeds its {limit}-byte limit")
-            chunks.append(chunk)
+        payload = _read_bounded(descriptor, limit=limit, context=context)
         after = os.fstat(descriptor)
     except EvidenceSiteError:
         raise
@@ -225,7 +251,6 @@ def _read_regular(path: Path, *, limit: int, context: str) -> bytes:
         final_path
     ):
         _fail(f"{context} changed while it was read")
-    payload = b"".join(chunks)
     if len(payload) != opened.st_size:
         _fail(f"{context} changed while it was read")
     return payload
@@ -376,22 +401,12 @@ def _runtime_release(value: object) -> RuntimeRelease:
     return release
 
 
-def validate_public_manifest(value: object) -> dict[str, object]:
-    """Validate and return a plain, closed public-evidence manifest."""
+def _validate_freshness(evidence: Mapping[str, object]) -> None:
+    """The freshness triple (status, fresh, warnings) plus the age/budget pair.
 
-    manifest = _exact_fields(value, _MANIFEST_FIELDS, "manifest")
-    if manifest["schema"] != PUBLIC_EVIDENCE_SCHEMA:
-        _fail("manifest.schema is unsupported")
-    evidence = _exact_fields(
-        manifest["evidence"],
-        _EVIDENCE_REQUIRED_FIELDS,
-        "manifest.evidence",
-        optional=_EVIDENCE_OPTIONAL_FIELDS,
-    )
-    claimed_version = _sha256(manifest["manifest_version"], "manifest.manifest_version")
-    expected_version = _manifest_version(evidence)
-    if not hmac.compare_digest(claimed_version, expected_version):
-        _fail("manifest.manifest_version is inconsistent")
+    Split out of `validate_public_manifest` for CQ-05 (max-complexity 10); the
+    order of the checks, and every message they raise, is unchanged.
+    """
 
     status = evidence["status"]
     warnings = evidence["warnings"]
@@ -414,6 +429,172 @@ def validate_public_manifest(value: object) -> dict[str, object]:
     if (status == "verified" and age > budget) or (status == "warning" and age <= budget):
         _fail("manifest.evidence freshness age is inconsistent")
 
+
+@dataclass(frozen=True)
+class _CaseTally:
+    """What the per-case pass counts as it walks `manifest.evidence.cases`."""
+
+    count: int
+    counts_by_suite: dict[str, list[int]]
+    answer_models: tuple[str, ...]
+    judge_models: tuple[str, ...]
+    model_provenance_count: int
+
+
+def _validate_case(
+    raw_case: object,
+    index: int,
+    *,
+    context_version: str,
+    seen_cases: set[str],
+    counts_by_suite: dict[str, list[int]],
+) -> dict[str, tuple[str, ...]] | None:
+    """One case entry. Returns its served-model sets, or None when it declares none."""
+
+    case = _exact_fields(
+        raw_case,
+        _CASE_REQUIRED_FIELDS,
+        f"manifest.evidence.cases[{index}]",
+        optional=_CASE_OPTIONAL_FIELDS,
+    )
+    case_id = _safe_text(
+        case["case_id"],
+        f"manifest.evidence.cases[{index}].case_id",
+        _CASE_ID,
+    )
+    if case_id in seen_cases:
+        _fail("manifest.evidence.cases contains duplicate case_id")
+    seen_cases.add(case_id)
+    suite = _safe_label(
+        case["suite"],
+        f"manifest.evidence.cases[{index}].suite",
+        maximum=128,
+    )
+    passed = case["passed"]
+    if type(passed) is not bool:
+        _fail(f"manifest.evidence.cases[{index}].passed must be a boolean")
+    counts = counts_by_suite.setdefault(suite, [0, 0])
+    counts[1] += 1
+    counts[0] += int(passed)
+    if "run_context_version" in case:
+        candidate_context = _sha256(
+            case["run_context_version"],
+            f"manifest.evidence.cases[{index}].run_context_version",
+        )
+        if not hmac.compare_digest(candidate_context, context_version):
+            _fail(f"manifest.evidence.cases[{index}] has the wrong run context")
+    if "case_semantics_version" in case:
+        _sha256(
+            case["case_semantics_version"],
+            f"manifest.evidence.cases[{index}].case_semantics_version",
+        )
+    if "served_models" not in case:
+        return None
+    models = _model_set(
+        case["served_models"],
+        f"manifest.evidence.cases[{index}].served_models",
+    )
+    return models
+
+
+def _validate_cases(evidence: Mapping[str, object], context_version: str) -> _CaseTally:
+    """Every case entry, and the per-suite tallies the summary is checked against."""
+
+    raw_cases = evidence["cases"]
+    if not isinstance(raw_cases, list) or not raw_cases:
+        _fail("manifest.evidence.cases must be a nonempty array")
+    seen_cases: set[str] = set()
+    counts_by_suite: dict[str, list[int]] = {}
+    answer_models: set[str] = set()
+    judge_models: set[str] = set()
+    model_provenance_count = 0
+    for index, raw_case in enumerate(raw_cases):
+        models = _validate_case(
+            raw_case,
+            index,
+            context_version=context_version,
+            seen_cases=seen_cases,
+            counts_by_suite=counts_by_suite,
+        )
+        if models is not None:
+            model_provenance_count += 1
+            answer_models.update(models["answer"])
+            judge_models.update(models["judge"])
+    if model_provenance_count not in {0, len(raw_cases)}:
+        _fail("case served-model provenance must be present for all cases or none")
+    return _CaseTally(
+        count=len(raw_cases),
+        counts_by_suite=counts_by_suite,
+        answer_models=tuple(sorted(answer_models)),
+        judge_models=tuple(sorted(judge_models)),
+        model_provenance_count=model_provenance_count,
+    )
+
+
+def _validate_totals_and_suites(evidence: Mapping[str, object], tally: _CaseTally) -> None:
+    """`total` and `suites` must be exactly what the case list adds up to."""
+
+    counts_by_suite = tally.counts_by_suite
+    expected_total = (
+        sum(counts[0] for counts in counts_by_suite.values()),
+        sum(counts[1] for counts in counts_by_suite.values()),
+    )
+    if _score(evidence["total"], "manifest.evidence.total") != expected_total:
+        _fail("manifest.evidence.total does not match cases")
+    raw_suites = evidence["suites"]
+    if not isinstance(raw_suites, list) or len(raw_suites) != len(counts_by_suite):
+        _fail("manifest.evidence.suites does not match cases")
+    observed_names: list[str] = []
+    for index, raw_suite in enumerate(raw_suites):
+        suite_mapping = _mapping(raw_suite, f"manifest.evidence.suites[{index}]")
+        name = _safe_label(
+            suite_mapping.get("name"),
+            f"manifest.evidence.suites[{index}].name",
+            maximum=128,
+        )
+        observed_names.append(name)
+        if name not in counts_by_suite or _score(
+            raw_suite,
+            f"manifest.evidence.suites[{index}]",
+            name=name,
+        ) != tuple(counts_by_suite[name]):
+            _fail(f"manifest.evidence.suites[{index}] does not match cases")
+    if observed_names != sorted(set(observed_names)):
+        _fail("manifest.evidence.suites must be sorted and unique")
+
+
+def _validate_summary_served_models(evidence: Mapping[str, object], tally: _CaseTally) -> None:
+    """Summary served models are all-or-nothing with the per-case ones, and must agree."""
+
+    if "served_models" in evidence:
+        if tally.model_provenance_count != tally.count:
+            _fail("summary served models require per-case served-model provenance")
+        models = _model_set(evidence["served_models"], "manifest.evidence.served_models")
+        if models["answer"] != tally.answer_models or models["judge"] != tally.judge_models:
+            _fail("manifest.evidence.served_models does not match cases")
+    elif tally.model_provenance_count:
+        _fail("per-case served-model provenance requires summary served models")
+
+
+def validate_public_manifest(value: object) -> dict[str, object]:
+    """Validate and return a plain, closed public-evidence manifest."""
+
+    manifest = _exact_fields(value, _MANIFEST_FIELDS, "manifest")
+    if manifest["schema"] != PUBLIC_EVIDENCE_SCHEMA:
+        _fail("manifest.schema is unsupported")
+    evidence = _exact_fields(
+        manifest["evidence"],
+        _EVIDENCE_REQUIRED_FIELDS,
+        "manifest.evidence",
+        optional=_EVIDENCE_OPTIONAL_FIELDS,
+    )
+    claimed_version = _sha256(manifest["manifest_version"], "manifest.manifest_version")
+    expected_version = _manifest_version(evidence)
+    if not hmac.compare_digest(claimed_version, expected_version):
+        _fail("manifest.manifest_version is inconsistent")
+
+    _validate_freshness(evidence)
+
     run_id = _safe_text(evidence["run_id"], "manifest.evidence.run_id", _RUN_ID)
     _timestamp(evidence["run_at"], "manifest.evidence.run_at")
     _timestamp(evidence["promoted_at"], "manifest.evidence.promoted_at")
@@ -430,100 +611,9 @@ def validate_public_manifest(value: object) -> dict[str, object]:
     ):
         _sha256(evidence[field], f"manifest.evidence.{field}")
 
-    raw_cases = evidence["cases"]
-    if not isinstance(raw_cases, list) or not raw_cases:
-        _fail("manifest.evidence.cases must be a nonempty array")
-    seen_cases: set[str] = set()
-    case_counts: dict[str, list[int]] = {}
-    answer_models: set[str] = set()
-    judge_models: set[str] = set()
-    model_provenance_count = 0
-    for index, raw_case in enumerate(raw_cases):
-        case = _exact_fields(
-            raw_case,
-            _CASE_REQUIRED_FIELDS,
-            f"manifest.evidence.cases[{index}]",
-            optional=_CASE_OPTIONAL_FIELDS,
-        )
-        case_id = _safe_text(
-            case["case_id"],
-            f"manifest.evidence.cases[{index}].case_id",
-            _CASE_ID,
-        )
-        if case_id in seen_cases:
-            _fail("manifest.evidence.cases contains duplicate case_id")
-        seen_cases.add(case_id)
-        suite = _safe_label(
-            case["suite"],
-            f"manifest.evidence.cases[{index}].suite",
-            maximum=128,
-        )
-        passed = case["passed"]
-        if type(passed) is not bool:
-            _fail(f"manifest.evidence.cases[{index}].passed must be a boolean")
-        counts = case_counts.setdefault(suite, [0, 0])
-        counts[1] += 1
-        counts[0] += int(passed)
-        if "run_context_version" in case:
-            candidate_context = _sha256(
-                case["run_context_version"],
-                f"manifest.evidence.cases[{index}].run_context_version",
-            )
-            if not hmac.compare_digest(candidate_context, context_version):
-                _fail(f"manifest.evidence.cases[{index}] has the wrong run context")
-        if "case_semantics_version" in case:
-            _sha256(
-                case["case_semantics_version"],
-                f"manifest.evidence.cases[{index}].case_semantics_version",
-            )
-        if "served_models" in case:
-            models = _model_set(
-                case["served_models"],
-                f"manifest.evidence.cases[{index}].served_models",
-            )
-            model_provenance_count += 1
-            answer_models.update(models["answer"])
-            judge_models.update(models["judge"])
-    if model_provenance_count not in {0, len(raw_cases)}:
-        _fail("case served-model provenance must be present for all cases or none")
-
-    expected_total = (
-        sum(counts[0] for counts in case_counts.values()),
-        sum(counts[1] for counts in case_counts.values()),
-    )
-    if _score(evidence["total"], "manifest.evidence.total") != expected_total:
-        _fail("manifest.evidence.total does not match cases")
-    raw_suites = evidence["suites"]
-    if not isinstance(raw_suites, list) or len(raw_suites) != len(case_counts):
-        _fail("manifest.evidence.suites does not match cases")
-    observed_names: list[str] = []
-    for index, raw_suite in enumerate(raw_suites):
-        suite_mapping = _mapping(raw_suite, f"manifest.evidence.suites[{index}]")
-        name = _safe_label(
-            suite_mapping.get("name"),
-            f"manifest.evidence.suites[{index}].name",
-            maximum=128,
-        )
-        observed_names.append(name)
-        if name not in case_counts or _score(
-            raw_suite,
-            f"manifest.evidence.suites[{index}]",
-            name=name,
-        ) != tuple(case_counts[name]):
-            _fail(f"manifest.evidence.suites[{index}] does not match cases")
-    if observed_names != sorted(set(observed_names)):
-        _fail("manifest.evidence.suites must be sorted and unique")
-
-    if "served_models" in evidence:
-        if model_provenance_count != len(raw_cases):
-            _fail("summary served models require per-case served-model provenance")
-        models = _model_set(evidence["served_models"], "manifest.evidence.served_models")
-        if models["answer"] != tuple(sorted(answer_models)) or models["judge"] != tuple(
-            sorted(judge_models)
-        ):
-            _fail("manifest.evidence.served_models does not match cases")
-    elif model_provenance_count:
-        _fail("per-case served-model provenance requires summary served models")
+    tally = _validate_cases(evidence, context_version)
+    _validate_totals_and_suites(evidence, tally)
+    _validate_summary_served_models(evidence, tally)
 
     # Keep names live for type/narrowing checks and make accidental deletion of
     # their validation above visible to coverage.

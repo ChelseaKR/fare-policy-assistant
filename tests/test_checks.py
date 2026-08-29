@@ -377,6 +377,49 @@ class TestFareFactsConsistent:
         assert not checks["fare_facts_consistent"].passed
         assert "age 0-17" in checks["fare_facts_consistent"].detail
 
+    def test_an_upper_bound_only_claim_does_not_render_as_a_negative_age(self):
+        """Issue #170: `(None, 17)` used to print as `age -17`.
+
+        The detail is what a human reads when deciding whether a
+        `fare_facts_consistent` failure is the model's fault or the harness's.
+        `age -17` is a hyphen glued to an empty lower bound, indistinguishable
+        from a negative number, and it sent the #138 triage of `xagency-008`
+        hunting a parse defect in `assistant.facts` that did not exist.
+        """
+        facts_by_doc = {
+            "mst-fares": [
+                FareFact(
+                    agency="MST",
+                    doc_id="mst-fares",
+                    chunk_id="mst-fares#1",
+                    program="Youth fare",
+                    rider_class="Youth (0-18)",
+                    price=1.50,
+                    currency="USD",
+                    age_min=0,
+                    age_max=18,
+                    confidence="parsed",
+                )
+            ]
+        }
+        case = {"expected_behavior": "answer", "language": "en"}
+        # "under 18" parses to (None, 17), which the corpus row (0-18) does not
+        # support, so the claim is reported — the point here is *how*.
+        result = _answered("The program is free for riders under 18 [doc:mst-fares], as of 2026.")
+        detail = _by_name(run_checks(case, result, DOC_IDS, facts_by_doc))[
+            "fare_facts_consistent"
+        ].detail
+        assert "age 17 and under" in detail
+        assert "-17" not in detail
+
+    def test_lower_bound_only_claim_reads_as_open_ended(self):
+        from evals.checks import _format_age_claim
+
+        assert _format_age_claim((65, None)) == "age 65+"
+        assert _format_age_claim((None, 17)) == "age 17 and under"
+        assert _format_age_claim((19, 61)) == "age 19-61"
+        assert _format_age_claim((None, None)) == "age unbounded"
+
     def test_price_from_the_wrong_doc_fails(self):
         # conv-005/ml-004-class misattribution: a real price, but not one
         # that belongs to the cited document.

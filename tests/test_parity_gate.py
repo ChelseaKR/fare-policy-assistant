@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 
 from assistant import config
-from evals import provenance, runner
+from evals import provenance, report, runner
 from evals.check_report_regression import _parity_from_table, check_parity_committed
 from evals.report import generate_markdown
 from evals.runner import (
@@ -233,6 +233,128 @@ def test_below_macro_suite_needs_a_written_annotation():
     assert annotated == []
 
 
+# ── annotation scope (ADR 0029) ──────────────────────────────────────────────
+#
+# One entry was being asked to be true of two different runs at once. The
+# `conversation` waiver has to stay for the PR-time gate, which reads a
+# 2026-07-12 report where the suite is 8/10 against a macro floor of 89.0%; on
+# every nightly since, the same suite is at 80.0% against a floor of 72.6%, so
+# `stale_annotations` reported it as describing nothing and failed the run —
+# correctly, and unfixably, because deleting it turns the PR gate red over an
+# artifact nobody can regenerate until a live run is clean enough to promote.
+
+
+def _scoped_suites():
+    """Tonight's shape: conversation genuinely below the macro floor."""
+    return {
+        "refusal": _suite(30, 30),
+        "groundedness": _suite(29, 30),
+        "conversation": _suite(4, 10),
+    }
+
+
+def test_a_committed_report_annotation_does_not_waive_a_live_run():
+    """The direction that matters: scoping makes the live gate stricter.
+
+    Before ADR 0029 this entry waived the conversation suite in every run, which
+    is the "silently waive the next real regression" outcome the file's own
+    header warns about.
+    """
+    records = _records(es_pass=[True], en_pass=[True])
+    flagged = parity_problems(
+        records,
+        _scoped_suites(),
+        annotations={"conversation": "true of the July report"},
+        declared_cases={"conversation": ["conv-forged-002"]},
+        scopes={"conversation": "committed_report"},
+    )
+    assert any(
+        "conversation" in problem and "below the macro floor" in problem for problem in flagged
+    ), flagged
+
+
+def test_a_run_scoped_annotation_still_waives_a_live_run():
+    records = _records(es_pass=[True], en_pass=[True])
+    assert (
+        parity_problems(
+            records,
+            _scoped_suites(),
+            annotations={"conversation": "documented honest failures"},
+            declared_cases={"conversation": ["conv-forged-002"]},
+            scopes={"conversation": "run"},
+        )
+        == []
+    )
+
+
+def test_a_committed_report_annotation_is_not_expired_by_a_live_runs_numbers():
+    """The nightly's fourth finding, which had no fix available before."""
+    # The nightly's actual shape: conversation at 80.0% sits *above* the macro
+    # floor, because the rest of the run is not at 97% any more.
+    recovered = {
+        "edge_cases": _suite(76, 100),
+        "conversation": _suite(8, 10),
+    }
+    records = _records(es_pass=[True], en_pass=[True])
+    assert (
+        parity_problems(
+            records,
+            recovered,
+            annotations={"conversation": "true of the July report"},
+            declared_cases={"conversation": ["conv-forged-002"]},
+            scopes={"conversation": "committed_report"},
+        )
+        == []
+    )
+    # ... while a run-scoped entry over the same recovered suite still expires.
+    stale = parity_problems(
+        records,
+        recovered,
+        annotations={"conversation": "no longer describes anything"},
+        declared_cases={"conversation": ["conv-forged-002"]},
+        scopes={"conversation": "run"},
+    )
+    assert any("must be deleted" in problem for problem in stale), stale
+
+
+def test_a_committed_report_annotation_still_has_to_name_a_real_case():
+    """Scoping narrows what an entry asserts; it does not exempt it from evidence."""
+    records = _records(es_pass=[True], en_pass=[True])
+    flagged = parity_problems(
+        records,
+        _scoped_suites(),
+        annotations={"conversation": "true of the July report"},
+        declared_cases={"conversation": ["conv-retired-009"]},
+        scopes={"conversation": "committed_report"},
+    )
+    assert any("conv-retired-009" in problem for problem in flagged), flagged
+
+
+def test_an_unrecognised_scope_waives_nothing_and_is_reported():
+    """Fail loud, not wide: reading a typo as `run` would make it the widest
+    possible waiver, which is the one direction this file must never fail in."""
+    records = _records(es_pass=[True], en_pass=[True])
+    flagged = parity_problems(
+        records,
+        _scoped_suites(),
+        annotations={"conversation": "true of something"},
+        declared_cases={"conversation": ["conv-forged-002"]},
+        scopes={"conversation": "committed-report"},  # hyphen, not underscore
+    )
+    assert any("unknown scope" in problem for problem in flagged), flagged
+    assert any("below the macro floor" in problem for problem in flagged), flagged
+
+
+def test_the_committed_conversation_entry_is_scoped_to_the_report_it_describes():
+    scopes = runner.annotation_scopes()
+    assert scopes.get("conversation") == "committed_report"
+    assert runner.invalid_annotation_scopes(scopes) == []
+    # And the committed report gate, which is what that entry exists for, is
+    # still satisfied by it.
+    md = (config.REPO_ROOT / "EVALS.md").read_text(encoding="utf-8")
+    assert check_parity_committed(md) == []
+
+
 # ── committed-report check: payload path and table fallback ─────────────────
 
 
@@ -351,9 +473,8 @@ def test_report_renders_the_delta_line_and_embeds_parity():
     assert payload is not None and payload["parity"]["pairs"] == 2
 
 
-def test_report_prints_the_below_macro_annotation():
-    records = _records(es_pass=[True], en_pass=[True])
-    summary = {
+def _below_macro_summary():
+    return {
         "run_at": "2026-07-17T00:00:00+00:00",
         "mode": "full",
         "offline": True,
@@ -369,11 +490,35 @@ def test_report_prints_the_below_macro_annotation():
         },
         "total": {"passed": 65, "total": 70},
     }
-    md = generate_markdown(summary, records)
+
+
+def test_report_prints_the_below_macro_annotation(monkeypatch):
+    monkeypatch.setattr(
+        report, "expected_below_macro", lambda: {"conversation": "documented honest failures"}
+    )
+    monkeypatch.setattr(report, "annotation_scopes", lambda: {"conversation": "run"})
+    md = generate_markdown(_below_macro_summary(), _records(es_pass=[True], en_pass=[True]))
     assert "**Below-macro suite:** conversation at 60.0%" in md
-    # conversation is annotated in the committed evals/expected_below_macro.json,
-    # so the rendered line carries the rationale, not the UNANNOTATED flag.
+    # A run-scoped annotation is about this run, so the rendered line carries
+    # the rationale rather than the UNANNOTATED flag.
     assert "annotated expected-below-macro" in md
+
+
+def test_report_does_not_credit_a_committed_report_annotation_to_a_live_run(monkeypatch):
+    """ADR 0029: a `committed_report`-scoped entry says nothing about this run.
+
+    Rendering it as "annotated" here would put a rationale written about the
+    2026-07-12 report next to tonight's below-macro suite and read as though
+    someone had looked at tonight's failures. They had not.
+    """
+    monkeypatch.setattr(
+        report, "expected_below_macro", lambda: {"conversation": "true of the July report"}
+    )
+    monkeypatch.setattr(report, "annotation_scopes", lambda: {"conversation": "committed_report"})
+    md = generate_markdown(_below_macro_summary(), _records(es_pass=[True], en_pass=[True]))
+    assert "**Below-macro suite:** conversation at 60.0%" in md
+    assert "UNANNOTATED — the parity gate fails this run" in md
+    assert "annotated expected-below-macro" not in md
 
 
 # ── mirror integrity (the gate's own denominator) ─────────────────────────────

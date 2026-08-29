@@ -195,7 +195,35 @@ def check_parity_committed(
 
 def main() -> int:
     if not BASELINE_PATH.exists():
-        print("no evals/baseline.json; skipping committed-report regression gate", file=sys.stderr)
+        # A missing baseline has exactly one innocent explanation: a repository
+        # extracted from `template/` that has not run its first evaluation yet.
+        # This module is in `template/MANIFEST.yaml`, so that case is real and
+        # must stay green. Every other explanation is the gate's own input having
+        # been deleted, and a guard with nothing to read is not a guard that
+        # passed (the phrasing is `evals/plumbline_guard.latest_report`'s, and
+        # this module was the one place in the repo that did not follow it).
+        #
+        # The two are distinguishable without guessing: a tree that has never
+        # been evaluated has no committed scoreboard either. If `EVALS.md`
+        # carries one, an evaluation happened, and the baseline it was gated
+        # against is missing.
+        evals_md = EVALS_MD_PATH.read_text(encoding="utf-8") if EVALS_MD_PATH.exists() else ""
+        if (provenance.read_evals_md(evals_md) or {}).get("suites"):
+            print(
+                "evals/baseline.json is missing, but the committed EVALS.md carries a "
+                "scoreboard — so this tree has been evaluated and its baseline has gone "
+                "missing rather than never existing. Restore it, or regenerate both with "
+                "`python -m evals.runner --update-baseline` and a written, owner-approved "
+                "rationale. This gate does not pass on an absent input.",
+                file=sys.stderr,
+            )
+            return 1
+        print(
+            "no evals/baseline.json and no committed scoreboard: this tree has not been "
+            "evaluated yet (a fresh `make template` extraction). Skipping the "
+            "committed-report regression gate.",
+            file=sys.stderr,
+        )
         return 0
     baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
     evals_md = EVALS_MD_PATH.read_text(encoding="utf-8")
