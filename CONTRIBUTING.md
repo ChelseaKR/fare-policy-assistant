@@ -21,8 +21,12 @@ A change that relaxes any of them will not be merged.
 
 ## Local setup
 
-Requires [uv](https://docs.astral.sh/uv/). The corpus snapshots are committed, so
-the offline path needs no API key and no network:
+Requires [uv](https://docs.astral.sh/uv/), plus `node` on `PATH` and the gettext
+`msgfmt` binary. Neither is a runtime dependency: `make i18n` compiles the
+catalogs with `msgfmt`, and `make test` runs the evidence hub's published
+freshness check in node, which is the only way to prove the hub can report its
+own staleness to a reader. The corpus snapshots are committed, so the offline
+path needs no API key and no network:
 
 ```sh
 make verify                                # the full offline gate: lint + format + typecheck + coverage-gated test + i18n

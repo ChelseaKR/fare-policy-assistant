@@ -79,22 +79,61 @@ runtime attests `180aa043f740c076ec7ec9443f2067b56009c985`, which is an
 ancestor of `origin/main` and does contain the renderer, so it is the only
 value that could satisfy `compare-runtime` against today's deployment.
 
-## The open decision this exposes
+## The decision this exposed, and what was done about it
 
-`validate_public_manifest` accepts a manifest with `status: "warning"`,
-`fresh: false`, `warnings: ["evaluation.stale"]`. `_template_html` renders it
-with `STATUS_CLASS: warning` and `STATUS_LABEL: "Verified with freshness
-warning"`, and `docs/pages/index.html` styles `.notice.warning` for it. None
-of that is reachable: `_template_html`'s only caller is
+Until 2026-08-29 the freshness budget was enforced in exactly one place, at
+render time, and never again. `validate_public_manifest` accepted a manifest
+with `status: "warning"`, `_template_html` rendered it as "Verified with
+freshness warning", and `docs/pages/index.html` styled `.notice.warning` for
+it, but none of that was reachable: `_template_html`'s only caller is
 `render_evidence_site`, which calls `require_current_public_evidence` first,
-and that function fails on any status other than `verified`.
+and that rejects every status but `verified`.
 
-So the pipeline has exactly one publishable state, "fresh and matching the
-live runtime", and no way to publish the sentence "this evidence is old".
-The page that is up cannot be corrected, only replaced by a page that passes
-every gate. Whether a stale receipt should be publishable *as* a warning is a
-decision for the repository owner, not a defect to be quietly patched: it
-loosens an outward-facing gate. It is recorded here rather than acted on.
+So the published page had one state and it was "Verified", permanently. That is
+not a report. A page that cannot return a second answer is not answering a
+question, and the fact that this one sat on a project about evaluation honesty
+is the reason it was worth fixing rather than documenting again.
+
+The fix was **not** to loosen the publication gate. Refusing to publish stale
+evidence is right, and `require_current_public_evidence` is unchanged. The
+error was treating the build as the last moment freshness could be judged.
+Publication happens once; reading happens for as long as the page is up.
+
+What the renderer now publishes instead:
+
+- **`data-expires-at`**, the instant the verdict stops being true: `run_at`
+  plus `max_age_seconds`, printed on the page as a `<time>` element. This is
+  the first time the operator's budget has been visible to a reader at all.
+- **One inline script**, which compares that instant to the reader's own clock
+  when the page loads and, past expiry, swaps the notice to `.notice.warning`,
+  relabels it "Verified with freshness warning", and states the age in days.
+  The strings the old dead branch held now live here, where a reader reaches
+  them. It fetches nothing, stores nothing, and sends nothing anywhere.
+- **A digest-pinned `script-src`.** The page's policy stays `default-src
+  'none'`; `'unsafe-inline'` is not used. `_script_csp_hash` computes the
+  SHA-256 of the exact bytes about to be inlined, so the policy admits that one
+  script and cannot drift from it.
+
+With scripting off, the static text still carries the expiry instant and says
+outright that the status above it was settled at build time and is not
+maintained. That is weaker than a computed verdict and it is stated as such,
+because the alternative is an unqualified "Verified" that nothing can retract.
+
+`tests/test_build_evidence_site.py` runs the published script in node at four
+clocks: one day in, the last second of the budget, one second past it, and 48
+days past it, which is how long the live hub had been serving one verdict when
+this was written. A structural assertion that the stale strings appear
+somewhere in the file would pass against a page whose script never runs, so the
+script is executed instead.
+
+The reasoning is recorded in
+[ADR 0030](decisions/0030-freshness-is-decided-at-read-time-not-build-time.md).
+
+Note what this does not do. It cannot correct the page currently at
+`evals.chelseakr.com`, which was published on 2026-07-12 by a workflow
+definition that no longer exists and carries none of this. Every page published
+from here on can report its own age; that one still cannot, and the three
+blockers below still stand between it and a replacement.
 
 ## The command, once there is something to publish
 
@@ -125,7 +164,9 @@ gh workflow run pages.yml \
 ```
 
 `--freshness-seconds` is the one number here that is a judgement rather than a
-measurement. It becomes `max_age_seconds` in the manifest, it is what
-`require_current_public_evidence` later checks against, and it is **not**
-rendered onto the page. Widening it to make an old run publishable would move
-a real staleness decision into a field no reader can see.
+measurement. It becomes `max_age_seconds` in the manifest, and it is what both
+`require_current_public_evidence` and the published page's own check measure
+against. Until 2026-08-29 it was invisible to readers, so widening it to make an
+old run publishable moved a real staleness decision into a field nobody could
+see. The page now prints `run_at + max_age_seconds` as the instant its verdict
+expires, so a wide budget is a claim made in public and can be argued with.

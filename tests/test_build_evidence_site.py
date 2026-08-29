@@ -7,6 +7,8 @@ import copy
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -34,6 +36,108 @@ _TEMPLATE = Path(__file__).resolve().parents[1] / "docs" / "pages" / "index.html
 _WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "pages.yml"
 _PRIVATE_SENTINEL = "PRIVATE-QUESTION-ANSWER-RATIONALE-PASSAGE"
 _PUBLISH_NOW = datetime(2026, 7, 30, 21, 15, 1, tzinfo=UTC)
+#: `_evidence()` runs at 2026-07-30T20:15:01Z with a 604800-second budget.
+_EXPIRES_AT = "2026-08-06T20:15:01Z"
+_NODE = shutil.which("node")
+
+#: Enough of a browser to run one script: four elements it looks up by id, their
+#: attributes, and a clock that reads whatever the caller says it reads. It loads
+#: the script the renderer actually published rather than a copy, so a page that
+#: stopped carrying the check fails here instead of passing on a stale duplicate.
+_READ_TIME_DRIVER = """\
+"use strict";
+const fs = require("fs");
+const [scriptPath, statePath] = process.argv.slice(2);
+const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+const nodes = {};
+for (const [id, node] of Object.entries(state.nodes)) {
+  nodes[id] = {
+    className: node.className,
+    textContent: node.textContent,
+    getAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(node.attributes, name)
+        ? node.attributes[name]
+        : null;
+    },
+  };
+}
+globalThis.document = { getElementById: (id) => nodes[id] || null };
+const reading = Date.parse(state.now);
+if (!isFinite(reading)) { throw new Error("the test clock is not a parsable instant"); }
+Date.now = () => reading;
+new Function(fs.readFileSync(scriptPath, "utf8"))();
+const observed = {};
+for (const [id, node] of Object.entries(nodes)) {
+  observed[id] = { className: node.className, textContent: node.textContent };
+}
+process.stdout.write(JSON.stringify(observed));
+"""
+
+
+def _rendered_index(tmp_path: Path, name: str = "site") -> str:
+    manifest_path = _write_manifest(tmp_path / f"{name}.json")
+    site.render_evidence_site(
+        manifest_path=manifest_path,
+        template_path=_TEMPLATE,
+        output_dir=tmp_path / name,
+    )
+    return (tmp_path / name / "index.html").read_text(encoding="utf-8")
+
+
+def _page_script(page: str) -> str:
+    element = BeautifulSoup(page, "html.parser").find("script")
+    assert element is not None, "the published page carries no freshness check at all"
+    return str(element.string)
+
+
+def _read_as_of(page: str, now: str, workdir: Path) -> dict[str, dict[str, str]]:
+    """Run the published page's own check the way a browser opened at `now` would.
+
+    The point of this fix is a verdict computed after the build ended, so nothing
+    short of executing the published script proves the verdict exists. A structural
+    assertion that the stale strings appear somewhere in the file would pass just as
+    happily against a page whose script never runs.
+    """
+
+    if _NODE is None:
+        pytest.fail(
+            "node is not on PATH, so the check this page performs at read time cannot "
+            "be executed here. Skipping would report the stale state as proven while "
+            "nothing had run it, which is the defect this test exists to close."
+        )
+    soup = BeautifulSoup(page, "html.parser")
+    nodes: dict[str, object] = {}
+    for identifier in (
+        "evidence-status",
+        "evidence-status-label",
+        "evidence-status-detail",
+        "evidence-freshness",
+    ):
+        element = soup.find(id=identifier)
+        assert element is not None, f"the published page carries no #{identifier}"
+        nodes[identifier] = {
+            "className": " ".join(element.get("class", [])),
+            "textContent": element.get_text(" ", strip=True),
+            "attributes": {
+                name: value for name, value in element.attrs.items() if name.startswith("data-")
+            },
+        }
+    workdir.mkdir(parents=True, exist_ok=True)
+    driver = workdir / "driver.js"
+    driver.write_text(_READ_TIME_DRIVER, encoding="utf-8")
+    script = workdir / "published.js"
+    script.write_text(_page_script(page), encoding="utf-8")
+    state = workdir / "state.json"
+    state.write_text(json.dumps({"now": now, "nodes": nodes}), encoding="utf-8")
+    completed = subprocess.run(
+        [_NODE, str(driver), str(script), str(state)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    observed = json.loads(completed.stdout)
+    assert isinstance(observed, dict)
+    return observed
 
 
 @pytest.fixture(autouse=True)
@@ -457,26 +561,24 @@ def test_consumers_recompute_freshness_and_reject_replayed_manifest(tmp_path: Pa
     assert not (tmp_path / "replayed-site").exists()
 
 
-def test_a_stale_receipt_has_no_publishable_state_not_even_a_warning(
+def test_a_stale_receipt_is_still_refused_at_every_publication_consumer(
     tmp_path: Path,
 ) -> None:
-    """The pipeline can publish "fresh", or nothing. It cannot publish "old".
+    """Publishing stale evidence stays refused. That refusal was never the bug.
 
     ``validate_public_manifest`` accepts ``status: warning`` with
-    ``warnings: ["evaluation.stale"]``, ``_template_html`` renders it as
-    "Verified with freshness warning", and ``docs/pages/index.html`` styles
-    ``.notice.warning`` for it. That state is unreachable: ``_template_html``'s
-    only caller is ``render_evidence_site``, which runs
-    ``require_current_public_evidence`` first, and that rejects every status
-    other than ``verified``.
+    ``warnings: ["evaluation.stale"]``, and every publication consumer refuses
+    it, because a page asserting a score should not be built out of a receipt
+    that has already expired.
 
-    The consequence is the one worth pinning. When the published evidence goes
-    stale there is no way to publish a page that says so, because a staleness
-    notice would have to carry the stale receipt it is describing. The page
-    that is up can only be replaced, never corrected. See
-    docs/publishing-the-evidence-hub.md; changing this loosens an
-    outward-facing gate and is the repository owner's decision, so this test
-    should be edited deliberately rather than repaired.
+    Until 2026-08-29 this was also the *only* place freshness was ever checked,
+    so the published page had exactly one reachable state and it was "Verified"
+    forever. The repair was not to loosen this gate. It was to stop the build
+    being the last word: the page now recomputes its own age against the
+    reader's clock, which is what
+    ``test_the_published_page_tells_a_late_reader_it_has_gone_stale`` proves.
+    A future change that relaxes this function to publish stale evidence would
+    be a different decision than the one taken, and should fail here first.
     """
 
     stale = _evidence(stale=True)
@@ -513,6 +615,111 @@ def test_a_stale_receipt_has_no_publishable_state_not_even_a_warning(
             consume()
 
     assert not (tmp_path / "warning-site").exists()
+
+
+def test_the_published_page_tells_a_late_reader_it_has_gone_stale(tmp_path: Path) -> None:
+    """The warning state, reached by the reader's clock rather than the build's.
+
+    ``render_evidence_site`` can only ever emit "Verified", because the gate above
+    refuses to render anything else. So the published page carries the run instant,
+    the instant its budget expires, and one script that compares them to the clock
+    of whoever opened it. This runs that published script in node, at two instants
+    after expiry, and watches the page relabel itself.
+
+    The second clock is 2026-09-16, forty-eight days past the run. That is not an
+    arbitrary number: it is how long https://evals.chelseakr.com/ had been serving
+    one unchanged verdict when this was written.
+    """
+
+    page = _rendered_index(tmp_path)
+    assert f'data-expires-at="{_EXPIRES_AT}"' in page
+
+    for now, age in (
+        ("2026-08-06T20:15:02Z", "7 days old"),
+        ("2026-09-16T20:15:01Z", "48 days old"),
+    ):
+        observed = _read_as_of(page, now, tmp_path / f"read-{now[:10]}")
+        assert observed["evidence-status"]["className"] == "notice warning"
+        assert observed["evidence-status-label"]["textContent"] == "Verified with freshness warning"
+        detail = observed["evidence-status-detail"]["textContent"]
+        assert age in detail
+        assert "past the freshness budget this page was published under" in detail
+        assert "Nothing here has been re-evaluated or rebuilt since publication" in detail
+        live = observed["evidence-freshness"]["textContent"]
+        assert age in live
+        assert f"past the freshness budget, which expired {_EXPIRES_AT}" in live
+
+
+def test_the_published_page_still_reads_as_fresh_inside_its_budget(tmp_path: Path) -> None:
+    """The other half of the proof. A verdict that only ever says one thing is what
+    this repair replaced, so a page that shouted "stale" at every reader would be
+    the same defect wearing the opposite label.
+
+    Three clocks inside or before the budget, none of which may reach the warning:
+    one day in, the last second before expiry, and a reader whose device clock is
+    set behind the run, where no honest age can be computed at all.
+    """
+
+    page = _rendered_index(tmp_path)
+
+    for now, expected in (
+        ("2026-08-01T00:00:00Z", "1 day old, inside the freshness budget"),
+        (_EXPIRES_AT, f"7 days old, inside the freshness budget, which expires {_EXPIRES_AT}"),
+    ):
+        observed = _read_as_of(page, now, tmp_path / f"fresh-{now[-9:-1].replace(':', '')}")
+        assert observed["evidence-status"]["className"] == "notice verified"
+        assert observed["evidence-status-label"]["textContent"] == "Verified"
+        assert expected in observed["evidence-freshness"]["textContent"]
+
+    behind = _read_as_of(page, "2026-07-30T19:00:00Z", tmp_path / "clock-behind")
+    assert behind["evidence-status"]["className"] == "notice verified"
+    assert (
+        "reads earlier than the run this page reports"
+        in (behind["evidence-freshness"]["textContent"])
+    )
+    assert "days old" not in behind["evidence-freshness"]["textContent"]
+
+
+def test_the_page_policy_admits_the_one_script_it_carries_and_nothing_else(
+    tmp_path: Path,
+) -> None:
+    """`default-src 'none'` and a digest, never `'unsafe-inline'`.
+
+    A hash that does not match the script it is supposed to admit is the worst
+    outcome available here: every gate stays green and the check silently never
+    runs in a browser, which is precisely the shape of failure this whole change
+    exists to remove. So the digest is recomputed from the published bytes.
+    """
+
+    page = _rendered_index(tmp_path)
+    policy = re.search(r'content="(default-src[^"]+)"', page)
+    assert policy is not None
+    directives = dict((part.split(" ", 1) + [""])[:2] for part in policy.group(1).split("; "))
+    assert directives["default-src"] == "'none'"
+    assert "unsafe-inline" not in directives["script-src"]
+
+    digest = base64.b64encode(hashlib.sha256(_page_script(page).encode("utf-8")).digest())
+    assert directives["script-src"] == f"'sha256-{digest.decode('ascii')}'"
+
+
+def test_the_page_says_when_it_expires_even_with_scripting_switched_off(
+    tmp_path: Path,
+) -> None:
+    """The no-script reader gets a checkable claim, not a bare "Verified".
+
+    Roughly nobody browses with scripting off, but the fallback is what the page
+    asserts before its own check has run, and the assertion has to be true then
+    too. So the static text carries the expiry instant and says outright that the
+    heading above it was settled at build time and is not maintained.
+    """
+
+    page = _rendered_index(tmp_path)
+    fallback = BeautifulSoup(page, "html.parser").find(id="evidence-freshness")
+    assert fallback is not None
+    text = fallback.get_text(" ", strip=True)
+    assert _EXPIRES_AT in text
+    assert "nothing rebuilds the page as it ages" in text
+    assert "with scripting off it cannot" in text
 
 
 def test_bounded_reader_rejects_wrong_missing_directory_and_oversized_inputs(

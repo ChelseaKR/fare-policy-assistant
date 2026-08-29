@@ -36,6 +36,15 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
+      # The evidence hub publishes one inline script: the freshness check that
+      # lets a published page notice it has gone stale without being rebuilt.
+      # `make test` executes that script rather than asserting things about its
+      # text, because a check nothing runs is the defect it was written to fix.
+      # Pinned rather than left to whatever the runner image ships, so the
+      # version that proves it is the version named here.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: "20"
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
         with:
           enable-cache: true

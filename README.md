@@ -50,24 +50,45 @@ inferred:
    attested runtime fields and fails on the mismatch, so an operator who
    widened the freshness budget to get past (2) would still be stopped here.
 
-The consequence is the part worth stating plainly on a project about honest
-evaluation: **there is no way to publish a correction.** Both surfaces that
-could mark the hub stale are gated on evidence that is fresh and matches the
-live runtime, and stale evidence is exactly what a staleness notice would
-have to carry. The manifest schema and the page template both model a
-`warning` status ("Verified with freshness warning"), but
-`require_current_public_evidence` rejects `status: warning` before
-`_template_html` is ever reached, so that state is unreachable in the
-published pipeline. `tests/test_build_evidence_site.py` pins this.
+Until 2026-08-29 there was a fourth problem, and it was the worst of them: the
+freshness budget was checked when a page was built and never again, so the
+page the renderer produced had exactly one reachable state and it was
+"Verified", for as long as it stayed up. The manifest schema and the template
+both modelled a `warning` status ("Verified with freshness warning"), and
+`require_current_public_evidence` rejected it before `_template_html` could
+ever render it. A page that can only return one verdict is not reporting one.
+
+That is fixed, and not by loosening the gate. Refusing to *publish* stale
+evidence is correct and is unchanged. What changed is that the build is no
+longer the last moment freshness is judged: the renderer now prints the instant
+the verdict expires (`run_at` plus the budget, previously invisible to
+readers), and the page carries one inline script that compares that instant to
+the reader's own clock and relabels itself "Verified with freshness warning",
+with the age in days, once it is past. Nothing is fetched at read time and the
+page's `default-src 'none'` policy is unchanged apart from a `script-src`
+pinned to the SHA-256 of that one script. `make test` executes the published
+script in node at four clocks, including 48 days past the run, and fails if the
+warning state stops being reachable. The reasoning, including what a read-time
+check costs a page that previously ran nothing, is in
+[ADR 0030](docs/decisions/0030-freshness-is-decided-at-read-time-not-build-time.md).
+
+The correction it cannot make is the one below. Every page published from here
+on can tell a reader it has gone stale; the page currently at
+<https://evals.chelseakr.com/> was published on 2026-07-12 by a workflow
+definition that no longer exists, carries none of this, and is still blocked
+from replacement by the three items above.
 
 What a visitor to <https://evals.chelseakr.com/> sees meanwhile: an index page
 carrying no date, no scoreboard, and no agency count, linking to a
 `report.html` that does state its own run
 (`2026-07-12T05:01:17+00:00`, corpus `0938fff0539a`) beside an `EVALS.md`
 link that tracks `main` and describes a different, larger, currently-failing
-suite. `public-evidence.json` and `release.json`, which the current template
-links, both return 404 there, because the site now up predates the pipeline
-that would have written them. The dated caveats in `docs/pages/index.html`
+suite. The missing date is a publication lag rather than a template defect:
+`docs/pages/index.html` has printed the run and promotion instants since
+2026-07-30, and now prints the expiry instant too, but that template has never
+been published. `public-evidence.json` and `release.json`, which the current
+template links, both return 404 there, because the site now up predates the
+pipeline that would have written them. The dated caveats in `docs/pages/index.html`
 about the eighteen-agency expansion have never reached the published page.
 See [docs/publishing-the-evidence-hub.md](docs/publishing-the-evidence-hub.md).
 
