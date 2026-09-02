@@ -116,12 +116,19 @@ cases:
       error; so is reporting METRO's youth program as a "discount fare", which
       would understate it.
 
-  # ── The Clipper scope case (added 2026-08-12 with SolTrans) ────────────────
-  # This is the case SolTrans was added for. Clipper is a *regional* fare card,
-  # so a rider naturally reads any Clipper answer as generalizing across the Bay
-  # Area — and the assistant has exactly one agency's Clipper documentation and
-  # zero evidence about anyone else's. Correct behavior is to answer the SolTrans
-  # half and visibly stop.
+  # ── The Clipper scope cases (added 2026-08-12 with SolTrans) ───────────────
+  # These are the cases SolTrans was added for. Clipper is a *regional* fare
+  # card, so a rider naturally reads any Clipper answer as generalizing across
+  # the Bay Area, and the corpus's coverage of it is uneven in exactly the way
+  # that invites the generalization: seven agencies document acceptance, one
+  # (Santa Cruz METRO) documents refusal, and nine say nothing at all. Correct
+  # behavior is to answer from the passages and visibly stop.
+  #
+  # This comment used to say the assistant had "exactly one agency's Clipper
+  # documentation and zero evidence about anyone else's", which was true of the
+  # six-agency corpus and became wrong without anything noticing. The per-agency
+  # split is asserted against the corpus in tests/test_clipper_ground_truth.py
+  # so it cannot drift silently again — see issue #162.
   - id: xagency-009
     question: "I use a Clipper card on SolTrans. Will it work on SacRT too?"
     language: en
@@ -136,10 +143,13 @@ cases:
     rationale: >
       Both agencies are in the corpus, but only one side of this question is.
       soltrans-clipper-card and soltrans-ways-to-pay document Clipper acceptance
-      on SolTrans in detail; sacrt-fares says nothing about Clipper at all, and
-      neither does any other document in the corpus. SacRT is a Sacramento-region
-      agency outside the Clipper service area, so the regional-card intuition is
-      not merely unsupported here, it is probably wrong.
+      on SolTrans in detail; SacRT's documents say nothing about Clipper, and no
+      document in the corpus — SacRT's or any other agency's — mentions SacRT and
+      Clipper together. (Seven other agencies do document Clipper acceptance for
+      themselves; see xagency-010. None of that reaches SacRT.) SacRT is a
+      Sacramento-region agency outside the Clipper service area, so the
+      regional-card intuition is not merely unsupported here, it is probably
+      wrong.
 
       The correct answer states SolTrans' Clipper acceptance with a citation,
       says plainly that the published SolTrans material does not establish
@@ -154,20 +164,75 @@ cases:
     question: "Which agencies in your corpus take Clipper?"
     language: en
     expected_behavior: partial
-    required_facts: ["re:(?i)soltrans"]
+    required_facts:
+      - "SolTrans"
+      - "AC Transit"
+      - "re:County Connection|CCCTA"
+      - "Marin Transit"
+      - "SamTrans"
+      - "re:\\bVTA\\b|Santa Clara Valley"
+      - "WestCAT"
+      - "re:Santa Cruz|SCMTD"
     forbidden_content:
       - "MST accepts Clipper"
       - "Yolobus accepts Clipper"
       - "Humboldt Transit accepts Clipper"
       - "all of them accept Clipper"
+      - "re:\\b(SacRT|SBMTD|FAX|SLO ?RTA|SJRTD|San Joaquin RTD|e-?tran)\\b[^.]{0,30}\\b(accepts|takes|honors)\\b[^.]{0,25}Clipper"
+      - "re:\\bSanta Cruz(?: METRO)?\\b[^.]{0,30}\\b(accepts|takes|honors)\\b[^.]{0,25}Clipper"
     rationale: >
-      The direct form of xagency-009. SolTrans is the only Clipper participant
-      documented in this corpus; MST, SBMTD, Yolobus, SacRT, and HTA each publish
-      their own agency-local fare media (Courtesy Cards, Tap-to-Pay, stored-value
-      passes) and no corpus passage says any of them takes Clipper. The honest
-      answer names SolTrans, says the corpus does not establish Clipper status
-      for the others, and does not silently convert "not documented" into "does
-      not accept" for them either.
+      The direct form of xagency-009, rebuilt against the eighteen-agency corpus
+      (issue #162). The ground truth below was derived per agency from
+      corpus/processed/chunks.jsonl, not carried over: the version this replaced
+      described the six-agency corpus and said SolTrans was the only documented
+      participant, which by 2026-08 made the case unpassable by construction —
+      an answer that correctly enumerated the corpus was graded as fabricating
+      citations, because judge_helpfulness v3 is threaded the rationale and used
+      it as truth.
+
+      Seven agencies document Clipper acceptance in their own passages, and each
+      has a passage a citation can resolve to. SolTrans (soltrans-clipper-card,
+      soltrans-ways-to-pay, soltrans-fare-table). AC Transit ("pay with cash,
+      Clipper, or contactless payment", actransit-fares; actransit-discounts).
+      County Connection / CCCTA ("accepted on almost all Bay Area transit
+      systems, including County Connection", cccta-clipper-card;
+      cccta-fare-types-prices makes bus-to-bus transfers Clipper-only). WestCAT
+      ("We also accept Clipper", westcat-fares-all; westcat-clipper). Marin
+      Transit (marin-clipper; marin-fares gives a 10% Clipper discount off the
+      adult cash fare). SamTrans (samtrans-clipper, samtrans-fare-types: passes
+      load onto Clipper cards). VTA (vta-fares prices a Clipper single ride in
+      its own column and gives two hours of free transfers on it).
+
+      One agency documents the opposite, and it is the sharpest fact in the case:
+      scmtd-fares-passes states "Clipper Cards are not honored on METRO buses."
+      Santa Cruz METRO is required in the answer for that reason — an
+      enumeration that omits the corpus's one explicit refusal is incomplete,
+      and one that lists METRO among the participants contradicts a passage it
+      can read.
+
+      Nine agencies are silent: e-tran, FAX, HTA, MST, SBMTD, SJRTD, SLO RTA,
+      SacRT and Yolobus have no chunk mentioning Clipper at all. Several publish
+      their own agency-local fare media (Courtesy Cards, Tap-to-Pay,
+      stored-value passes), which is a reason the question comes up and is not
+      evidence either way. The teaching point the case has always carried is
+      here: silence must not become "does not accept". That half is the judge's
+      call — the deterministic side can catch an answer that *invents*
+      acceptance for a silent agency (forbidden_content above) but cannot
+      reliably catch the inverse, because the negation-window rule in
+      phrase_asserted reads a nearby correct denial (METRO's) as excusing an
+      incorrect one.
+
+      Vine is the deliberate boundary case and is required neither way.
+      vine-fares says eligible riders "can apply for the Clipper START program
+      and receive 50% off of your Vine Transit Rides", which documents a
+      Clipper-administered discount applying to Vine fares without stating that
+      Clipper is accepted as payment on board. Naming Vine and not naming it are
+      both defensible; asserting either without saying which passage it rests on
+      is not.
+
+      Expected `partial` rather than `answer`: the corpus answers this for nine
+      of eighteen agencies and cannot answer it for the other nine, so a
+      complete-sounding list is the failure mode, not the goal.
 
   - id: xagency-011
     question: "I'm 66. Do I pay the same senior fare on FAX and on Humboldt Transit?"

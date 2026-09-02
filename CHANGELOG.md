@@ -78,6 +78,42 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Fixed
+- **`xagency-010` was unpassable by construction, and nothing could tell (#162).**
+  The case's rationale still described the six-agency corpus — "SolTrans is the
+  only Clipper participant documented in this corpus" — after the corpus had
+  grown to eighteen agencies, seven of which document Clipper acceptance in their
+  own passages. `judge_helpfulness` v3 is threaded the case rationale by design,
+  so on the 2026-08-22 full live run it used that text as ground truth and wrote
+  that the answer "fabricates citations", while
+  `citation_present_and_resolvable` passed on all nine of the same citations in
+  the same run. An answer that agreed with the rationale was wrong about the
+  corpus; an answer right about the corpus failed the judge.
+  - The case is rebuilt against the corpus at HEAD, deciding each of the
+    eighteen agencies explicitly. Seven document acceptance (SolTrans, AC
+    Transit, County Connection, WestCAT, Marin Transit, SamTrans, VTA) and are
+    now required facts. One documents the opposite — scmtd-fares-passes,
+    "Clipper Cards are not honored on METRO buses" — and Santa Cruz METRO is
+    required for that reason: an enumeration that omits the corpus's one
+    explicit refusal is incomplete. Nine are silent, and the case's original
+    teaching point is unchanged: silence must not become "does not accept".
+  - Vine is the deliberate boundary case and is required neither way. vine-fares
+    documents a Clipper START discount applying to Vine fares without saying
+    Clipper is accepted as payment on board, so naming it and not naming it are
+    both defensible, and asserting either without saying which passage it rests
+    on is not.
+  - The forbidden-content patterns catch an answer that *invents* acceptance for
+    a silent agency or for METRO. They deliberately do not try to catch the
+    inverse: `phrase_asserted`'s negation window would read METRO's correct
+    denial as excusing an incorrect one a clause later, and a deterministic check
+    that fires on the wrong sentence is worse than one that defers. That half
+    stays the judge's call, stated as such in the rationale.
+  - `tests/test_clipper_ground_truth.py` asserts the per-agency split against
+    `corpus/processed/chunks.jsonl`, so an agency that starts or stops
+    documenting Clipper fails in CI rather than silently in a judge's reasoning
+    weeks later. That is the part that was missing: the rationale was prose, the
+    corpus was data, and they drifted for two weeks with every gate green.
+  - `xagency-009`'s rationale and the suite comment above both carried the same
+    stale claim and are corrected with it.
 - **The evidence hub had one publishable state and it was "Verified".** The
   freshness budget was enforced at render time and nowhere else:
   `render_evidence_site` calls `require_current_public_evidence` first, which
