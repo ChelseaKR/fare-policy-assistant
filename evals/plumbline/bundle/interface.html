@@ -3,7 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Transit Fare Policy Assistant — reference implementation</title>
+<title>Transit Fare Policy Assistant — California reduced-fare answers with citations</title>
+<!--
+  What a search result and a link preview say about this page. The description
+  repeats the banner and the sub-heading below rather than saying something
+  friendlier: this page is a reference implementation, and a preview that omits
+  that is the one place a reader could mistake it for an agency service.
+  The card image is served from the repository rather than from this host. The
+  rider surface is a Lambda with a fixed route table and no static-asset route,
+  so an og:image here naming a path on this origin would 404 in a crawler that
+  never reports back. `tests/test_public_ux.py` holds the address to a file that
+  exists in this repository.
+-->
+<meta name="description" content="Answers questions about published California transit fare and reduced-fare policies from dated snapshots, and cites every source. A reference implementation, not an agency service.">
+<link rel="canonical" href="https://fare.chelseakr.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Transit Fare Policy Assistant">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="es_US">
+<meta property="og:url" content="https://fare.chelseakr.com/">
+<meta property="og:title" content="Transit Fare Policy Assistant — California reduced-fare answers with citations">
+<meta property="og:description" content="Answers questions about published California transit fare and reduced-fare policies from dated snapshots, and cites every source. A reference implementation, not an agency service.">
+<meta property="og:image" content="https://raw.githubusercontent.com/ChelseaKR/fare-policy-assistant/main/docs/og/rider-assistant.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Transit Fare Policy Assistant: California transit fares, with citations, at fare.chelseakr.com.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Transit Fare Policy Assistant — California reduced-fare answers with citations">
+<meta name="twitter:description" content="Answers questions about published California transit fare and reduced-fare policies from dated snapshots, and cites every source. A reference implementation, not an agency service.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/ChelseaKR/fare-policy-assistant/main/docs/og/rider-assistant.png">
+<meta name="twitter:image:alt" content="Transit Fare Policy Assistant: California transit fares, with citations, at fare.chelseakr.com.">
 <style>
   :root {
     --ink: #1a1f24;

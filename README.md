@@ -9,24 +9,60 @@ public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
 
-**[Evaluation evidence hub](https://evals.chelseakr.com/)** ·
-**[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/)** ·
-[Evaluation report in the repository](EVALS.md)
+## Quick start
 
-**Both public links above lag this repository's HEAD, and that gap is stated
-here rather than left for a visitor to discover by asking about an agency
-that isn't there** (#139, #140). The live assistant is pinned to
-corpus_version `35ec70d6359d` and serves five agencies — HTA, MST, SBMTD,
-SacRT, Yolobus, verified against its own `/version` endpoint — not the
-eighteen this README describes. `infra/deploy.sh` only promotes a build
-backed by a promoted, full, live evaluation (ADR 0023), and the nightly full
-run has been red on the `cross_agency` gate since the corpus's
-eighteen-agency expansion (#138), so there is currently no fresher run to
-promote and deploy. The evidence hub is further behind still: it serves the
-`2026-07-12` promoted run (201 cases, `cross_agency` 3/3) and has not been
-republished since. The unpromoted picture, eighteen agencies, 385 cases,
-`cross_agency` currently well below floor, is in [EVALS.md](EVALS.md) and the
-nightly run artifact, not on either public link above.
+Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are
+committed, so this path runs with no API key and no network:
+
+```sh
+git clone https://github.com/ChelseaKR/fare-policy-assistant
+cd fare-policy-assistant
+make test                                  # unit tests, coverage-gated
+uv run python -m evals.runner --offline    # full eval, deterministic checks only
+uv run python -m assistant.cli --offline "What proof do I need for the veteran fare on MST?"
+```
+
+`make verify` runs the whole merge gate the same way: lint, types, tests,
+accessibility, i18n, and the committed-report regression check, all offline.
+Live model runs and the other backends are in
+[Live runs and backends](#live-runs-and-backends). The committed evaluation
+report is [EVALS.md](EVALS.md).
+
+## Contributing
+
+Two entry points, each with a scaffold behind it rather than an invitation:
+
+- **[Good first issues](CONTRIBUTING.md#good-first-issues)** — the open
+  eval-failure issues (`[eval]` prefix) each name a case id, the failing check,
+  and a proposed remediation. The documentation and UI ones need no model key.
+- **[Adding agency #6](CONTRIBUTING.md#adding-agency-6)** — a scaffolded path
+  from a fare page to one reviewed PR. `assistant.scaffold_agency` drafts the
+  manifest stanza, then one skeleton eval case per corpus chunk with its source
+  passage inline, and the eval runner refuses to run any suite while a single
+  draft case is still a draft. A new agency is a case-authoring task here, not
+  a data drop.
+
+Everything else is in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## The two public links, and what they currently show
+
+Both are up. Neither is current, and that gap is stated here rather than left
+for a visitor to discover by asking about an agency that isn't there
+(#139, #140).
+
+| Link | State, checked against the surface itself |
+|---|---|
+| **[Evaluation evidence hub](https://evals.chelseakr.com/)** — the published evaluation evidence | Serving. Pinned to the `2026-07-12` promoted run (201 cases, `cross_agency` 3/3) and never republished since; `public-evidence.json` and `release.json`, which its own template links, return 404 there. |
+| **[Live AWS rider assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/)** — the chat surface a rider uses | Serving. Pinned to corpus_version `35ec70d6359d`, answering for five agencies — HTA, MST, SBMTD, SacRT, Yolobus, verified against its own `/version` endpoint — not the eighteen this README describes. |
+
+Nothing above is a prerequisite for anything in this repository: the quick start
+runs entirely offline. `infra/deploy.sh` only promotes a build backed by a
+promoted, full, live evaluation (ADR 0023), and the nightly full run has been
+red on the `cross_agency` gate since the corpus's eighteen-agency expansion
+(#138), so there is currently no fresher run to promote and deploy. The
+unpromoted picture, eighteen agencies, 385 cases, `cross_agency` currently well
+below floor, is in [EVALS.md](EVALS.md) and the nightly run artifact, not on
+either public link above.
 
 The evidence hub cannot currently be republished at all, and that is a
 stronger statement than "it is behind". `.github/workflows/pages.yml` has run
@@ -120,20 +156,6 @@ Spanish answers from the promoted run, committed blank at
 parity gate compares pass/fail on two answers, and every check behind those
 verdicts is satisfied by Spanish of any quality, which is exactly why 0.0
 points says nothing about how the Spanish reads.
-
-## Quick start
-
-Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are
-committed, so the offline path works with no API key and no network:
-
-```sh
-make test                                  # unit tests
-uv run python -m evals.runner --offline    # full eval, deterministic checks only
-uv run python -m assistant.cli --offline "What proof do I need for the veteran fare on MST?"
-```
-
-Live model runs and the other backends are covered in
-[Live runs and backends](#live-runs-and-backends).
 
 ## Standards conformance
 
