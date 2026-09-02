@@ -44,6 +44,19 @@ rather than tied to a published tag.
     which is what it is for.
 
 ### Security
+- Update the locked pypdf dependency from 6.15.0 to 6.16.2, clearing three
+  malformed-document advisories disclosed 2026-09-01 against optional PDF
+  ingestion: CVE-2026-84309 (an infinite loop reachable through
+  `TreeObject.insert_child`), CVE-2026-84310 (long runtimes and large memory use
+  from deeply nested or heavily re-used outlines) and CVE-2026-84311 (the same
+  through text extraction on a page with many re-used XForm objects). All three
+  need an attacker-supplied PDF; this project only reads PDFs it fetched itself
+  from an agency URL recorded in `corpus/manifest.yaml`, so exposure is a
+  compromised or replaced agency document rather than rider input. Fixed rather
+  than waived because `Dependency scan (pip-audit)` is a required check and a
+  merge gate held open by an unfixed advisory stops being a gate.
+  `infra/requirements-deploy.txt` is unchanged: pypdf is an ingest-time
+  dependency and is not in the rider bundle.
 - Update the optional dense-retrieval toolchain to Torch 2.13.0 and setuptools
   83.0.0, clearing the setuptools path-traversal advisory while preserving the
   existing Python and sentence-transformers compatibility range.
