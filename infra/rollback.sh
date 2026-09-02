@@ -13,10 +13,21 @@ ROLLBACK_ALIAS="${FPA_ROLLBACK_ALIAS:-rollback}"
 LEGACY_IDENTITY_ROLLBACK_VERSION="${FPA_LEGACY_IDENTITY_ROLLBACK_VERSION:-}"
 API_ID="${FPA_API_ID:-}"
 ASSISTANT_BASE_URL="${FPA_ASSISTANT_BASE_URL:-}"
+# Which documents the retained target must still have contained. Issue #164
+# lifted the standing `yolobus-fares` containment from the forward deploy, but a
+# rollback moves the rider-facing alias to an OLDER version, and an older version
+# carries an older corpus that may still hold the fare table that expired
+# 2026-06-30. "Expired snapshot, no containment" is the one combination that must
+# stay impossible, so this requirement is derived from the retained target's own
+# pinned corpus rather than deleted with the deploy default -- see
+# `scripts/yolobus_containment.py`, and the derivation below once TARGET_CORPUS
+# is known. Setting FPA_REQUIRED_DISABLED_DOC_IDS (to "" or to a list) skips the
+# derivation entirely and makes the requirement the operator's explicit call.
+REQUIRED_DISABLED_DOC_IDS=""
+REQUIRED_DISABLED_DOC_IDS_SOURCE="derived"
 if [[ ${FPA_REQUIRED_DISABLED_DOC_IDS+x} ]]; then
   REQUIRED_DISABLED_DOC_IDS="$FPA_REQUIRED_DISABLED_DOC_IDS"
-else
-  REQUIRED_DISABLED_DOC_IDS="yolobus-fares"
+  REQUIRED_DISABLED_DOC_IDS_SOURCE="operator"
 fi
 MAX_SECONDS="${FPA_ROLLBACK_MAX_SECONDS:-900}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -263,6 +274,31 @@ TARGET_RUNTIME_MODE="$(
 )"
 [[ "$TARGET_RUNTIME_MODE" == "FunctionUpdate" ]] \
   || fail "retained version is not frozen in FunctionUpdate runtime mode"
+
+if [[ "$REQUIRED_DISABLED_DOC_IDS_SOURCE" == "derived" ]]; then
+  # Read the fare period out of the archived corpus this exact target serves.
+  # Anything the derivation cannot read reports the containment as still
+  # required, so a missing archive or an unrecognised fare period refuses the
+  # rollback rather than waving it through; the operator's escape hatch is
+  # FPA_REQUIRED_DISABLED_DOC_IDS, which is a decision on the record.
+  command -v python3 >/dev/null 2>&1 \
+    || fail "python3 is required to derive the containment requirement for corpus \
+$TARGET_CORPUS; set FPA_REQUIRED_DISABLED_DOC_IDS to decide it explicitly"
+  CONTAINMENT_REASON_FILE="$(mktemp)"
+  if ! REQUIRED_DISABLED_DOC_IDS="$(
+    python3 "$ROOT/scripts/yolobus_containment.py" "$TARGET_CORPUS" \
+      2>"$CONTAINMENT_REASON_FILE"
+  )"; then
+    CONTAINMENT_REASON="$(<"$CONTAINMENT_REASON_FILE")"
+    rm -f "$CONTAINMENT_REASON_FILE"
+    fail "could not derive the containment requirement for corpus $TARGET_CORPUS: \
+$CONTAINMENT_REASON"
+  fi
+  echo "rollback: containment: $(<"$CONTAINMENT_REASON_FILE")"
+  rm -f "$CONTAINMENT_REASON_FILE"
+fi
+echo "rollback: required disabled documents ($REQUIRED_DISABLED_DOC_IDS_SOURCE): \
+${REQUIRED_DISABLED_DOC_IDS:-none}"
 
 IFS=',' read -r -a REQUIRED_DISABLED <<<"$REQUIRED_DISABLED_DOC_IDS"
 for document_id in "${REQUIRED_DISABLED[@]}"; do

@@ -389,16 +389,34 @@ EXISTING_HISTORY_HMAC_KEY="$(lambda_env_value FPA_HISTORY_HMAC_KEY)"
 EXISTING_RATE_LIMIT_HMAC_KEY="$(lambda_env_value FPA_RATE_LIMIT_HMAC_KEY)"
 
 # Production evidence controls. The currently reviewed bundle is pinned by its
-# deterministic corpus identity. ``yolobus-fares`` is contained by default
-# because the committed fare period ended 2026-06-30; remove it only after the
-# replacement source has been reviewed, ingested, evaluated, and approved.
+# deterministic corpus identity. No document is contained by default any more.
+#
+# ``yolobus-fares`` was contained from 2026-07 because the committed fare period
+# had already ended 2026-06-30, and the bar for lifting it was that the
+# replacement source be reviewed, ingested, evaluated, and approved. All four are
+# met (issue #164): reviewed through #114 and #155, refetched 2026-08-21 with a
+# period running to 2027-06-30, 42 cases scored on the 2026-08-22 cold full live
+# run, and approved there. Containing a document the corpus can answer correctly
+# is a rider-facing cost, not a free safety margin.
+#
+# Lifting the default is NOT the same as lifting containment on the live
+# function: the branch below inherits the existing Lambda's value ahead of the
+# default, on purpose, so a routine deploy never silently un-contains a document.
+# Clearing it on production takes one explicit `FPA_DISABLED_DOC_IDS=""` deploy.
+# The rollback path derives its own requirement per target instead of inheriting
+# this one, because an older target may still serve the expired table -- see
+# infra/rollback.sh and scripts/yolobus_containment.py.
 PINNED_CORPUS_VERSION="${FPA_PINNED_CORPUS_VERSION:-$(cd "$ROOT" && uv run python -c 'from assistant.corpus import corpus_version; print(corpus_version())')}"
 if [[ ${FPA_DISABLED_DOC_IDS+x} ]]; then
   DISABLED_DOC_IDS="$FPA_DISABLED_DOC_IDS"
+  DISABLED_DOC_IDS_SOURCE="operator (FPA_DISABLED_DOC_IDS)"
 elif [[ -n "$EXISTING_DISABLED_DOC_IDS" ]]; then
   DISABLED_DOC_IDS="$EXISTING_DISABLED_DOC_IDS"
+  DISABLED_DOC_IDS_SOURCE="inherited from the live function; this repository \
+contains nothing by default, so clearing it takes an explicit FPA_DISABLED_DOC_IDS=\"\" deploy"
 else
-  DISABLED_DOC_IDS="yolobus-fares"
+  DISABLED_DOC_IDS=""
+  DISABLED_DOC_IDS_SOURCE="repository default (no document is contained)"
 fi
 if [[ ${FPA_HISTORY_HMAC_KEY+x} ]]; then
   HISTORY_HMAC_KEY="$FPA_HISTORY_HMAC_KEY"
@@ -3032,7 +3050,8 @@ echo "release version: $RELEASE_VERSION"
 echo "promotion attestation sha256: $PROMOTION_ATTESTATION_SHA"
 echo "promotion evidence: $PROMOTION_ARCHIVE"
 echo "promotion evidence pointer: $EVAL_BUNDLE_POINTER"
-echo "disabled documents pending review: $DISABLED_DOC_IDS"
+echo "disabled documents pending review: ${DISABLED_DOC_IDS:-none}"
+echo "disabled documents source: $DISABLED_DOC_IDS_SOURCE"
 echo "per-caller limiter table: $RATE_LIMIT_TABLE (TTL $RATE_LIMIT_TTL_STATUS at start of run)"
 echo "alerts topic: $TOPIC_ARN (subscribe an email to receive alarms)"
 echo "dashboard: https://$REGION.console.aws.amazon.com/cloudwatch/home?region=$REGION#dashboards/dashboard/$FN"

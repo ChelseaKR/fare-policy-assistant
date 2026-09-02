@@ -41,6 +41,10 @@ args = sys.argv[1:]
 state_path = pathlib.Path(os.environ["FAKE_AWS_STATE"])
 state = json.loads(state_path.read_text())
 identity_mode = os.environ.get("FAKE_RELEASE_IDENTITY_MODE", "legacy")
+# The retained target's pinned corpus. The default is a real archived corpus
+# carrying the Yolobus fare table that expired 2026-06-30, so the rollback
+# containment derivation (issue #164) reads it as still requiring containment.
+corpus_version = os.environ.get("FAKE_CORPUS_VERSION", "0938fff0539a")
 source_revision = os.environ.get("FAKE_SOURCE_REVISION", "1" * 40)
 config_version = os.environ.get("FAKE_CONFIG_VERSION", "2" * 64)
 content_version = os.environ.get("FAKE_CONTENT_VERSION", "3" * 64)
@@ -103,7 +107,7 @@ if args[:2] == ["lambda", "invoke"]:
         result_body = "<html><title>Transit Fare Policy Assistant</title></html>"
     elif path == "/version":
         version_body = {
-            "corpus_version": "0938fff0539a",
+            "corpus_version": corpus_version,
             "matches_pin": True,
             "disabled_documents": disabled_documents,
         }
@@ -147,7 +151,7 @@ if args[:2] == ["lambda", "invoke"]:
         result_body = json.dumps({
             "kind": "answered",
             "answer": "Bring published proof.",
-            "corpus_version": "0938fff0539a",
+            "corpus_version": corpus_version,
             "as_of_date": "2026-07-29",
             "citations": [{
                 "agency": "MST",
@@ -239,7 +243,7 @@ elif args[:2] == ["lambda", "get-alias"]:
 elif args[:2] == ["lambda", "get-function-configuration"]:
     disabled = os.environ.get("FAKE_DISABLED_DOC_IDS", "yolobus-fares")
     environment = {
-        "FPA_PINNED_CORPUS_VERSION": "0938fff0539a",
+        "FPA_PINNED_CORPUS_VERSION": corpus_version,
         "FPA_DISABLED_DOC_IDS": disabled,
         "FPA_HISTORY_HMAC_KEY": "0" * 64,
         **identity_environment(),
@@ -313,6 +317,10 @@ state = json.loads(pathlib.Path(os.environ["FAKE_AWS_STATE"]).read_text())
 live = state["aliases"]["live"]["FunctionVersion"]
 fail_version = os.environ.get("FAKE_PUBLIC_FAIL_VERSION")
 identity_mode = os.environ.get("FAKE_RELEASE_IDENTITY_MODE", "legacy")
+# The retained target's pinned corpus. The default is a real archived corpus
+# carrying the Yolobus fare table that expired 2026-06-30, so the rollback
+# containment derivation (issue #164) reads it as still requiring containment.
+corpus_version = os.environ.get("FAKE_CORPUS_VERSION", "0938fff0539a")
 source_revision = os.environ.get("FAKE_SOURCE_REVISION", "1" * 40)
 config_version = os.environ.get("FAKE_CONFIG_VERSION", "2" * 64)
 content_version = os.environ.get("FAKE_CONTENT_VERSION", "3" * 64)
@@ -360,7 +368,7 @@ security = [
 if url.endswith("/version"):
     content_type = "application/json"
     version_body = {
-        "corpus_version": "0938fff0539a",
+        "corpus_version": corpus_version,
         "as_of": "2026-07-29",
         "agencies": ["MST"],
         "matches_pin": True,
@@ -410,7 +418,7 @@ elif url.endswith("/api/ask"):
         body = json.dumps({
             "answer": "Bring proof.",
             "kind": "answered",
-            "corpus_version": "0938fff0539a",
+            "corpus_version": corpus_version,
             "as_of_date": "2026-07-29",
             "citations": [{
                 "agency": "MST",
@@ -697,7 +705,52 @@ def test_direct_version_health_explicit_empty_skips_yolobus_containment(tmp_path
     assert "Yolobus containment" not in result.stdout
 
 
-def test_direct_version_health_default_detects_missing_containment(tmp_path):
+def test_direct_version_health_named_document_detects_missing_containment(tmp_path):
+    """A containment that is in force is still verified when it is named.
+
+    Issue #164 cleared the `yolobus-fares` default from this script, because a
+    default naming a document the corpus can now answer correctly fails against a
+    correctly un-contained function. What it must not have cleared is the check
+    itself: `deploy.sh` passes the value it deployed and `rollback.sh` passes the
+    value it derived, so a function that has dropped a required containment is
+    still caught here.
+    """
+
+    fake_bin = _install_fake_aws(tmp_path)
+    state_path = _state(tmp_path)
+    result = subprocess.run(
+        [
+            str(VERSION_HEALTH),
+            "--qualifier",
+            "6",
+            "--allow-legacy-release-identity",
+            "--expected-disabled-docs",
+            "yolobus-fares",
+        ],
+        cwd=config.REPO_ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_AWS_STATE": str(state_path),
+            "FAKE_DISABLED_DOC_IDS": "",
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "/version did not match" in result.stderr
+
+
+def test_direct_version_health_default_requires_no_containment(tmp_path):
+    """Issue #164: the default no longer names `yolobus-fares`.
+
+    Before this, running the check by hand against an un-contained function
+    failed on a default nobody had chosen for that run.
+    """
+
     fake_bin = _install_fake_aws(tmp_path)
     state_path = _state(tmp_path)
     result = subprocess.run(
@@ -720,8 +773,8 @@ def test_direct_version_health_default_detects_missing_containment(tmp_path):
         timeout=30,
     )
 
-    assert result.returncode != 0
-    assert "/version did not match" in result.stderr
+    assert result.returncode == 0, result.stderr
+    assert "Yolobus containment" not in result.stdout
 
 
 def test_rollback_moves_live_alias_to_strict_identity_target_and_smokes(tmp_path):
@@ -882,6 +935,97 @@ def test_rollback_allows_explicitly_empty_required_disabled_documents(tmp_path):
         request["question"] for request in state.get("public_requests", [])
     ]
     assert not any("Yolobus" in question for question in questions)
+
+
+class TestRollbackDerivesContainmentFromTheTargetCorpus:
+    """Issue #164.
+
+    Lifting the forward containment could not simply delete `rollback.sh`'s copy
+    of the same default: a rollback moves the rider-facing alias to an *older*
+    version, and an older version may still carry the fare table that expired
+    2026-06-30. The requirement is derived per target from the archived corpus
+    that target actually pins, and every case the derivation cannot read refuses
+    the rollback rather than allowing it.
+    """
+
+    # Both are real directories under `corpus/versions/`.
+    EXPIRED = "0938fff0539a"  # fares effective 2025-07-01 to 2026-06-30
+    REFRESHED = "3dd8b7bd757e"  # fares effective 2026-07-01 to 2027-06-30
+
+    def _run(self, tmp_path, **overrides):
+        fake_bin = _install_fake_aws(tmp_path)
+        _install_fake_curl(fake_bin)
+        state_path = _state(tmp_path)
+        result = subprocess.run(
+            [str(ROLLBACK)],
+            cwd=config.REPO_ROOT,
+            env=_rollback_env(fake_bin, state_path, **overrides),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        return result, json.loads(state_path.read_text())
+
+    def test_an_expired_target_corpus_still_requires_containment(self, tmp_path):
+        result, state = self._run(
+            tmp_path, FAKE_CORPUS_VERSION=self.EXPIRED, FAKE_DISABLED_DOC_IDS=""
+        )
+
+        assert result.returncode != 0
+        assert "does not contain required disabled document yolobus-fares" in result.stderr
+        assert "fare period that ended 2026-06-30" in result.stdout
+        assert state["aliases"]["live"]["FunctionVersion"] == "5"
+
+    def test_a_refreshed_target_corpus_does_not(self, tmp_path):
+        result, state = self._run(
+            tmp_path, FAKE_CORPUS_VERSION=self.REFRESHED, FAKE_DISABLED_DOC_IDS=""
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert "fare period running through 2027-06-30" in result.stdout
+        assert "required disabled documents (derived): none" in result.stdout
+        assert state["aliases"]["live"]["FunctionVersion"] == "4"
+
+    def test_a_target_corpus_this_checkout_cannot_read_refuses_the_rollback(self, tmp_path):
+        result, state = self._run(
+            tmp_path, FAKE_CORPUS_VERSION="deadbeef0000", FAKE_DISABLED_DOC_IDS=""
+        )
+
+        assert result.returncode != 0
+        assert "is not archived" in result.stdout
+        assert "does not contain required disabled document yolobus-fares" in result.stderr
+        assert state["aliases"]["live"]["FunctionVersion"] == "5"
+
+    def test_the_operator_override_skips_the_derivation_entirely(self, tmp_path):
+        result, state = self._run(
+            tmp_path,
+            FAKE_CORPUS_VERSION=self.EXPIRED,
+            FAKE_DISABLED_DOC_IDS="yolobus-fares",
+            FPA_REQUIRED_DISABLED_DOC_IDS="",
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert "required disabled documents (operator): none" in result.stdout
+        assert "rollback: containment:" not in result.stdout
+        assert state["aliases"]["live"]["FunctionVersion"] == "4"
+
+    def test_a_refreshed_corpus_that_is_still_contained_is_left_contained(self, tmp_path):
+        """Derivation decides what is *required*, never what is forbidden.
+
+        A target that contains more than the derivation asks for is still a valid
+        rollback target: containment is a safety margin, and removing one is a
+        deploy decision, not something a rollback should take on itself.
+        """
+
+        result, state = self._run(
+            tmp_path,
+            FAKE_CORPUS_VERSION=self.REFRESHED,
+            FAKE_DISABLED_DOC_IDS="yolobus-fares",
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert state["aliases"]["live"]["FunctionVersion"] == "4"
 
 
 def test_rollback_rejects_unqualified_api_integration_before_alias_move(tmp_path):

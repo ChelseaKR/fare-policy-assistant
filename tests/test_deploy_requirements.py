@@ -170,11 +170,22 @@ class TestDeployScriptUsesThePinFile:
         assert "uv run python scripts/build_lambda_zip.py" in text
         assert "zip -q" not in text
 
-    def test_deployment_pins_corpus_and_contains_expired_yolobus_source(self):
+    def test_deployment_pins_corpus_and_contains_nothing_by_default(self):
+        """Issue #164 / ADR 0031: the standing `yolobus-fares` default is gone.
+
+        This test used to assert `DISABLED_DOC_IDS="yolobus-fares"` was in the
+        script, which was right while the committed fare period was expired and
+        is wrong now that the replacement source is current and evaluated. What
+        must not go with it is the *inheritance* branch below: a routine deploy
+        still carries the live function's containment forward, so lifting the
+        default cannot silently un-contain anything on production.
+        """
+
         text = DEPLOY_SH.read_text(encoding="utf-8")
         assert "FPA_PINNED_CORPUS_VERSION" in text
         assert "corpus_version; print(corpus_version())" in text
-        assert 'DISABLED_DOC_IDS="yolobus-fares"' in text
+        assert 'DISABLED_DOC_IDS="yolobus-fares"' not in text
+        assert 'DISABLED_DOC_IDS=""' in text
         assert '"FPA_DISABLED_DOC_IDS": os.environ["FPA_DEPLOY_DISABLED_DOC_IDS"]' in text
         assert 'HISTORY_HMAC_KEY="$(openssl rand -hex 32)"' in text
         assert '"FPA_HISTORY_HMAC_KEY": history_key' in text
@@ -199,6 +210,24 @@ class TestDeployScriptUsesThePinFile:
         assert "[[ ${FPA_DISABLED_DOC_IDS+x} ]]" in text
         assert 'if [[ -n "$DISABLED_DOC_IDS"' in text
         assert "unknown disabled document id(s)" in text
+
+    def test_an_inherited_containment_is_reported_rather_than_left_blank(self):
+        """Issue #164: an empty list must not print as an empty string.
+
+        The deploy summary is where an operator learns what the function they
+        just shipped will refuse to answer. With no document contained, the old
+        line rendered as `disabled documents pending review: ` — an absence
+        printed as a blank, indistinguishable from a value that failed to
+        resolve. It now says `none`, and says where the value came from, so an
+        inherited containment nobody chooses any more is visible.
+        """
+
+        text = DEPLOY_SH.read_text(encoding="utf-8")
+
+        assert "disabled documents pending review: ${DISABLED_DOC_IDS:-none}" in text
+        assert 'echo "disabled documents source: $DISABLED_DOC_IDS_SOURCE"' in text
+        assert 'DISABLED_DOC_IDS_SOURCE="inherited from the live function' in text
+        assert 'DISABLED_DOC_IDS_SOURCE="repository default' in text
 
     def test_existing_deploy_captures_rollback_and_applies_config_before_code(self):
         text = DEPLOY_SH.read_text(encoding="utf-8")

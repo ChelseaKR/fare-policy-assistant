@@ -171,11 +171,21 @@ two releases.
 
 The direct health check includes a paid Bedrock answer, so run deployments
 sequentially and away from a scheduled demo. It shares the function's reserved
-concurrency of two with public traffic. Both the direct check and public smoke
-require `yolobus-fares` by default. Their
-`--expected-disabled-docs` option accepts a reviewed comma-separated list;
-passing an explicit empty string requires no disabled document and omits the
-Yolobus refusal probe.
+concurrency of two with public traffic. Neither the direct check nor the public
+smoke requires any disabled document by default: issue #164 lifted the standing
+`yolobus-fares` containment once the replacement fare source was reviewed,
+ingested, evaluated and approved, and a default naming a document the corpus can
+answer correctly would fail the check against a correctly un-contained function.
+The `--expected-disabled-docs` option accepts a reviewed comma-separated list,
+and `deploy.sh` passes the value it actually deployed, so a containment that is
+in force is still verified. Naming `yolobus-fares` there restores the Yolobus
+refusal probe.
+
+Lifting the default does not un-contain the live function. `deploy.sh` inherits
+the existing Lambda's `FPA_DISABLED_DOC_IDS` ahead of its own default, so a
+routine deploy never silently drops a containment; clearing it on production
+takes one explicit `FPA_DISABLED_DOC_IDS="" ./infra/deploy.sh`. The deploy
+summary prints the value and where it came from.
 
 For an operator-initiated rollback:
 
@@ -195,10 +205,22 @@ verification fails, times out, or the process is interrupted, the
 revision-guarded exit handler restores the displaced version without
 overwriting a concurrent alias change.
 
-By default the retained version must still contain `yolobus-fares` in its
-disabled-document list. Set `FPA_REQUIRED_DISABLED_DOC_IDS` to a comma-separated
-reviewed list; setting it explicitly to the empty string means no document ID
-is required.
+Rollback does not inherit the deploy's containment default, and does not carry
+one of its own. A rollback moves the rider-facing alias to an *older* version,
+which carries an older corpus, and that corpus may still hold the Yolobus fare
+table that expired 2026-06-30 — production's pin at the time of writing,
+`35ec70d6359d`, is exactly such a corpus. "Expired snapshot, no containment" is
+the combination that must stay impossible, so the requirement is derived per
+target: `scripts/yolobus_containment.py` reads the fare period out of
+`corpus/versions/<the target's pinned corpus>/chunks.jsonl` and reports whether
+that period has already ended. The reason is printed before the alias moves.
+
+Every case the derivation cannot resolve — a corpus that is not archived in this
+checkout, a fare period it cannot parse, a corpus pin that is not a corpus pin —
+reports the containment as still required, so an unreadable target refuses the
+rollback rather than being waved through. Set `FPA_REQUIRED_DISABLED_DOC_IDS` to
+a comma-separated reviewed list to skip the derivation and decide it explicitly;
+the empty string means no document ID is required.
 
 Both aliases must target numbered versions and must not use weighted routing.
 Never delete either target. A
