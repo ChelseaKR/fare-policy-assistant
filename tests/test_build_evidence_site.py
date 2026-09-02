@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import shutil
+import struct
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -33,6 +34,7 @@ _RELEASE = build_release_identity(
 ).release_version
 _ARTIFACT = base64.b64encode(bytes(range(32))).decode("ascii")
 _TEMPLATE = Path(__file__).resolve().parents[1] / "docs" / "pages" / "index.html"
+_OG_CARD = Path(__file__).resolve().parents[1] / "docs" / "pages" / "og-card.png"
 _WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "pages.yml"
 _PRIVATE_SENTINEL = "PRIVATE-QUESTION-ANSWER-RATIONALE-PASSAGE"
 _PUBLISH_NOW = datetime(2026, 7, 30, 21, 15, 1, tzinfo=UTC)
@@ -796,6 +798,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         output_dir=tmp_path / "site-one",
         history_svg_path=svg,
         cname_path=cname,
+        og_card_path=_OG_CARD,
     )
     second = site.render_evidence_site(
         manifest_path=manifest,
@@ -803,6 +806,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         output_dir=tmp_path / "site-two",
         history_svg_path=svg,
         cname_path=cname,
+        og_card_path=_OG_CARD,
     )
 
     first_files = _site_files(first)
@@ -811,6 +815,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         "CNAME",
         "eval-history.svg",
         "index.html",
+        "og-card.png",
         "public-evidence.json",
         "release.json",
         "report.html",
@@ -835,7 +840,9 @@ def test_render_without_optional_files_has_no_broken_history_reference(
 
     assert not (output / "CNAME").exists()
     assert not (output / "eval-history.svg").exists()
+    assert not (output / site.OG_CARD_NAME).exists()
     assert b"eval-history.svg" not in (output / "index.html").read_bytes()
+    assert b"og:image" not in (output / "index.html").read_bytes()
 
 
 def test_rendered_pages_have_semantic_accessibility_landmarks(tmp_path: Path) -> None:
@@ -1282,7 +1289,12 @@ def test_every_pages_action_is_pinned_to_a_full_commit_sha() -> None:
 # --- what the published pages say about where they are ---------------------------
 
 
-def _rendered(tmp_path: Path, *, cname: str | None = None) -> Path:
+def _rendered(
+    tmp_path: Path,
+    *,
+    cname: str | None = None,
+    og_card: Path | None = None,
+) -> Path:
     cname_path = None
     if cname is not None:
         cname_path = tmp_path / "CNAME"
@@ -1292,6 +1304,7 @@ def _rendered(tmp_path: Path, *, cname: str | None = None) -> Path:
         template_path=_TEMPLATE,
         output_dir=tmp_path / "site",
         cname_path=cname_path,
+        og_card_path=og_card,
     )
 
 
@@ -1331,8 +1344,84 @@ def test_the_share_card_says_what_the_page_says(tmp_path: Path) -> None:
         assert card["twitter:description"] == description["content"], name
         assert card["og:url"] == canonical["href"], name
         assert card["twitter:card"] == "summary", name
-        # No image is published, so none may be promised.
+        # No image is published in this render, so none may be promised.
         assert "og:image" not in card and "twitter:image" not in card, name
+
+
+def _card_tags(page: Path) -> dict[str, str | None]:
+    soup = BeautifulSoup(page.read_text(encoding="utf-8"), "html.parser")
+    return {
+        tag.get("property") or tag.get("name"): tag.get("content")
+        for tag in soup.find_all("meta")
+        if (tag.get("property") or "").startswith("og:")
+        or (tag.get("name") or "").startswith("twitter:")
+    }
+
+
+def test_a_promised_share_image_is_a_file_this_site_publishes(tmp_path: Path) -> None:
+    """The tag and the file are written by one render, so neither can outlive the other.
+
+    A link preview is fetched once, by somebody else's crawler, and nothing
+    reports back that the image 404'd. The only way to know the promise holds is
+    to make the promise and the file the same decision.
+    """
+    output = _rendered(tmp_path, og_card=_OG_CARD)
+
+    published = output / site.OG_CARD_NAME
+    assert published.read_bytes() == _OG_CARD.read_bytes()
+    address = f"{site.SITE_ORIGIN}/{site.OG_CARD_NAME}"
+    for name in site.INDEXABLE_PAGES:
+        card = _card_tags(output / name)
+        assert card["twitter:card"] == "summary_large_image", name
+        assert card["og:image"] == address, name
+        assert card["twitter:image"] == address, name
+        assert card["og:image:width"] == str(site.OG_CARD_WIDTH), name
+        assert card["og:image:height"] == str(site.OG_CARD_HEIGHT), name
+        assert card["og:image:alt"], name
+        assert card["twitter:image:alt"] == card["og:image:alt"], name
+
+
+def test_the_committed_share_card_is_the_png_at_the_size_the_tags_promise() -> None:
+    """The tags publish fixed pixel dimensions; the file has to actually have them."""
+    payload = site._validated_og_card(_OG_CARD)
+
+    assert payload.startswith(b"\x89PNG\r\n\x1a\n")
+    width, height = struct.unpack(">II", payload[16:24])
+    assert (width, height) == (site.OG_CARD_WIDTH, site.OG_CARD_HEIGHT)
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (b"not a png at all", "first chunk is IHDR"),
+        (
+            b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dIHDR" + struct.pack(">II", 600, 315),
+            "600x315",
+        ),
+    ],
+)
+def test_render_refuses_a_share_card_that_is_not_the_promised_image(
+    tmp_path: Path,
+    payload: bytes,
+    message: str,
+) -> None:
+    card = tmp_path / "og-card.png"
+    card.write_bytes(payload)
+
+    with pytest.raises(site.EvidenceSiteError, match=message):
+        site.render_evidence_site(
+            manifest_path=_write_manifest(tmp_path / "public.json"),
+            template_path=_TEMPLATE,
+            output_dir=tmp_path / "site",
+            og_card_path=card,
+        )
+
+
+def test_pages_workflow_passes_the_committed_share_card_to_the_renderer() -> None:
+    """A card the workflow never passes is a card the published site never serves."""
+    text = _WORKFLOW.read_text(encoding="utf-8")
+
+    assert "--og-card docs/pages/og-card.png" in text
 
 
 def test_no_published_description_is_long_enough_to_be_cut(tmp_path: Path) -> None:

@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import stat
+import struct
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
@@ -59,6 +60,7 @@ MAX_TEMPLATE_BYTES: Final = 256 * 1024
 MAX_VERSION_RESPONSE_BYTES: Final = 256 * 1024
 MAX_HISTORY_SVG_BYTES: Final = 5 * 1024 * 1024
 MAX_CNAME_BYTES: Final = 1024
+MAX_OG_CARD_BYTES: Final = 1024 * 1024
 
 _READ_CHUNK_BYTES = 1024 * 1024
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -83,9 +85,20 @@ _HOSTNAME = re.compile(
 SITE_ORIGIN = "https://evals.chelseakr.com"
 
 #: The pages offered for indexing, in the order the sitemap lists them. The other
-#: three published files -- the evidence manifest, the release receipt and the
-#: history SVG -- are data a reader reaches through these pages, not pages.
+#: published files -- the evidence manifest, the release receipt, the history SVG
+#: and the share card -- are data a reader reaches through these pages, not pages.
 INDEXABLE_PAGES: tuple[str, ...] = ("index.html", "report.html")
+
+#: The share-card image, when one is published. A link preview names an absolute
+#: address, so the card has to be a file this site actually serves; see
+#: `_social_meta` for why a card naming a file that is not there is worse than
+#: no card at all.
+OG_CARD_NAME: Final = "og-card.png"
+OG_CARD_WIDTH: Final = 1200
+OG_CARD_HEIGHT: Final = 630
+OG_CARD_ALT: Final = (
+    "Evaluation evidence for the Transit Fare Policy Assistant, at evals.chelseakr.com."
+)
 
 _PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 _TEMPLATE_FIELDS = frozenset(
@@ -99,6 +112,7 @@ _TEMPLATE_FIELDS = frozenset(
         "RUN_DATE",
         "RUN_AT",
         "SCRIPT_SRC_HASH",
+        "SOCIAL_IMAGE",
         "SOURCE_REVISION",
         "STATUS_CLASS",
         "STATUS_DETAIL",
@@ -871,7 +885,13 @@ def _expiry_instant(evidence: Mapping[str, object]) -> str:
     return expires.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bool) -> bytes:
+def _template_html(
+    template: bytes,
+    evidence: Mapping[str, object],
+    *,
+    trend: bool,
+    card: bool,
+) -> bytes:
     try:
         source = template.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -909,6 +929,7 @@ def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bo
         "RUN_AT": html.escape(str(evidence["run_at"])),
         "RUN_DATE": html.escape(str(evidence["run_at"])[:10]),
         "SCRIPT_SRC_HASH": _script_csp_hash(_FRESHNESS_SCRIPT),
+        "SOCIAL_IMAGE": "\n".join(_social_image_meta(card=card)),
         "SOURCE_REVISION": html.escape(str(runtime["source_revision"])),
         "STATUS_CLASS": "verified",
         "STATUS_DETAIL": _BUILT_STATUS_DETAIL,
@@ -932,7 +953,7 @@ def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bo
     return _PLACEHOLDER.sub(replace, source).encode("utf-8")
 
 
-def _report_html(evidence: Mapping[str, object]) -> bytes:
+def _report_html(evidence: Mapping[str, object], *, card: bool) -> bytes:
     runtime = _mapping(evidence["runtime_release"], "evidence.runtime_release")
     cases = evidence["cases"]
     suites = evidence["suites"]
@@ -966,7 +987,7 @@ def _report_html(evidence: Mapping[str, object]) -> bytes:
 <title>{_REPORT_TITLE}</title>
 <meta name="description" content="{report_description}">
 <link rel="canonical" href="{report_url}">
-{_social_meta(title=_REPORT_TITLE, description=report_description, url=report_url)}
+{_social_meta(title=_REPORT_TITLE, description=report_description, url=report_url, card=card)}
 <style>
 body {{ margin: 0; color: #17201b; background: #f7faf8; font: 1rem/1.55 system-ui, sans-serif; }}
 main {{ max-width: 68rem; margin: auto; padding: 1.5rem 1rem 4rem; }}
@@ -1056,6 +1077,25 @@ def _validated_svg(path: Path) -> bytes:
     return payload
 
 
+def _validated_og_card(path: Path) -> bytes:
+    """The share card, checked to be the PNG at the size the tags will promise.
+
+    The card is the one published file a reader never opens: it is fetched by a
+    crawler, off this page, and pasted into somebody else's timeline. Nothing
+    downstream will report that it was a text file with a `.png` name or that it
+    was half the size the `og:image:width` beside it claimed, so both are checked
+    here rather than trusted from the filename.
+    """
+    payload = _read_regular(path, limit=MAX_OG_CARD_BYTES, context="share card")
+    signature = b"\x89PNG\r\n\x1a\n"
+    if not payload.startswith(signature) or payload[12:16] != b"IHDR":
+        _fail("share card must be a PNG whose first chunk is IHDR")
+    width, height = struct.unpack(">II", payload[16:24])
+    if (width, height) != (OG_CARD_WIDTH, OG_CARD_HEIGHT):
+        _fail(f"share card must be {OG_CARD_WIDTH}x{OG_CARD_HEIGHT}, not {width}x{height}")
+    return payload
+
+
 def _validated_cname(path: Path) -> bytes:
     payload = _read_regular(path, limit=MAX_CNAME_BYTES, context="CNAME")
     try:
@@ -1088,13 +1128,32 @@ def _report_description(run_date: str) -> str:
     )
 
 
-def _social_meta(*, title: str, description: str, url: str) -> str:
-    """The OpenGraph and Twitter tags for one page.
+def _social_image_meta(*, card: bool) -> tuple[str, ...]:
+    """The image half of a share card, and the card type that follows from it.
 
-    No ``og:image``. This site publishes a fixed list of files and none of them is
-    an image a card could use, and an ``og:image`` naming a file that is not there
-    is worse than none at all.
+    An ``og:image`` naming a file this site does not serve is worse than none at
+    all: the tag is read once, by a crawler, somewhere this project will never
+    see the result. So the image tags are emitted only when the card is actually
+    being published in the same render, and ``twitter:card`` says ``summary``
+    rather than ``summary_large_image`` when there is no large image to show.
     """
+    if not card:
+        return ('<meta name="twitter:card" content="summary">',)
+    address = f"{SITE_ORIGIN}/{OG_CARD_NAME}"
+    return (
+        '<meta name="twitter:card" content="summary_large_image">',
+        f'<meta property="og:image" content="{html.escape(address)}">',
+        '<meta property="og:image:type" content="image/png">',
+        f'<meta property="og:image:width" content="{OG_CARD_WIDTH}">',
+        f'<meta property="og:image:height" content="{OG_CARD_HEIGHT}">',
+        f'<meta property="og:image:alt" content="{html.escape(OG_CARD_ALT)}">',
+        f'<meta name="twitter:image" content="{html.escape(address)}">',
+        f'<meta name="twitter:image:alt" content="{html.escape(OG_CARD_ALT)}">',
+    )
+
+
+def _social_meta(*, title: str, description: str, url: str, card: bool) -> str:
+    """The OpenGraph and Twitter tags for one page."""
     return "\n".join(
         (
             '<meta property="og:type" content="website">',
@@ -1103,7 +1162,7 @@ def _social_meta(*, title: str, description: str, url: str) -> str:
             f'<meta property="og:url" content="{html.escape(url)}">',
             f'<meta property="og:title" content="{html.escape(title)}">',
             f'<meta property="og:description" content="{html.escape(description)}">',
-            '<meta name="twitter:card" content="summary">',
+            *_social_image_meta(card=card),
             f'<meta name="twitter:title" content="{html.escape(title)}">',
             f'<meta name="twitter:description" content="{html.escape(description)}">',
         )
@@ -1164,6 +1223,40 @@ def _write_site_file(root: Path, name: str, payload: bytes) -> None:
         raise
 
 
+@dataclass(frozen=True)
+class _SiteAttachments:
+    """The optional files a render may publish beside the two pages."""
+
+    history: bytes | None
+    cname: bytes | None
+    og_card: bytes | None
+
+
+def _validated_attachments(
+    *,
+    history_svg_path: Path | None,
+    cname_path: Path | None,
+    og_card_path: Path | None,
+) -> _SiteAttachments:
+    """Read and check every optional attachment before a single byte is written.
+
+    Split out of `render_evidence_site` for CQ-05 (max-complexity 10), and worth
+    keeping together anyway: each of these is a file this site would serve, and a
+    render that has already written index.html before noticing the CNAME names
+    another host has published pages claiming an address it does not answer on.
+    """
+
+    history = _validated_svg(history_svg_path) if history_svg_path is not None else None
+    cname = _validated_cname(cname_path) if cname_path is not None else None
+    if cname is not None and cname.decode("ascii").strip() != urlsplit(SITE_ORIGIN).netloc:
+        # Every canonical link and every sitemap entry on this site names
+        # SITE_ORIGIN. A CNAME pointing the domain somewhere else would publish a
+        # site whose pages all claim to live at an address it does not answer on.
+        _fail("CNAME hostname differs from the origin this site publishes")
+    og_card = _validated_og_card(og_card_path) if og_card_path is not None else None
+    return _SiteAttachments(history=history, cname=cname, og_card=og_card)
+
+
 def render_evidence_site(
     *,
     manifest_path: Path,
@@ -1171,6 +1264,7 @@ def render_evidence_site(
     output_dir: Path,
     history_svg_path: Path | None = None,
     cname_path: Path | None = None,
+    og_card_path: Path | None = None,
     expected_source_revision: str | None = None,
     clock: Callable[[], datetime] | None = None,
 ) -> Path:
@@ -1193,13 +1287,14 @@ def render_evidence_site(
         limit=MAX_TEMPLATE_BYTES,
         context="index template",
     )
-    history = _validated_svg(history_svg_path) if history_svg_path is not None else None
-    cname = _validated_cname(cname_path) if cname_path is not None else None
-    if cname is not None and cname.decode("ascii").strip() != urlsplit(SITE_ORIGIN).netloc:
-        # Every canonical link and every sitemap entry on this site names
-        # SITE_ORIGIN. A CNAME pointing the domain somewhere else would publish a
-        # site whose pages all claim to live at an address it does not answer on.
-        _fail("CNAME hostname differs from the origin this site publishes")
+    attachments = _validated_attachments(
+        history_svg_path=history_svg_path,
+        cname_path=cname_path,
+        og_card_path=og_card_path,
+    )
+    history = attachments.history
+    og_card = attachments.og_card
+    cname = attachments.cname
     if output_dir.is_symlink() or output_dir.exists():
         _fail("output directory must not already exist")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -1211,9 +1306,18 @@ def render_evidence_site(
         _write_site_file(
             temporary,
             "index.html",
-            _template_html(template, evidence, trend=history is not None),
+            _template_html(
+                template,
+                evidence,
+                trend=history is not None,
+                card=og_card is not None,
+            ),
         )
-        _write_site_file(temporary, "report.html", _report_html(evidence))
+        _write_site_file(
+            temporary,
+            "report.html",
+            _report_html(evidence, card=og_card is not None),
+        )
         _write_site_file(
             temporary,
             "release.json",
@@ -1228,6 +1332,8 @@ def render_evidence_site(
         _write_site_file(temporary, "sitemap.xml", _sitemap_xml())
         if history is not None:
             _write_site_file(temporary, "eval-history.svg", history)
+        if og_card is not None:
+            _write_site_file(temporary, OG_CARD_NAME, og_card)
         if cname is not None:
             _write_site_file(temporary, "CNAME", cname)
         directory = os.open(temporary, os.O_RDONLY)
@@ -1313,6 +1419,7 @@ def _parser() -> argparse.ArgumentParser:
     render.add_argument("--output-dir", required=True, type=Path)
     render.add_argument("--history-svg", type=Path)
     render.add_argument("--cname", type=Path)
+    render.add_argument("--og-card", type=Path)
     render.add_argument("--expected-source-revision", required=True)
 
     compare = subparsers.add_parser(
@@ -1351,6 +1458,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 output_dir=args.output_dir,
                 history_svg_path=args.history_svg,
                 cname_path=args.cname,
+                og_card_path=args.og_card,
                 expected_source_revision=args.expected_source_revision,
             )
             result = {"output_dir": str(output)}

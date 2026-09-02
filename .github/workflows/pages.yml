@@ -132,6 +132,9 @@ jobs:
           if [[ -f docs/pages/CNAME ]]; then
             render_args+=(--cname docs/pages/CNAME)
           fi
+          if [[ -f docs/pages/og-card.png ]]; then
+            render_args+=(--og-card docs/pages/og-card.png)
+          fi
           uv run --no-sync python scripts/build_evidence_site.py "${render_args[@]}"
           test ! -e ../_site/results.jsonl
           test ! -e ../_site/summary.json

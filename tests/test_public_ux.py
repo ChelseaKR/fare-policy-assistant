@@ -113,3 +113,50 @@ def test_only_supported_answers_are_added_to_client_follow_up_history():
 
 def test_embed_clears_transient_question_before_request():
     assert EMBED_HTML.index('input.value = "";') < EMBED_HTML.index('fetch("/api/ask"')
+
+
+def test_rider_page_share_card_names_an_image_that_exists_in_this_repository():
+    """A link preview is fetched by a crawler that never reports a 404 back here.
+
+    The rider surface is a Lambda with a fixed route table and no static-asset
+    route, so its card points at the copy committed to this repository. That is
+    only true while the file is actually committed, which is what this checks --
+    a renamed or deleted card would otherwise fail silently, in somebody else's
+    timeline.
+    """
+    soup = BeautifulSoup(INDEX.read_text(encoding="utf-8"), "html.parser")
+    card = {
+        tag.get("property") or tag.get("name"): tag.get("content") for tag in soup.find_all("meta")
+    }
+
+    prefix = "https://raw.githubusercontent.com/ChelseaKR/fare-policy-assistant/main/"
+    address = card["og:image"]
+    assert address.startswith(prefix)
+    assert card["twitter:image"] == address
+    committed = Path(__file__).parents[1] / address[len(prefix) :]
+    assert committed.is_file()
+    assert committed.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_rider_page_share_card_repeats_the_page_it_previews():
+    """A card saying something the page does not is an unreviewed second description."""
+    soup = BeautifulSoup(INDEX.read_text(encoding="utf-8"), "html.parser")
+    card = {
+        tag.get("property") or tag.get("name"): tag.get("content") for tag in soup.find_all("meta")
+    }
+
+    title = soup.title.get_text(strip=True)
+    description = card["description"]
+    assert description
+    assert len(description) <= 200
+    assert card["og:title"] == title
+    assert card["twitter:title"] == title
+    assert card["og:description"] == description
+    assert card["twitter:description"] == description
+    assert card["twitter:card"] == "summary_large_image"
+    canonical = soup.find("link", rel="canonical")
+    assert canonical is not None
+    assert card["og:url"] == canonical["href"]
+    # The preview is where a reader is most likely to mistake this for an agency
+    # service, so the disclaimer the page leads with has to survive the trip.
+    assert "reference implementation" in description.lower()

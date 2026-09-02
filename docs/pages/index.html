@@ -12,8 +12,11 @@
   the run date the descriptions carry, and the digest in the policy above, which
   admits the one inline script this page runs and nothing else.
   The share card repeats this page's own title and description rather than a
-  second set written for a card. There is deliberately no og:image: this site
-  publishes a fixed list of files and none of them is an image.
+  second set written for a card. Its image half is the SOCIAL_IMAGE marker
+  below, which the renderer fills in only when it is publishing og-card.png in
+  the same render, and otherwise fills with a plain summary card: an image tag
+  naming a file this site does not serve is read once, by a crawler, somewhere
+  this project never sees the result.
 -->
 <meta name="description" content="Published evaluation evidence for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: promotion score by suite and the report behind it.">
 <link rel="canonical" href="https://evals.chelseakr.com/">
@@ -23,7 +26,7 @@
 <meta property="og:url" content="https://evals.chelseakr.com/">
 <meta property="og:title" content="Verified evaluation evidence — Transit Fare Policy Assistant">
 <meta property="og:description" content="Published evaluation evidence for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: promotion score by suite and the report behind it.">
-<meta name="twitter:card" content="summary">
+{{SOCIAL_IMAGE}}
 <meta name="twitter:title" content="Verified evaluation evidence — Transit Fare Policy Assistant">
 <meta name="twitter:description" content="Published evaluation evidence for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: promotion score by suite and the report behind it.">
 <style>
