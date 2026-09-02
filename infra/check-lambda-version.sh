@@ -18,10 +18,17 @@ EXPECTED_CONTENT=""
 EXPECTED_SNAPSHOT=""
 EXPECTED_RELEASE=""
 EXPECTED_ARTIFACT=""
+# Which documents the checked version must have contained. Empty by default
+# since issue #164 lifted the standing `yolobus-fares` containment: a default
+# that names a document the corpus can now answer correctly would fail this
+# check against a correctly un-contained function. Every caller that has an
+# opinion states it -- infra/deploy.sh passes the value it deployed, and
+# infra/rollback.sh passes the value it derived from the target's own corpus --
+# so nothing that used to be verified stops being verified.
 if [[ ${FPA_EXPECTED_DISABLED_DOC_IDS+x} ]]; then
   EXPECTED_DISABLED_DOC_IDS="$FPA_EXPECTED_DISABLED_DOC_IDS"
 else
-  EXPECTED_DISABLED_DOC_IDS="yolobus-fares"
+  EXPECTED_DISABLED_DOC_IDS=""
 fi
 DEADLINE_EPOCH=""
 REQUIRE_STRUCTURED_TELEMETRY=false
@@ -36,7 +43,7 @@ Options:
   --qualifier VERSION           Required numeric published version
   --expected-corpus VERSION     Required 12-character corpus identity
   --expected-disabled-docs IDS  Required comma-separated disabled document ids
-                                (default: yolobus-fares; "" means none)
+                                (default: none; callers pass what they deployed)
   --require-release-identity    Require the complete identity-bearing release
                                 contract (new numeric candidates)
   --allow-legacy-release-identity

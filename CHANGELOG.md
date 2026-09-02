@@ -208,6 +208,47 @@ rather than tied to a published tag.
   status rather than the three it carried from a six-agency corpus.
 
 ### Changed
+- **The Yolobus containment is lifted, and rollback now derives its own
+  (ADR 0031).** `yolobus-fares` was contained from 2026-07 because the committed
+  fare table had already expired on 2026-06-30. `infra/deploy.sh` set the bar for
+  lifting it — reviewed, ingested, evaluated, approved — and all four are met
+  (issue #164): the page was refetched 2026-08-21 with a period running to
+  2027-06-30, the three Yolobus documents were re-ingested and are consistent,
+  and 42 cases scored 36 passing on the 2026-08-22 cold full live run. The
+  deployed assistant was refusing Yolobus fare questions it could answer
+  correctly, which is a rider-facing cost rather than a free safety margin.
+  - `infra/deploy.sh` contains nothing by default. It still inherits the live
+    function's `FPA_DISABLED_DOC_IDS` ahead of that default, so a routine deploy
+    cannot silently un-contain a document; clearing it on production takes one
+    explicit `FPA_DISABLED_DOC_IDS=""` deploy. The summary now prints the value
+    *and where it came from*, and prints `none` rather than an empty string, so
+    an inherited containment nobody chooses any more is visible.
+  - `infra/check-lambda-version.sh` requires no disabled document by default. Its
+    old default named `yolobus-fares`, which would have failed the health check
+    against a correctly un-contained function. Callers pass what they mean:
+    `deploy.sh` passes what it deployed, `rollback.sh` passes what it derived, so
+    a containment in force is still verified and the Yolobus refusal probe still
+    runs whenever the document is named.
+  - `infra/rollback.sh` does **not** simply drop the same default, because a
+    rollback moves the rider-facing alias to an *older* version carrying an older
+    corpus. Five archived corpora still hold the expired table, including
+    `35ec70d6359d`, the pin production was serving when #164 was filed.
+    "Expired snapshot, no containment" had to stay impossible, and inverting it
+    — keeping the requirement — would have made rollback refuse the next retained
+    target during an incident. New `scripts/yolobus_containment.py` reads the fare
+    period out of `corpus/versions/<the target's pinned corpus>/chunks.jsonl` and
+    decides per target, offline, with no network call, no model call, and no git
+    history (CI's shallow checkout has none). The reason is printed before the
+    alias moves.
+  - Every case the derivation cannot resolve reports the containment as still
+    required: a corpus not archived here, a fare period it cannot parse, a pin
+    that is not a corpus identity. None of those are evidence that a build is
+    safe, and this never reports "not required" from anything but a period it
+    read and found unexpired. `FPA_REQUIRED_DISABLED_DOC_IDS` skips the
+    derivation for an operator who knows better, on the record.
+  - `tests/test_yolobus_containment.py` asserts every archived corpus resolves to
+    a read verdict rather than an unreadable one, so an archive that stops
+    parsing fails in CI rather than during a rollback.
 - **A below-macro waiver declares which gate it waives (ADR 0029, proposed).**
   An entry in `evals/expected_below_macro.json` may now carry
   `scope: "committed_report"`, meaning it waives the committed `EVALS.md` alone:
