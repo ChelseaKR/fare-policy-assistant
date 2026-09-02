@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  content="default-src 'none'; script-src '{{SCRIPT_SRC_HASH}}'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Verified evaluation evidence — Transit Fare Policy Assistant</title>
 <!--
-  Static head tags, and deliberately no substitution markers: the renderer checks
-  that the marker names in this file match _TEMPLATE_FIELDS exactly, so anything
-  varying per run has to be declared there. Nothing below varies per run.
+  The renderer checks that the marker names in this file match _TEMPLATE_FIELDS
+  exactly, so anything varying per build has to be declared there. Two things do:
+  the run date the descriptions carry, and the digest in the policy above, which
+  admits the one inline script this page runs and nothing else.
   The share card repeats this page's own title and description rather than a
   second set written for a card. There is deliberately no og:image: this site
   publishes a fixed list of files and none of them is an image.
@@ -85,12 +86,21 @@
     <a href="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/">Live rider
       assistant</a></p>
 
-  <section class="notice {{STATUS_CLASS}}" aria-labelledby="status-heading">
+  <section class="notice {{STATUS_CLASS}}" id="evidence-status"
+    aria-labelledby="status-heading"
+    data-run-at="{{RUN_AT}}" data-expires-at="{{EXPIRES_AT}}">
     <h2 id="status-heading">Evidence status</h2>
-    <strong class="status-label">{{STATUS_LABEL}}</strong>
-    <p>{{STATUS_DETAIL}}</p>
+    <strong class="status-label" id="evidence-status-label">{{STATUS_LABEL}}</strong>
+    <p id="evidence-status-detail">{{STATUS_DETAIL}}</p>
     <p>Evaluated <time datetime="{{RUN_AT}}">{{RUN_AT}}</time>; promoted
       <time datetime="{{PROMOTED_AT}}">{{PROMOTED_AT}}</time>.</p>
+    <p id="evidence-freshness">That status was settled when this page was built, and
+      nothing rebuilds the page as it ages. It expires
+      <time datetime="{{EXPIRES_AT}}">{{EXPIRES_AT}}</time>. Past that instant the
+      evidence above is outside the freshness budget it was published under, whatever
+      the heading still says. Your browser compares that instant to now and replaces
+      this sentence with what it found; with scripting off it cannot, so make the
+      comparison against today yourself.</p>
   </section>
 
   <section class="card" aria-labelledby="benchmark-heading">
@@ -142,5 +152,6 @@
 
   {{TREND_SECTION}}
 </main>
+<script>{{FRESHNESS_SCRIPT}}</script>
 </body>
 </html>

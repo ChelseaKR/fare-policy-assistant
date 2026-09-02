@@ -16,6 +16,7 @@ every field in the attested immutable runtime tuple. It performs no HTTP itself.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import hmac
 import html
@@ -90,11 +91,14 @@ _PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 _TEMPLATE_FIELDS = frozenset(
     {
         "CASE_COUNT",
+        "EXPIRES_AT",
+        "FRESHNESS_SCRIPT",
         "FUNCTION_VERSION",
         "PROMOTED_AT",
         "RELEASE_VERSION",
         "RUN_DATE",
         "RUN_AT",
+        "SCRIPT_SRC_HASH",
         "SOURCE_REVISION",
         "STATUS_CLASS",
         "STATUS_DETAIL",
@@ -767,6 +771,106 @@ def export_public_evidence(
     return manifest
 
 
+#: The status the renderer is allowed to publish, and the only one it can reach.
+#: `require_current_public_evidence` refuses to render anything else, and that
+#: refusal is correct: stale evidence should not be published. The consequence is
+#: that a build can only ever write "Verified", so the build is the wrong place to
+#: settle a question whose answer changes with the calendar.
+_BUILT_STATUS_LABEL: Final = "Verified"
+_BUILT_STATUS_DETAIL: Final = (
+    "The receipt is authentic, and was inside the publication freshness budget at "
+    "the moment this page was built."
+)
+
+#: The one thing on this page that runs. It reads two instants already printed
+#: beside it, compares them to the reader's own clock, and rewrites the status if
+#: the page has outlived its budget. It fetches nothing, stores nothing, and sends
+#: nothing anywhere, so the page keeps working with no network and no privacy cost.
+#:
+#: This exists because publication is a single moment and reading is not. The gate
+#: above guarantees the page is fresh when it is written; nothing guarantees it a
+#: day later, and nothing rebuilds it. Without this, "Verified" is a claim about a
+#: past instant printed in the present tense, which is the failure this file is
+#: otherwise built to prevent.
+_FRESHNESS_SCRIPT: Final = """\
+(function () {
+  "use strict";
+  var box = document.getElementById("evidence-status");
+  var label = document.getElementById("evidence-status-label");
+  var detail = document.getElementById("evidence-status-detail");
+  var live = document.getElementById("evidence-freshness");
+  if (!box || !label || !detail || !live) { return; }
+  var expiresText = box.getAttribute("data-expires-at");
+  var runAt = Date.parse(box.getAttribute("data-run-at"));
+  var expiresAt = Date.parse(expiresText);
+  if (!isFinite(runAt) || !isFinite(expiresAt)) { return; }
+  var now = Date.now();
+  if (now < runAt) {
+    live.textContent =
+      "Your device clock reads earlier than the run this page reports, so the age " +
+      "of this evidence cannot be worked out here. Both instants are printed above.";
+    return;
+  }
+  var days = Math.floor((now - runAt) / 86400000);
+  var age = (days === 1 ? "1 day" : days + " days") + " old";
+  if (now <= expiresAt) {
+    live.textContent =
+      "Checked against your device clock as this page loaded: " + age + ", inside the " +
+      "freshness budget, which expires " + expiresText + ".";
+    return;
+  }
+  box.className = "notice warning";
+  label.textContent = "Verified with freshness warning";
+  detail.textContent =
+    "The receipt is authentic, and the run it reports is " + age + ", past the " +
+    "freshness budget this page was published under. Nothing here has been " +
+    "re-evaluated or rebuilt since publication, so read every number below as " +
+    "evidence about " + expiresText.slice(0, 10) + " and earlier, not about today.";
+  live.textContent =
+    "Checked against your device clock as this page loaded: " + age + ", past the " +
+    "freshness budget, which expired " + expiresText + ".";
+})();
+"""
+
+
+def _script_csp_hash(script: str) -> str:
+    """The CSP source expression admitting exactly this script and nothing else.
+
+    This page's policy is `default-src 'none'`, and adding `'unsafe-inline'` to it
+    would admit any script anyone later managed to inject. Publishing the digest of
+    the exact bytes about to be inlined admits one script instead. The digest is
+    computed here rather than written into the template, so the policy and the
+    script cannot drift apart: editing either one recomputes the other.
+    """
+
+    digest = hashlib.sha256(script.encode("utf-8")).digest()
+    return f"sha256-{base64.b64encode(digest).decode('ascii')}"
+
+
+def _expiry_instant(evidence: Mapping[str, object]) -> str:
+    """When this page's `Verified` stops being true: the run plus its budget.
+
+    `max_age_seconds` is chosen by the operator at export time and is otherwise
+    invisible to a reader. Printed as an instant it becomes checkable by anyone
+    holding a calendar, which is what makes the claim above it falsifiable after
+    the build that made it has ended.
+    """
+
+    run_at = datetime.fromisoformat(
+        _timestamp(evidence["run_at"], "manifest.evidence.run_at")[:-1] + "+00:00"
+    )
+    budget = _count(
+        evidence["max_age_seconds"],
+        "manifest.evidence.max_age_seconds",
+        positive=True,
+    )
+    try:
+        expires = run_at + timedelta(seconds=budget)
+    except (OverflowError, ValueError) as exc:
+        raise EvidenceSiteError("public evidence expiry could not be computed") from exc
+    return expires.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bool) -> bytes:
     try:
         source = template.decode("utf-8")
@@ -789,22 +893,26 @@ def _template_html(template: bytes, evidence: Mapping[str, object], *, trend: bo
             f"<td>{entry['pass_rate']:.1f}%</td>"
             "</tr>"
         )
-    warning = evidence["status"] == "warning"
+    if evidence["status"] != "verified":
+        # Unreachable through the publication path, which runs
+        # `require_current_public_evidence` first. It is here so that a caller who
+        # skipped that gate cannot get a page labelled "Verified" out of a receipt
+        # that is not, which is what a single hardcoded label would otherwise do.
+        _fail("only verified evidence can be rendered into a page")
     replacements = {
         "CASE_COUNT": str(total["total"]),
+        "EXPIRES_AT": html.escape(_expiry_instant(evidence)),
+        "FRESHNESS_SCRIPT": _FRESHNESS_SCRIPT,
         "FUNCTION_VERSION": html.escape(str(runtime["function_version"])),
         "PROMOTED_AT": html.escape(str(evidence["promoted_at"])),
         "RELEASE_VERSION": html.escape(str(runtime["release_version"])),
         "RUN_AT": html.escape(str(evidence["run_at"])),
         "RUN_DATE": html.escape(str(evidence["run_at"])[:10]),
+        "SCRIPT_SRC_HASH": _script_csp_hash(_FRESHNESS_SCRIPT),
         "SOURCE_REVISION": html.escape(str(runtime["source_revision"])),
-        "STATUS_CLASS": "warning" if warning else "verified",
-        "STATUS_DETAIL": (
-            "The receipt is authentic but older than the publication freshness budget."
-            if warning
-            else "The receipt is authentic and within the publication freshness budget."
-        ),
-        "STATUS_LABEL": "Verified with freshness warning" if warning else "Verified",
+        "STATUS_CLASS": "verified",
+        "STATUS_DETAIL": _BUILT_STATUS_DETAIL,
+        "STATUS_LABEL": _BUILT_STATUS_LABEL,
         "SUITE_ROWS": "".join(rows),
         "TOTAL_SCORE": f"{total['passed']}/{total['total']} ({total['pass_rate']:.1f}%)",
         "TREND_SECTION": (

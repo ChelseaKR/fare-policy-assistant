@@ -65,6 +65,54 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Fixed
+- **The evidence hub had one publishable state and it was "Verified".** The
+  freshness budget was enforced at render time and nowhere else:
+  `render_evidence_site` calls `require_current_public_evidence` first, which
+  refuses any status but `verified`, so the `warning` state that
+  `validate_public_manifest` accepts, `_template_html` rendered as "Verified
+  with freshness warning", and `docs/pages/index.html` styles `.notice.warning`
+  for was unreachable. A published page therefore went on asserting "Verified"
+  for as long as it was served, with nothing able to retract it. The repair is
+  not a looser gate: refusing to publish stale evidence is correct and
+  `require_current_public_evidence` is untouched. The build is simply no longer
+  the last moment freshness is judged. The renderer now emits `data-expires-at`
+  (`run_at` plus `max_age_seconds`, an operator judgement that until now no
+  reader could see) and one inline script that compares it to the reader's own
+  clock, relabelling the page "Verified with freshness warning" with its age in
+  days once it is past. `_template_html`'s dead build-time warning branch is
+  gone; those strings now live where a reader reaches them, and rendering
+  anything but `verified` is refused outright rather than silently labelled.
+  Nothing is fetched at read time and `default-src 'none'` stands: rather than
+  `'unsafe-inline'`, `_script_csp_hash` computes the SHA-256 of the exact bytes
+  inlined, so the policy admits that one script and cannot drift from it.
+  `tests/test_build_evidence_site.py` executes the published script in node at
+  four clocks, including 48 days past the run, which is how long
+  `evals.chelseakr.com` had served one unchanged verdict when this was written.
+  Verified in headless Chrome as well, in both states. This does not correct the
+  page currently up: it was published on 2026-07-12 by a workflow definition
+  that no longer exists and carries none of this, and the three blockers below
+  still stand between it and a replacement. ADR 0030.
+- **The evidence hub cannot publish a correction, and the README said it was
+  merely behind.** `.github/workflows/pages.yml` has run exactly once, on
+  2026-07-12, under its previous definition, which copied four static files
+  and verified nothing. The evidence-pinned definition that replaced it landed
+  2026-07-30 and has never run, so `public-evidence.json` and `release.json`,
+  which the current page template links, both 404 on the live host. Three
+  things independently block a dispatch: no commit anywhere in the repository
+  contains a `public-evidence.json` for `evidence_ref` to name and `export`
+  has never been run; `require_current_public_evidence` refuses the 2026-07-12
+  receipt as stale; and, whatever freshness budget an operator declares, that
+  receipt attests corpus_version `0938fff0539a` while the live runtime serves
+  `35ec70d6359d`, which `compare-runtime` fails on. The manifest schema and
+  the page template both model a `warning`/"Verified with freshness warning"
+  state, but `require_current_public_evidence` rejects it before
+  `_template_html` is reached, so the pipeline has one publishable state and
+  no way to publish the sentence "this evidence is old". Adds
+  `docs/publishing-the-evidence-hub.md`, corrects the README, and pins the
+  unreachable state in `tests/test_build_evidence_site.py` so a silent
+  loosening of that gate fails the build. Whether a stale receipt should be
+  publishable as a warning is left to the repository owner; it loosens an
+  outward-facing gate and is recorded, not acted on.
 - **The lint and typecheck gates were aimed at a tree they did not cover, and
   `make verify` had been red on `main` for a week.** CI's `checks` job ran
   `ruff check src tests evals web` and `mypy src web` while the Makefile ran

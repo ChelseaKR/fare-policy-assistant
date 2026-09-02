@@ -24,13 +24,73 @@ run has been red on the `cross_agency` gate since the corpus's
 eighteen-agency expansion (#138), so there is currently no fresher run to
 promote and deploy. The evidence hub is further behind still: it serves the
 `2026-07-12` promoted run (201 cases, `cross_agency` 3/3) and has not been
-republished since, for the same reason — `scripts/build_evidence_site.py`
-refuses to publish evidence past its own freshness budget, so a rebuild with
-today's still-July-12 promoted evidence would fail that gate rather than
-quietly serve a report that claims to be current. The unpromoted picture —
-eighteen agencies, 385 cases, `cross_agency` currently well below floor — is
-in [EVALS.md](EVALS.md) and the nightly run artifact, not on either public
-link above.
+republished since. The unpromoted picture, eighteen agencies, 385 cases,
+`cross_agency` currently well below floor, is in [EVALS.md](EVALS.md) and the
+nightly run artifact, not on either public link above.
+
+The evidence hub cannot currently be republished at all, and that is a
+stronger statement than "it is behind". `.github/workflows/pages.yml` has run
+exactly once in the repository's history, on 2026-07-12, under its previous
+definition, which copied four static files into `_site`. The evidence-pinned
+definition that replaced it landed on 2026-07-30 and has never run. Three
+things independently block a dispatch today, each verified rather than
+inferred:
+
+1. There is no `evidence_ref` to pass. The workflow requires a commit whose
+   whole tree is one `public-evidence.json`. No such file exists in any
+   commit, branch, or ref of this repository, and no Makefile target or
+   workflow invokes `build_evidence_site.py export`, which has therefore
+   never been run.
+2. `require_current_public_evidence` recomputes age from `run_at` at render
+   time and refuses evidence past its budget, so the still-July-12 promoted
+   receipt is refused rather than quietly served as current.
+3. Independently of freshness, the July promoted run attests corpus_version
+   `0938fff0539a`, while the live runtime's `/version` serves
+   `35ec70d6359d`. `compare-runtime` compares corpus_version among the eight
+   attested runtime fields and fails on the mismatch, so an operator who
+   widened the freshness budget to get past (2) would still be stopped here.
+
+Until 2026-08-29 there was a fourth problem, and it was the worst of them: the
+freshness budget was checked when a page was built and never again, so the
+page the renderer produced had exactly one reachable state and it was
+"Verified", for as long as it stayed up. The manifest schema and the template
+both modelled a `warning` status ("Verified with freshness warning"), and
+`require_current_public_evidence` rejected it before `_template_html` could
+ever render it. A page that can only return one verdict is not reporting one.
+
+That is fixed, and not by loosening the gate. Refusing to *publish* stale
+evidence is correct and is unchanged. What changed is that the build is no
+longer the last moment freshness is judged: the renderer now prints the instant
+the verdict expires (`run_at` plus the budget, previously invisible to
+readers), and the page carries one inline script that compares that instant to
+the reader's own clock and relabels itself "Verified with freshness warning",
+with the age in days, once it is past. Nothing is fetched at read time and the
+page's `default-src 'none'` policy is unchanged apart from a `script-src`
+pinned to the SHA-256 of that one script. `make test` executes the published
+script in node at four clocks, including 48 days past the run, and fails if the
+warning state stops being reachable. The reasoning, including what a read-time
+check costs a page that previously ran nothing, is in
+[ADR 0030](docs/decisions/0030-freshness-is-decided-at-read-time-not-build-time.md).
+
+The correction it cannot make is the one below. Every page published from here
+on can tell a reader it has gone stale; the page currently at
+<https://evals.chelseakr.com/> was published on 2026-07-12 by a workflow
+definition that no longer exists, carries none of this, and is still blocked
+from replacement by the three items above.
+
+What a visitor to <https://evals.chelseakr.com/> sees meanwhile: an index page
+carrying no date, no scoreboard, and no agency count, linking to a
+`report.html` that does state its own run
+(`2026-07-12T05:01:17+00:00`, corpus `0938fff0539a`) beside an `EVALS.md`
+link that tracks `main` and describes a different, larger, currently-failing
+suite. The missing date is a publication lag rather than a template defect:
+`docs/pages/index.html` has printed the run and promotion instants since
+2026-07-30, and now prints the expiry instant too, but that template has never
+been published. `public-evidence.json` and `release.json`, which the current
+template links, both return 404 there, because the site now up predates the
+pipeline that would have written them. The dated caveats in `docs/pages/index.html`
+about the eighteen-agency expansion have never reached the published page.
+See [docs/publishing-the-evidence-hub.md](docs/publishing-the-evidence-hub.md).
 
 ## Status: Beta
 
