@@ -78,6 +78,80 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Fixed
+- **The relabeling worksheet could not be labeled by anyone, on any checkout
+  (#143).** `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` had held
+  37 unlabeled rows for a month, and the reading of that was that nobody had
+  found the hour. On 2026-09-04, `make relabel` on it exited 2: `no results.jsonl
+  in evals/runs/20260712T050117Z`. The worksheet is bound to a run directory,
+  `evals/runs/` is gitignored, and the promoted 2026-07-12 run had been pruned
+  from the one machine that ever held it. The hour of work was not declined; it
+  was never available, and it would not have been available to a reader who
+  cloned the project either.
+  - A worksheet now ships with a committed evidence packet beside it —
+    `judge_relabel_worksheet_<date>.jsonl` pairs with
+    `judge_relabel_evidence_<date>.jsonl` — carrying per case the question, prior
+    turns, expected behavior, rationale, retrieved passages with source URL and
+    fetch date, the answer, and the criterion text each judge was given.
+    `--review` reads the run directory when it is there and the packet when it is
+    not, so the fallback needs no flag. `--pack <run_dir> --for <worksheet>`
+    writes one while a run still exists.
+  - The packet holds no judge verdict and no judge reasoning, and that is
+    enforced rather than intended: `load_evidence_packet` raises on a row
+    carrying any judge field. Committing the evidence must not become the way the
+    judge's call reaches a reviewer before they have given theirs.
+  - The packet carries the judge criteria because a worksheet outlives the prompt
+    it was generated under. `prompts/judge_groundedness.txt` was v2 when this run
+    was judged and is v3 at HEAD; asking a reviewer to apply v3 to an answer v2's
+    judge ruled on would have measured the prompt edit, not the judge.
+  - `evals/calibration/judge_relabel_evidence_2026-08-05.jsonl` is rebuilt from
+    committed history by `tools/rebuild_calibration_evidence.py`: answers from
+    `evals/govchat/golden.jsonl` and the 2026-07-11 label packet, passages joined
+    to `corpus/processed/chunks.jsonl` at the promoting commit, case metadata from
+    the suites there. Every answer is checked against the `answer_sha256` the
+    worksheet already declared, and a row that does not hash fails the rebuild.
+    Two things it cannot restore are rendered as absent rather than as values:
+    retrieval scores were never committed for that run and read "score not
+    recorded", and the judge's reasoning died with the run directory.
+  - Passages carry provenance the era's groundedness judge did not see. That
+    asymmetry is disclosed on the review screen rather than removed: reproducing
+    the blind spot that made the judge wrong about `fresh-001` — a dated claim
+    checked against evidence the dates were cut out of — would calibrate nothing.
+  - `--limit N` bounds a sitting. The worksheet is already ordered failures-first
+    and already resumable; what was missing was any statement of what the work
+    costs before it starts, so `--review` now opens with the row counts, which
+    nine come first and why, and a per-row estimate.
+  - No `human_passed` was filled in. All 37 rows are still blank, and a test
+    asserts they are: these verdicts are a person's to give, and a file claiming
+    a human decided something no human decided is the one thing this artifact
+    cannot survive.
+- **A label was bound to the answer it graded but not to the criterion it graded
+  under (#143).** A verdict is a judgment about an answer *under a criterion*,
+  and only the answer half was bound. PR #179 is that gap with a date on it: it
+  moves `prompts/judge_groundedness.txt` from v3 to v4 and changes which "as of"
+  claims count as supported. Not one of the sixteen committed labels goes stale
+  under it, because no answer moves, so all sixteen would have gone on being
+  scored against verdicts from a rubric their author never read. The mechanism
+  that exists to stop precisely this would not have fired, and the reported
+  agreement would have been wrong rather than absent.
+  - A label now carries `judge_prompt_sha256`, and `calibrate` reports a
+    `criterion_stale` label exactly as it reports a stale one: skipped, listed,
+    relabelable. Labels predating the binding are `criterion_unbound` and still
+    scored, the same treatment `answer_sha256` gave its own legacy, so the blind
+    spot is a count on the page rather than an implication. All sixteen are
+    `criterion_unbound` today.
+  - `--review` stamps the criterion it actually put on screen, so a verdict
+    recorded from here is bound to both halves without the reviewer doing
+    anything.
+- **An undefined kappa and a stale label set read as a passing calibration
+  (#143).** The report said the four-label sample was "provisional" and did not
+  report freshness at all, so the one gate that fails purely with the passage of
+  time was invisible. `EVALS.md`'s calibration section now scores the three §3
+  auto-gates by name — AIEV-18 agreement, AIEV-19 kappa, AIEV-20 freshness — with
+  "not measured" as its own verdict, distinct from a pass: an undefined kappa and
+  a kappa of 0.9 over four labels are both things that section must not let read
+  as evidence. `judge_labels.jsonl` gained a `# labeled_on:` directive, read from
+  git rather than guessed from a file mtime, because AIEV-20 is a question about
+  a date and a set that does not record one is not fresh.
 - **`xagency-010` was unpassable by construction, and nothing could tell (#162).**
   The case's rationale still described the six-agency corpus — "SolTrans is the
   only Clipper participant documented in this corpus" — after the corpus had
