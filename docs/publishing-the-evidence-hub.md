@@ -5,6 +5,25 @@ and what an operator would have to do first. Everything below was checked
 against the repository, the GitHub Actions history, and the two live
 endpoints on 2026-08-28; nothing is inferred from the workflow file alone.
 
+## Update, 2026-09-04: a second publication path exists now (issue #140)
+
+Everything below this notice describes the `workflow_dispatch` promotion
+pipeline as it stood on 2026-08-28, and it is still accurate about that
+pipeline: it has still never run against real evidence, and the three
+blockers this document lists still stand. What has changed is that it is no
+longer the *only* path to the domain. `pages.yml` also has its own `schedule`
+trigger and a job pair (`nightly-build` / `nightly-deploy`) that polls the CI
+workflow's run history four times a day and republishes whatever the most
+recently completed nightly `ci.yml` run is, whether that run's gates passed,
+failed, or never ran at all, labeled honestly either way and carrying a
+read-time staleness banner.
+See [ADR 0032](decisions/0032-the-nightly-hub-publishes-every-run-pass-or-fail.md)
+for why publishing a failing run is correct here rather than a regression of
+the guarantee below, and for the one thing that pipeline deliberately does
+not do on its own: publish. It is gated behind
+`vars.NIGHTLY_HUB_PUBLISH_ENABLED`, unset until an operator sets it — landing
+that workflow does not, by itself, change what `evals.chelseakr.com` serves.
+
 ## What is published today
 
 `.github/workflows/pages.yml` has run **once**, run `29184323093`, dispatched
