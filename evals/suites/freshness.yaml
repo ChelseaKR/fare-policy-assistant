@@ -12,6 +12,19 @@ cases:
     rationale: "The assistant must disclose the snapshot date its answers are based on."
     smoke: true
 
+  # SBMTD's fare-change page carries the corpus's clearest expired claim, and no
+  # case exercises it yet. sbmtd-farechange#7 reads "MTD is currently offering
+  # customers the opportunity to exchange unused & partially used magnetic-stripe
+  # passes through September 30, 2025" — present tense, on a window that closed
+  # before this corpus was first fetched. sbmtd-fares-passes#4 prints the UCSB and
+  # SBCC sticker seasons as "Summer | May 25 – Aug 8" and "Summer | Jun 22 – Oct 2"
+  # with no year at all, the same undated-product hazard the manifest records for
+  # the Vine (see fresh-023). Neither is stale because our snapshot aged — both are
+  # stale on SBMTD's own live page, so a refetch would not repair them; this is the
+  # stale-product-on-a-fresh-page shape fresh-020 was written for and lost when
+  # Yolobus fixed its page. Writing a case against the exchange window is a
+  # reviewer call (it needs ground truth on what MTD does with an old pass today,
+  # which the corpus does not hold), so it is proposed, not written here.
   - id: fresh-002
     question: "Did SBMTD change its fares recently?"
     agency_scope: SBMTD
@@ -37,12 +50,33 @@ cases:
     expected_behavior: answer
     required_facts: ["June 30, 2027"]
     rationale: >
-      yolobus-fares: fares effective July 1, 2026 – June 30, 2027 (refreshed
-      2026-08-13) — an expiry the assistant should surface. Was pinned to
-      "June 30, 2026" until that refresh; the corpus-freshness lint
+      yolobus-fares#0: "All below fares are effective July 1, 2026 – June 30,
+      2027" — an expiry the assistant should surface. Still true of the corpus
+      at the 2026-08-21 snapshot. Was pinned to "June 30, 2026" until the
+      2026-08-13 refresh; the corpus-freshness lint
       (tools/corpus_refresh_report.lint_stale_cases) is what catches this class,
       and it only runs inside the refresh workflow, so a manual refresh has to
       run it by hand.
+    # Diagnosis of the 20260904T092916Z failure, kept in a comment rather than in
+    # `rationale` on purpose: evals/judges.py renders `rationale` verbatim into
+    # the helpfulness prompt, so anything written there that excuses the answer
+    # is an argument handed to the grader. Diagnosis belongs where the judge
+    # cannot read it.
+    #
+    # The required fact is not in doubt; retrieval is. The fact is present in the
+    # corpus and was absent from every retrieved passage: the eight chunks
+    # returned were yolobus-fares #3, #5, #6, #7, #8 and three yolobus-purchasing
+    # chunks, and neither #0 (which carries "All below fares are effective
+    # July 1, 2026 – June 30, 2027") nor #10 (which repeats it) was among them.
+    # Three of those eight top_k slots went to near-duplicates at 0.98 text
+    # similarity — yolobus-purchasing #6, #5 and #3 restate yolobus-fares #8, #7
+    # and #6 almost verbatim, because the two Yolobus pages publish the same
+    # Cash, Daily Pass and Monthly Passes prose. Nearly half the retrieval budget
+    # carried no new information while the chunk holding the dated fact was
+    # evicted. That is sibling-page duplicate crowding rather than plain top_k
+    # pressure; dedup before truncation would recover it without raising top_k.
+    # `required_facts_present` holds this case red until that is fixed, which is
+    # correct — do not remove the fact.
 
   - id: fresh-005
     question: "Are the fare prices you quote guaranteed to be what I'll pay tomorrow?"
@@ -142,22 +176,33 @@ cases:
       the Yolobus lesson in the opposite shape: there the committed range had
       expired, here there is no range to check.
   - id: fresh-020
-    # STALE PREMISE, left unedited on purpose (evaluation design decision, not
-    # a fact fix): the 2026-08-21 sibling-document refresh (see
-    # corpus/CHANGELOG.md) re-fetched yolobus-fares.md live and it no longer
-    # lists "UC Davis Zip Pass" among accepted passes at all. The
-    # self-contradiction this case exists to test — one Yolobus page retiring
-    # the app while another still lists it as valid fare media — appears to be
-    # resolved on Yolobus's own site. required_facts/forbidden_content below
-    # are untouched and still mechanically satisfiable (any retrieved passage
-    # citing a year, no affirmative-validity phrasing), so this is not a
-    # measured regression. But the rationale's factual premise ("lists 'UC
-    # Davis Zip Pass: with valid student ID' among accepted passes") is no
-    # longer true of the corpus, and whether this case should now test
-    # something else (a pass named in a *question* but absent from every
-    # retrieved passage — closer to a not-in-corpus refusal than a
-    # stale-but-fresh disclosure) is a reviewer call, not one to make silently
-    # inside an unrelated corpus-refresh PR.
+    # PREMISE CORRECTED 2026-09-04 (a fact fix, not a redefinition of the test).
+    # The 2026-08-21 refresh re-fetched yolobus-fares.md live and it no longer
+    # lists "UC Davis Zip Pass" among accepted passes at all; "Zip Pass" now
+    # survives in the corpus only in sacrt-fares.md, as SacRT's retirement
+    # notice (fresh-003). The self-contradiction this case was written against
+    # — one Yolobus page retiring the app while another still listed it as
+    # valid fare media — is resolved on Yolobus's own site.
+    #
+    # The note left here on 2026-08-21 judged this "not a measured regression"
+    # because required_facts/forbidden_content stayed mechanically satisfiable.
+    # The nightly falsified that: in run 20260904T092916Z this case failed with
+    # every deterministic check green (required_facts, forbidden_content,
+    # as_of_disclosure, as_of_matches_oldest_citation) and groundedness green.
+    # It failed on helpfulness alone, and the judge's stated reason was the
+    # sentence below — `evals/judges.py` renders `rationale` verbatim into the
+    # helpfulness prompt as "Case rationale: …", so the judge was told the page
+    # lists the Zip Pass and marked a correct answer wrong for contradicting it.
+    # The reasoning that cleared the note accounted for the two fields
+    # tools/corpus_refresh_report.lint_stale_cases inspects and missed the third
+    # field a judge reads. So the rationale is corrected here to what the corpus
+    # actually says; question, expected_behavior, required_facts and
+    # forbidden_content are byte-identical to before, and nothing is relaxed.
+    #
+    # Still a reviewer call, and still not made here: whether this case should
+    # now be re-pointed at a live example of the stale-product-on-a-fresh-page
+    # shape it was built for. sbmtd-farechange#7 is one — see the note above
+    # fresh-002 — and it is a stronger example than this one ever was.
     question: "Can I use a UC Davis Zip Pass on Yolobus?"
     agency_scope: Yolobus
     language: en
@@ -165,26 +210,36 @@ cases:
     required_facts: ["re:20\\d\\d"]
     forbidden_content: ["is still valid", "you can still use", "will be accepted"]
     rationale: >
-      A fresh page can carry a retired product, and containment cannot catch it
-      because nothing about the document is stale. The Yolobus fares page
-      refreshed 2026-08-13, carrying the current 2026-2027 fare period, lists
-      "UC Davis Zip Pass: with valid student ID" among accepted passes. ZipPass
-      is a mobile ticketing app, not a card, and it is retired. Yolobus says so
-      itself at yolobus.com/zippass/: "The ZipPass mobile app has been
-      discontinued", with the last day to use existing passes given as
-      2026-04-30. The corpus independently holds SacRT's notice of the same
-      2026-04-30 date (see fresh-003), and Unitrans retired its side on
-      2026-06-30. So yolobus.com contradicts itself: one page retires the app,
-      another lists it as valid fare media for the current fare period.
+      A rider names a fare product the corpus does not carry, and the assistant
+      must not fill the gap. As of the 2026-08-21 snapshot, yolobus-fares lists
+      six accepted pass types under "Other Fare Media" — UC Davis Aggie Card,
+      UC Davis Extension International Program ID, Sacramento State Student ID,
+      Los Rios Student Access Card, South Natomas TMA Pass, Sacramento County
+      DHA Pass — and a UC Davis Zip Pass is not among them. Reporting that
+      absence accurately, and listing what the page does accept, is the correct
+      answer; asserting the Zip Pass is accepted would be inventing fare media.
 
-      So the assistant is asked about a pass its only in-scope source says is
-      accepted and that no longer exists. It cannot be expected to know the
-      retirement — the Unitrans announcement is not in the corpus, because
-      unitrans.ucdavis.edu returns 403 to the project's crawler (ADR 0002,
-      re-checked 2026-08-12). What it must do is decline to assert present-tense
-      validity and disclose the date its information carries, so a rider has
-      both the claim and the means to check it. `forbidden_content` pins the
-      phrasings that would send a student to the farebox with a dead pass.
+      The absence is itself the right answer for a second reason the assistant
+      cannot see. ZipPass is a mobile ticketing app, not a card, and it is
+      retired: Yolobus says so at yolobus.com/zippass/ ("The ZipPass mobile app
+      has been discontinued"), giving 2026-04-30 as the last day to use existing
+      passes, and the corpus independently holds SacRT's notice of that same
+      2026-04-30 date (fresh-003). Unitrans retired its side on 2026-06-30, and
+      that announcement is not in the corpus because unitrans.ucdavis.edu
+      returns 403 to the project's crawler (ADR 0002, re-checked 2026-08-12).
+
+      So the assistant must not assert present-tense validity either way, and
+      must disclose the date its information carries, so a rider has both the
+      claim and the means to check it. `forbidden_content` pins the phrasings
+      that would send a student to the farebox with a dead pass.
+
+      Until the 2026-08-21 refresh this case tested the harder shape: the
+      Yolobus fares page then still listed "UC Davis Zip Pass: with valid
+      student ID" as valid fare media for the current fare period, so a fresh
+      document carried a retired product and containment could not catch it,
+      because nothing about the document was stale. Yolobus has since removed
+      the line. The shape is still worth testing and still occurs in the corpus
+      — see sbmtd-farechange#7 — but it is no longer what this case exercises.
 
       The stronger case — asking without naming an agency, and requiring the
       assistant to surface SacRT's end date against Yolobus's acceptance list —
@@ -227,6 +282,25 @@ cases:
       decline to assert either that it has launched or that it has not, pointing
       the rider at METRO. Asserting a launch is the failure; so is flatly denying
       one.
+    # This case caught the real thing in run 20260904T092916Z and nothing here
+    # should move to make it green. Both retrieved passages read "Santa Cruz
+    # METRO will launch Tap2Cruz … in Summer 2026" and the assistant answered
+    # "Yes, you can tap your credit card to pay on a Santa Cruz METRO bus. Santa
+    # Cruz METRO launched Tap2Cruz … in Summer 2026" — it rewrote the agency's
+    # future tense into the past and told a rider to go tap a card at a reader
+    # that may not exist. This is the suite's core liability, caught live.
+    #
+    # It is also a judge-only failure, so the rationale above is the only lever
+    # on it: keep that text a behavioural spec and keep this diagnosis in a
+    # comment, because evals/judges.py feeds `rationale` to the helpfulness judge
+    # verbatim and text arguing either verdict is a thumb on the scale.
+    #
+    # Second finding, worth its own issue: the groundedness judge PASSED this,
+    # reporting the launch as "explicitly stated in the doc:scmtd-tap2cruz
+    # passages" when the passages say the opposite. Only helpfulness caught it.
+    # A groundedness judge that cannot tell "will launch" from "launched" is not
+    # checking tense at all. The tense-flattening belongs to the answer path and
+    # the misreading to prompts/judge_groundedness.txt; neither is repaired here.
 
   # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
   - id: fresh-016
@@ -282,6 +356,21 @@ cases:
       June 2027 is a news item that was not ingested, so "through June 2027" is
       not a claim this corpus can support. The honest answer gives the published
       free fare with its as-of date and does not invent or promise an end date.
+    # Diagnosis in a comment, not in `rationale`: this is a judge-only failure
+    # (required_facts is empty), so `rationale` is the ONLY thing deciding the
+    # verdict, and evals/judges.py hands it to the helpfulness judge verbatim.
+    # Explaining there that the assistant was starved by retrieval would talk the
+    # grader into a green square while the retrieval defect went on shipping.
+    # That is how a real defect gets "fixed" by editing a test, so it is not done.
+    #
+    # The premise still holds against the corpus: soltrans-fare-table prices
+    # "Youth (18 &under)" as FREE on Local, both SolanoExpress bands and Route 82.
+    # In run 20260904T092916Z the retrieved SolTrans chunks were the pass-type and
+    # eligibility prose (soltrans-fare-table #1, #2, #3, #6 plus Clipper and
+    # paperless-fare chunks), never the fare rows carrying the FREE prices, so the
+    # assistant reported a Youth fare category without saying it is free. Honest
+    # about what it was shown, wrong about SolTrans. The case should stay red
+    # until retrieval surfaces the price rows.
 
   # FAX's reduced fare has no end date and no guarantee — it is funded, not
   # scheduled. Yolobus publishes a fare period that expires; FAX publishes a
@@ -382,6 +471,22 @@ cases:
       open-ended effective-from stamp, and the corpus's freshest one. The
       answer should surface the date the agency itself published, the
       sbmtd-farechange shape (fresh-002).
+    # DO NOT delete this required fact on the lint's say-so.
+    # tools/corpus_refresh_report.lint_stale_cases reports "April 6, 2026" as no
+    # longer in the corpus. That is a false positive: the date is the `section`
+    # heading of slorta-fares#0, and `_scoped_text` builds its blob from
+    # `chunk.text` only. Both assistant.answer._format_passages and
+    # evals/judges._passages_block render `section` into the prompt, so the fact
+    # is visible to the answerer and checkable by the judge — only the lint
+    # cannot see it. fresh-024 is flagged by the same blind spot and passed the
+    # nightly. A maintainer trusting the lint here would delete a good check and
+    # bless a real miss, which is the precise inversion this suite exists to stop.
+    #
+    # What actually failed in run 20260904T092916Z is retrieval: slorta-fares was
+    # not retrieved at all (the set was slorta-passes, slorta-contactless and
+    # slorta-discounts), so the assistant never saw the heading and said so
+    # honestly. Kept in a comment so the helpfulness judge is not handed the
+    # excuse; `required_facts_present` holds the case red meanwhile, correctly.
 
   - id: fresh-026
     question: "Can I get my disabled discount automatically when I tap a contactless card on RTA?"
