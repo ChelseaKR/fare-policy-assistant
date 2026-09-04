@@ -435,8 +435,10 @@ def test_cross_check_agrees_when_feed_amount_in_prose(tmp_path, monkeypatch):
     records = gtfs.cross_check(chunks)
 
     # One prose chunk carries $2.00, so the agreement is a specific match rather
-    # than a collision — the number is what says which (#141).
-    assert records == [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1)]
+    # than a collision — the count and the chunk id are what say which (#141).
+    assert records == [
+        gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1, ["c#0"])
+    ]
 
 
 def test_cross_check_flags_disagreement_when_feed_amount_absent_from_prose(tmp_path, monkeypatch):
@@ -497,7 +499,14 @@ def test_cross_check_no_feed_when_snapshot_missing(tmp_path, monkeypatch):
     records = gtfs.cross_check(chunks)
 
     assert records == [
-        gtfs.CrossCheckRecord("MST", "(no snapshot)", "(no snapshot)", None, "no_feed")
+        gtfs.CrossCheckRecord(
+            "MST",
+            "(no snapshot)",
+            "(no snapshot)",
+            None,
+            "no_feed",
+            reason="configured feed has no validated snapshot; run `make gtfs-fetch`",
+        )
     ]
 
 
@@ -510,7 +519,12 @@ def test_cross_check_no_feed_configured_for_corpus_agency(tmp_path, monkeypatch)
 
     assert records == [
         gtfs.CrossCheckRecord(
-            "Yolobus", "(no feed configured)", "(no feed configured)", None, "no_feed"
+            "Yolobus",
+            "(no feed configured)",
+            "(no feed configured)",
+            None,
+            "no_feed",
+            reason="no feed configured; this agency has not been checked",
         )
     ]
 
@@ -568,12 +582,147 @@ def test_an_amount_repeated_inside_one_chunk_counts_once(tmp_path, monkeypatch):
     assert record.prose_matches == 1
 
 
+def test_an_agreement_names_the_chunks_it_matched(tmp_path, monkeypatch):
+    """Issue #141: a count still hides which chunk agreed.
+
+    The live case this is modelled on is SCMTD's 3-Day Pass at $15.00, which the
+    coarse check reported as "yes, 1 prose chunk" — a clean-looking single
+    match. The one chunk is the sentence about a $15.00 returned-check service
+    charge, and the 3-Day Pass is a product SCMTD's prose says it stopped
+    selling. Publishing the chunk id is what lets a reader see that.
+    """
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text("fare_id,price\n3Day,15.00\n")
+    monkeypatch.setattr(
+        gtfs, "load_gtfs_manifest", lambda: [{"agency": "MST", "url": "https://mst.org/g.zip"}]
+    )
+    chunks = [_chunk("MST", "There is a $15.00 service charge on returned checks.", "fees#3")]
+
+    (record,) = gtfs.cross_check(chunks)
+
+    assert record.feed_agrees == "yes"
+    assert record.prose_chunks == ["fees#3"]
+
+
+def test_a_disagreement_names_no_chunks(tmp_path, monkeypatch):
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text("fare_id,price\nRegular,3.00\n")
+    monkeypatch.setattr(
+        gtfs, "load_gtfs_manifest", lambda: [{"agency": "MST", "url": "https://mst.org/g.zip"}]
+    )
+
+    (record,) = gtfs.cross_check([_chunk("MST", "Regular fare is $2.00.")])
+
+    assert record.feed_agrees == "no"
+    assert record.prose_chunks == []
+
+
+def test_matched_chunk_ids_are_capped_but_the_count_is_not(tmp_path, monkeypatch):
+    """A truncated list must never make a collision look smaller than it is."""
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text("fare_id,price\nRegular,2.00\n")
+    monkeypatch.setattr(
+        gtfs, "load_gtfs_manifest", lambda: [{"agency": "MST", "url": "https://mst.org/g.zip"}]
+    )
+    chunks = [_chunk("MST", "The fare is $2.00.", f"c#{i}") for i in range(20)]
+
+    (record,) = gtfs.cross_check(chunks)
+
+    assert record.prose_matches == 20
+    assert len(record.prose_chunks or []) == gtfs._PROSE_CHUNK_SAMPLE
+
+
+# ── declared no-feed agencies (issue #141) ───────────────────────────────────
+
+
+def test_a_declared_no_feed_agency_carries_its_reason(tmp_path, monkeypatch):
+    """ "Checked, and here is what was found" is not the same claim as "nobody
+    looked". Before #141 the report could only make the second one."""
+    _point_config_at(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gtfs,
+        "load_gtfs_manifest",
+        lambda: [{"agency": "SacRT", "no_feed_reason": "feed carries no fare table"}],
+    )
+
+    (record,) = gtfs.cross_check([_chunk("SacRT", "The fare is $2.50.")])
+
+    assert record.feed_agrees == "no_feed"
+    assert record.reason == "feed carries no fare table"
+
+
+def test_an_unchecked_agency_says_it_was_never_checked(tmp_path, monkeypatch):
+    _point_config_at(tmp_path, monkeypatch)
+    monkeypatch.setattr(gtfs, "load_gtfs_manifest", lambda: [])
+
+    (record,) = gtfs.cross_check([_chunk("Yolobus", "The fare is $2.00.")])
+
+    assert record.reason == "no feed configured; this agency has not been checked"
+
+
+def test_partition_rejects_an_entry_that_is_both_or_neither():
+    with pytest.raises(gtfs.GTFSStorageError, match="mutually exclusive"):
+        gtfs.partition_gtfs_feeds(
+            [{"agency": "X", "url": "https://x/g.zip", "no_feed_reason": "y"}]
+        )
+    with pytest.raises(gtfs.GTFSStorageError, match="needs either url or no_feed_reason"):
+        gtfs.partition_gtfs_feeds([{"agency": "X"}])
+    with pytest.raises(gtfs.GTFSStorageError, match="non-empty string"):
+        gtfs.partition_gtfs_feeds([{"agency": "X", "no_feed_reason": "  "}])
+    with pytest.raises(gtfs.GTFSStorageError, match="duplicate GTFS agency"):
+        gtfs.partition_gtfs_feeds(
+            [
+                {"agency": "X", "url": "https://x/g.zip"},
+                {"agency": "X", "no_feed_reason": "y"},
+            ]
+        )
+    with pytest.raises(gtfs.GTFSStorageError, match="must be a mapping"):
+        gtfs.partition_gtfs_feeds(["X"])
+
+
+def test_an_agency_name_may_contain_a_space_but_not_a_separator():
+    """Two of the corpus's eighteen agencies are two words, and the agency name
+    is the join key onto their prose, so it has to admit them (#141)."""
+    feeds, declared = gtfs.partition_gtfs_feeds(
+        [
+            {"agency": "Marin Transit", "url": "https://marintransit.gov/data/google_transit.zip"},
+            {"agency": "AC Transit", "no_feed_reason": "authenticated feed"},
+        ]
+    )
+    assert [f["agency"] for f in feeds] == ["Marin Transit"]
+    assert [d.agency for d in declared] == ["AC Transit"]
+    for unsafe in ("Marin/Transit", " Marin", "Marin ", "..", "Marin\\Transit"):
+        with pytest.raises(gtfs.GTFSStorageError, match="safe agency identifier"):
+            gtfs.partition_gtfs_feeds([{"agency": unsafe, "url": "https://x/g.zip"}])
+
+
+def test_fetch_refuses_to_select_a_declared_no_feed_agency(tmp_path, monkeypatch, capsys):
+    _point_config_at(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gtfs,
+        "load_gtfs_manifest",
+        lambda: [
+            {"agency": "SBMTD", "url": "https://sbmtd.gov/g.zip"},
+            {"agency": "SacRT", "no_feed_reason": "feed carries no fare table"},
+        ],
+    )
+
+    assert gtfs.fetch_all(only={"SacRT"}) is False
+    assert "declared no_feed_reason" in capsys.readouterr().err
+
+
 # ── report + CLI ─────────────────────────────────────────────────────────────
 
 
 def test_write_report_shape(tmp_path, monkeypatch):
     _, processed = _point_config_at(tmp_path, monkeypatch)
-    records = [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1)]
+    records = [gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1, ["mst#0"])]
 
     gtfs.write_report(records)
 
@@ -586,6 +735,8 @@ def test_write_report_shape(tmp_path, monkeypatch):
             "feed_amount": "2.00",
             "feed_agrees": "yes",
             "prose_matches": 1,
+            "prose_chunks": ["mst#0"],
+            "reason": None,
         }
     ]
     assert "generated" in payload
@@ -600,6 +751,37 @@ def test_main_check_dispatch(tmp_path, monkeypatch):
     gtfs.main()
 
     assert (processed / "gtfs_cross_check.json").exists()
+
+
+def test_main_check_prints_the_evidence_behind_each_verdict(tmp_path, monkeypatch, capsys):
+    """The CLI is where a human first meets this check, so it has to show an
+    agreement's evidence, a disagreement's absence, and a no_feed's reason."""
+    raw, _ = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text("fare_id,price\nRegular,2.00\nNew,9.00\n")
+    monkeypatch.setattr(
+        gtfs,
+        "load_gtfs_manifest",
+        lambda: [
+            {"agency": "MST", "url": "https://mst.org/g.zip"},
+            {"agency": "SacRT", "no_feed_reason": "feed carries no fare table"},
+        ],
+    )
+    monkeypatch.setattr(
+        "assistant.gtfs.ingest.load_chunks",
+        lambda: [_chunk("MST", "Regular fare is $2.00.", "mst-fares#0")],
+    )
+    monkeypatch.setattr("sys.argv", ["gtfs", "check"])
+
+    gtfs.main()
+
+    captured = capsys.readouterr()
+    assert "1 prose chunk(s): mst-fares#0" in captured.out
+    assert "no prose chunk states this amount" in captured.out
+    assert "feed carries no fare table" in captured.out
+    assert "coverage: 1 of 2 corpus agencies" in captured.out
+    assert "1 disagreement(s) found." in captured.err
 
 
 def test_main_fetch_failure_exits_nonzero(monkeypatch):

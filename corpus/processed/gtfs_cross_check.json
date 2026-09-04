@@ -1,29 +1,22 @@
 {
-  "generated": "2026-08-28T22:56:52.902000+00:00",
+  "generated": "2026-09-04T19:46:34.125258+00:00",
   "records": [
-    {
-      "agency": "MST",
-      "fare_id": "Regular",
-      "name": "Regular",
-      "feed_amount": "2.00",
-      "feed_agrees": "yes",
-      "prose_matches": 4
-    },
-    {
-      "agency": "MST",
-      "fare_id": "Free",
-      "name": "Free",
-      "feed_amount": "0.00",
-      "feed_agrees": "yes",
-      "prose_matches": 3
-    },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_standard_cash_fare",
       "name": "Standard One-way Cash Fare",
       "feed_amount": "2.50",
       "feed_agrees": "yes",
-      "prose_matches": 6
+      "prose_matches": 6,
+      "prose_chunks": [
+        "sbmtd-farechange#1",
+        "sbmtd-farechange#15",
+        "sbmtd-farechange#7",
+        "sbmtd-farechange#8",
+        "sbmtd-farechange#9",
+        "sbmtd-fares-passes#1"
+      ],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -31,7 +24,11 @@
       "name": "Reduced One-way Cash Fare",
       "feed_amount": "1.25",
       "feed_agrees": "yes",
-      "prose_matches": 1
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sbmtd-fares-passes#1"
+      ],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -39,7 +36,16 @@
       "name": "Free Child Fare",
       "feed_amount": "0.00",
       "feed_agrees": "yes",
-      "prose_matches": 6
+      "prose_matches": 6,
+      "prose_chunks": [
+        "sbmtd-farechange#5",
+        "sbmtd-farechange#7",
+        "sbmtd-fares-passes#1",
+        "sbmtd-fares-passes#3",
+        "sbmtd-fares-passes#5",
+        "sbmtd-fares-passes#6"
+      ],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -47,7 +53,16 @@
       "name": "Standard One-way Contactless Fare",
       "feed_amount": "2.50",
       "feed_agrees": "yes",
-      "prose_matches": 6
+      "prose_matches": 6,
+      "prose_chunks": [
+        "sbmtd-farechange#1",
+        "sbmtd-farechange#15",
+        "sbmtd-farechange#7",
+        "sbmtd-farechange#8",
+        "sbmtd-farechange#9",
+        "sbmtd-fares-passes#1"
+      ],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -55,7 +70,11 @@
       "name": "Reduced One-way Contactless Fare",
       "feed_amount": "1.25",
       "feed_agrees": "yes",
-      "prose_matches": 1
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sbmtd-fares-passes#1"
+      ],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -63,7 +82,9 @@
       "name": "Waterfront Shuttle One-way Cash Fare",
       "feed_amount": "0.50",
       "feed_agrees": "no",
-      "prose_matches": 0
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -71,7 +92,9 @@
       "name": "Waterfront Shuttle Reduced One-way Cash Fare",
       "feed_amount": "0.25",
       "feed_agrees": "no",
-      "prose_matches": 0
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -79,7 +102,9 @@
       "name": "Waterfront Shuttle One-way Contactless Fare",
       "feed_amount": "0.50",
       "feed_agrees": "no",
-      "prose_matches": 0
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
     },
     {
       "agency": "SBMTD",
@@ -87,7 +112,1651 @@
       "name": "Waterfront Shuttle Reduced One-way Contactless Fare",
       "feed_amount": "0.25",
       "feed_agrees": "no",
-      "prose_matches": 0
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "CCCTA",
+      "fare_id": "1",
+      "name": "1",
+      "feed_amount": "2.5",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "cccta-fare-types-prices#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "CCCTA",
+      "fare_id": "2",
+      "name": "2",
+      "feed_amount": "0",
+      "feed_agrees": "yes",
+      "prose_matches": 8,
+      "prose_chunks": [
+        "cccta-clipper-card#1",
+        "cccta-clipper-card#7",
+        "cccta-fare-types-prices#0",
+        "cccta-fare-types-prices#2",
+        "cccta-link-fares#0",
+        "cccta-rtc-discount-card#7"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "FAX",
+      "fare_id": "R",
+      "name": "R",
+      "feed_amount": "1.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "fax-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Single Ride RTS",
+      "name": "Cash Single Ride RTS",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Tap-To-Pay RTS",
+      "name": "Cash Tap-To-Pay RTS",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Single Ride ETS",
+      "name": "Cash Single Ride ETS",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Tap-To-Pay ETS",
+      "name": "Cash Tap-To-Pay ETS",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Single Ride AMRTS",
+      "name": "Cash Single Ride AMRTS",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Tap-To-Pay AMRTS",
+      "name": "Cash Tap-To-Pay AMRTS",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Single Ride NSE101",
+      "name": "Cash Single Ride NSE101",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Tap-To-Pay NSE101",
+      "name": "Cash Tap-To-Pay NSE101",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Single Ride NSE299",
+      "name": "Cash Single Ride NSE299",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Tap-To-Pay NSE299",
+      "name": "Cash Tap-To-Pay NSE299",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Single Ride SoHum",
+      "name": "Cash Single Ride SoHum",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "HTA",
+      "fare_id": "Cash Tap-To-Pay SoHum",
+      "name": "Cash Tap-To-Pay SoHum",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "hta-fares#0",
+        "hta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "Marin Transit",
+      "fare_id": "5",
+      "name": "5",
+      "feed_amount": "1",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "marin-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "Marin Transit",
+      "fare_id": "2",
+      "name": "2",
+      "feed_amount": "1",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "marin-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "Marin Transit",
+      "fare_id": "1",
+      "name": "1",
+      "feed_amount": "2",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "marin-clipper#1",
+        "marin-fares#0",
+        "marin-fares#11"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SamTrans",
+      "fare_id": "OW_Adult_20160110",
+      "name": "OW_Adult_20160110",
+      "feed_amount": "2.2500",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "samtrans-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "free-adult",
+      "name": "Free Service",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 7,
+      "prose_chunks": [
+        "scmtd-accessibility#3",
+        "scmtd-accessibility#6",
+        "scmtd-fares-passes#1",
+        "scmtd-fares-passes#2",
+        "scmtd-fares-passes#4",
+        "scmtd-fares-passes#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-adult",
+      "name": "Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "6.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "scmtd-fares-passes#0",
+        "scmtd-fares-passes#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "3-day-adult",
+      "name": "3-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "15.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "7-day-adult",
+      "name": "7-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "32.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-adult",
+      "name": "31-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "65.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "scmtd-fares-passes#0",
+        "scmtd-fares-passes#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-adult",
+      "name": "Cash/1-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "scmtd-accessibility#10",
+        "scmtd-fares-passes#0",
+        "scmtd-tap2cruz#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-adult",
+      "name": "15-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "27.00",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "free-youth",
+      "name": "Free Service",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 7,
+      "prose_chunks": [
+        "scmtd-accessibility#3",
+        "scmtd-accessibility#6",
+        "scmtd-fares-passes#1",
+        "scmtd-fares-passes#2",
+        "scmtd-fares-passes#4",
+        "scmtd-fares-passes#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-youth",
+      "name": "Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "6.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "scmtd-fares-passes#0",
+        "scmtd-fares-passes#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "3-day-youth",
+      "name": "3-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "15.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "7-day-youth",
+      "name": "7-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "32.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-youth",
+      "name": "31-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "48.00",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-youth",
+      "name": "Cash/1-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "scmtd-accessibility#10",
+        "scmtd-fares-passes#0",
+        "scmtd-tap2cruz#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-youth",
+      "name": "15-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "27.00",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-adult-hw17",
+      "name": "Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "14.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-adult-hw17",
+      "name": "31-Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "145.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-adult-hw17",
+      "name": "Cash/1-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-adult-hw17",
+      "name": "15-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "94.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-youth-hw17",
+      "name": "Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "14.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-youth-hw17",
+      "name": "31-Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "145.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-youth-hw17",
+      "name": "Cash/1-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-youth-hw17",
+      "name": "15-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "94.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "free-senior",
+      "name": "Free Service",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 7,
+      "prose_chunks": [
+        "scmtd-accessibility#3",
+        "scmtd-accessibility#6",
+        "scmtd-fares-passes#1",
+        "scmtd-fares-passes#2",
+        "scmtd-fares-passes#4",
+        "scmtd-fares-passes#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-senior",
+      "name": "Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "3.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-senior-hw17",
+      "name": "Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "14.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "3-day-senior",
+      "name": "3-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "7.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "7-day-senior",
+      "name": "7-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "16.00",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-senior",
+      "name": "31-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "32.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-senior-hw17",
+      "name": "31-Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "145.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-senior",
+      "name": "Cash/1-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "1.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "scmtd-fares-passes#0",
+        "scmtd-tap2cruz#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-senior-hw17",
+      "name": "Cash/1-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "3.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-senior",
+      "name": "15-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "13.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-senior-hw17",
+      "name": "15-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "94.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "free-discount",
+      "name": "Free Service",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 7,
+      "prose_chunks": [
+        "scmtd-accessibility#3",
+        "scmtd-accessibility#6",
+        "scmtd-fares-passes#1",
+        "scmtd-fares-passes#2",
+        "scmtd-fares-passes#4",
+        "scmtd-fares-passes#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-discount",
+      "name": "Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "3.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-day-discount-hw17",
+      "name": "Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "14.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "3-day-discount",
+      "name": "3-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "7.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "7-day-discount",
+      "name": "7-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "16.00",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-discount",
+      "name": "31-Day Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "32.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "31-day-discount-hw17",
+      "name": "31-Day Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "145.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-discount",
+      "name": "Cash/1-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "1.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "scmtd-fares-passes#0",
+        "scmtd-tap2cruz#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "1-ride-discount-hw17",
+      "name": "Cash/1-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "3.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "scmtd-fares-passes#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-discount",
+      "name": "15-Ride Pass (Local Service in Santa Cruz County)",
+      "feed_amount": "13.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SCMTD",
+      "fare_id": "15-ride-discount-hw17",
+      "name": "15-Ride Pass (Amtrak/Highway 17 Express)",
+      "feed_amount": "94.50",
+      "feed_agrees": "no",
+      "prose_matches": 0,
+      "prose_chunks": [],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_adult_cash",
+      "name": "Local/Express 1-Ride - Adult (Cash)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_adult_ticket",
+      "name": "Local/Express 1-Ride - Adult (Ticket)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_adult_vamos",
+      "name": "Local/Express 1-Ride - Adult (Vamos)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_discount_cash",
+      "name": "Local/Express 1-Ride - Discount (Cash)",
+      "feed_amount": "0.75",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_discount_ticket",
+      "name": "Local/Express 1-Ride - Discount (Ticket)",
+      "feed_amount": "0.75",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_discount_vamos",
+      "name": "Local/Express 1-Ride - Discount (Vamos)",
+      "feed_amount": "0.75",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_student_cash",
+      "name": "Local/Express 1-Ride - Student (Cash)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_student_ticket",
+      "name": "Local/Express 1-Ride - Student (Ticket)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1ride_student_vamos",
+      "name": "Local/Express 1-Ride - Student (Vamos)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_adult_cash",
+      "name": "Local/Express 1-Day Pass - Adult (Cash)",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_adult_vamos",
+      "name": "Local/Express 1-Day Pass - Adult (Vamos)",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_adult_ticket",
+      "name": "Local/Express 1-Day Pass - Adult (Ticket)",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_discount_cash",
+      "name": "Local/Express 1-Day Pass - Discount (Cash)",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_discount_ticket",
+      "name": "Local/Express 1-Day Pass - Discount (Ticket)",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_discount_vamos",
+      "name": "Local/Express 1-Day Pass - Discount (Vamos)",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_student_cash",
+      "name": "Local/Express 1-Day Pass - Student (Cash)",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_student_ticket",
+      "name": "Local/Express 1-Day Pass - Student (Ticket)",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "1day_student_vamos",
+      "name": "Local/Express 1-Day Pass - Student (Vamos)",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "31day_adult_vamos",
+      "name": "Local/Express 31-Day Pass - Adult (Vamos)",
+      "feed_amount": "65.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "31day_adult_ticket",
+      "name": "Local/Express 31-Day Pass - Adult (Ticket)",
+      "feed_amount": "65.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "31day_discount_vamos",
+      "name": "Local/Express 31-Day Pass - Discount (Vamos)",
+      "feed_amount": "30.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "31day_discount_ticket",
+      "name": "Local/Express 31-Day Pass - Discount (Ticket)",
+      "feed_amount": "30.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "31day_student_vamos",
+      "name": "Local/Express 31-Day Pass - Student (Vamos)",
+      "feed_amount": "40.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "31day_student_ticket",
+      "name": "Local/Express 31-Day Pass - Student (Ticket)",
+      "feed_amount": "40.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_stk_dub_oneway_vamos",
+      "name": "Commuter Rte 150 Stockton-Dublin BART One-Way (Vamos)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_stk_dub_oneway_ticket",
+      "name": "Commuter Rte 150 Stockton-Dublin BART One-Way (Ticket)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_stk_dub_monthly_vamos",
+      "name": "Commuter Rte 150 Stockton-Dublin BART Monthly (Vamos)",
+      "feed_amount": "191.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_stk_dub_monthly_ticket",
+      "name": "Commuter Rte 150 Stockton-Dublin BART Monthly (Ticket)",
+      "feed_amount": "191.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_lth_dub_oneway_vamos",
+      "name": "Commuter Rte 150 Lathrop-Dublin BART One-Way (Vamos)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_lth_dub_oneway_ticket",
+      "name": "Commuter Rte 150 Lathrop-Dublin BART One-Way (Ticket)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_lth_dub_monthly_vamos",
+      "name": "Commuter Rte 150 Lathrop-Dublin BART Monthly (Vamos)",
+      "feed_amount": "175.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_lth_dub_monthly_ticket",
+      "name": "Commuter Rte 150 Lathrop-Dublin BART Monthly (Ticket)",
+      "feed_amount": "175.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_trcy_dub_oneway_vamos",
+      "name": "Commuter Rte 150 Tracy-Dublin BART One-Way (Vamos)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_trcy_dub_oneway_ticket",
+      "name": "Commuter Rte 150 Tracy-Dublin BART One-Way (Ticket)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_trcy_dub_monthly_vamos",
+      "name": "Commuter Rte 150 Tracy-Dublin BART Monthly (Vamos)",
+      "feed_amount": "158.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_150_trcy_dub_monthly_ticket",
+      "name": "Commuter Rte 150 Tracy-Dublin BART Monthly (Ticket)",
+      "feed_amount": "158.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_stk_sac_oneway_vamos",
+      "name": "Commuter Rte 163 Stockton-Sacramento One-Way (Vamos)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_stk_sac_oneway_ticket",
+      "name": "Commuter Rte 163 Stockton-Sacramento One-Way (Ticket)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_stk_sac_monthly_vamos",
+      "name": "Commuter Rte 163 Stockton-Sacramento Monthly (Vamos)",
+      "feed_amount": "176.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_stk_sac_monthly_ticket",
+      "name": "Commuter Rte 163 Stockton-Sacramento Monthly (Ticket)",
+      "feed_amount": "176.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_lodi_sac_oneway_vamos",
+      "name": "Commuter Rte 163 Lodi-Sacramento One-Way (Vamos)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_lodi_sac_oneway_ticket",
+      "name": "Commuter Rte 163 Lodi-Sacramento One-Way (Ticket)",
+      "feed_amount": "7.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_lodi_sac_monthly_vamos",
+      "name": "Commuter Rte 163 Lodi-Sacramento Monthly (Vamos)",
+      "feed_amount": "167.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "comm_163_lodi_sac_monthly_ticket",
+      "name": "Commuter Rte 163 Lodi-Sacramento Monthly (Ticket)",
+      "feed_amount": "167.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "para_1ride_ticket",
+      "name": "Paratransit One-Way (Ticket)",
+      "feed_amount": "3.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#2",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "vg_full_base",
+      "name": "Van Go! Full Fare - First 5 Miles",
+      "feed_amount": "4.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#0",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "vg_discount_base",
+      "name": "Van Go! Discount Fare - First 5 Miles",
+      "feed_amount": "3.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "sjrtd-fares#2",
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "vg_per_mile",
+      "name": "Van Go! Additional Mile Charge",
+      "feed_amount": "0.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#3"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "child_additional_1ride_cash",
+      "name": "Local/Express 1-Ride - Additional Child (Cash)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SJRTD",
+      "fare_id": "child_additional_1ride_vamos",
+      "name": "Local/Express 1-Ride - Additional Child (Vamos)",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "sjrtd-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SLORTA",
+      "fare_id": "1",
+      "name": "1",
+      "feed_amount": "1.50",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "slorta-contactless#7",
+        "slorta-fares#0",
+        "slorta-passes#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SLORTA",
+      "fare_id": "4",
+      "name": "4",
+      "feed_amount": "1.00",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "slorta-contactless#6",
+        "slorta-contactless#7",
+        "slorta-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SLORTA",
+      "fare_id": "5",
+      "name": "5",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 5,
+      "prose_chunks": [
+        "slorta-contactless#4",
+        "slorta-contactless#6",
+        "slorta-contactless#7",
+        "slorta-fares#0",
+        "slorta-passes#6"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SLORTA",
+      "fare_id": "6",
+      "name": "6",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 5,
+      "prose_chunks": [
+        "slorta-contactless#3",
+        "slorta-discounts#0",
+        "slorta-fares#0",
+        "slorta-passes#7",
+        "slorta-passes#8"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SolTrans",
+      "fare_id": "1",
+      "name": "1",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "soltrans-fare-table#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SolTrans",
+      "fare_id": "2",
+      "name": "2",
+      "feed_amount": "2.75",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "soltrans-fare-table#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SolTrans",
+      "fare_id": "3",
+      "name": "3",
+      "feed_amount": "5.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "soltrans-fare-table#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "SolTrans",
+      "fare_id": "4",
+      "name": "4",
+      "feed_amount": "6.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "soltrans-fare-table#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VINE",
+      "fare_id": "3622",
+      "name": "3622",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "vine-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VINE",
+      "fare_id": "3623",
+      "name": "3623",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "vine-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VINE",
+      "fare_id": "3624",
+      "name": "3624",
+      "feed_amount": "3.50",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "vine-fares#0",
+        "vine-fares#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VINE",
+      "fare_id": "3625",
+      "name": "3625",
+      "feed_amount": "6.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "vine-fares#0"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VTA",
+      "fare_id": "1",
+      "name": "1",
+      "feed_amount": "2.50",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "vta-fares#1",
+        "vta-fares#4",
+        "vta-regional-transfers#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VTA",
+      "fare_id": "2",
+      "name": "2",
+      "feed_amount": "5.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "vta-fares#1",
+        "vta-fares#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VTA",
+      "fare_id": "3",
+      "name": "3",
+      "feed_amount": "2.50",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "vta-fares#1",
+        "vta-fares#4",
+        "vta-regional-transfers#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VTA",
+      "fare_id": "4",
+      "name": "4",
+      "feed_amount": "5.00",
+      "feed_agrees": "yes",
+      "prose_matches": 2,
+      "prose_chunks": [
+        "vta-fares#1",
+        "vta-fares#2"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "VTA",
+      "fare_id": "5",
+      "name": "5",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 8,
+      "prose_chunks": [
+        "vta-fares#0",
+        "vta-fares#1",
+        "vta-fares#2",
+        "vta-fares#3",
+        "vta-fares#4",
+        "vta-fares#5"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "WestCAT",
+      "fare_id": "1381",
+      "name": "1381",
+      "feed_amount": "1.75",
+      "feed_agrees": "yes",
+      "prose_matches": 4,
+      "prose_chunks": [
+        "westcat-clipper#0",
+        "westcat-clipper#1",
+        "westcat-fares-all#0",
+        "westcat-fares-all#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "WestCAT",
+      "fare_id": "1382",
+      "name": "1382",
+      "feed_amount": "5.00",
+      "feed_agrees": "yes",
+      "prose_matches": 1,
+      "prose_chunks": [
+        "westcat-fares-all#0"
+      ],
+      "reason": null
     },
     {
       "agency": "AC Transit",
@@ -95,15 +1764,9 @@
       "name": "(no feed configured)",
       "feed_amount": null,
       "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "CCCTA",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
+      "prose_matches": null,
+      "prose_chunks": null,
+      "reason": "https://api.actransit.org/transit/gtfs/download returns HTTP 401 \"A valid API token is required to use the AC Transit API\" (checked 2026-09-04). The older catalog row points at the retired transitfeeds.com aggregator. This project does not hold agency API credentials and will not fetch a feed it cannot fetch anonymously, so AC Transit fare rows stay uncross-checked."
     },
     {
       "agency": "E-tran",
@@ -111,55 +1774,19 @@
       "name": "(no feed configured)",
       "feed_amount": null,
       "feed_agrees": "no_feed",
-      "prose_matches": null
+      "prose_matches": null,
+      "prose_chunks": null,
+      "reason": "No first-party Elk Grove GTFS feed found (checked 2026-09-04). The Mobility Database's active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated commercial site on another domain; every path on that host does. SacRT, which operates e-tran and publishes the prose corpus for it, serves a GTFS feed with no fare table at all."
     },
     {
-      "agency": "FAX",
+      "agency": "MST",
       "fare_id": "(no feed configured)",
       "name": "(no feed configured)",
       "feed_amount": null,
       "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "HTA",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "Marin Transit",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "SCMTD",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "SJRTD",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "SLORTA",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
+      "prose_matches": null,
+      "prose_chunks": null,
+      "reason": "https://www.mst.org/google/google_transit.zip returns a Cloudflare HTTP 403 to this project's identified research user agent, as does every mst.org HTML page including https://mst.org/fares/ (checked twice, 2026-09-04). robots.txt still serves 200 and still allows \"*\" with Crawl-delay 10; the WAF and robots disagree and the WAF is what a fetcher meets. Same posture as unitrans.ucdavis.edu and elkgrove.gov above: we do not spoof a browser user agent to get around a WAF, so MST cannot be recaptured today. This is a change since 2026-06-11, when mst.org served this project's fetcher on the first try, and it blocks the prose corpus as well as the feed. MST's fare rows are consequently no longer cross-checked."
     },
     {
       "agency": "SacRT",
@@ -167,47 +1794,9 @@
       "name": "(no feed configured)",
       "feed_amount": null,
       "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "SamTrans",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "SolTrans",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "VINE",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "VTA",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
-    },
-    {
-      "agency": "WestCAT",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null
+      "prose_matches": null,
+      "prose_chunks": null,
+      "reason": "https://www.sacrt.com/wp-content/uploads/google_transit.zip downloads a valid 2.7 MB GTFS ZIP that contains neither fare_attributes.txt nor fare_products.txt (checked 2026-09-04; the older iportal.sacrt.com row behaves the same). There is nothing to cross-check against the prose until SacRT publishes fare data in its feed."
     },
     {
       "agency": "Yolobus",
@@ -215,7 +1804,9 @@
       "name": "(no feed configured)",
       "feed_amount": null,
       "feed_agrees": "no_feed",
-      "prose_matches": null
+      "prose_matches": null,
+      "prose_chunks": null,
+      "reason": "Yolobus's own GTFS page links one feed, https://avl.yctd.org/RealTime/google_transit.zip, and it downloads a valid 485 KB ZIP that contains no fare file (checked 2026-09-04). The Mobility Database's direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip, 404s. Same outcome as SacRT for a different reason: a feed exists, fares are not in it."
     }
   ]
 }

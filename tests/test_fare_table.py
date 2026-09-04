@@ -25,7 +25,12 @@ def test_structured_fares_bind_amount_to_category():
 
 
 def test_v1_agency_has_fares_without_categories():
-    fares = fare_table.structured_fares("MST")
+    # Was MST until 2026-09-04, when mst.org started returning a Cloudflare 403
+    # to this project's fetcher and MST moved to a `no_feed_reason` in the
+    # manifest (see corpus/manifest.yaml and issue #141). SolTrans is the same
+    # shape — a v1 `fare_attributes.txt` feed with no rider categories — so the
+    # property under test is unchanged; only the live fixture moved.
+    fares = fare_table.structured_fares("SolTrans")
     assert fares
     assert all(f.rider_category is None for f in fares)
     assert any(f.amount == Decimal("2.00") for f in fares)

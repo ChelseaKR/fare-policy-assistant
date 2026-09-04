@@ -86,7 +86,14 @@ GTFS_SELECTED_SET_SCHEMA = "fare-assistant.gtfs-selected-set.v1"
 _CURRENT_NAME = "current.json"
 _SNAPSHOTS_NAME = "snapshots"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
-_AGENCY = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,62}[A-Za-z0-9])?$")
+# The agency identifier is both a storage path component and the join key onto
+# the prose corpus, so it has to admit the corpus's own agency names — two of
+# which ("AC Transit", "Marin Transit") contain a space. A single space class is
+# all that widened for issue #141; the properties this guard actually exists for
+# are unchanged: first and last character are alphanumeric (so no leading or
+# trailing whitespace, and neither "." nor ".." can be spelled), no path or
+# drive separator, no NUL, and a bounded length.
+_AGENCY = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9 _.-]{0,62}[A-Za-z0-9])?$")
 _MAX_ZIP_BYTES = 256 * 1024 * 1024
 _MAX_CONSUMED_MEMBER_BYTES = 32 * 1024 * 1024
 _FETCH_PROCESS_LOCK = threading.Lock()
@@ -104,6 +111,9 @@ _DOLLAR_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)")
 # agency's prose mentions "free" anywhere.
 _FREE_RE = re.compile(r"\bfree\b", re.I)
 _ZERO = Decimal("0.00")
+# How many matching chunk ids a record carries. `prose_matches` still publishes
+# the true total, so a truncated list never understates the collision.
+_PROSE_CHUNK_SAMPLE = 6
 
 
 @dataclass
@@ -135,6 +145,25 @@ class CrossCheckRecord:
     # really the check being nearly vacuous. A number a reader can see is the
     # difference between those two readings.
     prose_matches: int | None = None
+    # *Which* chunks those were, so an agreement can be audited instead of
+    # trusted. The count alone still hides the thing that matters: SCMTD's feed
+    # prices a 3-Day Pass at $15.00 and this check reported "yes, 1 prose
+    # chunk", which reads like a clean single match — but the one chunk is the
+    # sentence "There is a $15.00 service charge on all returned checks", and
+    # the 3-Day Pass is a product SCMTD's prose says it stopped selling on
+    # 2026-07-01. A reader cannot tell those apart from a number. Sorted,
+    # capped at `_PROSE_CHUNK_SAMPLE`, empty on a disagreement and None where
+    # nothing was compared.
+    prose_chunks: list[str] | None = None
+    # Why nothing was compared, on a `no_feed` record; None on a compared row.
+    # Three shapes reach a reader here, and they are not the same fact:
+    # "no feed configured" (nobody has looked at this agency), the manifest's
+    # own `no_feed_reason` (somebody looked, and this is what they found), and
+    # "configured feed has no snapshot" (a feed is configured but `make
+    # gtfs-fetch` has not run or did not succeed). Before issue #141 all three
+    # rendered as the same bare `no_feed`, which made an unchecked agency and a
+    # checked-and-unusable one indistinguishable in the report.
+    reason: str | None = None
 
 
 class GTFSStorageError(ValueError):
@@ -173,6 +202,57 @@ _CURRENT_CACHE: dict[tuple[str, str], dict[str, FeedSnapshot]] = {}
 def load_gtfs_manifest() -> list[dict]:
     manifest = ingest.load_manifest()
     return manifest.get("gtfs_feeds", [])
+
+
+@dataclass(frozen=True)
+class DeclaredNoFeed:
+    """An agency checked for a GTFS-Fares feed and deliberately not configured."""
+
+    agency: str
+    reason: str
+
+
+def partition_gtfs_feeds(
+    raw: list[dict] | None = None,
+) -> tuple[list[Mapping[str, object]], list[DeclaredNoFeed]]:
+    """Split ``gtfs_feeds`` into fetchable feeds and checked-but-unusable agencies.
+
+    An entry carries either a ``url`` (fetch it) or a ``no_feed_reason`` (it was
+    checked and cannot be fetched or carries no fare table), never both and never
+    neither. The second form exists because "this agency has no feed" and "nobody
+    has looked at this agency yet" are different claims, and until issue #141 the
+    report could only make the second one. `make gtfs-fetch` skips a declared
+    no-feed agency; `cross_check` still emits its record, carrying the reason.
+    """
+    entries = raw if raw is not None else load_gtfs_manifest()
+    feeds: list[Mapping[str, object]] = []
+    declared: list[DeclaredNoFeed] = []
+    seen: set[str] = set()
+    for index, item in enumerate(entries):
+        context = f"manifest GTFS feed {index}"
+        if not isinstance(item, Mapping):
+            raise GTFSStorageError(f"{context}: entry must be a mapping")
+        agency = _agency_name(item.get("agency"), context)
+        if agency in seen:
+            raise GTFSStorageError(f"manifest: duplicate GTFS agency {agency}")
+        seen.add(agency)
+        reason = item.get("no_feed_reason")
+        has_url = item.get("url") is not None
+        if has_url and reason is not None:
+            raise GTFSStorageError(
+                f"{context} ({agency}): url and no_feed_reason are mutually exclusive"
+            )
+        if reason is not None:
+            if not isinstance(reason, str) or not reason.strip():
+                raise GTFSStorageError(
+                    f"{context} ({agency}): no_feed_reason must be a non-empty string"
+                )
+            declared.append(DeclaredNoFeed(agency=agency, reason=reason.strip()))
+            continue
+        if not has_url:
+            raise GTFSStorageError(f"{context} ({agency}): needs either url or no_feed_reason")
+        feeds.append(item)
+    return feeds, declared
 
 
 # ── fetch ────────────────────────────────────────────────────────────────────
@@ -842,25 +922,25 @@ def fetch_all(only: set[str] | None = None) -> bool:
     publication error returns ``False`` and leaves the selected current set
     unchanged. Immutable directories are never overwritten.
     """
-    raw_feeds = load_gtfs_manifest()
-    feeds: list[Mapping[str, object]] = []
-    configured: set[str] = set()
-    for index, item in enumerate(raw_feeds):
-        if not isinstance(item, Mapping):
-            print(f"FAIL  manifest feed {index}: entry must be a mapping", file=sys.stderr)
-            return False
-        try:
-            agency = _agency_name(item.get("agency"), f"manifest GTFS feed {index}")
-        except GTFSStorageError as exc:
-            print(f"FAIL  manifest feed {index}: {exc}", file=sys.stderr)
-            return False
-        if agency in configured:
-            print(f"FAIL  manifest: duplicate GTFS agency {agency}", file=sys.stderr)
-            return False
-        configured.add(agency)
-        feeds.append(item)
+    try:
+        feeds, declared_no_feed = partition_gtfs_feeds()
+    except GTFSStorageError as exc:
+        print(f"FAIL  {exc}", file=sys.stderr)
+        return False
+    configured = {str(feed["agency"]) for feed in feeds}
+    for entry in declared_no_feed:
+        print(f"skip  {entry.agency}  no feed: {entry.reason}")
 
     if only is not None:
+        no_feed_names = {entry.agency for entry in declared_no_feed}
+        selected_no_feed = only & no_feed_names
+        if selected_no_feed:
+            print(
+                "FAIL  selected agency has a declared no_feed_reason: "
+                + ", ".join(sorted(selected_no_feed)),
+                file=sys.stderr,
+            )
+            return False
         unknown = only - configured
         if unknown:
             print(
@@ -992,18 +1072,18 @@ def _parse_fares_v2(agency_dir: Path, agency: str) -> list[FeedFare]:
 # ── cross-check ──────────────────────────────────────────────────────────────
 
 
-def prose_amount_chunk_counts(
+def prose_amount_chunk_ids(
     agency: str, chunks: list[ingest.Chunk] | None = None
-) -> dict[Decimal, int]:
-    """Each dollar amount in the agency's prose corpus → how many chunks state it.
+) -> dict[Decimal, list[str]]:
+    """Each dollar amount in the agency's prose corpus → the chunks stating it.
 
-    The count is the part `prose_fare_amounts` throws away, and it is what makes
-    a coarse agreement readable: an amount found in one chunk is a specific
-    match, the same amount found in twelve is a collision on a page dense with
-    dollar figures. See `CrossCheckRecord.prose_matches` and issue #141.
+    The chunk list is what `prose_fare_amounts` throws away, and it is what makes
+    a coarse agreement auditable: one chunk is a specific match, twelve is a
+    collision on a page dense with dollar figures, and the id says which chunk so
+    a reader can go and look. See `CrossCheckRecord.prose_chunks` and issue #141.
     """
     chunks = chunks if chunks is not None else ingest.load_chunks()
-    counts: dict[Decimal, int] = {}
+    found: dict[Decimal, list[str]] = {}
     for chunk in chunks:
         if chunk.agency != agency:
             continue
@@ -1015,59 +1095,106 @@ def prose_amount_chunk_counts(
                 continue
             seen_in_chunk.add(amount)
         for amount in seen_in_chunk:
-            counts[amount] = counts.get(amount, 0) + 1
-    return counts
+            found.setdefault(amount, []).append(chunk.chunk_id)
+    return found
+
+
+def prose_amount_chunk_counts(
+    agency: str, chunks: list[ingest.Chunk] | None = None
+) -> dict[Decimal, int]:
+    """Each dollar amount in the agency's prose corpus → how many chunks state it."""
+    return {
+        amount: len(chunk_ids)
+        for amount, chunk_ids in prose_amount_chunk_ids(agency, chunks).items()
+    }
 
 
 def prose_fare_amounts(agency: str, chunks: list[ingest.Chunk] | None = None) -> set[Decimal]:
     """Every dollar amount mentioned anywhere in the agency's prose corpus."""
-    return set(prose_amount_chunk_counts(agency, chunks))
+    return set(prose_amount_chunk_ids(agency, chunks))
+
+
+def _compare_agency(
+    agency: str,
+    fares: list[FeedFare],
+    chunks: list[ingest.Chunk],
+) -> list[CrossCheckRecord]:
+    """One agency's feed fares against its prose, with the evidence attached."""
+    prose_chunks = prose_amount_chunk_ids(agency, chunks)
+    free_chunks = sorted(
+        c.chunk_id for c in chunks if c.agency == agency and _FREE_RE.search(c.text)
+    )
+    records: list[CrossCheckRecord] = []
+    for fare in fares:
+        matched = free_chunks if fare.amount == _ZERO else prose_chunks.get(fare.amount, [])
+        records.append(
+            CrossCheckRecord(
+                agency,
+                fare.fare_id,
+                fare.name,
+                str(fare.amount),
+                "yes" if matched else "no",
+                len(matched),
+                sorted(matched)[:_PROSE_CHUNK_SAMPLE],
+            )
+        )
+    return records
 
 
 def cross_check(chunks: list[ingest.Chunk] | None = None) -> list[CrossCheckRecord]:
     """Compare every agency's snapshotted feed fares against its prose corpus.
 
-    An agency with no configured feed, or a configured feed with no snapshot
-    yet (`make gtfs-fetch` not run, or the fetch failed), gets one `no_feed`
-    record so a report reader sees coverage without it reading as a failure.
+    An agency with no configured feed, a manifest entry that declares why no
+    feed could be configured, or a configured feed with no snapshot yet (`make
+    gtfs-fetch` not run, or the fetch failed), gets one `no_feed` record so a
+    report reader sees coverage without it reading as a failure. Each of those
+    three carries its own `reason`; they are different facts about the agency.
     Never used to alter an answer — see module docstring.
     """
     chunks = chunks if chunks is not None else ingest.load_chunks()
-    feeds = load_gtfs_manifest()
-    fed_agencies = {f["agency"] for f in feeds}
+    feeds, declared_no_feed = partition_gtfs_feeds()
+    fed_agencies = {str(f["agency"]) for f in feeds} | {e.agency for e in declared_no_feed}
     corpus_agencies = {c.agency for c in chunks}
     records: list[CrossCheckRecord] = []
 
     for feed in feeds:
-        agency = feed["agency"]
+        agency = str(feed["agency"])
         fares = parse_fares(agency)
         if not fares:
             records.append(
-                CrossCheckRecord(agency, "(no snapshot)", "(no snapshot)", None, "no_feed")
-            )
-            continue
-        prose_counts = prose_amount_chunk_counts(agency, chunks)
-        free_chunks = sum(1 for c in chunks if c.agency == agency and _FREE_RE.search(c.text))
-        for fare in fares:
-            if fare.amount == _ZERO:
-                matches = free_chunks
-            else:
-                matches = prose_counts.get(fare.amount, 0)
-            records.append(
                 CrossCheckRecord(
                     agency,
-                    fare.fare_id,
-                    fare.name,
-                    str(fare.amount),
-                    "yes" if matches else "no",
-                    matches,
+                    "(no snapshot)",
+                    "(no snapshot)",
+                    None,
+                    "no_feed",
+                    reason="configured feed has no validated snapshot; run `make gtfs-fetch`",
                 )
             )
+            continue
+        records.extend(_compare_agency(agency, fares, chunks))
+
+    for entry in sorted(declared_no_feed, key=lambda e: e.agency):
+        records.append(
+            CrossCheckRecord(
+                entry.agency,
+                "(no feed configured)",
+                "(no feed configured)",
+                None,
+                "no_feed",
+                reason=entry.reason,
+            )
+        )
 
     for agency in sorted(corpus_agencies - fed_agencies):
         records.append(
             CrossCheckRecord(
-                agency, "(no feed configured)", "(no feed configured)", None, "no_feed"
+                agency,
+                "(no feed configured)",
+                "(no feed configured)",
+                None,
+                "no_feed",
+                reason="no feed configured; this agency has not been checked",
             )
         )
 
@@ -1092,10 +1219,22 @@ def main() -> None:
         records = cross_check()
         write_report(records)
         for r in records:
-            strength = "" if r.prose_matches is None else f"  [{r.prose_matches} prose chunk(s)]"
-            print(f"{r.feed_agrees:8} {r.agency:10} {r.name} ({r.feed_amount}){strength}")
+            strength = ""
+            if r.prose_matches:
+                where = ", ".join(r.prose_chunks or [])
+                strength = f"  [{r.prose_matches} prose chunk(s): {where}]"
+            elif r.prose_matches == 0:
+                strength = "  [no prose chunk states this amount]"
+            detail = f"  — {r.reason}" if r.feed_agrees == "no_feed" and r.reason else ""
+            print(f"{r.feed_agrees:8} {r.agency:14} {r.name} ({r.feed_amount}){strength}{detail}")
         disagreements = [r for r in records if r.feed_agrees == "no"]
-        print(f"\nwrote {len(records)} record(s) -> {CROSS_CHECK_PATH}")
+        covered = sorted({r.agency for r in records if r.feed_agrees != "no_feed"})
+        agencies = sorted({r.agency for r in records})
+        print(
+            f"\ncoverage: {len(covered)} of {len(agencies)} corpus agencies have a "
+            "snapshotted GTFS-Fares feed"
+        )
+        print(f"wrote {len(records)} record(s) -> {CROSS_CHECK_PATH}")
         # An agreement backed by one prose chunk is evidence; the same agreement
         # backed by a dozen is a collision. Say which this run produced rather
         # than letting a wall of "yes" read as corroboration (#141).
