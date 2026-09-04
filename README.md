@@ -58,11 +58,13 @@ for a visitor to discover by asking about an agency that isn't there
 Nothing above is a prerequisite for anything in this repository: the quick start
 runs entirely offline. `infra/deploy.sh` only promotes a build backed by a
 promoted, full, live evaluation (ADR 0023), and the nightly full run has been
-red on the `cross_agency` gate since the corpus's eighteen-agency expansion
-(#138), so there is currently no fresher run to promote and deploy. The
-unpromoted picture, eighteen agencies, 385 cases, `cross_agency` currently well
-below floor, is in [EVALS.md](EVALS.md) and the nightly run artifact, not on
-either public link above.
+red on two gates since the corpus's eighteen-agency expansion: the
+`cross_agency` macro floor (#138) and the bilingual parity gate, which is
+deliberately unwaivable (#165). So there is currently no fresher run to
+promote and deploy. The unpromoted picture — eighteen agencies, 385 cases,
+`cross_agency` and Spanish parity both currently well below floor — is in
+[EVALS.md](EVALS.md) and the nightly run artifact, not on either public link
+above.
 
 The evidence hub cannot currently be republished at all, and that is a
 stronger statement than "it is behind". `.github/workflows/pages.yml` has run
@@ -133,29 +135,38 @@ See [docs/publishing-the-evidence-hub.md](docs/publishing-the-evidence-hub.md).
 Deployed and evaluated (use the two public entrypoints above), but not
 production-grade: the manual accessibility walkthrough is still pending, the
 judge-calibration sample is 4 scored labels against a floor of 37 (and its
-κ is undefined, not the 1.000 published until 2026-08-05), and the
+κ is undefined, not the 1.000 published until 2026-08-05, #143), the
+bilingual parity gate — deliberately unwaivable — has been failing on the
+full 385-case suite every night since 2026-08-22 (#165), and the
 native-Spanish half of the bilingual equity standard has never been measured
-at all — 0 of its 28 Spanish answers are rated, and the parity gate that reads
-0.0 points cannot see answer quality. All three are tracked in the
-[Standards conformance](#standards-conformance) table below. This is, and is
-meant to be read as, a reference implementation — see the closing note.
+at all — 0 of its 28 Spanish answers are rated. Each of these is tracked in
+the [Standards conformance](#standards-conformance) table below. This is, and
+is meant to be read as, a reference implementation — see the closing note.
 
 This line used to say the EN/ES answer-quality gap exceeded the project's own
-≤5-point target. That was written on 2026-07-05 and is no longer what the
-evidence says: the mirrored-case parity gate has read 0.0 points since the
-2026-07-12 run, and on 2026-08-05 a mirror-integrity gate established that the
-22 pairs it reads that number from really are pairs (three of them were not).
-The measured gap is 0.0 points. What remains open is the part that was never
-measured — a native-Spanish, not machine-translated, benchmark
-(`docs/I18N.md` §7) — and an unmeasured property is not a passing one. That
-half is now defined and scaffolded rather than merely named:
-`evals/spanish_quality.py` publishes the rubric and emits a census of all 28
-Spanish answers from the promoted run, committed blank at
-`evals/spanish/native_es_rubric_2026-08-05.jsonl` and rated with
-`make spanish-quality`. `EVALS.md` carries the state as **not measured**. The
-parity gate compares pass/fail on two answers, and every check behind those
-verdicts is satisfied by Spanish of any quality, which is exactly why 0.0
-points says nothing about how the Spanish reads.
+≤5-point target, then for a while said the gap had closed to 0.0 points.
+Both were true of the run that produced them, and neither is true of the run
+that matters now — which is why this paragraph points at a live report
+instead of a number, from here on. The 0.0 reading came from the 2026-07-12
+promoted run: 22 mirror pairs over the five original agencies (corpus
+`0938fff0539a`), confirmed to really be pairs by a mirror-integrity gate
+added 2026-08-05 (three were not, until then). That report has not been
+replaced since. The suite has grown to 40 mirror pairs across all eighteen
+agencies, and every full run against it has failed the unwaivable parity
+gate every night since 2026-08-22 — 7.5 points the first night (#165), and
+it has not recovered. The current gap is always in
+[EVALS.md](EVALS.md)'s Spanish-parity table, not in this paragraph, because a
+number typed into prose is exactly what went stale last time. What remains
+open regardless of which way the gate reads is the part that was never
+measured at all: a native-Spanish, not machine-translated, benchmark
+(`docs/I18N.md` §7). `evals/spanish_quality.py` publishes that rubric and
+emits a census of all 28 Spanish answers from the 2026-07-12 run, committed
+blank at `evals/spanish/native_es_rubric_2026-08-05.jsonl` and rated with
+`make spanish-quality`; `EVALS.md` carries the state as **not measured**.
+The parity gate compares pass/fail on two answers, and every check behind
+those verdicts is satisfied by Spanish of any quality, which is why neither
+a 0.0 reading nor a failing one says anything about how the Spanish actually
+reads.
 
 ## Standards conformance
 
@@ -177,8 +188,8 @@ rather than as something an outside reader can check against the rubric.
 | Release & Versioning | Applies | Partial. `.github/workflows/release.yml` (added 2026-07-10) is tag-triggered on `v*`: checks the tag matches `pyproject.toml`'s version, re-runs `make verify` at the tagged commit, builds sdist+wheel, generates a CycloneDX 1.7 SBOM, attests SLSA build provenance, and creates a GitHub Release with the matching `CHANGELOG.md` section as notes. Nothing is published to a package index (no PyPI project registered, no other repo pins this one), so the GitHub Release is the publish target, not Trusted Publishing — the pipeline still exists so the deployed artifact is traceable to a signed, tested, tagged build. No tracking issue filed yet. |
 | Accessibility | Applies | Partial. Merge-blocking structural and browser pa11y/axe gates are green, and as of 2026-08-05 the structural gate covers all four public pages rather than the chat page alone — `/embed`, `/offline`, and `/guide` were previously unchecked, and all three passed on the day it was widened. The "Sources" caption is now a heading on both answering surfaces, so screen-reader heading navigation reaches it. The manual screen-reader walkthrough is still pending (`docs/audits/a11y-walkthrough.md`), and nothing above substitutes for it: no screen reader has been used on any of the four pages. |
 | Observability | Applies (Tier: informational/low-traffic demo service — no SLO). Privacy-safe JSON records correlate request/model outcomes with Lambda-owned IDs and expose canonical provider/model, token-derived estimated cost, and request/model duration without content or request metadata. Promotion captures the numbered candidate's real log tail and tests the installed CloudWatch filters before moving `live`. Alarms, dashboard, 14-day retention, and the account's $20/month `fare-demo` AWS Budget provide layered backstops; a confirmed SNS subscriber remains operator-supplied. | — |
-| Internationalization | Applies | English and Spanish are the supported answer languages. Gettext catalogs for EN/ES/TL have 9 merge-blocking gates (`docs/I18N.md`), but Tagalog remains experimental: its 15-case stretch suite uses cross-lingual retrieval over a corpus with no agency-authored Tagalog source page and is excluded from the production-core release denominator. The Spanish parity delta is 0.0 points over 22 mirror pairs, each of which a merge-blocking mirror-integrity gate holds to the same agency, expected behavior, and required-fact count as the English case it mirrors (added 2026-08-05; it found three malformed pairs, all of which had been reporting parity). Still open: the §7 native-Spanish benchmark has never been run, so the 0.0 covers this repo's own mirrored cases and nothing beyond them. It is now scaffolded, not just named — a published rubric plus a committed, entirely blank census of all 28 Spanish answers (`evals/spanish/native_es_rubric_2026-08-05.jsonl`, `make spanish-quality`), reported in `EVALS.md` as **not measured** and never as a zero; 0 of 28 are rated and 0 of 28 questions are externally sourced. Separately, the second-harness lexical multilingual proxy remains below threshold at 0.581, computed over a `golden.jsonl` export that still carries the three pre-repair pairings. |
-| AI Evaluation | Applies | This is the project's thesis: 186 production-core English/Spanish cases, 15 separately reported experimental Tagalog cases, versioned prompts, a committed regression baseline, and a second-harness Plumbline replay that runs on every pull request (that harness is a separate project by the same author, so the replay is not a third-party audit; it is public and replay-only, so anyone can rerun it — `make audit`, offline, no keys). The promoted baseline remains **192/201 (95.5%)** overall and **177/186 (95.2%)** production-core. The latest observed nightly is lower at **190/201 overall and 175/186 production-core**, with the cross-agency gate red, so it has not replaced the baseline. A direct probe confirmed both the answer and judge models are deterministic at temperature 0. Judge calibration is the weakest evidence here and is now labeled as such on the report itself: 4 scored labels against a floor of 37 (10% of the promoted run's 367 judged pairs), and κ is **undefined**, not the 1.000 published until 2026-08-05 — every label that recorded a human/judge disagreement had gone stale, so the surviving sample was the agreeing half and could only report 100%. A floor-sized, failure-first relabeling worksheet is committed at `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` (`python -m evals.calibration --worksheet <run_dir>`); it holds 37 unlabeled rows and needs a human. `make relabel` walks those rows offline, showing each one's judge criterion, question, retrieved passages, and answer, and recording the reviewer's verdict and reason; it never proposes a verdict and withholds the judge's own call until after the reviewer has given theirs. |
+| Internationalization | Applies | English and Spanish are the supported answer languages. Gettext catalogs for EN/ES/TL have 9 merge-blocking gates (`docs/I18N.md`), but Tagalog remains experimental: its 15-case stretch suite uses cross-lingual retrieval over a corpus with no agency-authored Tagalog source page and is excluded from the production-core release denominator. The Spanish parity gate (M-1, deliberately unwaivable) checks pass/fail pairs held to the same agency, expected behavior, and required-fact count as the English case they mirror, since a merge-blocking mirror-integrity gate added 2026-08-05 (it found three malformed pairs among the original 22, all of which had been reporting parity). The 2026-07-12 promoted run that `EVALS.md` still carries read a 0.0-point delta over those 22 pairs, across five agencies — and has not been superseded: the suite has since grown to 40 mirror pairs across all eighteen agencies, and every full run against that larger suite has failed the gate every night since 2026-08-22 (#165). Current gap in [EVALS.md](EVALS.md)'s Spanish-parity table, not restated here. Still open regardless of which way the gate reads: the §7 native-Spanish benchmark has never been run, so neither the 0.0 nor a failing number says anything about how the Spanish actually reads, only whether it passes the same pass/fail checks as its English mirror. It is now scaffolded, not just named — a published rubric plus a committed, entirely blank census of all 28 Spanish answers (`evals/spanish/native_es_rubric_2026-08-05.jsonl`, `make spanish-quality`), reported in `EVALS.md` as **not measured** and never as a zero; 0 of 28 are rated and 0 of 28 questions are externally sourced. Separately, the second-harness lexical multilingual proxy remains below threshold at 0.581, computed over a `golden.jsonl` export that still carries the three pre-repair pairings. |
+| AI Evaluation | Applies | This is the project's thesis: the full suite is 385 cases across nine suites — English/Spanish production-core plus 15 separately reported experimental Tagalog cases — with versioned prompts, a committed regression baseline, and a second-harness Plumbline replay that runs on every pull request (that harness is a separate project by the same author, so the replay is not a third-party audit; it is public and replay-only, so anyone can rerun it — `make audit`, offline, no keys). The promoted, committed baseline in `EVALS.md` is a smaller, older run from before the eighteen-agency expansion: **192/201 (95.5%)** overall and **177/186 (95.2%)** production-core. It has not been replaced: every full run against the current 385-case suite has failed the merge gate every night since 2026-08-22, on two gates at once — the below-macro `cross_agency` floor (#138) and the bilingual parity gate, deliberately unwaivable (#165). Current per-suite numbers for the latest run are always in [EVALS.md](EVALS.md)'s scoreboard and the nightly run artifact; a figure typed into this row would be wrong within a day, which is exactly how the row's previous numbers went stale. A direct probe confirmed both the answer and judge models are deterministic at temperature 0. Judge calibration is the weakest evidence here and is now labeled as such on the report itself: 4 scored labels against a floor of 37 (10% of the promoted run's 367 judged pairs), and κ is **undefined**, not the 1.000 published until 2026-08-05 (#143) — every label that recorded a human/judge disagreement had gone stale, so the surviving sample was the agreeing half and could only report 100%. A floor-sized, failure-first relabeling worksheet is committed at `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` (`python -m evals.calibration --worksheet <run_dir>`); it holds 37 unlabeled rows and needs a human. `make relabel` walks those rows offline, showing each one's judge criterion, question, retrieved passages, and answer, and recording the reviewer's verdict and reason; it never proposes a verdict and withholds the judge's own call until after the reviewer has given theirs. |
 | Documentation | Applies | Partial. This table is new (2026-07-05); ADRs, model card, and CONTRIBUTING exist and are dated. `CHANGELOG.md` added 2026-07-05. No tracking issue filed yet. |
 | Responsible-Tech Framework | Applies (civic domain touching age/disability/income/veteran status). Misuse-resistance is code-enforced and tested (`src/assistant/guards.py`). The three governance artifacts now exist, synthesized from ADR 0004, `SECURITY.md`, and the model card: a DPIA (`docs/dpia.md`), an AI risk register (`docs/ai-risk-register.md`), and an EU-AI-Act classification (`docs/eu-ai-act-classification.md`) — the last of which shows the "never determine eligibility" invariant is what keeps the system below the Annex III high-risk line. | — |
 
@@ -212,12 +223,18 @@ by the evaluation suites (`evals/suites/`). The model card
 
 ## How it is evaluated
 
-186 production-core English/Spanish cases, plus 15 explicitly experimental
-Tagalog stretch cases, across nine suites. Each case is written against a
-specific passage in the corpus and readable by a non-engineer. The 201-case
-research total includes 30 counterfactual sensitivity variants; the Tagalog
-cases are reported separately and do not contribute to the production release
-denominator.
+The full suite is 385 cases across nine suites — English/Spanish production-core
+plus 15 explicitly experimental Tagalog stretch cases, and it has held that
+size since the corpus's eighteen-agency expansion completed 2026-08-14. Each
+case is written against a specific passage in the corpus and readable by a
+non-engineer. The Tagalog cases are reported separately and do not contribute
+to the production release denominator. The committed, promoted
+[EVALS.md](EVALS.md) report is a smaller, older run predating that
+expansion — 186 production-core cases plus 15 Tagalog, 201 in total, with 30
+of the 186 counterfactual sensitivity variants — and nothing larger has been
+promoted since (see "The two public links" above for why). Exact current
+per-suite counts and pass rates are always in EVALS.md's scoreboard and the
+nightly run artifact, not restated here.
 
 The harness is validated beyond its own scoreboard: a defect-injection self-test
 proves the gate catches planted bugs (`make eval-selftest`), a coverage map
