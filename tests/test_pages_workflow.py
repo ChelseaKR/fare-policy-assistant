@@ -62,28 +62,81 @@ def _workflow() -> tuple[str, dict]:
     return text, parsed
 
 
-def test_workflow_run_trigger_is_scoped_to_the_ci_workflow() -> None:
+def test_the_workflow_does_not_use_workflow_run() -> None:
+    """Regression test for the design this file replaced.
+
+    An earlier version of this workflow used `workflow_run` on CI's
+    completion to drive the nightly path. zizmor's `dangerous-triggers` rule
+    flags that trigger categorically (`workflow_run is almost always used
+    insecurely`), and this repo's zizmor gate is unsuppressible by design
+    (`zizmor (blocking; no mute)`) -- 26 other findings are muted inline and
+    this rule is not, on purpose. `test_zizmor_reports_no_findings` below
+    proves the live consequence when zizmor is available locally; this
+    assertion is the one-line version that always runs, so a `workflow_run`
+    reintroduced here fails fast without needing zizmor installed at all.
+    """
     _, parsed = _workflow()
-    trigger = parsed["on"]["workflow_run"]
-    assert trigger["workflows"] == ["CI"]
-    assert "completed" in trigger["types"]
+    assert "workflow_run" not in parsed["on"]
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    assert not re.search(r"^\s*workflow_run:", text, flags=re.MULTILINE), (
+        "a workflow_run trigger key reappeared -- comments discussing the "
+        "trigger by name are fine, a `workflow_run:` block under `on:` is not"
+    )
 
 
-def test_nightly_jobs_run_on_both_success_and_failure_not_success_only() -> None:
-    """The regression this test exists to catch: gating on success alone
+def test_zizmor_reports_no_findings() -> None:
+    """The exact command CI's unsuppressible `zizmor (blocking; no mute)` step
 
-    reproduces issue #140 exactly, just with a later frozen date, because the
-    nightly has failed fourteen nights running when this was written. Publish
-    must not depend on the gate passing.
+    runs. Skipped, not failed, when zizmor is not on PATH: unlike the
+    freshness-script check below (which has no other executor anywhere in
+    CI), this property already has a real, always-on, unsuppressible gate in
+    `.github/workflows/zizmor.yml` on every PR that touches workflow files --
+    a local skip here does not create a check that cannot fail, it just means
+    this particular machine cannot preview that gate's answer early.
+    """
+    zizmor = shutil.which("zizmor")
+    if zizmor is None:
+        pytest.skip("zizmor is not on PATH; the real gate is .github/workflows/zizmor.yml")
+    completed = subprocess.run(
+        [zizmor, "--min-severity", "high", str(_WORKFLOW.parent)],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_schedule_trigger_polls_several_times_a_day() -> None:
+    """A single check a day would race a slow nightly and, worse, would only
+
+    notice a missing nightly once every 24 hours instead of within one
+    six-hour cycle.
+    """
+    _, parsed = _workflow()
+    crons = parsed["on"]["schedule"]
+    assert len(crons) == 1
+    hours = crons[0]["cron"].split()[1]
+    assert len(hours.split(",")) >= 4, f"expected at least four checks a day, got {hours!r}"
+
+
+def test_nightly_jobs_publish_a_run_regardless_of_its_conclusion() -> None:
+    """The regression this test exists to catch: gating publication on the
+
+    nightly *passing* reproduces issue #140 exactly, just with a later frozen
+    date, because the nightly has failed fourteen nights running when this
+    was written. The job-level `if:` no longer mentions success/failure at
+    all (that decision moved into the "Find the most recently completed
+    nightly CI run" step, which is why it is tested by executing the render
+    step against both conclusions below) -- what the job-level guard must
+    still never do is require a specific conclusion.
     """
     _, parsed = _workflow()
     for job in ("nightly-build", "nightly-deploy"):
         condition = parsed["jobs"][job]["if"]
-        assert "workflow_run.conclusion == 'success'" in condition
-        assert "workflow_run.conclusion == 'failure'" in condition
-        assert "workflow_run.event == 'schedule'" in condition, (
-            f"{job} must never fire off a pull_request- or push-triggered CI run"
+        assert "conclusion == 'success'" not in condition, (
+            f"{job} must not gate on the nightly passing"
         )
+        assert "workflow_run" not in condition
 
 
 def test_nightly_publication_is_off_by_default_behind_a_named_switch() -> None:
@@ -101,11 +154,11 @@ def test_nightly_publication_is_off_by_default_behind_a_named_switch() -> None:
         )
 
 
-def test_manual_dispatch_jobs_are_scoped_away_from_workflow_run_events() -> None:
+def test_manual_dispatch_jobs_are_scoped_away_from_schedule_events() -> None:
     """Adding a second trigger to `on:` without gating the original jobs would
 
     make `build`/`deploy` attempt to run (and fail on empty `inputs.*`) on
-    every nightly `workflow_run` event too.
+    every scheduled nightly-poll tick too.
     """
     _, parsed = _workflow()
     for job in ("build", "deploy"):

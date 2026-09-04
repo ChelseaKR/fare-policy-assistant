@@ -11,10 +11,12 @@ Everything below this notice describes the `workflow_dispatch` promotion
 pipeline as it stood on 2026-08-28, and it is still accurate about that
 pipeline: it has still never run against real evidence, and the three
 blockers this document lists still stand. What has changed is that it is no
-longer the *only* path to the domain. `pages.yml` also has a `workflow_run`
-job pair (`nightly-build` / `nightly-deploy`) that republishes automatically
-after every completed nightly `ci.yml` run, whether that run's gates passed or
-not, labeled honestly either way and carrying a read-time staleness banner.
+longer the *only* path to the domain. `pages.yml` also has its own `schedule`
+trigger and a job pair (`nightly-build` / `nightly-deploy`) that polls the CI
+workflow's run history four times a day and republishes whatever the most
+recently completed nightly `ci.yml` run is, whether that run's gates passed,
+failed, or never ran at all, labeled honestly either way and carrying a
+read-time staleness banner.
 See [ADR 0032](decisions/0032-the-nightly-hub-publishes-every-run-pass-or-fail.md)
 for why publishing a failing run is correct here rather than a regression of
 the guarantee below, and for the one thing that pipeline deliberately does

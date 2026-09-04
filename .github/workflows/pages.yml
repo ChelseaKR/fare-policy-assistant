@@ -7,11 +7,20 @@
 # (verify_promotion_evidence refuses anything else) and, as of this file's last
 # review, has never had evidence to publish — see docs/publishing-the-evidence-hub.md.
 #
-# `workflow_run` (added 2026-09-04, issue #140): republishes automatically after
-# every completed nightly CI run, pass or fail, so the hub tracks a real measurement
-# instead of freezing at the last manual dispatch. See
-# docs/decisions/0032-the-nightly-hub-publishes-every-run-pass-or-fail.md for why
-# publishing a failing run is the correct behavior here, not a regression of it.
+# `schedule` (added 2026-09-04, issue #140): republishes several times a day
+# from whatever the CI workflow's most recently completed nightly run is, pass
+# or fail, so the hub tracks a real measurement instead of freezing at the last
+# manual dispatch. Deliberately NOT `workflow_run` on CI's completion: zizmor
+# (`zizmor (blocking; no mute)`, this repo's one unsuppressible finding class)
+# flags `workflow_run` as categorically insecure, and this repo treats that
+# rule as categorical rather than arguing a suppression past it. Polling on our
+# own schedule instead of reacting to CI's event also buys something a
+# workflow_run consumer cannot structurally have: it still runs, and still
+# republishes, on a night the nightly never fires at all — see the
+# "nightly-build" job below and
+# docs/decisions/0032-the-nightly-hub-publishes-every-run-pass-or-fail.md for
+# why publishing a failing (or missing) run is the correct behavior here, not
+# a regression of it.
 #
 # One-time setup: Settings → Pages → Source = "GitHub Actions".
 name: Pages
@@ -31,9 +40,14 @@ on:
         description: Lowercase SHA-256 of the exact canonical public-evidence.json
         required: true
         type: string
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  schedule:
+    # Four checks a day, not one: CI's own nightly cron (17 9 UTC) can run
+    # long with 385 live cases, so a single check soon after would race it.
+    # Spacing these six hours apart means a late-finishing nightly is picked
+    # up within one cycle, and — as important — a nightly that never starts
+    # at all still gets a publish attempt four times that day instead of
+    # zero, each one able to notice and say so.
+    - cron: "17 3,9,15,21 * * *"
 
 permissions:
   contents: read
@@ -273,64 +287,101 @@ jobs:
           echo "observed: ${observed_sha256:-unavailable}" >&2
           exit 1
 
-  # --- nightly: publish last night's real run, pass or fail -------------------
-  # Automatic, from `workflow_run` on the "CI" workflow, restricted to its
-  # `schedule`-triggered runs only -- never a pull_request or push run, so this
-  # never checks out or executes anything from a fork or an untrusted branch.
-  # `head_sha` and `id` come from the completed workflow_run event, not from any
-  # attacker-influenced input.
+  # --- nightly: publish the most recent nightly run, pass, fail, or missing ---
+  # Automatic, from our own `schedule` (above), not from `workflow_run` on CI's
+  # completion. zizmor's `dangerous-triggers` rule flags `workflow_run` as
+  # categorically insecure regardless of how the consumer guards it, this
+  # repo's zizmor gate is unsuppressible by design (`zizmor (blocking; no
+  # mute)`), so the earlier `workflow_run` design in this file was replaced
+  # rather than argued past. Polling on a timer instead of reacting to an
+  # event also closes a gap that design had: a `workflow_run` consumer only
+  # ever runs when CI produces a completed run to react to, so a night the
+  # nightly never fires at all -- schedule disabled, billing block (this has
+  # happened before), CI itself broken -- is a night this job would never have
+  # run either, silently. Polling runs regardless, four times a day, and finds
+  # whatever the most recent completed nightly actually is, however old.
   #
-  # Downloads the "eval-report" artifact ci.yml's full-evals-nightly job already
-  # uploads (EVALS.md, docs/eval-report.html, evals/runs/) and republishes only
-  # the two files that are already public by established convention: EVALS.md's
-  # machine-readable `<!-- provenance {...} -->` block (the same format
-  # evals/provenance.py and evals/report.py read and write) and a byte-for-byte
-  # copy of docs/eval-report.html. Nothing under evals/runs/ is read or copied.
+  # Queries the CI workflow's own run history through the read-only Actions
+  # API (`gh api`, same-repo, same `GITHUB_TOKEN` already scoped `actions:
+  # read` for the artifact download two steps down) rather than trusting any
+  # externally supplied identifier, so there is nothing here for an
+  # attacker-controlled value to reach.
+  #
+  # Downloads the "eval-report" artifact ci.yml's full-evals-nightly job
+  # already uploads (EVALS.md, docs/eval-report.html, evals/runs/) from
+  # whichever run the query names, and republishes only the two files that
+  # are already public by established convention: EVALS.md's machine-readable
+  # `<!-- provenance {...} -->` block (the same format evals/provenance.py and
+  # evals/report.py read and write) and a byte-for-byte copy of
+  # docs/eval-report.html. Nothing under evals/runs/ is read or copied.
   #
   # No write credential is used anywhere in this path -- there is no
-  # evidence-only commit to bind, only files this run already produced.
+  # evidence-only commit to bind, only files a past run already produced.
   #
   # Off by default. `vars.NIGHTLY_HUB_PUBLISH_ENABLED` is unset until an
   # operator sets it to the literal string "true" in Settings -> Secrets and
   # variables -> Actions -> Variables. Landing this workflow publishes a
   # currently-failing scoreboard to a public site the moment it first runs;
   # that first publish is deliberately not a consequence of merging this PR or
-  # of any nightly run completing on its own. It is a decision an operator
+  # of any scheduled tick firing on its own. It is a decision an operator
   # makes once, explicitly, after reading docs/decisions/0032. Every run before
   # that stays a no-op: nightly-build and nightly-deploy both skip.
   nightly-build:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.name == 'CI' &&
-      github.event.workflow_run.event == 'schedule' &&
-      (github.event.workflow_run.conclusion == 'success' ||
-       github.event.workflow_run.conclusion == 'failure') &&
+      github.event_name == 'schedule' &&
       vars.NIGHTLY_HUB_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       actions: read
-    env:
-      RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-      RUN_URL: ${{ github.event.workflow_run.html_url }}
     steps:
-      - name: Check out the commit the nightly actually tested
+      - name: Check out main
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           path: source
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Download the nightly's own eval-report artifact
+      - name: Find the most recently completed nightly CI run
+        id: nightly
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          run_json="$(
+            gh api "repos/$REPO/actions/workflows/ci.yml/runs" \
+              -f event=schedule -f status=completed -f per_page=1 \
+              --jq '.workflow_runs[0] // empty'
+          )"
+          if [[ -z "$run_json" ]]; then
+            echo "no completed, schedule-triggered CI run exists at all -- refusing to publish" >&2
+            exit 1
+          fi
+          conclusion="$(jq -r '.conclusion' <<<"$run_json")"
+          if [[ "$conclusion" != "success" && "$conclusion" != "failure" ]]; then
+            echo "most recent completed nightly CI run concluded '$conclusion' -- not success or failure, skipping this cycle" >&2
+            exit 1
+          fi
+          {
+            echo "run_id=$(jq -r '.id' <<<"$run_json")"
+            echo "conclusion=$conclusion"
+            echo "html_url=$(jq -r '.html_url' <<<"$run_json")"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Download that run's eval-report artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: eval-report
           path: nightly-report
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.nightly.outputs.run_id }}
           github-token: ${{ github.token }}
 
-      - name: Render the nightly snapshot from last night's real numbers
+      - name: Render the nightly snapshot from that run's real numbers
+        env:
+          RUN_CONCLUSION: ${{ steps.nightly.outputs.conclusion }}
+          RUN_URL: ${{ steps.nightly.outputs.html_url }}
         shell: bash
         run: |
           set -euo pipefail
@@ -516,11 +567,7 @@ jobs:
   # with `id-token: write` and `pages: write`.
   nightly-deploy:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.name == 'CI' &&
-      github.event.workflow_run.event == 'schedule' &&
-      (github.event.workflow_run.conclusion == 'success' ||
-       github.event.workflow_run.conclusion == 'failure') &&
+      github.event_name == 'schedule' &&
       vars.NIGHTLY_HUB_PUBLISH_ENABLED == 'true'
     needs: nightly-build
     runs-on: ubuntu-latest

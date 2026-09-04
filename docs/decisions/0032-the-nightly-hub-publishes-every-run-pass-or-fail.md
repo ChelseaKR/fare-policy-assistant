@@ -40,9 +40,11 @@ whatever the last passing run was, which reproduces issue #140 exactly, just
 with a later frozen date. A fix that only works when the underlying system is
 healthy is not a fix for the case that matters, which is when it is not.
 
-So a second, independent publication path is added (`workflow_run` on `ci.yml`,
-restricted to its `schedule`-triggered runs) that renders and deploys a
-**nightly snapshot** — a different page
+So a second, independent publication path is added: `pages.yml` gains its own
+`schedule` trigger, four times a day, that queries the CI workflow's own run
+history through the read-only Actions API for the most recently completed
+nightly (`schedule`-triggered) run and renders and deploys a **nightly
+snapshot** from whatever it finds — a different page
 (`docs/pages/nightly-index.html`, not `docs/pages/index.html`) with different
 claims:
 
@@ -71,6 +73,45 @@ daily, so a gap that wide means the nightly has gone quiet, not just run late.
 `docs/decisions/0031`'s "GitHub Actions billing block RECURRED" is the concrete
 failure mode this defends: publishing stops silently, and only a page that
 notices its own age catches it.
+
+## Why `schedule` polling a run history, not `workflow_run` reacting to one
+
+The first version of this change used `workflow_run` on `ci.yml`'s
+completion, restricted with `github.event.workflow_run.event == 'schedule'` so
+it could only ever fire off a genuine nightly run and never a pull_request- or
+push-triggered one. That restriction is real and the analysis behind it holds
+up; it is not why it changed. It changed because zizmor's `dangerous-triggers`
+rule flags `workflow_run` categorically — "almost always used insecurely,"
+regardless of how the consumer guards it — and this repository's zizmor gate
+(`zizmor (blocking; no mute)`) is deliberately unsuppressible: 26 other
+findings across the workflow set are muted with inline justifications, and
+this rule is not one of them, on purpose. Arguing a suppression past a gate
+built specifically not to take one is the same move as widening a freshness
+budget nobody can see (ADR 0030) or loosening a gate under pressure — correct
+in this one instance, maybe, and a habit this repository has chosen not to
+practice. So the trigger was replaced rather than the finding suppressed.
+
+The replacement queries `GET /repos/{repo}/actions/workflows/ci.yml/runs`
+(`event=schedule`, `status=completed`, newest first) through `gh api`, using
+the same same-repo `GITHUB_TOKEN` already scoped `actions: read` for the
+artifact download two steps later. Nothing here reaches outside the
+repository's own run history, and nothing in the query is attacker-influenced.
+
+This turned out to be strictly better on the merits, not just an equally-safe
+substitute. A `workflow_run` consumer only ever runs when CI produces a
+completed run to react to — a night the nightly never fires at all (schedule
+disabled, the GitHub Actions billing block from ADR 0031's history recurring,
+CI itself broken) is a night that consumer would never have run either,
+silently, and the hub's only defense would have been the client-side
+freshness banner eventually going stale on its own. A poller does not have
+that gap: it runs on its own four-times-a-day schedule regardless of what CI
+did or did not do, finds whatever the most recently completed nightly run
+actually is (however old), and republishes with two independent timestamps on
+the page — when that run happened, and when the publisher last checked for a
+newer one. When the second keeps advancing and the first does not, a reader
+knows the checker is alive and the nightly itself is what went quiet, which is
+exactly the "absence rendered as a value" shape this portfolio keeps finding
+in other repos, closed here instead of reproduced.
 
 ## What is not done here
 

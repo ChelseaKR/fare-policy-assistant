@@ -1251,7 +1251,7 @@ def test_cli_failure_is_nonzero_and_sanitized(
 #: nightly jobs begin) keeps every assertion here scoped to the pipeline it was
 #: written to constrain, rather than either weakening it or making it fail for
 #: an unrelated, intentional reason.
-_NIGHTLY_MARKER = "\n  # --- nightly: publish last night's real run, pass or fail"
+_NIGHTLY_MARKER = "\n  # --- nightly:"
 
 
 def _strict_pipeline_text() -> str:
@@ -1265,7 +1265,7 @@ def test_pages_workflow_is_manual_commit_and_digest_pinned_and_sanitized() -> No
     parsed = yaml.load(_WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
 
     assert isinstance(parsed, dict)
-    assert set(parsed["on"]) == {"workflow_dispatch", "workflow_run"}
+    assert set(parsed["on"]) == {"workflow_dispatch", "schedule"}
     inputs = parsed["on"]["workflow_dispatch"]["inputs"]
     assert set(inputs) == {
         "source_revision",

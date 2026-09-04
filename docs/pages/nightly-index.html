@@ -7,15 +7,21 @@
   content="default-src 'none'; script-src '{{SCRIPT_SRC_HASH}}'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Nightly evaluation snapshot — Transit Fare Policy Assistant</title>
 <!--
-  Rendered by the "nightly-build" job in .github/workflows/pages.yml, once per
-  completed nightly CI run (pass or fail — see docs/decisions/0032). This is a
-  DIFFERENT template from docs/pages/index.html on purpose: that page can only
-  ever say "Verified" (require_current_public_evidence refuses to render
-  anything else, see ADR 0030) and can only be produced from a promoted
+  Rendered by the "nightly-build" job in .github/workflows/pages.yml, on our
+  own `schedule` (four times a day), from whatever the CI workflow's most
+  recently completed nightly run is -- pass, fail, or several days old if the
+  nightly itself has stopped firing (see docs/decisions/0032). Deliberately
+  not driven by a `workflow_run` reaction to that run completing: this repo's
+  zizmor gate is unsuppressible and flags that trigger categorically, and a
+  poller notices a missing nightly in a way a completion-reactive job cannot.
+  This is a DIFFERENT template from docs/pages/index.html on purpose: that page
+  can only ever say "Verified" (require_current_public_evidence refuses to
+  render anything else, see ADR 0030) and can only be produced from a promoted
   release, which this repository has not had since 2026-07-12. This page
-  publishes last night's real, un-promoted measurement instead, labeled as
-  exactly that, so the hub is never older than one failed nightly rather than
-  frozen at the last successful manual dispatch.
+  publishes the most recent real, un-promoted measurement instead, labeled as
+  exactly that, so the hub is never older than one publisher cycle behind
+  whatever the nightly has actually produced -- rather than frozen at the last
+  successful manual dispatch.
   Every build fills in the markers below; the render step fails loudly if the
   set of markers in this file and the set it knows how to fill ever disagree.
 -->
@@ -106,9 +112,13 @@
     <strong class="status-label" id="evidence-status-label">{{GATE_LABEL}}</strong>
     <p id="evidence-status-detail">{{GATE_DETAIL}}</p>
     <p>Evaluated <time datetime="{{RUN_AT}}">{{RUN_AT}}</time> ({{RUN_MODE}}),
-      corpus <code>{{CORPUS_VERSION}}</code>. Published from
-      <a href="{{RUN_URL}}">this CI run</a> at
-      <time datetime="{{PUBLISHED_AT}}">{{PUBLISHED_AT}}</time>.</p>
+      corpus <code>{{CORPUS_VERSION}}</code>, from
+      <a href="{{RUN_URL}}">this CI run</a>. This page's publisher checks for a
+      newer nightly run several times a day whether or not one has actually
+      appeared, and last did so at
+      <time datetime="{{PUBLISHED_AT}}">{{PUBLISHED_AT}}</time> — if that instant
+      is recent and the run above is not, the checker is working and the
+      nightly itself is what stopped.</p>
     <p id="evidence-freshness">That status was settled when this page was built, and
       nothing rebuilds it as it ages. It expires
       <time datetime="{{EXPIRES_AT}}">{{EXPIRES_AT}}</time> — past that instant the
