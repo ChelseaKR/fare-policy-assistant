@@ -124,6 +124,24 @@ generic_edit:
       terminology dimension points at corpus/processed/mst-fares-es.md as the
       reference for published vocabulary, which must be re-stated as the new
       domain's own source-language document.
+  - path: evals/spanish_retrieval_parity.py
+    marker: "_is_reduced_fare_query"
+    note: >
+      The mechanism is generic: for every mirror pair in the parity suite it
+      asks whether the non-English question reached the same evidence its
+      English mirror reached — same agency scope, same augmentation helpers
+      fired, own required facts present in its own retrieved set, and what
+      share of the mirror's documents it also found. That separates a
+      retrieval cause from a model cause when the parity gate fires, which is
+      a question any bilingual domain has. Two things here are this domain's.
+      The target language is Spanish (`SPANISH = "es"`), for the same reason
+      as evals/spanish_quality.py; a new domain names its own. And the
+      augmentation gates it reads by name, `_is_reduced_fare_query` and
+      `_is_child_fare_query`, are this corpus's "close the loop" categories —
+      a new domain re-states them as its own retrieval's query-side gates, or
+      drops the column. Unknown names are reported as unknown rather than
+      raising, so an unedited copy degrades to the scope/facts/evidence
+      columns instead of breaking.
   - path: evals/selftest.py
     marker: "DD Form 214"
     note: >
