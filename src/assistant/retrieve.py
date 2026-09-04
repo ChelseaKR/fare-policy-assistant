@@ -401,6 +401,12 @@ _FARE_TABLE_PRICE = re.compile(r"\$\s?\d")
 # is a guard against a future thin agency rather than an active filter.
 _FARE_TABLE_MIN_PRICES = 4
 
+# How relevant the schedule must be, relative to the agency's best retrieved
+# passage, to be worth appending when that best passage is ALREADY a priced
+# table. See `Retriever._dominated_by_a_better_table` for the measurement and
+# for ground-024, the live regression that made this necessary.
+_FARE_SCHEDULE_RELEVANCE_FLOOR = 0.25
+
 # A question asking for an AMOUNT, in the three languages the assistant
 # answers in. Deliberately the rider's vocabulary rather than the agencies':
 # "what's the most I'll be charged?" (edge-actransit-001) and "magkano ang
@@ -910,7 +916,18 @@ class Retriever:
         above for why BM25 loses it — a table names each fare once, the prose
         around it names them repeatedly — and for the measured ranks. Mirrors
         the three helpers above exactly: append at most one passage per
-        relevant agency, never remove anything."""
+        relevant agency, never remove anything.
+
+        The `_dominated_by_a_better_table` guard is not decoration. Without it
+        this helper made ground-024 worse, live and reproducibly: "How much
+        does a BeeLine on-demand ride in Woodland cost?" retrieves
+        `yolobus-fares#2` first, the BeeLine table that prices Woodland at
+        $3.00, and the answer was correct. Appending Yolobus's general
+        fixed-route schedule (`yolobus-fares#1`, Local $2.00) put a second,
+        off-topic price table in front of the model and the answer became
+        "$2.00". That is this repo's own headline defect — a number attributed
+        to the wrong table — caused by the fix for it, which makes the guard
+        part of the fix rather than a refinement of it."""
         if not _is_fare_price_query(question):
             return results
         targets = self._augmentation_targets(question, agencies, results)
@@ -922,9 +939,42 @@ class Retriever:
                 continue  # this agency has no schedule, or it is already in hand
             for sc in ranked:
                 if sc.chunk.chunk_id in schedule and sc.chunk.chunk_id not in present:
-                    additions.append(sc)
+                    if not self._dominated_by_a_better_table(ag, sc, results):
+                        additions.append(sc)
                     break
         return results + additions
+
+    def _dominated_by_a_better_table(
+        self, agency: str, schedule: ScoredChunk, results: list[ScoredChunk]
+    ) -> bool:
+        """True when BM25 has already found this agency a priced table that
+        answers the question far better than its general schedule would.
+
+        The rider who asks about one specific priced product — an on-demand
+        zone, a single route — is served by the table for that product, and
+        the agency's general schedule is then a competing set of numbers for a
+        different service. Appending it is pure risk: the guarantee this helper
+        provides is that a missing number arrives, and no number is missing.
+
+        Both conditions have to hold, which is what keeps the guard narrow.
+        Measured over the eleven facts this helper recovers, the schedule's
+        score as a fraction of the agency's best retrieved passage runs 0.33 to
+        0.75, and the three of those whose best passage is itself a priced
+        table sit at 0.75, 0.44 and 0.37. ground-024 sits at 0.13 — its best
+        passage outscores the schedule nearly eightfold. The floor is set
+        between them with roughly a threefold margin to the nearest case it
+        must keep.
+        """
+        best = max(
+            (sc for sc in results if sc.chunk.agency == agency),
+            key=lambda sc: sc.score,
+            default=None,
+        )
+        if best is None or best.score <= 0:
+            return False
+        if _priced_products(best.chunk) < _FARE_TABLE_MIN_PRICES:
+            return False  # the best passage is prose; the schedule is still needed
+        return schedule.score / best.score < _FARE_SCHEDULE_RELEVANCE_FLOOR
 
     def _ensure_effective_date_passage(
         self,

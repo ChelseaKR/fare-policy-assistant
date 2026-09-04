@@ -554,6 +554,29 @@ class TestFareSchedulePassage:
         schedule = corpus_retriever._fare_schedule_ids("CCCTA")
         assert len([sc for sc in results if sc.chunk.chunk_id in schedule]) == 1
 
+    def test_a_better_table_for_the_asked_product_is_not_second_guessed(self, corpus_retriever):
+        """ground-024, the live regression this guard exists for. Yolobus
+        prices BeeLine on-demand in its own table, `yolobus-fares#2`, which
+        BM25 already ranks first for this question. Appending Yolobus's general
+        fixed-route schedule put a competing set of numbers in front of the
+        model and the live answer moved from Woodland's $3.00 to the
+        fixed-route $2.00. The schedule must not be added here."""
+        question = "How much does a BeeLine on-demand ride in Woodland cost?"
+        results = corpus_retriever.search(question)
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert "yolobus-fares#2" in ids
+        assert "yolobus-fares#1" not in ids
+
+    def test_the_guard_only_fires_when_the_best_passage_is_itself_a_table(self, corpus_retriever):
+        """Containment on the guard: it must not suppress the schedule when the
+        agency's best retrieved passage is prose, which is the ordinary case
+        this helper exists for."""
+        results = corpus_retriever.search(
+            "I pay per ride with Clipper on AC Transit local buses. "
+            "If I keep riding all day, what's the most I'll be charged?"
+        )
+        assert "actransit-fares#1" in [sc.chunk.chunk_id for sc in results]
+
     def test_nothing_is_ever_removed(self, corpus_retriever):
         question = "What's the discount single-ride fare on MST?"
         with_helper = {sc.chunk.chunk_id for sc in corpus_retriever.search(question)}
