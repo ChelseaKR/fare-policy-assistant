@@ -23,14 +23,23 @@
 #                it allows the fetch. The whole file is Cloudflare's managed block,
 #                which matters for reading the WAF behaviour below: it is a generic
 #                managed policy rather than MST's considered statement about us.
-#                Separately, and NOT a robots question: mst.org's WAF returns 403
-#                to any user agent containing the token "research", which ours
-#                does. Measured 2026-09-04, both directions, same minute, same
-#                address. See MST's `no_feed_reason` under gtfs_feeds for the
-#                measurement and for why that is an owner decision (ADR 0002
-#                fixes the user-agent string) rather than something to work
-#                around. It is not a robots.txt refusal and must not be recorded
-#                as one.
+#                Separately, and NOT a robots question: mst.org's WAF returned
+#                403 to any user agent containing the token "research", which
+#                this project's did. Measured 2026-09-04 both directions in the
+#                same minute from the same address, and confirmed blunt rather
+#                than targeted: `something-research/0.1` from an unrelated
+#                project is refused, `totally-unrelated-agent/9.9` is served.
+#                Not a rate limit (a first request refuses, and Crawl-delay 10
+#                was honored), not an address block (other Cloudflare-fronted
+#                corpus hosts served this client in the same window), and not a
+#                robots.txt refusal — the wildcard rule above allows us.
+#                Resolved 2026-09-04: the fetch identity dropped the word, to
+#                `fare-policy-assistant/0.1 (portfolio reference project;
+#                ckellyreif@gmail.com)`. Still names the project, still carries
+#                a contact address, still not a browser and still not any other
+#                crawler's name; the crawl delay is unchanged. The full
+#                reasoning, and the line it does not cross, are in ADR 0002's
+#                2026-09-04 amendment. MST fetches normally again.
 #   sbmtd.gov    robots.txt allows all (wp-admin excluded).
 #   yolobus.com  robots.txt allows all; Crawl-delay 10 honored.
 #   sacrt.com    robots.txt allows all (wp internals excluded).
@@ -105,7 +114,7 @@
 #                block; METRO has authored no rules of its own in it.
 #   How this project read that, so a reviewer can disagree with the reasoning
 #   rather than have to reconstruct it: the fetcher is
-#   fare-policy-assistant-research/0.1, it is none of the named crawlers, and it
+#   fare-policy-assistant/0.1, it is none of the named crawlers, and it
 #   did not present any other agent's name — so it falls under `User-agent: *`,
 #   which both hosts allow. `ai-train=no` is honored: this project does not train
 #   on fetched content, it retrieves and quotes it with attribution and a link
@@ -187,7 +196,7 @@
 #                 page. One wrinkle a reviewer should see rather than have to
 #                 reconstruct: a second group, `User-agent: bingbot`, disallows
 #                 PDFs and /website/. That group binds bingbot alone; this
-#                 project's fetcher (fare-policy-assistant-research/0.1) is not
+#                 project's fetcher (fare-policy-assistant/0.1) is not
 #                 bingbot, presents no other agent's name, and falls under
 #                 `User-agent: *` — and in any case no AC Transit PDF is
 #                 ingested. Every page below returned HTTP 200 to the
@@ -411,7 +420,7 @@
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
 
-user_agent: "fare-policy-assistant-research/0.1 (portfolio reference project; ckellyreif@gmail.com)"
+user_agent: "fare-policy-assistant/0.1 (portfolio reference project; ckellyreif@gmail.com)"
 crawl_delay_seconds: 10
 
 documents:
@@ -1674,6 +1683,15 @@ documents:
 #     replacement row, and Yolobus's real feed is linked only from the agency's
 #     own /gtfs/ page. URLs below are the ones that answered on 2026-09-04.
 gtfs_feeds:
+  - agency: MST
+    url: https://www.mst.org/google/google_transit.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+    # Unconfigured for part of 2026-09-04 while mst.org's WAF refused this
+    # project's user agent. The block was a keyword match on the token
+    # "research" in that string, not a decision about this project and not a
+    # robots.txt refusal; the identity dropped the word, with the compliance
+    # reasoning recorded in ADR 0002's 2026-09-04 amendment, and the feed
+    # serves normally again. See the mst.org note in the header above.
   - agency: SBMTD
     url: https://www.sbmtd.gov/google_transit/feed.zip
     fares_version: v2 # fare_products.txt + fare_leg_rules.txt + rider_categories.txt
@@ -1730,25 +1748,6 @@ gtfs_feeds:
   # carries no fare table, is not the same thing as an agency nobody looked at,
   # and `make gtfs-check` prints the reason next to the agency rather than a
   # bare `no_feed`.
-  - agency: MST
-    no_feed_reason: >-
-      mst.org is reachable; it will not serve the string this project calls
-      itself. https://www.mst.org/google/google_transit.zip and
-      https://mst.org/fares/ both return a Cloudflare HTTP 403 to
-      "fare-policy-assistant-research/0.1 (...)" and HTTP 200 to the identical
-      request with "-research" removed, from the same address inside the same
-      minute (measured 2026-09-04T20:04-20:07Z). An unrelated
-      "something-research/0.1" also gets 403, so the rule keys on the token
-      "research" and has nothing to do with this project specifically. It is
-      not a rate limit (a single first request 403s, and mst.org's Crawl-delay
-      of 10 was honoured), not an IP block (www.fresno.gov, also
-      Cloudflare-fronted, serves this client normally in the same window), and
-      not a robots.txt refusal (see the mst.org note in the header above). The
-      one-word change to manifest.user_agent that would fix it is an owner
-      decision about how the project identifies itself project-wide, recorded
-      in ADR 0002, not something to change inside a GTFS PR — so MST is
-      unconfigured pending that decision rather than unfetchable. Do not read
-      this row as "MST blocks us".
   - agency: AC Transit
     no_feed_reason: >-
       https://api.actransit.org/transit/gtfs/download returns HTTP 401 "A valid

@@ -1,6 +1,35 @@
 {
-  "generated": "2026-09-04T20:10:02.141750+00:00",
+  "generated": "2026-09-04T20:33:46.133019+00:00",
   "records": [
+    {
+      "agency": "MST",
+      "fare_id": "Regular",
+      "name": "Regular",
+      "feed_amount": "2.00",
+      "feed_agrees": "yes",
+      "prose_matches": 4,
+      "prose_chunks": [
+        "mst-fares#0",
+        "mst-fares#1",
+        "mst-fares-es#0",
+        "mst-fares-es#1"
+      ],
+      "reason": null
+    },
+    {
+      "agency": "MST",
+      "fare_id": "Free",
+      "name": "Free",
+      "feed_amount": "0.00",
+      "feed_agrees": "yes",
+      "prose_matches": 3,
+      "prose_chunks": [
+        "mst-fares#6",
+        "mst-fares#7",
+        "mst-veterans-resource#1"
+      ],
+      "reason": null
+    },
     {
       "agency": "SBMTD",
       "fare_id": "regular_route_standard_cash_fare",
@@ -1777,16 +1806,6 @@
       "prose_matches": null,
       "prose_chunks": null,
       "reason": "No first-party Elk Grove GTFS feed found (checked 2026-09-04, and re-confirmed the same day on a spaced-out retry). The Mobility Database's active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated commercial site on another domain; every path on that host does, on both attempts. SacRT, which operates e-tran and publishes the prose corpus for it, serves a GTFS feed with no fare table at all. A standing condition: a domain that resolves somewhere else is not a load artifact."
-    },
-    {
-      "agency": "MST",
-      "fare_id": "(no feed configured)",
-      "name": "(no feed configured)",
-      "feed_amount": null,
-      "feed_agrees": "no_feed",
-      "prose_matches": null,
-      "prose_chunks": null,
-      "reason": "mst.org is reachable; it will not serve the string this project calls itself. https://www.mst.org/google/google_transit.zip and https://mst.org/fares/ both return a Cloudflare HTTP 403 to \"fare-policy-assistant-research/0.1 (...)\" and HTTP 200 to the identical request with \"-research\" removed, from the same address inside the same minute (measured 2026-09-04T20:04-20:07Z). An unrelated \"something-research/0.1\" also gets 403, so the rule keys on the token \"research\" and has nothing to do with this project specifically. It is not a rate limit (a single first request 403s, and mst.org's Crawl-delay of 10 was honoured), not an IP block (www.fresno.gov, also Cloudflare-fronted, serves this client normally in the same window), and not a robots.txt refusal (see the mst.org note in the header above). The one-word change to manifest.user_agent that would fix it is an owner decision about how the project identifies itself project-wide, recorded in ADR 0002, not something to change inside a GTFS PR \u2014 so MST is unconfigured pending that decision rather than unfetchable. Do not read this row as \"MST blocks us\"."
     },
     {
       "agency": "SacRT",
