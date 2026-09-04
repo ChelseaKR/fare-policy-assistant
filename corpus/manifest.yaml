@@ -8,6 +8,29 @@
 #                "search=yes, ai-train=no" (ai-input unspecified). We do not train on
 #                this content; it is retrieved and quoted with attribution. Fetched
 #                once, manually, with an identified user agent.
+#                Re-read in full 2026-09-04, because the file now says more than
+#                "allows *" and the detail is the compliance basis:
+#                  * `User-agent: *` gets `Allow: /` with `Crawl-delay: 10`, and
+#                    `Content-Signal: search=yes,ai-train=no,use=reference`.
+#                  * Named agents get `Disallow: /`: ClaudeBot, GPTBot, CCBot,
+#                    Google-Extended, Amazonbot, Applebot-Extended, Bytespider,
+#                    meta-externalagent, CloudflareBrowserRenderingCrawler.
+#                This project is none of those named agents; it fetches under its
+#                own identified user agent, and it does reference lookup — it
+#                retrieves a passage, quotes it, and cites the URL — which is what
+#                `use=reference` permits, while `ai-train=no` forbids something we
+#                do not do. So the wildcard rule is the one that applies to us and
+#                it allows the fetch. The whole file is Cloudflare's managed block,
+#                which matters for reading the WAF behaviour below: it is a generic
+#                managed policy rather than MST's considered statement about us.
+#                Separately, and NOT a robots question: mst.org's WAF returns 403
+#                to any user agent containing the token "research", which ours
+#                does. Measured 2026-09-04, both directions, same minute, same
+#                address. See MST's `no_feed_reason` under gtfs_feeds for the
+#                measurement and for why that is an owner decision (ADR 0002
+#                fixes the user-agent string) rather than something to work
+#                around. It is not a robots.txt refusal and must not be recorded
+#                as one.
 #   sbmtd.gov    robots.txt allows all (wp-admin excluded).
 #   yolobus.com  robots.txt allows all; Crawl-delay 10 honored.
 #   sacrt.com    robots.txt allows all (wp internals excluded).
@@ -1709,42 +1732,58 @@ gtfs_feeds:
   # bare `no_feed`.
   - agency: MST
     no_feed_reason: >-
-      https://www.mst.org/google/google_transit.zip returns a Cloudflare HTTP
-      403 to this project's identified research user agent, as does every
-      mst.org HTML page including https://mst.org/fares/ (checked twice,
-      2026-09-04). robots.txt still serves 200 and still allows "*" with
-      Crawl-delay 10; the WAF and robots disagree and the WAF is what a fetcher
-      meets. Same posture as unitrans.ucdavis.edu and elkgrove.gov above: we do
-      not spoof a browser user agent to get around a WAF, so MST cannot be
-      recaptured today. This is a change since 2026-06-11, when mst.org served
-      this project's fetcher on the first try, and it blocks the prose corpus as
-      well as the feed. MST's fare rows are consequently no longer cross-checked.
+      mst.org is reachable; it will not serve the string this project calls
+      itself. https://www.mst.org/google/google_transit.zip and
+      https://mst.org/fares/ both return a Cloudflare HTTP 403 to
+      "fare-policy-assistant-research/0.1 (...)" and HTTP 200 to the identical
+      request with "-research" removed, from the same address inside the same
+      minute (measured 2026-09-04T20:04-20:07Z). An unrelated
+      "something-research/0.1" also gets 403, so the rule keys on the token
+      "research" and has nothing to do with this project specifically. It is
+      not a rate limit (a single first request 403s, and mst.org's Crawl-delay
+      of 10 was honoured), not an IP block (www.fresno.gov, also
+      Cloudflare-fronted, serves this client normally in the same window), and
+      not a robots.txt refusal (see the mst.org note in the header above). The
+      one-word change to manifest.user_agent that would fix it is an owner
+      decision about how the project identifies itself project-wide, recorded
+      in ADR 0002, not something to change inside a GTFS PR — so MST is
+      unconfigured pending that decision rather than unfetchable. Do not read
+      this row as "MST blocks us".
   - agency: AC Transit
     no_feed_reason: >-
       https://api.actransit.org/transit/gtfs/download returns HTTP 401 "A valid
-      API token is required to use the AC Transit API" (checked 2026-09-04). The
-      older catalog row points at the retired transitfeeds.com aggregator. This
-      project does not hold agency API credentials and will not fetch a feed it
-      cannot fetch anonymously, so AC Transit fare rows stay uncross-checked.
+      API token is required to use the AC Transit API" (checked 2026-09-04, and
+      re-confirmed the same day on a spaced-out retry rather than inside the
+      fetch burst). The older catalog row points at the retired
+      transitfeeds.com aggregator. This project does not hold agency API
+      credentials and will not fetch a feed it cannot fetch anonymously, so AC
+      Transit fare rows stay uncross-checked. A standing condition, not a
+      transient failure: an API-token requirement does not come and go.
   - agency: E-tran
     no_feed_reason: >-
-      No first-party Elk Grove GTFS feed found (checked 2026-09-04). The
-      Mobility Database's active row, https://elkgrovetransit.com/gtfs, 302s to
-      an unrelated commercial site on another domain; every path on that host
-      does. SacRT, which operates e-tran and publishes the prose corpus for it,
-      serves a GTFS feed with no fare table at all.
+      No first-party Elk Grove GTFS feed found (checked 2026-09-04, and
+      re-confirmed the same day on a spaced-out retry). The Mobility Database's
+      active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated
+      commercial site on another domain; every path on that host does, on both
+      attempts. SacRT, which operates e-tran and publishes the prose corpus for
+      it, serves a GTFS feed with no fare table at all. A standing condition:
+      a domain that resolves somewhere else is not a load artifact.
   - agency: SacRT
     no_feed_reason: >-
       https://www.sacrt.com/wp-content/uploads/google_transit.zip downloads a
-      valid 2.7 MB GTFS ZIP that contains neither fare_attributes.txt nor
-      fare_products.txt (checked 2026-09-04; the older iportal.sacrt.com row
-      behaves the same). There is nothing to cross-check against the prose until
-      SacRT publishes fare data in its feed.
+      valid 2.7 MB GTFS ZIP (11 members) that contains neither
+      fare_attributes.txt nor fare_products.txt; the older iportal.sacrt.com row
+      serves a different 2.3 MB ZIP with the same absence (checked 2026-09-04,
+      both re-confirmed the same day on a spaced-out retry). There is nothing to
+      cross-check against the prose until SacRT publishes fare data in its feed.
+      A structural absence rather than a fetch failure: the download succeeds.
   - agency: Yolobus
     no_feed_reason: >-
       Yolobus's own GTFS page links one feed,
       https://avl.yctd.org/RealTime/google_transit.zip, and it downloads a valid
-      485 KB ZIP that contains no fare file (checked 2026-09-04). The Mobility
-      Database's direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip,
-      404s. Same outcome as SacRT for a different reason: a feed exists, fares
-      are not in it.
+      485 KB ZIP (7 members) that contains no fare file. The Mobility Database's
+      direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip, 404s.
+      Checked 2026-09-04 and both re-confirmed the same day on a spaced-out
+      retry, honouring yolobus.com's Crawl-delay of 10. Same outcome as SacRT
+      for a different reason, and structural the same way: the download
+      succeeds, the fares are not in it.

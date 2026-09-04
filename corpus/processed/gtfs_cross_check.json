@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-04T19:46:34.125258+00:00",
+  "generated": "2026-09-04T20:10:02.141750+00:00",
   "records": [
     {
       "agency": "SBMTD",
@@ -1766,7 +1766,7 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
-      "reason": "https://api.actransit.org/transit/gtfs/download returns HTTP 401 \"A valid API token is required to use the AC Transit API\" (checked 2026-09-04). The older catalog row points at the retired transitfeeds.com aggregator. This project does not hold agency API credentials and will not fetch a feed it cannot fetch anonymously, so AC Transit fare rows stay uncross-checked."
+      "reason": "https://api.actransit.org/transit/gtfs/download returns HTTP 401 \"A valid API token is required to use the AC Transit API\" (checked 2026-09-04, and re-confirmed the same day on a spaced-out retry rather than inside the fetch burst). The older catalog row points at the retired transitfeeds.com aggregator. This project does not hold agency API credentials and will not fetch a feed it cannot fetch anonymously, so AC Transit fare rows stay uncross-checked. A standing condition, not a transient failure: an API-token requirement does not come and go."
     },
     {
       "agency": "E-tran",
@@ -1776,7 +1776,7 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
-      "reason": "No first-party Elk Grove GTFS feed found (checked 2026-09-04). The Mobility Database's active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated commercial site on another domain; every path on that host does. SacRT, which operates e-tran and publishes the prose corpus for it, serves a GTFS feed with no fare table at all."
+      "reason": "No first-party Elk Grove GTFS feed found (checked 2026-09-04, and re-confirmed the same day on a spaced-out retry). The Mobility Database's active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated commercial site on another domain; every path on that host does, on both attempts. SacRT, which operates e-tran and publishes the prose corpus for it, serves a GTFS feed with no fare table at all. A standing condition: a domain that resolves somewhere else is not a load artifact."
     },
     {
       "agency": "MST",
@@ -1786,7 +1786,7 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
-      "reason": "https://www.mst.org/google/google_transit.zip returns a Cloudflare HTTP 403 to this project's identified research user agent, as does every mst.org HTML page including https://mst.org/fares/ (checked twice, 2026-09-04). robots.txt still serves 200 and still allows \"*\" with Crawl-delay 10; the WAF and robots disagree and the WAF is what a fetcher meets. Same posture as unitrans.ucdavis.edu and elkgrove.gov above: we do not spoof a browser user agent to get around a WAF, so MST cannot be recaptured today. This is a change since 2026-06-11, when mst.org served this project's fetcher on the first try, and it blocks the prose corpus as well as the feed. MST's fare rows are consequently no longer cross-checked."
+      "reason": "mst.org is reachable; it will not serve the string this project calls itself. https://www.mst.org/google/google_transit.zip and https://mst.org/fares/ both return a Cloudflare HTTP 403 to \"fare-policy-assistant-research/0.1 (...)\" and HTTP 200 to the identical request with \"-research\" removed, from the same address inside the same minute (measured 2026-09-04T20:04-20:07Z). An unrelated \"something-research/0.1\" also gets 403, so the rule keys on the token \"research\" and has nothing to do with this project specifically. It is not a rate limit (a single first request 403s, and mst.org's Crawl-delay of 10 was honoured), not an IP block (www.fresno.gov, also Cloudflare-fronted, serves this client normally in the same window), and not a robots.txt refusal (see the mst.org note in the header above). The one-word change to manifest.user_agent that would fix it is an owner decision about how the project identifies itself project-wide, recorded in ADR 0002, not something to change inside a GTFS PR \u2014 so MST is unconfigured pending that decision rather than unfetchable. Do not read this row as \"MST blocks us\"."
     },
     {
       "agency": "SacRT",
@@ -1796,7 +1796,7 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
-      "reason": "https://www.sacrt.com/wp-content/uploads/google_transit.zip downloads a valid 2.7 MB GTFS ZIP that contains neither fare_attributes.txt nor fare_products.txt (checked 2026-09-04; the older iportal.sacrt.com row behaves the same). There is nothing to cross-check against the prose until SacRT publishes fare data in its feed."
+      "reason": "https://www.sacrt.com/wp-content/uploads/google_transit.zip downloads a valid 2.7 MB GTFS ZIP (11 members) that contains neither fare_attributes.txt nor fare_products.txt; the older iportal.sacrt.com row serves a different 2.3 MB ZIP with the same absence (checked 2026-09-04, both re-confirmed the same day on a spaced-out retry). There is nothing to cross-check against the prose until SacRT publishes fare data in its feed. A structural absence rather than a fetch failure: the download succeeds."
     },
     {
       "agency": "Yolobus",
@@ -1806,7 +1806,7 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
-      "reason": "Yolobus's own GTFS page links one feed, https://avl.yctd.org/RealTime/google_transit.zip, and it downloads a valid 485 KB ZIP that contains no fare file (checked 2026-09-04). The Mobility Database's direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip, 404s. Same outcome as SacRT for a different reason: a feed exists, fares are not in it."
+      "reason": "Yolobus's own GTFS page links one feed, https://avl.yctd.org/RealTime/google_transit.zip, and it downloads a valid 485 KB ZIP (7 members) that contains no fare file. The Mobility Database's direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip, 404s. Checked 2026-09-04 and both re-confirmed the same day on a spaced-out retry, honouring yolobus.com's Crawl-delay of 10. Same outcome as SacRT for a different reason, and structural the same way: the download succeeds, the fares are not in it."
     }
   ]
 }
