@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; script-src '{{SCRIPT_SRC_HASH}}'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<title>Nightly evaluation snapshot — Transit Fare Policy Assistant</title>
+<!--
+  Rendered by the "nightly-build" job in .github/workflows/pages.yml, once per
+  completed nightly CI run (pass or fail — see docs/decisions/0032). This is a
+  DIFFERENT template from docs/pages/index.html on purpose: that page can only
+  ever say "Verified" (require_current_public_evidence refuses to render
+  anything else, see ADR 0030) and can only be produced from a promoted
+  release, which this repository has not had since 2026-07-12. This page
+  publishes last night's real, un-promoted measurement instead, labeled as
+  exactly that, so the hub is never older than one failed nightly rather than
+  frozen at the last successful manual dispatch.
+  Every build fills in the markers below; the render step fails loudly if the
+  set of markers in this file and the set it knows how to fill ever disagree.
+-->
+<meta name="description" content="Nightly evaluation snapshot for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: {{TOTAL_SCORE}}, gate {{GATE_WORD}}. Not a promoted release.">
+<link rel="canonical" href="https://evals.chelseakr.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Transit Fare Policy Assistant">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://evals.chelseakr.com/">
+<meta property="og:title" content="Nightly evaluation snapshot — Transit Fare Policy Assistant">
+<meta property="og:description" content="Nightly evaluation snapshot for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: {{TOTAL_SCORE}}, gate {{GATE_WORD}}. Not a promoted release.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Nightly evaluation snapshot — Transit Fare Policy Assistant">
+<meta name="twitter:description" content="Nightly evaluation snapshot for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: {{TOTAL_SCORE}}, gate {{GATE_WORD}}. Not a promoted release.">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: #17201b;
+    background: #f7faf8;
+    font: 1rem/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  h1 { max-width: 42rem; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.15; }
+  h2 { font-size: 1.2rem; }
+  .lede { max-width: 48rem; color: #425048; }
+  .notice, .card {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid #a8b4ad;
+    border-radius: .6rem;
+    background: #fff;
+  }
+  .notice { border-left-width: .5rem; }
+  .notice.ok { border-left-color: #14733b; }
+  .notice.warn { border-left-color: #9a6500; }
+  .notice.stale { border-left-color: #991b1b; background: #fdeceb; }
+  .red { border-left: .35rem solid #991b1b; padding-left: .7rem; }
+  .status-label { display: block; font-size: 1.15rem; }
+  dl { display: grid; grid-template-columns: minmax(9rem, 1fr) 2fr; gap: .4rem 1rem; }
+  dt { font-weight: 700; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  table { width: 100%; border-collapse: collapse; }
+  caption { padding: .5rem 0; text-align: left; font-weight: 700; }
+  th, td { border: 1px solid #a8b4ad; padding: .55rem; text-align: left; }
+  code { overflow-wrap: anywhere; }
+  a { color: #075ea8; }
+  a:focus-visible { outline: 3px solid #075ea8; outline-offset: 3px; }
+  @media (max-width: 35rem) {
+    dl { grid-template-columns: 1fr; }
+    dd { margin-bottom: .6rem; }
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #edf5ef; background: #131a16; }
+    .lede { color: #bdc8c0; }
+    .notice, .card { background: #1c2620; border-color: #64736a; }
+    .notice.stale { background: #2a1615; }
+    a { color: #79bfff; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p><strong>Reference implementation.</strong> This portfolio project is not an
+    official service of any transit agency.</p>
+  <h1>Nightly evaluation snapshot</h1>
+  <p class="lede">This page mirrors the most recent completed nightly evaluation
+    run on <code>main</code>, published automatically whether that run passed
+    its gates or not — see
+    <a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/decisions/0032-the-nightly-hub-publishes-every-run-pass-or-fail.md">why</a>.
+    It is <strong>not</strong> a promoted release: this repository's
+    cryptographically pinned promotion-evidence pipeline
+    (<a href="https://github.com/ChelseaKR/fare-policy-assistant/blob/main/docs/publishing-the-evidence-hub.md">documented here</a>)
+    remains blocked on a live deployment matching a passing run, and publishes
+    a separate "Verified" page only when that is true. This page's job is
+    narrower: never let the public hub go silent about what the corpus and
+    prompts at HEAD actually score.</p>
+  <p><a href="https://evals.chelseakr.com/" aria-current="page">Canonical
+      evaluation evidence hub</a> ·
+    <a href="https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/">Live rider
+      assistant</a></p>
+
+  <section class="notice {{GATE_CLASS}}" id="evidence-status"
+    aria-labelledby="status-heading"
+    data-run-at="{{RUN_AT}}" data-expires-at="{{EXPIRES_AT}}">
+    <h2 id="status-heading">Nightly status</h2>
+    <strong class="status-label" id="evidence-status-label">{{GATE_LABEL}}</strong>
+    <p id="evidence-status-detail">{{GATE_DETAIL}}</p>
+    <p>Evaluated <time datetime="{{RUN_AT}}">{{RUN_AT}}</time> ({{RUN_MODE}}),
+      corpus <code>{{CORPUS_VERSION}}</code>. Published from
+      <a href="{{RUN_URL}}">this CI run</a> at
+      <time datetime="{{PUBLISHED_AT}}">{{PUBLISHED_AT}}</time>.</p>
+    <p id="evidence-freshness">That status was settled when this page was built, and
+      nothing rebuilds it as it ages. It expires
+      <time datetime="{{EXPIRES_AT}}">{{EXPIRES_AT}}</time> — past that instant the
+      nightly workflow has gone quiet for longer than one missed night can explain,
+      whatever the heading still says. Your browser compares that instant to now and
+      replaces this sentence with what it found; with scripting off it cannot, so make
+      the comparison against today yourself.</p>
+  </section>
+
+  <section class="card" aria-labelledby="score-heading">
+    <h2 id="score-heading">Last night's score</h2>
+    <p><strong>{{TOTAL_SCORE}}</strong> across every case in the suite, published
+      exactly as scored — including the cases that failed.</p>
+    <table>
+      <caption>Scores by evaluation suite</caption>
+      <thead>
+        <tr><th scope="col">Suite</th><th scope="col">Passed</th>
+          <th scope="col">Pass rate</th></tr>
+      </thead>
+      <tbody>{{SUITE_ROWS}}</tbody>
+    </table>
+    <p><a href="report.html">Review the case-level report</a> (same file this
+      run wrote to <code>docs/eval-report.html</code>, republished unedited).</p>
+  </section>
+</main>
+<script>{{FRESHNESS_SCRIPT}}</script>
+</body>
+</html>

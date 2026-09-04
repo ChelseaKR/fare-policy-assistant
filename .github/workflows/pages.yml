@@ -1,8 +1,19 @@
-# Publish only a canonical, sanitized promotion-evidence manifest.
+# Two publication paths to the same site, gated on two different triggers.
 #
-# One-time setup: Settings → Pages → Source = "GitHub Actions". The workflow
-# stays manual because the caller must bind one trusted source commit to one
-# separately reviewed evidence-only commit and its exact manifest digest.
+# `workflow_dispatch` (below, unchanged): a canonical, sanitized, cryptographically
+# pinned promotion-evidence manifest. Stays manual because the caller must bind one
+# trusted source commit to one separately reviewed evidence-only commit and its
+# exact manifest digest. It can only ever publish a run whose gates passed
+# (verify_promotion_evidence refuses anything else) and, as of this file's last
+# review, has never had evidence to publish — see docs/publishing-the-evidence-hub.md.
+#
+# `workflow_run` (added 2026-09-04, issue #140): republishes automatically after
+# every completed nightly CI run, pass or fail, so the hub tracks a real measurement
+# instead of freezing at the last manual dispatch. See
+# docs/decisions/0032-the-nightly-hub-publishes-every-run-pass-or-fail.md for why
+# publishing a failing run is the correct behavior here, not a regression of it.
+#
+# One-time setup: Settings → Pages → Source = "GitHub Actions".
 name: Pages
 
 on:
@@ -20,16 +31,26 @@ on:
         description: Lowercase SHA-256 of the exact canonical public-evidence.json
         required: true
         type: string
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
   contents: read
 
+# One deployment target, so both paths serialize against each other rather than
+# racing: whichever finishes last is what the site serves next, and that is the
+# intended behavior (a manual promoted-evidence dispatch published after last
+# night's nightly should win; the following night's nightly then supersedes it,
+# same as it would supersede an older promoted page).
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
+  # --- workflow_dispatch: the manual, cryptographically pinned promotion path ---
   build:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -149,6 +170,7 @@ jobs:
           path: _site
 
   deploy:
+    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -250,3 +272,266 @@ jobs:
           echo "expected: $EXPECTED_PUBLIC_MANIFEST_SHA256" >&2
           echo "observed: ${observed_sha256:-unavailable}" >&2
           exit 1
+
+  # --- nightly: publish last night's real run, pass or fail -------------------
+  # Automatic, from `workflow_run` on the "CI" workflow, restricted to its
+  # `schedule`-triggered runs only -- never a pull_request or push run, so this
+  # never checks out or executes anything from a fork or an untrusted branch.
+  # `head_sha` and `id` come from the completed workflow_run event, not from any
+  # attacker-influenced input.
+  #
+  # Downloads the "eval-report" artifact ci.yml's full-evals-nightly job already
+  # uploads (EVALS.md, docs/eval-report.html, evals/runs/) and republishes only
+  # the two files that are already public by established convention: EVALS.md's
+  # machine-readable `<!-- provenance {...} -->` block (the same format
+  # evals/provenance.py and evals/report.py read and write) and a byte-for-byte
+  # copy of docs/eval-report.html. Nothing under evals/runs/ is read or copied.
+  #
+  # No write credential is used anywhere in this path -- there is no
+  # evidence-only commit to bind, only files this run already produced.
+  #
+  # Off by default. `vars.NIGHTLY_HUB_PUBLISH_ENABLED` is unset until an
+  # operator sets it to the literal string "true" in Settings -> Secrets and
+  # variables -> Actions -> Variables. Landing this workflow publishes a
+  # currently-failing scoreboard to a public site the moment it first runs;
+  # that first publish is deliberately not a consequence of merging this PR or
+  # of any nightly run completing on its own. It is a decision an operator
+  # makes once, explicitly, after reading docs/decisions/0032. Every run before
+  # that stays a no-op: nightly-build and nightly-deploy both skip.
+  nightly-build:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.name == 'CI' &&
+      github.event.workflow_run.event == 'schedule' &&
+      (github.event.workflow_run.conclusion == 'success' ||
+       github.event.workflow_run.conclusion == 'failure') &&
+      vars.NIGHTLY_HUB_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+    steps:
+      - name: Check out the commit the nightly actually tested
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download the nightly's own eval-report artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: eval-report
+          path: nightly-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Render the nightly snapshot from last night's real numbers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import base64, hashlib, html, json, os, re, sys
+          from datetime import UTC, datetime, timedelta
+          from pathlib import Path
+
+          # One full missed night plus slack for a slow live run, not a round number
+          # chosen for looks: the nightly cron fires daily, so any gap wider than this
+          # means the nightly has gone quiet, not just run late.
+          FRESHNESS_BUDGET_SECONDS = 129600  # 36h
+
+          artifact_dir = Path("nightly-report")
+          evals_md_path = artifact_dir / "EVALS.md"
+          report_html_path = artifact_dir / "docs" / "eval-report.html"
+          if not evals_md_path.is_file():
+              sys.exit("nightly artifact has no EVALS.md; refusing to publish an empty snapshot")
+          if not report_html_path.is_file():
+              sys.exit("nightly artifact has no docs/eval-report.html; refusing to publish an empty snapshot")
+
+          evals_md = evals_md_path.read_text(encoding="utf-8")
+          match = re.search(r"<!--\s*provenance\s*(\{.*?\})\s*-->", evals_md, re.S)
+          if match is None:
+              sys.exit("EVALS.md carries no <!-- provenance {...} --> block; cannot state this run's provenance")
+          provenance = json.loads(match.group(1))
+          run_at_raw = provenance["run_id"]
+          corpus_version = provenance["corpus_version"]
+          suites = provenance["suites"]
+
+          mode_match = re.search(r"Generated from the run at `[^`]+` \(([^)]*)\)\.", evals_md)
+          run_mode = mode_match.group(1) if mode_match else "mode unrecorded"
+
+          total_passed = sum(int(s["passed"]) for s in suites.values())
+          total_cases = sum(int(s["total"]) for s in suites.values())
+          pass_rate = round(100 * total_passed / total_cases, 1) if total_cases else 0.0
+
+          rows = "".join(
+              f'<tr><th scope="row">{html.escape(name)}</th>'
+              f'<td>{suites[name]["passed"]}/{suites[name]["total"]}</td>'
+              f'<td>{suites[name]["pass_rate"]:.1f}%</td></tr>'
+              for name in sorted(suites)
+          )
+
+          run_at_iso = run_at_raw[:-1] + "+00:00" if run_at_raw.endswith("Z") else run_at_raw
+          run_at = datetime.fromisoformat(run_at_iso)
+          if run_at.tzinfo is None:
+              run_at = run_at.replace(tzinfo=UTC)
+          expires_at = (run_at + timedelta(seconds=FRESHNESS_BUDGET_SECONDS)).astimezone(UTC).replace(microsecond=0)
+
+          conclusion = os.environ["RUN_CONCLUSION"]
+          passed_gate = conclusion == "success"
+          gate_class = "ok" if passed_gate else "warn"
+          gate_label = "Nightly gate: passed" if passed_gate else "Nightly gate: FAILED"
+          gate_detail = (
+              "Every gate the nightly run enforces passed against this scoreboard."
+              if passed_gate
+              else "At least one gate the nightly run enforces failed against this scoreboard "
+              "(see the suite table and the linked case-level report for which cases). "
+              "This page still publishes the real numbers rather than hiding them."
+          )
+
+          FRESHNESS_SCRIPT = """\
+          (function () {
+            "use strict";
+            var box = document.getElementById("evidence-status");
+            var label = document.getElementById("evidence-status-label");
+            var detail = document.getElementById("evidence-status-detail");
+            var live = document.getElementById("evidence-freshness");
+            if (!box || !label || !detail || !live) { return; }
+            var expiresText = box.getAttribute("data-expires-at");
+            var runAt = Date.parse(box.getAttribute("data-run-at"));
+            var expiresAt = Date.parse(expiresText);
+            if (!isFinite(runAt) || !isFinite(expiresAt)) { return; }
+            var now = Date.now();
+            if (now < runAt) {
+              live.textContent =
+                "Your device clock reads earlier than the run this page reports, so the age " +
+                "of this snapshot cannot be worked out here. Both instants are printed above.";
+              return;
+            }
+            var days = Math.floor((now - runAt) / 86400000);
+            var age = (days === 1 ? "1 day" : days + " days") + " old";
+            if (now <= expiresAt) {
+              live.textContent =
+                "Checked against your device clock as this page loaded: " + age + ", inside the " +
+                "one-missed-night budget, which expires " + expiresText + ".";
+              return;
+            }
+            box.className = "notice stale";
+            label.textContent = "STALE \\u2014 nightly publishing appears to have stopped";
+            detail.textContent =
+              "The nightly workflow has not published a newer snapshot in " + age +
+              ", longer than one missed night explains. Treat every number below as evidence " +
+              "about " + expiresText.slice(0, 10) + " and earlier, not about today, and check " +
+              "the CI run history for why the nightly stopped.";
+            live.textContent =
+              "Checked against your device clock as this page loaded: " + age + ", past the " +
+              "one-missed-night budget, which expired " + expiresText + ".";
+          })();
+          """
+
+          script_hash = "sha256-" + base64.b64encode(
+              hashlib.sha256(FRESHNESS_SCRIPT.encode("utf-8")).digest()
+          ).decode("ascii")
+
+          template = Path("source/docs/pages/nightly-index.html").read_text(encoding="utf-8")
+          placeholder = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
+
+          replacements = {
+              "SCRIPT_SRC_HASH": script_hash,
+              "RUN_DATE": run_at_raw[:10],
+              "TOTAL_SCORE": f"{total_passed}/{total_cases} ({pass_rate:.1f}%)",
+              "GATE_WORD": "passed" if passed_gate else "FAILED",
+              "GATE_CLASS": gate_class,
+              "GATE_LABEL": gate_label,
+              "GATE_DETAIL": gate_detail,
+              "RUN_AT": html.escape(run_at_raw),
+              "RUN_MODE": html.escape(run_mode),
+              "CORPUS_VERSION": html.escape(corpus_version),
+              "RUN_URL": html.escape(os.environ["RUN_URL"]),
+              "PUBLISHED_AT": html.escape(
+                  datetime.now(UTC).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+              ),
+              "EXPIRES_AT": html.escape(expires_at.strftime("%Y-%m-%dT%H:%M:%SZ")),
+              "SUITE_ROWS": rows,
+              "FRESHNESS_SCRIPT": FRESHNESS_SCRIPT,
+          }
+
+          found = set(placeholder.findall(template))
+          if found != set(replacements):
+              sys.exit(
+                  f"template placeholders {sorted(found)} do not match the "
+                  f"renderer's {sorted(replacements)}"
+              )
+
+          rendered = placeholder.sub(lambda m: replacements[m.group(1)], template)
+
+          site_dir = Path("_site")
+          site_dir.mkdir(parents=True, exist_ok=True)
+          (site_dir / "index.html").write_text(rendered, encoding="utf-8")
+          (site_dir / "report.html").write_bytes(report_html_path.read_bytes())
+
+          for name in ("CNAME", "og-card.png"):
+              src = Path("source/docs/pages") / name
+              if src.is_file():
+                  (site_dir / name).write_bytes(src.read_bytes())
+
+          history = Path("source/docs/eval-history.svg")
+          if history.is_file():
+              (site_dir / "eval-history.svg").write_bytes(history.read_bytes())
+
+          (site_dir / "robots.txt").write_text(
+              "User-agent: *\nAllow: /\n\nSitemap: https://evals.chelseakr.com/sitemap.xml\n",
+              encoding="utf-8",
+          )
+          (site_dir / "sitemap.xml").write_text(
+              '<?xml version="1.0" encoding="UTF-8"?>'
+              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+              "<url><loc>https://evals.chelseakr.com/</loc></url>"
+              "<url><loc>https://evals.chelseakr.com/report.html</loc></url>"
+              "</urlset>\n",
+              encoding="utf-8",
+          )
+
+          print(
+              f"nightly snapshot published: {total_passed}/{total_cases} ({pass_rate}%), "
+              f"gate={conclusion}, run_at={run_at_raw}, corpus={corpus_version}"
+          )
+          PYEOF
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
+
+      - name: Upload nightly Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
+        with:
+          path: _site
+
+  # Same off-by-default gate as nightly-build, repeated rather than inherited:
+  # a `needs:` job that skips because its dependency skipped would still be
+  # reachable if this `if:` were ever loosened on its own, and this is the job
+  # with `id-token: write` and `pages: write`.
+  nightly-deploy:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.name == 'CI' &&
+      github.event.workflow_run.event == 'schedule' &&
+      (github.event.workflow_run.conclusion == 'success' ||
+       github.event.workflow_run.conclusion == 'failure') &&
+      vars.NIGHTLY_HUB_PUBLISH_ENABLED == 'true'
+    needs: nightly-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy nightly Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4

@@ -1241,12 +1241,31 @@ def test_cli_failure_is_nonzero_and_sanitized(
     assert captured.err.startswith("public evidence build failed:")
 
 
-def test_pages_workflow_is_manual_commit_and_digest_pinned_and_sanitized() -> None:
+#: `pages.yml` gained a second, automatic publication path on 2026-09-04 (issue
+#: #140, ADR 0032): a `workflow_run` job pair that republishes the nightly's own
+#: EVALS.md/docs/eval-report.html, pass or fail. That job pair is not the
+#: `workflow_dispatch` promotion pipeline this test's other assertions are about
+#: -- it deliberately *does* touch `docs/eval-report.html` and copy files, which
+#: is exactly what the assertions below forbid of the strict pipeline. Slicing
+#: the file at this marker (present verbatim in pages.yml, right before the
+#: nightly jobs begin) keeps every assertion here scoped to the pipeline it was
+#: written to constrain, rather than either weakening it or making it fail for
+#: an unrelated, intentional reason.
+_NIGHTLY_MARKER = "\n  # --- nightly: publish last night's real run, pass or fail"
+
+
+def _strict_pipeline_text() -> str:
     text = _WORKFLOW.read_text(encoding="utf-8")
-    parsed = yaml.load(text, Loader=yaml.BaseLoader)
+    assert _NIGHTLY_MARKER in text, "the nightly-jobs marker moved or was renamed"
+    return text.split(_NIGHTLY_MARKER, 1)[0]
+
+
+def test_pages_workflow_is_manual_commit_and_digest_pinned_and_sanitized() -> None:
+    text = _strict_pipeline_text()
+    parsed = yaml.load(_WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
 
     assert isinstance(parsed, dict)
-    assert set(parsed["on"]) == {"workflow_dispatch"}
+    assert set(parsed["on"]) == {"workflow_dispatch", "workflow_run"}
     inputs = parsed["on"]["workflow_dispatch"]["inputs"]
     assert set(inputs) == {
         "source_revision",
