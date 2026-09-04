@@ -471,3 +471,168 @@ class TestEnumerationRetrieval:
         # And it moves nothing else.
         for question in unchanged:
             assert with_branch[question] == without_branch[question], question
+
+
+class TestAccentBlindAgencyDetection:
+    """Every alias in the shipped profile is written unaccented, so a Spanish
+    rendering of an agency name matched nothing and the question fell through
+    to an unscoped global top_k (eval cases ml-016, ml-020)."""
+
+    def test_accented_agency_name_is_detected(self):
+        assert detect_agencies("¿Los niños viajan gratis en Santa Bárbara?") == ["SBMTD"]
+
+    def test_unaccented_spelling_still_works(self):
+        assert detect_agencies("Do kids ride free in Santa Barbara?") == ["SBMTD"]
+
+    def test_an_accented_alias_would_also_match_an_unaccented_question(self):
+        found = detect_agencies("what does the tren cost", aliases={"trén": "TEST"})
+        assert found == ["TEST"]
+
+    def test_folding_preserves_length_so_first_mention_order_holds(self):
+        # "Bárbara" is one character longer than its folded form only if the
+        # fold drops a character; ordering is by match offset, so a length
+        # change here would silently reorder a two-agency comparison.
+        question = "Compare Santa Bárbara with MST fares."
+        assert detect_agencies(question) == ["SBMTD", "MST"]
+
+
+class TestFareSchedulePassage:
+    @pytest.fixture(scope="class")
+    def corpus_retriever(self):
+        return Retriever(cfg=config.RetrievalConfig(use_dense=False))
+
+    @pytest.mark.parametrize(
+        ("question", "agency", "wanted"),
+        [
+            # Each of these lost its agency's fare schedule in the 2026-09-04
+            # nightly and failed `required_facts_present` on a number that is
+            # published only in that schedule.
+            ("What's the discount single-ride fare on MST?", "MST", "$ 1.00"),
+            ("Magkano ang pamasahe sa MST kung babayad ako ng cash?", "MST", "$ 2.00"),
+            (
+                "How much is a single ride on County Connection if I pay with Clipper?",
+                "CCCTA",
+                "$2.00",
+            ),
+            (
+                "I pay per ride with Clipper on AC Transit local buses. "
+                "If I keep riding all day, what's the most I'll be charged?",
+                "AC Transit",
+                "$6.00",
+            ),
+        ],
+    )
+    def test_the_schedule_reaches_the_answer(self, corpus_retriever, question, agency, wanted):
+        results = corpus_retriever.search(question)
+        text = "\n".join(sc.chunk.text for sc in results if sc.chunk.agency == agency)
+        assert wanted in text
+
+    def test_the_spanish_mirror_is_chosen_for_a_spanish_question(self, corpus_retriever):
+        """Both AC Transit schedules price 21 products, so the tie is broken by
+        this query's own ranking and the existing language boost picks the
+        Spanish table without a second rule."""
+        results = corpus_retriever.search(
+            "Si pago cada viaje con Clipper en los autobuses locales de AC Transit, "
+            "¿cuánto es lo máximo que pagaré en un día?"
+        )
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert "actransit-fares-es#1" in ids
+
+    def test_a_comparison_gets_both_agencies_schedules(self, corpus_retriever):
+        """The miss that made a retrieval failure look like an attribution
+        failure: SacRT's adult row never arrived, the TK-12 student table did,
+        and the answer reported the student fare as the basic fare."""
+        results = corpus_retriever.search(
+            "How much does the RTD Commuter bus from Stockton to Sacramento cost, "
+            "and what is the basic single ride fare on SacRT once I'm there?"
+        )
+        ids = [sc.chunk.chunk_id for sc in results]
+        assert "sacrt-fares#1" in ids
+
+    def test_at_most_one_schedule_is_added_per_agency(self, corpus_retriever):
+        results = corpus_retriever.search("How much is a single ride on County Connection?")
+        schedule = corpus_retriever._fare_schedule_ids("CCCTA")
+        assert len([sc for sc in results if sc.chunk.chunk_id in schedule]) == 1
+
+    def test_nothing_is_ever_removed(self, corpus_retriever):
+        question = "What's the discount single-ride fare on MST?"
+        with_helper = {sc.chunk.chunk_id for sc in corpus_retriever.search(question)}
+        original = retrieve_module._is_fare_price_query
+        retrieve_module._is_fare_price_query = lambda question: False
+        try:
+            without = {sc.chunk.chunk_id for sc in corpus_retriever.search(question)}
+        finally:
+            retrieve_module._is_fare_price_query = original
+        assert without < with_helper
+
+    def test_every_agency_has_a_schedule_so_the_guarantee_is_never_vacuous(self, corpus_retriever):
+        agencies = {c.agency for c in corpus_retriever.chunks}
+        assert agencies
+        for agency in agencies:
+            assert corpus_retriever._fare_schedule_ids(agency), agency
+
+    def test_a_non_price_question_is_left_alone(self, corpus_retriever):
+        """Containment, in this file's established shape: the branch moves the
+        questions it claims to and nothing else."""
+        changed = ["What's the discount single-ride fare on MST?"]
+        unchanged = [
+            "What proof do I need for the veteran fare on MST?",
+            "Where do I apply for the SBMTD Mobility Pass?",
+        ]
+
+        def snapshot(question):
+            return [(sc.chunk.chunk_id, sc.score) for sc in corpus_retriever.search(question)]
+
+        with_branch = {q: snapshot(q) for q in changed + unchanged}
+        original = retrieve_module._is_fare_price_query
+        retrieve_module._is_fare_price_query = lambda question: False
+        try:
+            without_branch = {q: snapshot(q) for q in changed + unchanged}
+        finally:
+            retrieve_module._is_fare_price_query = original
+        for question in changed:
+            assert with_branch[question] != without_branch[question], question
+        for question in unchanged:
+            assert with_branch[question] == without_branch[question], question
+
+
+class TestEffectiveDatePassage:
+    @pytest.fixture(scope="class")
+    def corpus_retriever(self):
+        return Retriever(cfg=config.RetrievalConfig(use_dense=False))
+
+    def test_the_effective_period_reaches_the_answer(self, corpus_retriever):
+        results = corpus_retriever.search("How long are the current Yolobus fares in effect?")
+        text = "\n".join(f"{sc.chunk.section}\n{sc.chunk.text}" for sc in results)
+        assert "June 30, 2027" in text
+
+    def test_a_heading_only_date_reaches_the_answer(self, corpus_retriever):
+        """SLORTA publishes its effective date in a section heading and nowhere
+        in any chunk body. `answer._format_passages` renders the heading, so
+        the fact does reach the model — but only if the chunk is retrieved."""
+        results = corpus_retriever.search("Did SLO RTA change its fares recently?")
+        headings = "\n".join(sc.chunk.section for sc in results)
+        assert "April 6, 2026" in headings
+
+    def test_an_ordinary_fare_question_is_left_alone(self, corpus_retriever):
+        question = "What proof do I need for the veteran fare on MST?"
+        before = [(sc.chunk.chunk_id, sc.score) for sc in corpus_retriever.search(question)]
+        original = retrieve_module._is_effective_date_query
+        retrieve_module._is_effective_date_query = lambda question: False
+        try:
+            after = [(sc.chunk.chunk_id, sc.score) for sc in corpus_retriever.search(question)]
+        finally:
+            retrieve_module._is_effective_date_query = original
+        assert before == after
+
+
+class TestChildFareQueryLanguages:
+    def test_spanish_child_words_reach_the_child_fare_helper(self):
+        assert _is_child_fare_query("¿Los niños pequeños viajan gratis en Santa Bárbara?")
+        assert _is_child_fare_query("¿Mi hija paga pasaje?")
+
+    def test_tagalog_child_words_reach_the_child_fare_helper(self):
+        assert _is_child_fare_query("Libre ba ang bata sa bus?")
+
+    def test_an_adult_question_still_does_not(self):
+        assert not _is_child_fare_query("What is the regular adult fare on Yolobus?")

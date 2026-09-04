@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import statistics
+import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -66,15 +67,39 @@ class ConfidenceSignals:
     term_coverage: float
 
 
+def _fold_accents(text: str) -> str:
+    """`text` with combining accents stripped, length preserved.
+
+    Every one of the 87 aliases in the shipped profile is written unaccented
+    ("santa barbara"), because they were written from the agencies' English
+    pages. A Spanish speaker writes the same agency accented — "Santa
+    Bárbara", "Los Ángeles" — and the literal alias search below then finds
+    nothing at all, so `search()` drops the agency filter entirely and answers
+    an SBMTD question out of a global top_k spread across four agencies. That
+    is what happens to eval cases ml-016 and ml-020 in the 2026-09-04 nightly:
+    both detect no agency, and both fail `required_facts_present`.
+
+    Folding is applied to the question and to the alias, so an accented alias
+    would keep working too. NFC first, so that dropping the combining marks
+    leaves one character where the composed form had one and match offsets
+    stay comparable with the caller's original string.
+    """
+    composed = unicodedata.normalize("NFC", text)
+    return "".join(
+        ch for ch in unicodedata.normalize("NFD", composed) if unicodedata.category(ch) != "Mn"
+    )
+
+
 def detect_agencies(question: str, aliases: dict[str, str] | None = None) -> list[str]:
     """All known scopes named in the question, in order of first mention. The
     alias map defaults to the active profile's but can be injected (a different
-    domain, or a test) without touching this logic."""
-    q = question.lower()
+    domain, or a test) without touching this logic. Matching is accent-blind on
+    both sides — see `_fold_accents`."""
+    q = _fold_accents(question.lower())
     selected_aliases = domain.get_profile().aliases if aliases is None else aliases
     matches: list[tuple[int, int, str]] = []
     for alias, agency in selected_aliases.items():
-        match = re.search(rf"\b{re.escape(alias)}\b", q)
+        match = re.search(rf"\b{re.escape(_fold_accents(alias.lower()))}\b", q)
         if match:
             # Text position defines behavior. Alias mapping insertion order is
             # deliberately irrelevant because canonical configuration identity
@@ -235,9 +260,23 @@ def _is_reduced_fare_query(question: str) -> bool:
 # it falls out of top_k. Same remedy as _close_the_loop: when the question is a
 # child-fare query and the provision passage is missing, append it so the answer
 # can state the actual rule (a height/age threshold) instead of declining.
+#
+# The rider's word for a child, in the three languages the assistant answers
+# in. It was English-only until 2026-09-04, which meant the whole helper was
+# unreachable from a Spanish or Tagalog question even though the provision it
+# looks for is published in English and the retriever already bridges the
+# query with _ES_EN_LEXICON / _TL_EN_LEXICON: eval ml-016 ("¿Los niños
+# pequeños viajan gratis…?") asks exactly the question this helper exists for
+# and never triggered it. Accents are folded before matching (see
+# `_is_child_fare_query`), so "niño" and "nino" both match.
 _CHILD_FARE_QUERY = re.compile(
     r"\b(child|children|kid|kids|toddler|toddlers|infant|infants|baby|babies|"
-    r"son|daughter|\d+[- ]?year[- ]?olds?|years? old)\b",
+    r"son|daughter|\d+[- ]?year[- ]?olds?|years? old"
+    # es
+    r"|nino|nina|ninos|ninas|hijo|hija|hijos|hijas|bebe|bebes|menores"
+    r"|\d+\s*anos?"
+    # tl
+    r"|bata|bata-bata|anak|sanggol)\b",
     re.I,
 )
 _CHILD_FARE_PROVISION = re.compile(
@@ -249,7 +288,7 @@ _CHILD_FARE_PROVISION = re.compile(
 
 
 def _is_child_fare_query(question: str) -> bool:
-    return bool(_CHILD_FARE_QUERY.search(question))
+    return bool(_CHILD_FARE_QUERY.search(_fold_accents(question)))
 
 
 def _is_child_fare_provision(chunk: Chunk) -> bool:
@@ -293,6 +332,161 @@ _ELIGIBILITY_CRITERION = re.compile(
 
 def _is_eligibility_criterion_passage(chunk: Chunk) -> bool:
     return bool(_ELIGIBILITY_CRITERION.search(f"{chunk.section} {chunk.text}"))
+
+
+# Priced-fare-table "close the loop" (issue #138). A rider who asks what
+# something costs needs the agency's own priced fare table, and BM25
+# systematically ranks that table BELOW the prose surrounding it. A table
+# states each term once per row — "Local Single Ride | $2.75 | $3.00" — while
+# the narrative pages beside it ("Multiple Ride Passes", "East Bay Day Pass",
+# "Group Discount Program", "Students (TK-12)") repeat "fare", "pass",
+# "Clipper" and "day" across whole sentences, and term frequency is what BM25
+# scores. The gap does not close as the corpus grows, it widens: every agency
+# added brings more prose competing for the same top_k, while each agency
+# still has only the one table.
+#
+# `config.RetrievalConfig.top_k` already carries a comment that names this
+# ("8 rather than 6: fare-table chunks are number-heavy and rank low on BM25
+# even when they hold the answer"). Raising k is the wrong lever, because the
+# table's *rank* is what moves with corpus size, not its distance from a
+# constant. Measured offline against the 2026-09-04 nightly's own questions,
+# with the agency filter applied and no multi-agency quota in play:
+#
+#   mst-fares#1               "Single Ride ... $2.00"        rank 8, 14 of 28 MST chunks
+#   cccta-fare-types-prices#0 "Single Ride | $2.00"          rank 10, 10, 16 of 25
+#   actransit-fares#1         "Local Day Pass ... $6.00"     rank 9 of 26
+#   actransit-fares-es#1      "Pase Local Diario ... $6.00"  rank 8 of 26
+#   sbmtd-fares-passes#1      "FREE Children under 45 in"    rank 8 of 23
+#
+# — every one of them just past a top_k of 8, and every one of them the only
+# place its agency publishes the number the case asks for.
+#
+# The consequence is worse than a missing number. On xagency-016 SacRT's adult
+# fare row (`sacrt-fares#1`, "Age 19-61 - Basic | Single Ride Ticket | $2.50")
+# never arrived while the TK-12 student table (`sacrt-fares#2`, "$1.25") did,
+# and the model reported $1.25 as the basic single ride. Issue #138 files that
+# as a cross-agency attribution error; it is a retrieval miss wearing an
+# attribution error's clothes, and no prompt rule can fix it, because the
+# correct row was never in the context window.
+#
+# WHICH priced passage is guaranteed matters as much as the guarantee. An
+# agency publishes several priced pages — MST prices its Group Discount
+# Program, CCCTA its East Bay Day Pass, SacRT its TK-12 student table — and
+# those are what BM25 already returns. Guaranteeing merely "some passage with
+# prices in it" is therefore satisfied by the very passages that crowded the
+# schedule out, which is measurably useless: it recovered 2 of the 11
+# never-retrieved facts in the 2026-09-04 nightly.
+#
+# The rider asking what a ride costs needs the agency's *fare schedule* — the
+# one table that prices its products together — and that table is
+# identifiable without naming any chunk: it is the agency's densest, by a
+# wide margin. MST's schedule prices 16 products where its next densest page
+# prices 6; SacRT's 16 against 5; CCCTA's 9 against 4. Checked against all 18
+# agencies in the corpus, the densest chunk is the agency's fare schedule for
+# 14 of them ("Current Fares", "Fares & Passes", "Local Fixed Route Fares",
+# "CASH FARES", "Fare Table", …); for the other four it is an adjacent
+# schedule — SLORTA's fare-capping table, SBMTD's passes table — which is the
+# same kind of evidence and still the right passage to hold.
+#
+# Ties are common and load-bearing: an agency that publishes a Spanish mirror
+# has two equally dense schedules (actransit-fares#1 and actransit-fares-es#1
+# both price 21 products). Both count as the schedule, and the tie is broken
+# by this query's own ranking, so a Spanish question gets the Spanish table
+# through the existing language boost rather than through a second rule.
+_FARE_TABLE_PRICE = re.compile(r"\$\s?\d")
+
+# An agency whose densest page prices fewer than four products has no schedule
+# worth guaranteeing; injecting its best-priced page would be noise. No agency
+# in today's corpus is below this (the lowest, VTA, prices six), so the floor
+# is a guard against a future thin agency rather than an active filter.
+_FARE_TABLE_MIN_PRICES = 4
+
+# A question asking for an AMOUNT, in the three languages the assistant
+# answers in. Deliberately the rider's vocabulary rather than the agencies':
+# "what's the most I'll be charged?" (edge-actransit-001) and "magkano ang
+# pamasahe" (tl-001) ask for a number off the fare table just as plainly as
+# "how much does it cost".
+#
+# The word "fare" is deliberately NOT a trigger on its own, and this repo's
+# own containment test is why. Half the corpus's questions mention a fare
+# without asking its price — "What proof do I need for the veteran fare on
+# MST?" wants a document list — and with a bare `\bfares?\b` alternative the
+# helper appended MST's schedule to that question at score 0.0, a passage with
+# no term overlap with the query at all. The interrogative form below asks for
+# the fare's value ("what is the ... fare") and leaves the proof question
+# alone.
+_FARE_PRICE_QUERY = re.compile(
+    r"\bhow much\b|\bcosts?\b|\bprices?\b|\bcharges?\b|\bcharged\b"
+    r"|\bfare max\w*|\bcap(ped|s)?\b|\bmaximum\b|\bmost i\b"
+    r"|\bwhat(?:'s| is| are)\s+(?:the\s+)?[\w -]{0,24}\b(?:fares?|pass(?:es)?|ticket)\b"
+    # es
+    r"|\bcuant[oa]s?\b|\bcuesta\b|\bcuestan\b|\bcosto\b|\bprecios?\b|\bmaximo\b"
+    # tl
+    r"|\bmagkano\b",
+    re.I,
+)
+
+
+def _is_fare_price_query(question: str) -> bool:
+    return bool(_FARE_PRICE_QUERY.search(_fold_accents(question)))
+
+
+# Effective-date "close the loop" (issue #138, freshness suite). "How long are
+# the current Yolobus fares in effect?" and "Did SLO RTA change its fares
+# recently?" both need one specific passage: the one carrying the schedule's
+# effective-date stamp. Neither is retrieved today, and for the same reason
+# the fare schedule is not — the stamp is one short sentence, or a section
+# heading with no body text at all, next to pages that discuss fares at
+# length. `yolobus-fares#0` is 140 characters ("All below fares are effective
+# July 1, 2026 – June 30, 2027") and ranks 9th of 22 Yolobus chunks; SLORTA
+# publishes its date ONLY in a heading, "New cash fares as of April 6, 2026",
+# which appears nowhere in any chunk body in the corpus.
+#
+# That heading is why this matches against section and text together, as
+# `_priced_products` does: `answer._format_passages` renders the section in
+# each passage block, so a heading-only fact does reach the model — but only
+# if the chunk is retrieved at all.
+#
+# Narrow by construction: 13 of 301 chunks qualify, across 7 of the 18
+# agencies. The other eleven publish no effective date, and for them this
+# helper correctly does nothing rather than inventing a stand-in.
+_MONTH = (
+    r"(january|february|march|april|may|june|july|august|september|october"
+    r"|november|december|enero|febrero|marzo|abril|mayo|junio|julio|agosto"
+    r"|septiembre|octubre|noviembre|diciembre)"
+)
+_EFFECTIVE_DATE_PASSAGE = re.compile(
+    rf"\b(fares?|tarifas?|prices?)\b[^.\n]{{0,60}}"
+    rf"\b(effective|as of|in effect|vigent\w*|a partir de)\b"
+    rf"|\b(effective|as of|vigente desde)\b[^.\n]{{0,20}}{_MONTH}\s+\d",
+    re.I,
+)
+_EFFECTIVE_DATE_QUERY = re.compile(
+    r"\b(in effect|effective|expires?|expiring|expiration|how long|until when)\b"
+    r"|\b(chang\w+|increas\w+|rais\w+|new|current|recent\w*)\b[^?.\n]{0,40}\b(fares?|prices?)\b"
+    r"|\b(fares?|prices?)\b[^?.\n]{0,40}\b(chang\w+|increas\w+|went up|go up|recent\w*)\b"
+    # es
+    r"|\b(vigent\w*|vencen?|caducan?|hasta cuando)\b"
+    r"|\b(cambi\w+|subi\w+|nuev[ao]s?)\b[^?.\n]{0,40}\btarifas?\b"
+    r"|\btarifas?\b[^?.\n]{0,40}\b(cambi\w+|subi\w+)\b",
+    re.I,
+)
+
+
+def _is_effective_date_query(question: str) -> bool:
+    return bool(_EFFECTIVE_DATE_QUERY.search(_fold_accents(question)))
+
+
+def _is_effective_date_passage(chunk: Chunk) -> bool:
+    return bool(_EFFECTIVE_DATE_PASSAGE.search(f"{chunk.section} {chunk.text}"))
+
+
+def _priced_products(chunk: Chunk) -> int:
+    """How many fare products a passage prices. The section heading counts:
+    several agencies carry the price or the effective date in the heading and
+    nowhere in the body, and `answer._format_passages` shows the model the
+    heading too."""
+    return len(_FARE_TABLE_PRICE.findall(f"{chunk.section} {chunk.text}"))
 
 
 # Corpus-wide enumeration questions (issue #150, xagency-010): "Which agencies
@@ -480,6 +674,7 @@ class Retriever:
         self.chunks = chunks if chunks is not None else load_chunks()
         self._bm25 = BM25Okapi([_tokenize(f"{c.section} {c.text}") for c in self.chunks])
         self._dense = self._load_dense() if self.cfg.use_dense else None
+        self._fare_schedules: dict[str, frozenset[str]] | None = None
 
     def _load_dense(self):
         from sentence_transformers import SentenceTransformer
@@ -572,7 +767,9 @@ class Retriever:
         ]
         results = self._close_the_loop(question, agencies, results, ranked)
         results = self._ensure_eligibility_passage(question, agencies, results, ranked)
-        return self._ensure_child_fare_passage(question, agencies, results, ranked)
+        results = self._ensure_child_fare_passage(question, agencies, results, ranked)
+        results = self._ensure_fare_table_passage(question, agencies, results, ranked)
+        return self._ensure_effective_date_passage(question, agencies, results, ranked)
 
     def _augmentation_targets(
         self, question: str, agencies: list[str], results: list[ScoredChunk]
@@ -677,6 +874,83 @@ class Retriever:
                     sc.chunk.agency == ag
                     and sc.chunk.chunk_id not in present
                     and _is_child_fare_provision(sc.chunk)
+                ):
+                    additions.append(sc)
+                    break
+        return results + additions
+
+    def _fare_schedule_ids(self, agency: str) -> frozenset[str]:
+        """The chunk ids holding `agency`'s fare schedule: those tied for the
+        most fare products priced in one passage. A fact about the corpus, not
+        about any query, so it is computed once per retriever."""
+        if self._fare_schedules is None:
+            best: dict[str, int] = {}
+            for chunk in self.chunks:
+                n = _priced_products(chunk)
+                if n > best.get(chunk.agency, 0):
+                    best[chunk.agency] = n
+            self._fare_schedules = {
+                ag: frozenset(
+                    c.chunk_id for c in self.chunks if c.agency == ag and _priced_products(c) == n
+                )
+                for ag, n in best.items()
+                if n >= _FARE_TABLE_MIN_PRICES
+            }
+        return self._fare_schedules.get(agency, frozenset())
+
+    def _ensure_fare_table_passage(
+        self,
+        question: str,
+        agencies: list[str],
+        results: list[ScoredChunk],
+        ranked: list[ScoredChunk],
+    ) -> list[ScoredChunk]:
+        """Issue #138: on a price question, make sure each relevant agency's own
+        fare schedule survives into the answer prompt. See `_FARE_TABLE_PRICE`
+        above for why BM25 loses it — a table names each fare once, the prose
+        around it names them repeatedly — and for the measured ranks. Mirrors
+        the three helpers above exactly: append at most one passage per
+        relevant agency, never remove anything."""
+        if not _is_fare_price_query(question):
+            return results
+        targets = self._augmentation_targets(question, agencies, results)
+        present = {sc.chunk.chunk_id for sc in results}
+        additions: list[ScoredChunk] = []
+        for ag in targets:
+            schedule = self._fare_schedule_ids(ag)
+            if not schedule or any(sc.chunk.chunk_id in schedule for sc in results):
+                continue  # this agency has no schedule, or it is already in hand
+            for sc in ranked:
+                if sc.chunk.chunk_id in schedule and sc.chunk.chunk_id not in present:
+                    additions.append(sc)
+                    break
+        return results + additions
+
+    def _ensure_effective_date_passage(
+        self,
+        question: str,
+        agencies: list[str],
+        results: list[ScoredChunk],
+        ranked: list[ScoredChunk],
+    ) -> list[ScoredChunk]:
+        """Issue #138 (freshness): on a question about when fares took effect or
+        how long they last, make sure the agency's effective-date passage
+        survives. See `_EFFECTIVE_DATE_PASSAGE` above for why it does not on
+        its own. Mirrors the helpers around it: at most one passage per
+        relevant agency, never removes anything."""
+        if not _is_effective_date_query(question):
+            return results
+        targets = self._augmentation_targets(question, agencies, results)
+        present = {sc.chunk.chunk_id for sc in results}
+        additions: list[ScoredChunk] = []
+        for ag in targets:
+            if any(_is_effective_date_passage(sc.chunk) for sc in results if sc.chunk.agency == ag):
+                continue
+            for sc in ranked:
+                if (
+                    sc.chunk.agency == ag
+                    and sc.chunk.chunk_id not in present
+                    and _is_effective_date_passage(sc.chunk)
                 ):
                     additions.append(sc)
                     break
