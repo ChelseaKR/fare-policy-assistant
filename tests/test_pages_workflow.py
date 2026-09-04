@@ -290,13 +290,28 @@ def test_render_step_refuses_to_publish_without_a_provenance_block(tmp_path: Pat
 
 
 def test_render_step_writes_robots_and_sitemap_naming_the_real_origin(tmp_path: Path) -> None:
+    """Exact equality on parsed values, not `url in text` -- a raw substring
+
+    check against a URL is exactly the incomplete-sanitization shape CodeQL's
+    py/incomplete-url-substring-sanitization rule exists to catch (a
+    genuine, non-flaky finding this file tripped once; fixed by asserting
+    against the parsed value instead of arguing the finding away).
+    """
     completed = _run_render_step(tmp_path, conclusion="success", evals_md=_fixture_evals_md())
     assert completed.returncode == 0, completed.stderr
     robots = (tmp_path / "_site" / "robots.txt").read_text(encoding="utf-8")
-    assert "Sitemap: https://evals.chelseakr.com/sitemap.xml" in robots
+    assert robots.splitlines() == [
+        "User-agent: *",
+        "Allow: /",
+        "",
+        "Sitemap: https://evals.chelseakr.com/sitemap.xml",
+    ]
     sitemap = (tmp_path / "_site" / "sitemap.xml").read_text(encoding="utf-8")
-    assert "https://evals.chelseakr.com/" in sitemap
-    assert "https://evals.chelseakr.com/report.html" in sitemap
+    locations = re.findall(r"<loc>(.*?)</loc>", sitemap)
+    assert locations == [
+        "https://evals.chelseakr.com/",
+        "https://evals.chelseakr.com/report.html",
+    ]
 
 
 # --- the published page's own read-time freshness check --------------------
