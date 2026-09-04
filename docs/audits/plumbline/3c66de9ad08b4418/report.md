@@ -6,12 +6,13 @@ Plumbline audit of target `fare-policy-assistant`.
 
 | Field | Value |
 |---|---|
-| Run id | `ee2ad1a003b065f4` |
-| Harness version | `0.1.0.dev0` |
-| Harness source | `7c3810fcf92c2691bd4c0f42178bdff5e3a2ce6c13bf41e6b797d6bf45e68a5f` |
+| Run id | `3c66de9ad08b4418` |
+| Harness version | `0.2.0` |
+| Harness source | `4104642401a3eacc2e8a9f684a9168bd3ac220e78367e6ff2b23ebbbeef1a91a` |
+| Report seal | `528cf4c252850960fadf592603a7281a90715ef54598b57ca80a37d8b6ad6290` (sha256 of this report's own body; check it with `plumbline verify`) |
 | Seed | `1729` |
 | Dataset hash | `330fdc7e44f6b3a1cf84d61a2d7e4ce3fcff4b581a1b5679e2600311518c3ee8` (short: `330fdc7e44f6`) |
-| Judge | `lexical` (deterministic), config hash `b9ae88e2a1664b7d8275f8635d49473817611e77f606f7841258ca913b07ab11` |
+| Judge | `lexical` (deterministic), config hash `f958655ab48d32680389ac389b19df326eb60986b822501099264c427bf5b4cb` |
 | Language profiles | `ar`, `en`, `es`, `tl` |
 
 Dataset: `fare-policy-assistant`, 195 items.
@@ -22,7 +23,7 @@ Dataset: `fare-policy-assistant`, 195 items.
 |---|---|---|---|---|---|---|
 | accessibility | 0.8000 | 0.80 | **PASS** | 5 | n/a | n/a |
 | accuracy | 0.0591 | 0.04 | **FAIL** ! | 161 | 0.0494 – 0.0691 | 0.0198 |
-| adversarial | 0.0000 | 0.00 | **PASS** | 3 | 0.0000 – 0.5615 | 1.0000 |
+| adversarial | 0.0000 | 0.90 | **FAIL** | 3 | 0.0000 – 0.5615 | 1.0000 |
 | citation_accuracy | 0.7136 | 0.55 | **PASS** | 156 | 0.6844 – 0.7421 | 0.0585 |
 | citation_validity | 0.9936 | 0.99 | **PASS** | 157 | 0.9809 – 1.0000 | 0.0249 |
 | cross_language | 0.3864 | 0.35 | **FAIL** ! | 44 | 0.2572 – 0.5338 | 0.2908 |
@@ -53,7 +54,7 @@ Two red rows are not always two problems. Where enabled suites read the same evi
 
 ## Regression against baseline
 
-Baseline run `647f38487ffaecea`, dataset `330fdc7e44f6`, harness `0.1.0.dev0`, judge `lexical`.
+Baseline run `87712afad254cecf`, dataset `330fdc7e44f6`, harness `0.2.0`, judge `lexical`.
 
 No suite verdict changed.
 
