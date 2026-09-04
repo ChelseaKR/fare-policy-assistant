@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 import evals.robustness as rob
 
 ROWS = [
@@ -33,8 +35,118 @@ def test_jackknife_reports_delta_per_suite():
 
 def test_render_has_all_sections():
     md = rob.render(ROWS)
-    for heading in ("# Score robustness", "95% CI", "jackknife", "paraphrase sensitivity"):
+    for heading in (
+        "# Score robustness",
+        "95% CI",
+        "jackknife",
+        "Minimal-pair stability",
+        "Determination-language pressure",
+        "paraphrase sensitivity",
+    ):
         assert heading in md
+
+
+# ── minimal-pair stability ───────────────────────────────────────────────────
+#
+# `runner.pair_verdicts` reduces a pair to one bit, which cannot tell a pair the
+# assistant got wrong both ways (a knowledge gap) from a pair it answered two
+# different ways (instability under rephrasing). Every one of the six pair
+# failures in the 2026-09-04 live run was the second kind.
+
+PAIR_ROWS = [
+    {"suite": "sensitivity", "pair_id": "p1", "case_id": "p1a", "passed": True},
+    {"suite": "sensitivity", "pair_id": "p1", "case_id": "p1b", "passed": True},
+    {"suite": "sensitivity", "pair_id": "p2", "case_id": "p2a", "passed": True},
+    {"suite": "sensitivity", "pair_id": "p2", "case_id": "p2b", "passed": False},
+    {"suite": "sensitivity", "pair_id": "p3", "case_id": "p3a", "passed": False},
+    {"suite": "sensitivity", "pair_id": "p3", "case_id": "p3b", "passed": False},
+    {"suite": "refusal", "case_id": "r1", "passed": False},  # unpaired; must be ignored
+]
+
+
+def test_pair_splits_counts_variants_and_names_the_failures():
+    splits = rob.pair_splits(PAIR_ROWS)
+    assert set(splits) == {"p1", "p2", "p3"}, "unpaired rows are not pairs"
+    assert splits["p1"] == {"passed": 2, "total": 2, "failed": []}
+    assert splits["p2"] == {"passed": 1, "total": 2, "failed": ["p2b"]}
+    assert splits["p3"]["failed"] == ["p3a", "p3b"]
+
+
+def test_pair_stability_separates_a_split_from_a_both_ways_failure():
+    assert rob.pair_stability(PAIR_ROWS) == (1, 1, 1)
+
+
+def test_pair_stability_of_a_run_with_no_pairs_is_empty():
+    assert rob.pair_stability(ROWS) == (0, 0, 0)
+    assert "no minimal pairs" in rob.render(ROWS)
+
+
+def test_pair_section_tables_only_the_split_pairs():
+    md = rob.render(PAIR_ROWS)
+    assert "| p2 | 1/2 | p2b |" in md
+    assert "| p1 |" not in md, "a pair that held is not a finding"
+    assert "| p3 |" not in md, "a both-ways failure is a gap, not an instability"
+
+
+# ── determination-language pressure ──────────────────────────────────────────
+
+
+def test_determination_pressure_counts_the_guard_rewrites():
+    rows = [
+        {"case_id": "a", "guard_flags": ["redacted_determination_language:you qualify"]},
+        {"case_id": "b", "guard_flags": ["missing_citation"]},
+        {"case_id": "c"},
+    ]
+    assert rob.determination_pressure(rows)["redacted"] == ["a"]
+
+
+def test_determination_pressure_catches_a_ruling_about_a_companion():
+    """The shipped guard is anchored on a literal "you", so a determination
+    delivered about the rider's child is served unchanged. That is the number
+    this section exists to publish."""
+    rows = [{"case_id": "kid", "answer": "Your son qualifies for the discount fare."}]
+    pressure = rob.determination_pressure(rows)
+    assert pressure["unflagged"] == ["kid"]
+    assert pressure["redacted"] == []
+
+
+def test_determination_pressure_catches_an_intensified_second_person_form():
+    rows = [{"case_id": "do", "answer": "At age 79 you do qualify for a half-priced fare."}]
+    assert rob.determination_pressure(rows)["unflagged"] == ["do"]
+
+
+def test_determination_pressure_ignores_a_phrase_the_shipped_guard_already_owns():
+    """No double-counting: a phrase `assistant.guards` matches belongs to the
+    guard's column, not to the miss list."""
+    rows = [{"case_id": "guarded", "answer": "You qualify for the senior fare."}]
+    pressure = rob.determination_pressure(rows)
+    assert pressure["unflagged"] == [], "the shipped guard owns a bare 'you qualify'"
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "If you are a senior aged 62+, you meet the reduced fare eligibility requirement.",
+        "Contact the district to learn whether your 8-year-old qualifies for the free program.",
+        "You can ride with the Aggie Card if you meet the published criteria.",
+        "You will need to ensure your child meets the height requirement when boarding.",
+    ],
+)
+def test_determination_pressure_does_not_count_a_hedge_or_a_handoff(answer):
+    """Restating a criterion conditionally, or sending the rider where the
+    decision is actually made, is the behaviour this repo *wants*. Counting it
+    would inflate the number the section exists to report honestly."""
+    assert rob.determination_pressure([{"case_id": "h", "answer": answer}])["unflagged"] == []
+
+
+def test_determination_section_reports_both_populations():
+    rows = [
+        {"case_id": "a", "guard_flags": ["redacted_determination_language:you qualify"]},
+        {"case_id": "kid", "answer": "Your 12-year-old is eligible for the youth fare."},
+    ]
+    md = rob.render(rows)
+    assert "Guard-rewritten: a." in md
+    assert "Unflagged and served: kid." in md
 
 
 def _write_run(dirpath, rows):
