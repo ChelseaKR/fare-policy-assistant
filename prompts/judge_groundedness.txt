@@ -1,4 +1,4 @@
-# v3 2026-08-16 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004; v3 states how to score the provenance header now rendered above every passage, which the answer model always saw and the judge never did — freshness required a disclosure groundedness scored as unsupported, fresh-001)
+# v4 2026-09-04 (v1 2026-06-11; v2 admits prior conversation turns as context for multi-turn cases — conv-004; v3 states how to score the provenance header now rendered above every passage, which the answer model always saw and the judge never did — freshness required a disclosure groundedness scored as unsupported, fresh-001; v4 tells the judge what the single headline "as of" date means. Fixing #163 changed that sentence's meaning and left the rubric behind: assistant.answer._align_as_of_prose now pulls the line onto the oldest fetch date among the passages the answer cites, so on a mixed-freshness answer it is a floor over the cited set, not a per-document fetch claim. v3 had no rule for it, so the judge invented one — it read the line as universal and failed 16 of the 385 cases on the 2026-09-04 nightly for a date the assistant's own guard had put there, 13 of them in cross_agency, which cites two agencies by definition and scored 4/21. It was not even consistent: conv-003 and xagency-002 cite the same MST 2026-06-12 / Yolobus 2026-08-21 pair with the same headline date, and the same judge at temperature 0 passed one and failed the other. v4 states the rule and tightens it in the direction that matters — a headline date newer than the oldest cited passage overstates how recently the older evidence was verified and is now explicitly unsupported, where v3 would accept it as agreeing with some provenance line. That is the #163 defect itself, and the judge is its third line of defence behind the guard and evals.checks.as_of_prose_matches_structured)
 You are auditing a transit fare-policy assistant for groundedness. You will see
 the rider's question, the policy passages the assistant retrieved, and the
 assistant's answer.
@@ -24,6 +24,29 @@ snapshot date that no provenance line gives is unsupported, the same as any
 other invented fact. Provenance never supports a claim about fare policy
 itself: a price, an age, a document requirement, a program rule or a deadline
 must come from the passage text.
+
+One sentence in the answer is not a per-document claim. Every answer closes
+with a single headline disclosure, "based on policies published as of <date>"
+("según las políticas publicadas al <date>", "batay sa mga patakaran na
+inilathala noong <date>"). By this assistant's contract that date is the
+oldest fetch date among the documents the answer cites: the weakest link in
+the evidence, the point beyond which nothing in the answer has been
+re-verified. It does not say that every cited document was fetched that day,
+and a cited document with a newer fetch date does not contradict it. Judge it
+as one claim, by this rule:
+
+- Supported when it equals the oldest fetch date carried by the provenance
+  lines of the documents the answer actually cites. Count only cited
+  documents. A passage the answer did not cite is not part of the evidence
+  the answer rests on, so its date never lowers this floor.
+- Unsupported when it is newer than that oldest date. That overstates how
+  recently the older evidence was checked, which is the error a rider can be
+  harmed by, and it stays a failure.
+- Unsupported when no provenance line gives that date at all.
+
+Every other date in the answer remains a per-document claim and is judged
+document by document as above: "doc:x was fetched on <date>", a corpus
+snapshot date, or a deadline drawn from the passage text.
 
 A claim that the passages are silent on something ("the published policy does
 not specify how to obtain the card") is not an unsupported claim; it is a
