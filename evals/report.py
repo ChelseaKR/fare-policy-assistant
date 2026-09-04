@@ -236,7 +236,7 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
     offline runs have no judge verdicts to compare against."""
     if not summary.get("judges_ran"):
         return None
-    from evals.calibration import calibrate
+    from evals.calibration import calibrate, calibration_status, labeled_on
 
     try:
         c = calibrate(records)
@@ -290,8 +290,47 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
         lines.append(
             f"- Unbound (no answer hash; not staleness-checked): {', '.join(c['unbound'])}"
         )
+    if c.get("criterion_stale"):
+        lines.append(
+            "- **Criterion-stale** (the answer held but the judge prompt moved since the label "
+            "was written, so the human and the judge answered different questions): "
+            f"{', '.join(c['criterion_stale'])}"
+        )
+    if c.get("criterion_unbound"):
+        lines.append(
+            "- Criterion-unbound (the label does not record which judge prompt version it was "
+            f"given under, so a prompt bump cannot be detected): {len(c['criterion_unbound'])} "
+            "of the scored labels"
+        )
     if c["unmatched"]:
         lines.append(f"- Unmatched (no judge verdict in this run): {', '.join(c['unmatched'])}")
+
+    # The three §3 auto-gates, named and scored. Until this was here the section
+    # said the sample was "provisional", which is a word, and left a reader to
+    # work out that the project's own standard makes calibration merge-blocking
+    # and that this misses it. Freshness (AIEV-20) was not reported at all, so
+    # the one gate that fails purely with the passage of time was invisible.
+    # "unmeasured" is its own verdict on purpose: an undefined κ and a κ of 0.9
+    # over four labels are both things this section must not let read as a pass.
+    marks = {"pass": "PASS", "fail": "**FAIL**", "unmeasured": "**not measured**"}
+    lines += [
+        "",
+        "**Against `STANDARDS/AI-EVALUATION-STANDARD.md` §3, which makes these merge-blocking:**",
+        "",
+        "| Gate | Target | This run | |",
+        "|---|---|---|---|",
+    ]
+    for gate in calibration_status(c, labeled_on()):
+        lines.append(
+            f"| {gate['id']} {gate['name']} | {gate['target']} | {gate['actual']} | "
+            f"{marks[gate['verdict']]} |"
+        )
+    lines.append("")
+    lines.append(
+        "Closing these needs human labels, not a code change: "
+        "`evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` holds the rows and "
+        "`make relabel` walks them. See [docs/judge-calibration.md](docs/judge-calibration.md)."
+    )
     return "\n".join(lines)
 
 
