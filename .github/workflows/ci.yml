@@ -16,6 +16,13 @@ on:
     # day except Monday" is Sunday plus Tuesday-Saturday: 0,2-6.
     - cron: "17 9 * * 0,2-6"  # nightly full suite (cache-backed)
     - cron: "17 9 * * 1"      # weekly cold full suite (cache refreshed)
+    #
+    # A red run here used to be visible only in this tab: fourteen straight
+    # nights of `failure` (2026-08-22 through 2026-09-04) went unnoticed
+    # while unrelated commits kept landing on main. nightly-eval-alert.yml
+    # polls this job's own run history daily and turns a red (or missing)
+    # nightly into a durable, numbered GitHub issue with the actual failing
+    # numbers, closed automatically once this goes green again.
 
 # Least privilege by default; jobs that need AWS add id-token themselves.
 permissions:
