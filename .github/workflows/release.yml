@@ -43,6 +43,7 @@ jobs:
   release-tests:
     needs: authorize
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -64,6 +65,7 @@ jobs:
   build:
     needs: [authorize, release-tests]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       id-token: write        # SLSA build-provenance attestation
@@ -124,6 +126,7 @@ jobs:
   github-release:
     needs: [authorize, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:

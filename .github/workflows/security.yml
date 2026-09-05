@@ -23,6 +23,7 @@ jobs:
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read
@@ -43,6 +44,7 @@ jobs:
   sast:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -52,6 +54,8 @@ jobs:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Semgrep scan (blocking on ERROR severity)
         # Pinned tool version; default + python registry rulesets. --error makes
         # any ERROR-severity finding fail the build (no `|| true`).
@@ -71,6 +75,7 @@ jobs:
     # a schedule but nothing previously blocked a merge that introduced or kept
     # a known-vulnerable dependency; this closes that gap.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -80,6 +85,8 @@ jobs:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Lockfile drift check
         # Fails if uv.lock is stale relative to pyproject.toml (CQ-09) before
         # auditing a lockfile that might not even describe what CI installs.
@@ -107,6 +114,7 @@ jobs:
     # this would start clean was wrong; those were fixed in the same pass that
     # added this job, so it starts clean going forward, not by coincidence.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -116,6 +124,8 @@ jobs:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: zizmor (blocking; no mute)
         # Pinned tool version, like the Semgrep job above. No --fix here (fixes
         # are for a human/author to apply and review, not to auto-commit in CI).
