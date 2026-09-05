@@ -9,6 +9,37 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Added
+- **The feedback record can say which corpus a verdict is about** (2026-09-05).
+  ROADMAP P2-3 asked for a thumbs-up/down logging "the verdict, the response
+  kind, and the corpus version". The endpoint, the UI row, the closed-set
+  validation, the per-route rate limit, and the `FeedbackDown` alarm were all
+  already shipped and the roadmap had simply never been updated to say so. The
+  corpus version was the part that was genuinely missing, and it is the field
+  that made the aggregate answerable: without it a helpfulness rate cannot be
+  attributed to the policy text a rider was reading, so a corpus refresh that
+  made answers worse looks the same as one that made them better.
+  - `telemetry.log_feedback` now records `corpus_version`, and `_feedback`
+    reads it from `web.handler._serving_corpus_version()` rather than the
+    request body. `/api/ask` already returns a `corpus_version` to the page, so
+    echoing it back was the shorter path; it would also have been forgeable and
+    the only client-controlled string on a record whose value is having none.
+  - A corpus that cannot be summarized costs the version, not the verdict.
+    `/api/feedback` reads no corpus otherwise, and a summary fault reaching the
+    handler's catch-all would have turned a working route into a 500. The field
+    degrades to `null`, which is never confused with a real version.
+  - `TestFeedback` asserts the record's field set as a closed set built from a
+    real `LogRecord`, so a future field cannot widen it quietly. The previous
+    tests checked that specific known-bad strings were absent, which passes for
+    a record that has since gained a `question` field. New cases cover the
+    smuggling attempts directly: body keys named `question`, `answer`,
+    `history`, `citations`, and the record's own field names all fail to reach
+    the log or add to it, and a client-supplied `corpus_version` is ignored in
+    favour of the served one.
+  - `infra/README.md` gains "Reading the feedback signal" with the Logs
+    Insights query that produces helpfulness by corpus version, kind, and
+    language. ADR 0019's event table now lists the field, and records why a
+    question hash was rejected: short fare questions are enumerable, so a
+    digest of one is a reversible copy rather than a de-identified token.
 - **The evidence hub can say where it is** (2026-08-28). A technical SEO audit of
   `evals.chelseakr.com` found neither published page carrying a meta description,
   a canonical link, or a share card, and `/robots.txt` and `/sitemap.xml` both
