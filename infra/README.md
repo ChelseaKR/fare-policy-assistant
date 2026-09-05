@@ -274,6 +274,42 @@ Constraints inherited from the rest of the repo: no user query persistence
 (the handler logs counts and timings, never content; 14-day retention),
 pinned model versions, and the deployed corpus is the committed snapshot set.
 
+## Reading the feedback signal
+
+`/api/feedback` emits one `feedback` record per verdict, carrying the verdict,
+the response kind, the language, and the corpus version the deployment was
+serving. It carries nothing else, and `tests/test_web.py` asserts that field
+set as a closed set rather than as a list of strings to avoid.
+
+`FeedbackDown` alarms on the raw count. The rate is the useful number, and it
+comes from Logs Insights over the same records, with no extra provisioning:
+
+```sh
+aws logs start-query \
+  --log-group-name /aws/lambda/fare-policy-assistant-demo \
+  --start-time "$(date -u -v-14d +%s)" --end-time "$(date -u +%s)" \
+  --query-string 'fields @timestamp
+    | filter event = "feedback"
+    | stats sum(verdict = "up") as up,
+            sum(verdict = "down") as down,
+            count(*) as total,
+            sum(verdict = "up") * 100 / count(*) as helpful_pct
+      by corpus_version, kind, language'
+```
+
+That is the whole of P2-3's "queryable in aggregate": helpfulness split by the
+corpus a rider was actually reading, by whether the assistant answered or
+declined, and by language. Drop the `by` clause for one overall rate, or keep
+`corpus_version` alone to see whether a corpus refresh moved the number.
+
+Nothing in that output can be narrowed to a person or a question. The record
+has no caller key, no request body, and no question hash. A hash was considered
+and rejected: the space of short fare questions is small enough to enumerate,
+so a digest of one is a reversible copy of it rather than a de-identified
+token. The cost is real and worth naming. A `down` verdict says something was
+wrong without saying what, so the follow-up is reproducing it against the same
+`corpus_version` and `kind` in the eval suite, not reading the rider's session.
+
 ## Per-caller rate limiting
 
 The gateway throttle above is aggregate. One actor sustaining two requests per

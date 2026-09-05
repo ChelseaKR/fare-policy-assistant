@@ -422,7 +422,9 @@
   }
 
   // Privacy-safe feedback: sends only the verdict, the response kind, and the
-  // language. Never the question or the answer.
+  // language. Never the question or the answer. The server checks all three
+  // against a closed set before recording them, and adds the corpus version it
+  // is serving from its own state rather than trusting this page for it.
   function feedbackRow(data) {
     var row = document.createElement("p");
     row.className = "feedback";
