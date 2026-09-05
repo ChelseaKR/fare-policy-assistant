@@ -25,6 +25,12 @@ corpus/versions/.archive.lock
 corpus/versions/.*.*/
 corpus/snapshots/.archive.lock
 corpus/snapshots/.*.*/
+# Same reasoning for the GTFS publication lock and its hidden staging
+# transactions (ADR 0024): the lock is a cooperative flock target, and an
+# interrupted transaction directory is unreachable by construction and safe to
+# clean. Neither is evidence; the immutable snapshots and current.json are.
+corpus/raw/gtfs/.fetch.lock
+corpus/raw/gtfs/.transaction.*/
 # Per-run eval artifacts (committed reports live in docs/)
 evals/runs/
 # Content-keyed answer/judge cache (evals/cache.py, FIX-12); local speed/cost

@@ -1,0 +1,6 @@
+rider_category_id,rider_category_name,is_default_fare_category,eligibility_url
+adult,"Full Fare (Ages 18-59)",1,https://sanjoaquinrtd.com/fares/
+discount,"Discount Fare (Seniors 60+/Disabled/Veterans/Medicare/DFC)",0,https://sanjoaquinrtd.com/fares/
+student,"Student Fare (Ages 5-17 & College w/ID)",0,https://sanjoaquinrtd.com/fares/
+child,"Child Fare (4 and under)",0,https://sanjoaquinrtd.com/fares/
+paratransit,"Paratransit (ADA)",0,https://sanjoaquinrtd.com/fares/

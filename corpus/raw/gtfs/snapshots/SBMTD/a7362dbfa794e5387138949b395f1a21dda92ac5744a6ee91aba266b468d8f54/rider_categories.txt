@@ -1,0 +1,4 @@
+rider_category_id,rider_category_name,is_default_fare_category,eligibility_url
+standard,"Standard (Regular one-way, Youth (K-12th grade)",1,https://sbmtd.gov/fares-passes/
+reduced,Seniors (age 65+) or Persons with Disabilities or Medicare Cards,0,https://sbmtd.gov/fares-passes/
+free,Children under 45 inches tall,0,https://sbmtd.gov/fares-passes/

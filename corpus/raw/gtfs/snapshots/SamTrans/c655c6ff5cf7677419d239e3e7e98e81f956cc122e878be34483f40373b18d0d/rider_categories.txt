@@ -1,0 +1,3 @@
+rider_category_id,rider_category_name,is_default_fare_category,rider_category_description
+2,Discounted,0,Eligible Discount (Senior / Disabled / Medicare cardholder)
+5,Youth,0,Youth

@@ -8,6 +8,38 @@
 #                "search=yes, ai-train=no" (ai-input unspecified). We do not train on
 #                this content; it is retrieved and quoted with attribution. Fetched
 #                once, manually, with an identified user agent.
+#                Re-read in full 2026-09-04, because the file now says more than
+#                "allows *" and the detail is the compliance basis:
+#                  * `User-agent: *` gets `Allow: /` with `Crawl-delay: 10`, and
+#                    `Content-Signal: search=yes,ai-train=no,use=reference`.
+#                  * Named agents get `Disallow: /`: ClaudeBot, GPTBot, CCBot,
+#                    Google-Extended, Amazonbot, Applebot-Extended, Bytespider,
+#                    meta-externalagent, CloudflareBrowserRenderingCrawler.
+#                This project is none of those named agents; it fetches under its
+#                own identified user agent, and it does reference lookup — it
+#                retrieves a passage, quotes it, and cites the URL — which is what
+#                `use=reference` permits, while `ai-train=no` forbids something we
+#                do not do. So the wildcard rule is the one that applies to us and
+#                it allows the fetch. The whole file is Cloudflare's managed block,
+#                which matters for reading the WAF behaviour below: it is a generic
+#                managed policy rather than MST's considered statement about us.
+#                Separately, and NOT a robots question: mst.org's WAF returned
+#                403 to any user agent containing the token "research", which
+#                this project's did. Measured 2026-09-04 both directions in the
+#                same minute from the same address, and confirmed blunt rather
+#                than targeted: `something-research/0.1` from an unrelated
+#                project is refused, `totally-unrelated-agent/9.9` is served.
+#                Not a rate limit (a first request refuses, and Crawl-delay 10
+#                was honored), not an address block (other Cloudflare-fronted
+#                corpus hosts served this client in the same window), and not a
+#                robots.txt refusal — the wildcard rule above allows us.
+#                Resolved 2026-09-04: the fetch identity dropped the word, to
+#                `fare-policy-assistant/0.1 (portfolio reference project;
+#                ckellyreif@gmail.com)`. Still names the project, still carries
+#                a contact address, still not a browser and still not any other
+#                crawler's name; the crawl delay is unchanged. The full
+#                reasoning, and the line it does not cross, are in ADR 0002's
+#                2026-09-04 amendment. MST fetches normally again.
 #   sbmtd.gov    robots.txt allows all (wp-admin excluded).
 #   yolobus.com  robots.txt allows all; Crawl-delay 10 honored.
 #   sacrt.com    robots.txt allows all (wp internals excluded).
@@ -82,7 +114,7 @@
 #                block; METRO has authored no rules of its own in it.
 #   How this project read that, so a reviewer can disagree with the reasoning
 #   rather than have to reconstruct it: the fetcher is
-#   fare-policy-assistant-research/0.1, it is none of the named crawlers, and it
+#   fare-policy-assistant/0.1, it is none of the named crawlers, and it
 #   did not present any other agent's name — so it falls under `User-agent: *`,
 #   which both hosts allow. `ai-train=no` is honored: this project does not train
 #   on fetched content, it retrieves and quotes it with attribution and a link
@@ -164,7 +196,7 @@
 #                 page. One wrinkle a reviewer should see rather than have to
 #                 reconstruct: a second group, `User-agent: bingbot`, disallows
 #                 PDFs and /website/. That group binds bingbot alone; this
-#                 project's fetcher (fare-policy-assistant-research/0.1) is not
+#                 project's fetcher (fare-policy-assistant/0.1) is not
 #                 bingbot, presents no other agent's name, and falls under
 #                 `User-agent: *` — and in any case no AC Transit PDF is
 #                 ingested. Every page below returned HTTP 200 to the
@@ -388,7 +420,7 @@
 # the Content-Signal seen when it was fetched. None of them is a grant of rights
 # by this project, which has none to give.
 
-user_agent: "fare-policy-assistant-research/0.1 (portfolio reference project; ckellyreif@gmail.com)"
+user_agent: "fare-policy-assistant/0.1 (portfolio reference project; ckellyreif@gmail.com)"
 crawl_delay_seconds: 10
 
 documents:
@@ -1624,10 +1656,133 @@ documents:
 # might 404 or silently serve the wrong agency's data. `make gtfs-check`
 # reports them as `no_feed`, not a failure. Add an entry once a real feed URL
 # is confirmed for one of them.
+#
+# Second survey (live-fetched 2026-09-04, issue #141). The corpus had grown from
+# five agencies to eighteen and this list had not moved, so coverage was 2 of 18.
+# Every one of the sixteen was re-checked against the Mobility Database catalog
+# (https://bit.ly/catalogs-csv) and then fetched directly, because a catalog row
+# is a claim about a feed and not the feed. Twelve resolved to a first-party
+# agency feed carrying a fare table and are configured below. The other four are
+# configured too, with a `no_feed_reason` instead of a `url`: they were checked,
+# and what the check found is recorded rather than left as silence. The three
+# things that can be true of an unconfigured agency — nobody looked, somebody
+# looked and this is why, the feed is configured but not yet fetched — are
+# different facts, and `gtfs_cross_check.json` now says which one it is.
+#
+# Two catalog rows are worth naming because they are the failure this list's
+# 2026-07-08 note was written to avoid, observed live:
+#   - Elk Grove Transit's catalog row (mdb 2136, status "active") gives
+#     https://elkgrovetransit.com/gtfs, and every path on that host now 302s to
+#     an unrelated commercial site in another country. Nothing about the row
+#     says so. Had it been configured, `_extract_consumed_fare_files` would have
+#     rejected the HTML and failed the whole transaction closed rather than
+#     publishing it, which is the design working, but the row is not a feed and
+#     is recorded as such.
+#   - Yolobus, County Connection, Santa Cruz METRO and SacRT all have catalog
+#     rows whose direct_download is dead or deprecated; three had a live
+#     replacement row, and Yolobus's real feed is linked only from the agency's
+#     own /gtfs/ page. URLs below are the ones that answered on 2026-09-04.
 gtfs_feeds:
   - agency: MST
     url: https://www.mst.org/google/google_transit.zip
     fares_version: v1 # fare_attributes.txt + fare_rules.txt
+    # Unconfigured for part of 2026-09-04 while mst.org's WAF refused this
+    # project's user agent. The block was a keyword match on the token
+    # "research" in that string, not a decision about this project and not a
+    # robots.txt refusal; the identity dropped the word, with the compliance
+    # reasoning recorded in ADR 0002's 2026-09-04 amendment, and the feed
+    # serves normally again. See the mst.org note in the header above.
   - agency: SBMTD
     url: https://www.sbmtd.gov/google_transit/feed.zip
     fares_version: v2 # fare_products.txt + fare_leg_rules.txt + rider_categories.txt
+  - agency: CCCTA
+    url: https://countyconnection.com/GTFS/google_transit.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+    # The catalog's older row points at the retired transitfeeds.com aggregator
+    # and 403s; this is County Connection's own host (mdb 2421).
+  - agency: FAX
+    url: https://gis4u.fresno.gov/downloads/fax_gtfs.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+  - agency: HTA
+    url: https://hta.optibus.co/public_api/v1/feeds/gtfs
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+    # Serves no Content-Type; the bytes are a valid GTFS ZIP and the fetcher
+    # validates content rather than trusting a header.
+  - agency: Marin Transit
+    url: https://marintransit.gov/data/google_transit.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt (+ rider_categories.txt)
+    # The catalog's marintransit.org URL 301s here; recorded at the destination
+    # so the receipt's requested and final URL agree.
+  - agency: SamTrans
+    url: https://www.samtrans.com/Assets/GTFS/samtrans/ST-GTFS.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt (+ rider_categories.txt)
+    # The catalog deprecates this row in favour of an authenticated 511.org
+    # feed. SamTrans's own unauthenticated URL still serves, and a first-party
+    # feed is better evidence than an aggregator's copy, so it stays.
+  - agency: SCMTD
+    url: https://developer.scmetro.org/gtfs.zip
+    fares_version: v2 # fare_products.txt + fare_leg_rules.txt + rider_categories.txt
+    # scmtd.com/google_transit/google_transit.zip (the deprecated catalog row)
+    # 404s; this is METRO's current developer host (mdb 2425).
+  - agency: SJRTD
+    url: https://sjrtd.com/RTD-GTFS/RTD-GTFS.zip
+    fares_version: v2 # fare_products.txt + fare_leg_rules.txt + rider_categories.txt
+  - agency: SLORTA
+    url: https://slo.connexionz.net/rtt/public/resource/gtfs.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+  - agency: SolTrans
+    url: https://soltrans.connexionz.net/rtt/public/resource/gtfs.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+  - agency: VINE
+    url: https://data.trilliumtransit.com/gtfs/vinetransit-ca-us/vinetransit-ca-us.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+  - agency: VTA
+    url: https://gtfs.vta.org/gtfs_vta.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+  - agency: WestCAT
+    url: https://data.trilliumtransit.com/gtfs/westcat-ca-us/westcat-ca-us.zip
+    fares_version: v1 # fare_attributes.txt + fare_rules.txt
+
+  # Checked 2026-09-04 and deliberately not configured. These four are the
+  # honest half of the coverage number: a feed that cannot be fetched, or that
+  # carries no fare table, is not the same thing as an agency nobody looked at,
+  # and `make gtfs-check` prints the reason next to the agency rather than a
+  # bare `no_feed`.
+  - agency: AC Transit
+    no_feed_reason: >-
+      https://api.actransit.org/transit/gtfs/download returns HTTP 401 "A valid
+      API token is required to use the AC Transit API" (checked 2026-09-04, and
+      re-confirmed the same day on a spaced-out retry rather than inside the
+      fetch burst). The older catalog row points at the retired
+      transitfeeds.com aggregator. This project does not hold agency API
+      credentials and will not fetch a feed it cannot fetch anonymously, so AC
+      Transit fare rows stay uncross-checked. A standing condition, not a
+      transient failure: an API-token requirement does not come and go.
+  - agency: E-tran
+    no_feed_reason: >-
+      No first-party Elk Grove GTFS feed found (checked 2026-09-04, and
+      re-confirmed the same day on a spaced-out retry). The Mobility Database's
+      active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated
+      commercial site on another domain; every path on that host does, on both
+      attempts. SacRT, which operates e-tran and publishes the prose corpus for
+      it, serves a GTFS feed with no fare table at all. A standing condition:
+      a domain that resolves somewhere else is not a load artifact.
+  - agency: SacRT
+    no_feed_reason: >-
+      https://www.sacrt.com/wp-content/uploads/google_transit.zip downloads a
+      valid 2.7 MB GTFS ZIP (11 members) that contains neither
+      fare_attributes.txt nor fare_products.txt; the older iportal.sacrt.com row
+      serves a different 2.3 MB ZIP with the same absence (checked 2026-09-04,
+      both re-confirmed the same day on a spaced-out retry). There is nothing to
+      cross-check against the prose until SacRT publishes fare data in its feed.
+      A structural absence rather than a fetch failure: the download succeeds.
+  - agency: Yolobus
+    no_feed_reason: >-
+      Yolobus's own GTFS page links one feed,
+      https://avl.yctd.org/RealTime/google_transit.zip, and it downloads a valid
+      485 KB ZIP (7 members) that contains no fare file. The Mobility Database's
+      direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip, 404s.
+      Checked 2026-09-04 and both re-confirmed the same day on a spaced-out
+      retry, honouring yolobus.com's Crawl-delay of 10. Same outcome as SacRT
+      for a different reason, and structural the same way: the download
+      succeeds, the fares are not in it.

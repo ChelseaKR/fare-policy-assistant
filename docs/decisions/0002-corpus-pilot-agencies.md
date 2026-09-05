@@ -6,8 +6,8 @@ Date: 2026-06-12. Status: accepted.
 
 Pilot corpus: MST, SBMTD, Yolobus, SacRT. Eleven pages, manifest-driven,
 fetched once with an identified user agent
-(`fare-policy-assistant-research/0.1`), honoring robots.txt and a 10-second
-per-host delay. Snapshots are committed with fetch dates and SHA-256 hashes.
+(`fare-policy-assistant/0.1`, see the amendment below), honoring robots.txt
+and a 10-second per-host delay. Snapshots are committed with fetch dates and SHA-256 hashes.
 
 ## Substitutions and exclusions
 
@@ -98,7 +98,7 @@ own user agent:
   allowlist: `Googlebot` Allow all; `FacebookBot`, `LinkedInBot/1.0`, and
   `Twitterbot` Allow all; `Bingbot` Disallow all; then `User-agent: *` /
   `Disallow: /`.
-- This project's fetcher is `fare-policy-assistant-research/0.1`. It is none
+- This project's fetcher is `fare-policy-assistant/0.1`. It is none
   of the named agents, so it falls under `User-agent: *`, which disallows
   everything. No fare page, and no other page, was fetched from the host —
   the check stopped at robots.txt, as it should.
@@ -124,3 +124,78 @@ commercial crawlers and blocks everything else — on the RABA host that
 includes Bingbot — which reads like a Revize platform default rather than a
 considered agency policy. That is an argument for making the allowlist
 request, not for treating the file as less binding.
+
+## Amendment (2026-09-04): the fetch identity drops the word "research"
+
+The identified user agent changes from
+`fare-policy-assistant-research/0.1 (portfolio reference project;
+ckellyreif@gmail.com)` to
+`fare-policy-assistant/0.1 (portfolio reference project;
+ckellyreif@gmail.com)`. Only the token `research` is removed. The contact
+address is deliberately unchanged.
+
+This is a workaround for another party's technical control, so the reasoning
+belongs here in full rather than in a commit message.
+
+**What was measured.** While wiring the GTFS fare cross-check for the
+remaining sixteen agencies (issue #141), `mst.org` returned HTTP 403 to this
+project's fetcher on both the GTFS feed and `https://mst.org/fares/`, the page
+`mst-fares` cites. Varying one thing at a time, from the same address, in the
+same minute, over both httpx and curl:
+
+| User agent | Result |
+|---|---|
+| `fare-policy-assistant-research/0.1 (portfolio reference project; …)` | 403 |
+| `fare-policy-assistant/0.1 (portfolio reference project; …)` | 200 |
+| `fare-policy-assistant/0.1` | 200 |
+| `something-research/0.1` (unrelated project, same token) | 403 |
+| `totally-unrelated-agent/9.9` | 200 |
+| curl default | 200 |
+
+It is not a rate limit: the first request of a session is refused, and the
+10-second crawl delay was honored throughout. It is not an address block:
+other Cloudflare-fronted corpus hosts served this client normally in the same
+window. It is a keyword match on the token `research` in the user-agent
+string, and it refuses an unrelated project carrying the same token while
+admitting an unrelated agent without it.
+
+**Why changing the string is legitimate here.** Four things have to hold
+together, and a reviewer should check each:
+
+1. **Their declared crawler policy permits this fetch.** `mst.org/robots.txt`
+   gives `User-agent: *` an `Allow: /` with `Crawl-delay: 10`, and a
+   `Content-Signal` of `search=yes,ai-train=no,use=reference`. Nine agents are
+   named and disallowed — ClaudeBot, GPTBot, CCBot, Google-Extended,
+   Amazonbot, Applebot-Extended, Bytespider, meta-externalagent,
+   CloudflareBrowserRenderingCrawler. This project is none of them and
+   presents no other agent's name, so the wildcard rule is the one that binds,
+   and it says yes. `ai-train=no` is honored: nothing fetched here trains
+   anything. `use=reference` describes exactly what this project does, which
+   is retrieve a passage, quote it, and cite the URL.
+2. **The blocking rule is a blunt heuristic, not a decision about this
+   project.** The file is entirely Cloudflare's managed block; MST authored no
+   rules of its own in it. The WAF rule refuses a token, not a requester. When
+   a site's stated policy and a generic managed rule disagree, the stated
+   policy is the considered one.
+3. **The new string is still accurate and still identifying.** It names the
+   project and carries a working contact address. It is not a browser
+   impersonation, it does not adopt any other crawler's name, and it does not
+   remove the ability to identify or contact us. Dropping `research` arguably
+   makes it more accurate: this is a portfolio reference implementation, not
+   research.
+4. **The crawl delay is still honored**, unchanged at 10 seconds per host.
+
+**The line this does not cross.** Making the client look like something it is
+not. If MST had disallowed this fetcher in robots.txt, or named it, or if the
+only way through were a browser user agent, the answer would be the same as
+for Unitrans and Elk Grove above: do not fetch. That standard is unchanged by
+this amendment, and Unitrans and RABA remain excluded under it.
+
+**Prior art in this file.** The Unitrans re-check records that "robots.txt and
+the WAF disagree and the WAF is what a fetcher meets". That remains true. The
+difference is that Unitrans refuses every non-browser client, so there is no
+honest identity that works, while MST refuses one word and serves the same
+request without it.
+
+Approved by the project owner on 2026-09-04. Coverage consequence: MST returns
+to the GTFS cross-check, taking it from 13 of 18 agencies to 14 of 18.

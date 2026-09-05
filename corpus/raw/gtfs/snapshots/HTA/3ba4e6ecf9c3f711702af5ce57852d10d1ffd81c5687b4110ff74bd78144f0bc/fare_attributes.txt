@@ -1,0 +1,13 @@
+fare_id,price,currency_type,payment_method,transfers,agency_id,transfer_duration
+Cash Single Ride RTS,2,USD,0,0,RTS,
+Cash Tap-To-Pay RTS,2,USD,0,,RTS,7200
+Cash Single Ride ETS,2,USD,0,0,ETS,
+Cash Tap-To-Pay ETS,2,USD,0,,ETS,7200
+Cash Single Ride AMRTS,2,USD,0,0,A&MRTS,
+Cash Tap-To-Pay AMRTS,2,USD,0,,A&MRTS,7200
+Cash Single Ride NSE101,2,USD,0,0,NSE101,
+Cash Tap-To-Pay NSE101,2,USD,0,,NSE101,7200
+Cash Single Ride NSE299,2,USD,0,0,NSE299,
+Cash Tap-To-Pay NSE299,2,USD,0,,NSE299,7200
+Cash Single Ride SoHum,2,USD,0,0,SHI,
+Cash Tap-To-Pay SoHum,2,USD,0,,SHI,7200
