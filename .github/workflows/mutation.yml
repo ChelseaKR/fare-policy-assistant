@@ -23,11 +23,14 @@ concurrency:
 jobs:
   mutation:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Run mutmut on the core scoring modules (offline; advisory)
         continue-on-error: true
         run: make mutation

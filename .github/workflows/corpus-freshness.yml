@@ -26,6 +26,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
@@ -42,6 +43,8 @@ jobs:
       # Record the corpus_version and the current processed chunks BEFORE
       # re-processing overwrites them, so the report step can diff against a real
       # prior snapshot instead of git plumbing.
+        with:
+          enable-cache: true
       - name: Snapshot the current corpus version
         run: uv run python tools/corpus_refresh_report.py --snapshot-old /tmp/old.json
 

@@ -66,6 +66,7 @@ jobs:
   build:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     env:
@@ -187,6 +188,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       pages: write
@@ -331,6 +333,7 @@ jobs:
       github.event_name == 'schedule' &&
       vars.NIGHTLY_HUB_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read
@@ -571,6 +574,7 @@ jobs:
       vars.NIGHTLY_HUB_PUBLISH_ENABLED == 'true'
     needs: nightly-build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       pages: write
