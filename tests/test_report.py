@@ -45,6 +45,42 @@ RECORDS = [
 ]
 
 
+def test_a_passage_shorter_than_the_excerpt_is_not_marked_as_continuing():
+    """The ellipsis was unconditional, so a passage that had already ended read
+    as one with more to come. A reader checking whether a document carries a
+    figure could not tell the end of the evidence from the end of the excerpt."""
+    records = [
+        {
+            **RECORDS[1],
+            "passages": [
+                {"chunk_id": "mst-fares#1", "section": "Fares", "score": 9.1, "text": "short"}
+            ],
+        }
+    ]
+    md = generate_markdown(SUMMARY, records)
+    assert "score 9.1" in md
+    assert ": short\n" in md or ": short" in md.replace("…", "!ELLIPSIS!")
+
+
+def test_a_passage_the_recorder_truncated_is_marked_as_continuing():
+    records = [
+        {
+            **RECORDS[1],
+            "passages": [
+                {
+                    "chunk_id": "mst-fares#1",
+                    "section": "Fares",
+                    "score": 9.1,
+                    "text": "short",
+                    "text_truncated": True,
+                    "text_chars": 1200,
+                }
+            ],
+        }
+    ]
+    assert "short…" in generate_markdown(SUMMARY, records)
+
+
 def test_scoreboard_and_failures_present():
     md = generate_markdown(SUMMARY, RECORDS)
     assert "| groundedness | 1 | 2 | 50.0% |" in md
