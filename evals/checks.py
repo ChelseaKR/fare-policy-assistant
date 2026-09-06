@@ -334,6 +334,115 @@ def unsupported_clock_times(
     return sorted(format_clock(moment) for moment in clock_times(answer) - supported)
 
 
+# Money as an answer renders it: "$2", "$2.50", "$1,234.56", "$ 2.50".
+_ANSWER_MONEY_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)")
+# Money as a *source document* renders it. Fare tables routinely lose the
+# currency symbol when a table cell is flattened into text ("Day Pass\n$6\n31-Day
+# Pass\n65"), so a bare two-decimal figure counts as a published amount too. This
+# direction only ever makes the check more permissive, which is the safe
+# direction for a merge gate: it can add support for an amount, never invent an
+# absence.
+_SOURCE_MONEY_RE = re.compile(
+    r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)"
+    r"|(?<![\d.])(\d{1,3}(?:,\d{3})*\.\d{2})(?![\d])"
+)
+# Language that marks an amount as *derived from* two published prices rather
+# than published itself: "you save $0.20 per ride", "$0.15 higher than on
+# e-tran". Those figures are arithmetic on grounded numbers and an answer is
+# entitled to state them, so they are exempted — see
+# `unsourced_fare_amounts` for why the exemption is this narrow and what it
+# deliberately does not cover.
+_DERIVED_AMOUNT_CUES = re.compile(
+    r"\b(saves?|saved|saving|savings|cheaper|costlier|difference|"
+    r"higher|lower|more than|less than|more expensive|"
+    r"ahorr\w+|m[a\u00e1]s barat\w+|m[a\u00e1]s car\w+|diferencia|"
+    r"makakatipid|mas mura|mas mahal)\b",
+    re.I,
+)
+# How far either side of the amount the cue may sit. Wide enough for "so yes,
+# Clipper is cheaper — you save $0.20 per ride", tight enough that a comparison
+# elsewhere in a long answer does not launder an unrelated invented price.
+_DERIVED_CUE_BEFORE = 60
+_DERIVED_CUE_AFTER = 40
+
+
+def money_amounts(text: str, *, source: bool = False) -> set[float]:
+    """Every currency amount in `text`, as a rounded float.
+
+    `source=True` reads a corpus document, where a flattened fare table may have
+    dropped the dollar sign; `source=False` reads an answer, where a bare number
+    is a route number or an age far more often than it is a price.
+    """
+    pattern = _SOURCE_MONEY_RE if source else _ANSWER_MONEY_RE
+    out: set[float] = set()
+    for match in pattern.finditer(text):
+        raw = match.group(1) or (match.group(2) if source else None)
+        if raw:
+            out.add(round(float(raw.replace(",", "")), 2))
+    return out
+
+
+def unsourced_fare_amounts(
+    answer: str,
+    cited_texts: Sequence[str],
+    asked: str = "",
+) -> list[str]:
+    """Dollar amounts the answer publishes that no document it cites carries.
+
+    Issue #195. `ground-035` told a rider that Santa Cruz METRO's Highway 17
+    Express discount 31-Day Pass costs **$72.50**. That figure appears nowhere
+    in the corpus at any version: the chunker dropped the discount row's Day
+    Pass and 31-Day Pass cells, and rather than reporting the silence the model
+    completed the table by halving the adult column ($145 / 2) and published the
+    arithmetic under a citation. `edge-053` is the same defect on a different
+    field — "the most you can be charged in one day is **$6**
+    [doc:scmtd-tap2cruz]", where that document publishes no cap amount at all
+    and $6 is the *other* document's Day Pass price.
+
+    A judge is not the right instrument for "is this number in the source", and
+    the number is the whole product: a rider who is quoted a monthly pass price
+    that does not exist is the concrete harm the corpus-and-citation design
+    exists to prevent.
+
+    `asked` is the rider's own words, exempted for the same reason
+    `unsupported_clock_times` exempts them: repeating a figure back to the
+    person who supplied it is not sourcing a claim from a document.
+
+    **The derived-amount exemption.** #196's clock-time check declined to scan
+    currency because "the same scan over currency amounts flags derived figures
+    an answer is entitled to state — '$2.25 cash, $2.05 Clipper, so you save
+    $0.20'". That is true and it is the only false-positive class there is:
+    replayed over the 347 answered cases of the 2026-08-22 full live run, a
+    scan with no exemption flagged five cases, four of them a comparison
+    ("$0.15 higher than on e-tran", "ahorras $0.20 por viaje") and one of them
+    `edge-053`. Exempting an amount that sits beside comparison language leaves
+    exactly one flag on that run — `edge-053`, a real finding that until now
+    only the groundedness judge caught.
+
+    The exemption is deliberately about *comparison*, not about arithmetic.
+    "$145 / 2 = $72.50" carries no cue and is not exempt, which is the point:
+    #195's defect is a derivation presented as a published price, and that is
+    the shape this must keep failing.
+    """
+    supported: set[float] = set()
+    for text in cited_texts:
+        supported |= money_amounts(text, source=True)
+    supported |= money_amounts(asked, source=True)
+
+    unsourced: list[float] = []
+    for match in _ANSWER_MONEY_RE.finditer(answer):
+        amount = round(float(match.group(1).replace(",", "")), 2)
+        if amount in supported or amount in unsourced:
+            continue
+        window = answer[
+            max(0, match.start() - _DERIVED_CUE_BEFORE) : match.end() + _DERIVED_CUE_AFTER
+        ]
+        if _DERIVED_AMOUNT_CUES.search(window):
+            continue
+        unsourced.append(amount)
+    return [f"${amount:,.2f}" for amount in sorted(unsourced)]
+
+
 def run_checks(
     case: dict,
     result: AnswerResult,
@@ -565,14 +674,8 @@ def run_checks(
         # GTFS-Fares cross-check behind it; an hour had nothing, and an hour is
         # what decides whether a rider finds an open counter.
         #
-        # Deliberately narrow, in two ways.
-        #
-        # Only clock times. The same scan over currency amounts flags derived
-        # figures an answer is entitled to state -- "$2.25 cash, $2.05 Clipper,
-        # so you save $0.20" -- and whether a computed saving may carry a
-        # citation is a judgement, not a fact. Nobody derives an office hour.
-        #
-        # Only the union of the documents the answer cites, not per sentence.
+        # Deliberately narrow: only the union of the documents the answer cites,
+        # not per sentence.
         # Per-sentence attribution reads a markdown list as belonging to the
         # citation *after* it and flags a whole fare table for the wrong
         # document; measured, that produced three false positives for every two
@@ -593,6 +696,29 @@ def run_checks(
                         "office_hours_in_cited_source",
                         not unsupported,
                         "; ".join(unsupported),
+                    )
+                )
+
+                # 8d. And the same walk over the field the whole product is
+                # about: a dollar amount (#195).
+                #
+                # When 8c landed it scanned only clock times, reasoning that
+                # "the same scan over currency amounts flags derived figures an
+                # answer is entitled to state". That reasoning was right about
+                # the false-positive class and wrong to stop there. Replayed
+                # over the 347 answered cases of the 2026-08-22 full live run,
+                # the unexempted scan flags five cases: four comparisons and
+                # `edge-053`, an invented Tap2Cruz daily cap that no
+                # deterministic check caught. Exempting an amount that sits
+                # beside comparison language leaves exactly that one flag, and
+                # still fails #195's `$72.50` — a derivation with no comparison
+                # around it, published as a price. See `unsourced_fare_amounts`.
+                unsourced = unsourced_fare_amounts(answer, cited_texts, asked)
+                out.append(
+                    CheckResult(
+                        "fare_amounts_in_cited_source",
+                        not unsourced,
+                        "; ".join(unsourced),
                     )
                 )
 
