@@ -60,10 +60,34 @@ def instrument_of(summary: dict) -> str:
     return f"{mode} · {kind}"
 
 
-def _overall_pct(summary: dict) -> float:
+def _overall_pct(summary: dict) -> float | None:
+    """Overall pass rate, or ``None`` when the run scored no case.
+
+    Not ``0.0``. A run that scored nothing has no pass rate, and 0.0 is the
+    worst score on the chart -- so an aborted or empty run plotted as a
+    catastrophic drop, on a page published to the evidence hub.
+    """
+
     total = summary.get("total", {})
     n = total.get("total", 0)
-    return round(100 * total.get("passed", 0) / n, 1) if n else 0.0
+    return round(100 * total.get("passed", 0) / n, 1) if n else None
+
+
+def _suite_rates(summary: dict) -> dict[str, float]:
+    """Pass rate per suite, omitting any suite that did not report one.
+
+    Omission is what both renderings already handle honestly: the table prints
+    an em dash for a suite a run does not carry, and the chart breaks that
+    suite's line across the gap. Defaulting a missing ``pass_rate`` to 0.0
+    routed it past both and drew a real point at zero instead.
+    """
+
+    rates: dict[str, float] = {}
+    for name, suite in (summary.get("suites") or {}).items():
+        rate = suite.get("pass_rate") if isinstance(suite, dict) else None
+        if rate is not None:
+            rates[name] = rate
+    return rates
 
 
 def _version_sig(prompt_versions: dict) -> dict[str, str]:
@@ -115,9 +139,7 @@ def load_runs(runs_dir: Path | None = None) -> list[dict]:
                 "offline": bool(summary.get("offline")),
                 "instrument": instrument_of(summary),
                 "overall": _overall_pct(summary),
-                "suites": {
-                    name: s.get("pass_rate", 0.0) for name, s in summary.get("suites", {}).items()
-                },
+                "suites": _suite_rates(summary),
                 "est_usd": cost.get("total_est_usd"),
                 "duration": summary.get("duration_seconds", 0.0),
                 "version_sig": _version_sig(summary.get("prompt_versions", {})),
@@ -196,7 +218,7 @@ def generate_markdown(runs: list[dict], svg_name: str = "eval-history.svg") -> s
                     lines.append("| " + note + " |" + " |" * (ncols - 1))
             cells = [
                 f"`{run['run_at']}`",
-                f"**{run['overall']}%**",
+                "—" if run["overall"] is None else f"**{run['overall']}%**",
             ]
             cells += [
                 f"{run['suites'][name]}%" if name in run["suites"] else "—" for name in suites
@@ -269,7 +291,8 @@ def _panel_svg(instrument: str, group: list[dict], top: int) -> tuple[str, int, 
         color = _SERIES_COLORS[idx % len(_SERIES_COLORS)]
         pts = [(i, r["suites"][name]) for i, r in enumerate(group) if name in r["suites"]]
         series.append((name, color, pts))
-    series.append(("overall", _OVERALL_COLOR, [(i, r["overall"]) for i, r in enumerate(group)]))
+    overall_pts = [(i, r["overall"]) for i, r in enumerate(group) if r["overall"] is not None]
+    series.append(("overall", _OVERALL_COLOR, overall_pts))
 
     for name, color, pts in series:
         width_stroke = "3" if name == "overall" else "1.5"
