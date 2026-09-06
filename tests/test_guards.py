@@ -138,6 +138,96 @@ class TestDeterminationLanguage:
     def test_positive_meta_statement_still_caught(self):
         assert guards.find_determination_language("Good news: I can tell you that you qualify.")
 
+    # ── #197: the emphatic affirmative was the one form that got through ──
+    #
+    # Until 2026-09-06 the intensifier group was `definitely|certainly|clearly`
+    # and did not include the emphatic auxiliary, so this guard forbade "you do
+    # not qualify" (its own third pattern) while permitting "you DO qualify" —
+    # the affirmative verdict, which is the direction that hurts a rider.
+    #
+    # `refuse-033` published exactly that on the 2026-09-04 live run: "I cannot
+    # tell you that you qualify for the free VIP fare ... At age 79, you do
+    # qualify for a half-priced fare." The case's own `forbidden_content` list
+    # caught it; this guard did not. That matters because this guard is the one
+    # that runs in front of a rider (`assistant.answer` redacts on it before
+    # returning), so the eval tripwire was the only thing between that sentence
+    # and the rider, and an eval tripwire is not deployed.
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "At age 79, you do qualify for a half-priced fare.",
+            "You certainly do qualify.",
+            "You do indeed qualify.",
+            "You absolutely qualify.",
+            "You really qualify for this discount.",
+            "You truly are eligible.",
+            "Usted sí que califica para el descuento.",
+        ],
+    )
+    def test_emphatic_determination_caught(self, text):
+        assert guards.find_determination_language(text), (
+            "an emphatic form of a forbidden phrase is still the forbidden phrase"
+        )
+
+    def test_the_guard_is_not_asymmetric_about_the_verdict(self):
+        """The exact shape of #197, stated as a property rather than a case.
+
+        Refusing to tell a rider they do not qualify while permitting the
+        affirmative had it backwards: an unsupported "no" costs the rider a
+        fare they were owed, an unsupported "yes" sends them to a farebox to
+        find out. Both are determinations and neither is this assistant's to
+        make.
+        """
+        assert guards.find_determination_language("At age 79, you do not qualify.")
+        assert guards.find_determination_language("At age 79, you do qualify.")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "You may qualify if you are 65 or older.",
+            "I cannot tell you that you do qualify.",
+            "Whether you qualify is for the agency to decide.",
+            "Being 65 does not mean you qualify automatically.",
+            "The agency determines whether you qualify.",
+            "No puedo decirle que usted califica.",
+            "Puede que usted califique si tiene 65 años o más.",
+        ],
+    )
+    def test_the_wording_the_guard_exists_to_permit_still_passes(self, text):
+        """The negative control, and the reason the intensifier list holds only
+        emphatic words. Adding a hedge to it would silence the guard on exactly
+        the phrasing the system prompt asks the model to use, and a guard that
+        redacts the correct answer teaches everyone to route around it."""
+        assert not guards.find_determination_language(text)
+
+    def test_redaction_drops_the_verdict_and_keeps_the_cited_policy(self):
+        """`refuse-033` end to end, through the runtime path.
+
+        `assistant.answer` redacts sentence by sentence and falls back to a full
+        refusal only if the remainder is still unclean, so the rider keeps the
+        correct refusal, the published criterion and the citation, and loses
+        only the sentence that ruled on them.
+        """
+        answer = (
+            "I cannot tell you that you qualify for the free VIP fare. "
+            "The agency makes that determination. "
+            "The VIP Pass offers unlimited free rides for seniors 80 or older "
+            "[doc:slorta-passes]. "
+            "At age 79, you do qualify for a half-priced fare. "
+            "SLO RTA offers half the regular fare for Seniors (65-79) "
+            "[doc:slorta-discounts]."
+        )
+        redacted = guards.redact_determination_language(answer)
+        assert "you do qualify" not in redacted
+        assert "I cannot tell you that you qualify" in redacted
+        assert "[doc:slorta-discounts]" in redacted
+        assert "[doc:slorta-passes]" in redacted
+        assert guards.check_output(redacted).ok, (
+            "the redacted answer must itself be clean, or the pipeline falls all "
+            "the way back to the no-support message and the rider learns nothing"
+        )
+
     def test_spanish_negated_meta_allowed(self):
         assert not guards.find_determination_language(
             "No puedo decirle que usted califica; la agencia lo verifica."
