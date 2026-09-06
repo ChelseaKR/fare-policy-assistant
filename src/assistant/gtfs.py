@@ -17,16 +17,46 @@ Two GTFS-Fares schemas are in live use and both are handled:
   - v1 ("classic"): fare_attributes.txt (fare_id, price, ...)
   - v2: fare_products.txt (fare_product_id, fare_product_name, amount, ...)
 
-EXP-01's typed per-fact `FareFact` table (agency/program/rider_class/price)
-does not exist yet in this codebase, so cross-checking here compares against
-raw dollar amounts extracted from the corpus text (`prose_fare_amounts`)
-rather than structured, per-program fact rows. That means a match only proves
-"the feed's amount appears *somewhere* in this agency's prose", not "this
-specific program's fare agrees" — coarser than the fact-row match EXP-06
-describes, but the same disagreement shape (a feed amount with no matching
-prose figure anywhere for that agency is still a real drift signal). Once
-EXP-01 lands, `cross_check` should compare against `facts.jsonl` instead for
-tighter per-program matching.
+How strong an agreement is, and why the report says so (issue #141). EXP-01's
+typed `FareFact` table now exists, so a match is graded rather than binary.
+Best first:
+
+  - `fact_row_class` — a parsed fare fact for this agency carries this exact
+    price AND its rider class agrees with the feed row's. "SBMTD's feed prices
+    the standard one-way at $2.50 and the fare page prices the standard
+    one-way at $2.50" is the claim EXP-06 was written to make.
+  - `fact_row` — a parsed fare fact carries the price, but one side names no
+    rider class the other can be compared to.
+  - `prose_amount` — the amount appears in the agency's prose and in no parsed
+    fare row: the coarse form, kept as the fallback for agencies whose fact
+    extraction is thin, and now labelled as such instead of reading like the
+    strong claim.
+
+A `fact_row` match is stronger than a prose match and no stronger than the
+extractor. SCMTD's feed prices a 3-Day Pass at $15.00 and this run matches it
+to a parsed row whose label is "service charge on all returned checks" — the
+extractor read a sentence as a priced row. That is why every `fact_row*` record
+names the rows it matched: an agreement a reader can audit survives a bad
+extraction, and a count does not.
+
+`feed_agrees` is deliberately unchanged by the grading. Every fact price is
+extracted from the prose, so a fact-row match is a strict subset of a prose
+match and the verdict cannot move; the mode says how much the same verdict is
+worth. Measured on the committed corpus (143 feed fare rows across fourteen
+agencies): 35 match a fact row for the same rider class, 82 match a fact row
+whose class cannot be compared, 9 match prose only, and 17 match nothing — the
+same 17 disagreements the coarse check reported before.
+
+What this deliberately does NOT do is turn a per-class mismatch into a
+disagreement. Tried and measured: of the 70 feed rows whose class the corpus
+also has priced rows for, 35 carry an amount absent from that class's fact
+prices, and 31 of those 35 are one agency — SCMTD, whose prose yields four
+adult prices while its feed publishes eleven adult products. That is the fact
+table being thin, not the two sources disagreeing, and scoring it as a conflict
+would publish a gap in this project's own extractor as a finding about the
+agency. That is the failure mode the whole module exists to avoid. Instead
+`class_prices` puts the fare page's prices for that class on the record beside
+the feed's amount, and a human decides.
 
 Usage:
     python -m assistant.gtfs fetch    # atomically capture exact gtfs_feeds[] ZIPs
@@ -35,6 +65,7 @@ Usage:
 
 from __future__ import annotations
 
+import collections
 import csv
 import fcntl
 import hashlib
@@ -59,6 +90,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from assistant import config, ingest
+from assistant.facts import FareFact, load_facts
 
 GTFS_RAW_DIR = config.RAW_DIR / "gtfs"
 CROSS_CHECK_PATH = config.PROCESSED_DIR / "gtfs_cross_check.json"
@@ -114,6 +146,41 @@ _ZERO = Decimal("0.00")
 # How many matching chunk ids a record carries. `prose_matches` still publishes
 # the true total, so a truncated list never understates the collision.
 _PROSE_CHUNK_SAMPLE = 6
+_FACT_ROW_SAMPLE = 6
+_FACT_LABEL_CHARS = 60
+
+# Rider classes both sides of the cross-check can be reduced to. Order matters:
+# a label reading "Senior/Disabled Discount" is a senior fare, so the specific
+# classes are tested before the generic "reduced"/"discount" bucket, and "adult"
+# is last because "regular"/"standard" also appear inside more specific labels.
+# Deliberately the same vocabulary `evals.checks._FARE_CLASS_KEYWORDS` uses on
+# the answer side, widened with the words a GTFS `rider_category_id` uses.
+_CLASS_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
+    (name, re.compile(pattern, re.I))
+    for name, pattern in (
+        ("senior", r"senior|older adult|\b6[25]\s*\+"),
+        ("disabled", r"disab|medicare|\brtc\b|\bada\b|paratransit"),
+        ("youth", r"youth|child|student|k-?12|kid"),
+        ("veteran", r"veteran|military"),
+        ("reduced", r"reduced|discount"),
+        ("adult", r"adult|regular|standard|general|full[- ]fare"),
+    )
+)
+# "Reduced" and "Discount" are what an agency calls the senior/disabled fare
+# when it prices them as one product, so the three are one class for comparison
+# even though they are three different words. SBMTD's feed says "Reduced
+# One-way Cash Fare $1.25" and its fare page says "Seniors (age 65+) / Persons
+# with Disabilities $1.25"; those agree, and a strict string match would call
+# the class incomparable and throw the strongest evidence in the report away.
+_EQUIVALENT_CLASSES = frozenset({"senior", "disabled", "reduced"})
+
+
+def _classes_agree(feed_class: str | None, fact_class: str | None) -> bool:
+    if feed_class is None or fact_class is None:
+        return False
+    if feed_class == fact_class:
+        return True
+    return {feed_class, fact_class} <= _EQUIVALENT_CLASSES
 
 
 @dataclass
@@ -155,6 +222,25 @@ class CrossCheckRecord:
     # capped at `_PROSE_CHUNK_SAMPLE`, empty on a disagreement and None where
     # nothing was compared.
     prose_chunks: list[str] | None = None
+    # How the agreement was reached — "fact_row_class", "fact_row" or
+    # "prose_amount", best first; None on a disagreement or a `no_feed` record.
+    # See the module docstring for what each is worth. `prose_matches` above
+    # says how *specific* a coarse match was; this says whether the match was
+    # coarse at all.
+    match_mode: str | None = None
+    # The parsed fare rows behind a `fact_row*` match, rendered
+    # "chunk_id: rider class / program", sorted and capped at
+    # `_FACT_ROW_SAMPLE`. An agreement that names the row it agrees with can be
+    # audited; one that does not has to be trusted.
+    fact_rows: list[str] | None = None
+    # What the *fare page* prices this feed row's rider class at, when both
+    # sides name a class the other can be compared to. This is the comparison
+    # EXP-06 asked for — "the feed prices the senior single ride at $X, the fare
+    # page prices that class at $Y" — published as context rather than scored as
+    # a verdict, because the corpus side is an extraction and a missing row
+    # there is not a disagreement. None when either side names no comparable
+    # class, or when the corpus has no priced row for it.
+    class_prices: list[str] | None = None
     # Why nothing was compared, on a `no_feed` record; None on a compared row.
     # Three shapes reach a reader here, and they are not the same fact:
     # "no feed configured" (nobody has looked at this agency), the manifest's
@@ -1114,19 +1200,97 @@ def prose_fare_amounts(agency: str, chunks: list[ingest.Chunk] | None = None) ->
     return set(prose_amount_chunk_ids(agency, chunks))
 
 
+def rider_class_key(*labels: str | None) -> str | None:
+    """The rider class a label denotes, or None when it names none.
+
+    Both sides of the cross-check are read with this one function: a GTFS
+    `rider_category_id` ("reduced", "youth"), a fare product name ("Standard
+    One-way Cash Fare"), and a `FareFact`'s `rider_class` / `program` are all
+    free text written by different people, and the comparison is only honest if
+    the same vocabulary reduces all of them. Labels are tried in order, so a
+    caller passes the most specific first.
+    """
+    for label in labels:
+        if not label:
+            continue
+        for name, pattern in _CLASS_PATTERNS:
+            if pattern.search(label):
+                return name
+    return None
+
+
+def _fact_label(fact: FareFact) -> str:
+    """One matched fare row, written so a reader can go and check it.
+
+    The description is elided past `_FACT_LABEL_CHARS`: `FareFact.program` is
+    extracted from a table cell and a bad extraction can run to a whole
+    sentence, which would push the chunk id — the part a reader navigates by —
+    off the end of the line.
+    """
+    described = " / ".join(part for part in (fact.rider_class, fact.program) if part)
+    if len(described) > _FACT_LABEL_CHARS:
+        described = described[: _FACT_LABEL_CHARS - 1].rstrip() + "…"
+    return f"{fact.chunk_id}: {described}" if described else fact.chunk_id
+
+
+def _fact_class(fact: FareFact) -> str | None:
+    return rider_class_key(fact.rider_class, fact.program)
+
+
+def _fact_evidence(
+    fare: FeedFare,
+    agency_facts: list[FareFact],
+) -> tuple[str | None, list[str], list[str] | None]:
+    """(match mode, matched fare rows, the class's published prices).
+
+    The mode is None when no parsed fare row carries this amount, which leaves
+    the caller to fall back to the coarse prose match. `class_prices` is the
+    context the report publishes instead of scoring a per-class mismatch: what
+    the fare page prices this feed row's class at, whether or not the amounts
+    agree. See the module docstring for why that is context and not a verdict.
+    """
+    amount = float(fare.amount)
+    feed_class = rider_class_key(fare.rider_category, fare.name)
+    priced = [f for f in agency_facts if f.price is not None and abs(f.price - amount) < 0.005]
+    same_class = [f for f in priced if _classes_agree(feed_class, _fact_class(f))]
+    class_rows = [
+        f
+        for f in agency_facts
+        if f.price is not None and _classes_agree(feed_class, _fact_class(f))
+    ]
+    class_prices = [f"{price:.2f}" for price in sorted({f.price for f in class_rows if f.price})]
+    matched = same_class or priced
+    mode = None
+    if same_class:
+        mode = "fact_row_class"
+    elif priced:
+        mode = "fact_row"
+    return mode, sorted({_fact_label(f) for f in matched})[:_FACT_ROW_SAMPLE], class_prices or None
+
+
 def _compare_agency(
     agency: str,
     fares: list[FeedFare],
     chunks: list[ingest.Chunk],
+    facts: list[FareFact] | None = None,
 ) -> list[CrossCheckRecord]:
     """One agency's feed fares against its prose, with the evidence attached."""
     prose_chunks = prose_amount_chunk_ids(agency, chunks)
     free_chunks = sorted(
         c.chunk_id for c in chunks if c.agency == agency and _FREE_RE.search(c.text)
     )
+    agency_facts = [f for f in (facts or []) if f.agency == agency]
     records: list[CrossCheckRecord] = []
     for fare in fares:
         matched = free_chunks if fare.amount == _ZERO else prose_chunks.get(fare.amount, [])
+        # A zero fare is evidenced by the word "free", not by a parsed price, so
+        # it stays on the coarse path rather than being graded against a fact
+        # table that cannot hold it.
+        mode, fact_rows, class_prices = (
+            (None, [], None) if fare.amount == _ZERO else _fact_evidence(fare, agency_facts)
+        )
+        if matched and mode is None:
+            mode = "prose_amount"
         records.append(
             CrossCheckRecord(
                 agency,
@@ -1136,12 +1300,29 @@ def _compare_agency(
                 "yes" if matched else "no",
                 len(matched),
                 sorted(matched)[:_PROSE_CHUNK_SAMPLE],
+                match_mode=mode,
+                fact_rows=fact_rows or None,
+                class_prices=class_prices,
             )
         )
     return records
 
 
-def cross_check(chunks: list[ingest.Chunk] | None = None) -> list[CrossCheckRecord]:
+def _load_facts_or_empty() -> list[FareFact]:
+    """The parsed fare-fact table, or an empty one when it has not been
+    generated. An absent table degrades the report to the coarse prose match
+    it always did, labelled `prose_amount`; it never silently reports an
+    agreement as stronger than it is."""
+    try:
+        return load_facts(config.FACTS_PATH)
+    except (OSError, ValueError):
+        return []
+
+
+def cross_check(
+    chunks: list[ingest.Chunk] | None = None,
+    facts: list[FareFact] | None = None,
+) -> list[CrossCheckRecord]:
     """Compare every agency's snapshotted feed fares against its prose corpus.
 
     An agency with no configured feed, a manifest entry that declares why no
@@ -1152,6 +1333,7 @@ def cross_check(chunks: list[ingest.Chunk] | None = None) -> list[CrossCheckReco
     Never used to alter an answer — see module docstring.
     """
     chunks = chunks if chunks is not None else ingest.load_chunks()
+    facts = _load_facts_or_empty() if facts is None else facts
     feeds, declared_no_feed = partition_gtfs_feeds()
     fed_agencies = {str(f["agency"]) for f in feeds} | {e.agency for e in declared_no_feed}
     corpus_agencies = {c.agency for c in chunks}
@@ -1172,7 +1354,7 @@ def cross_check(chunks: list[ingest.Chunk] | None = None) -> list[CrossCheckReco
                 )
             )
             continue
-        records.extend(_compare_agency(agency, fares, chunks))
+        records.extend(_compare_agency(agency, fares, chunks, facts))
 
     for entry in sorted(declared_no_feed, key=lambda e: e.agency):
         records.append(
@@ -1220,11 +1402,16 @@ def main() -> None:
         write_report(records)
         for r in records:
             strength = ""
-            if r.prose_matches:
+            if r.match_mode in ("fact_row_class", "fact_row"):
+                where = ", ".join(r.fact_rows or [])
+                strength = f"  [{r.match_mode}: {where}]"
+            elif r.prose_matches:
                 where = ", ".join(r.prose_chunks or [])
-                strength = f"  [{r.prose_matches} prose chunk(s): {where}]"
+                strength = f"  [prose_amount only, {r.prose_matches} chunk(s): {where}]"
             elif r.prose_matches == 0:
                 strength = "  [no prose chunk states this amount]"
+            if r.class_prices:
+                strength += f"  (fare page prices this class at: {', '.join(r.class_prices)})"
             detail = f"  — {r.reason}" if r.feed_agrees == "no_feed" and r.reason else ""
             print(f"{r.feed_agrees:8} {r.agency:14} {r.name} ({r.feed_amount}){strength}{detail}")
         disagreements = [r for r in records if r.feed_agrees == "no"]
@@ -1239,12 +1426,20 @@ def main() -> None:
         # backed by a dozen is a collision. Say which this run produced rather
         # than letting a wall of "yes" read as corroboration (#141).
         agreed = [r for r in records if r.feed_agrees == "yes" and r.prose_matches is not None]
-        weak = [r for r in agreed if r.prose_matches and r.prose_matches > 1]
+        by_mode = collections.Counter(r.match_mode for r in agreed)
         if agreed:
             print(
-                f"{len(agreed)} agreement(s), of which {len(weak)} matched an amount that "
-                "appears in more than one chunk of the same agency's prose — those prove the "
-                "amount is published somewhere, not that this program's fare agrees."
+                f"{len(agreed)} agreement(s): "
+                f"{by_mode['fact_row_class']} bound to a parsed fare row for the same rider "
+                f"class, {by_mode['fact_row']} to a parsed fare row whose class cannot be "
+                f"compared, {by_mode['prose_amount']} to a dollar amount in the prose and no "
+                "parsed fare row at all. Only the first says this program's fare agrees; the "
+                "last says the amount is published somewhere on the site."
+            )
+            weak = [r for r in agreed if r.prose_matches and r.prose_matches > 1]
+            print(
+                f"{len(weak)} of them matched an amount that appears in more than one chunk "
+                "of the same agency's prose."
             )
         if disagreements:
             print(f"{len(disagreements)} disagreement(s) found.", file=sys.stderr)

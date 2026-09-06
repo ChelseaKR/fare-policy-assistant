@@ -105,6 +105,45 @@ rather than tied to a published tag.
     publication is still behind the owner-gated `NIGHTLY_HUB_PUBLISH_ENABLED`
     switch (#140), so serving the feeds is one decision with turning the hub on.
     The files, the gate, and the tests are in place for when it is.
+- **The GTFS cross-check says how strong an agreement is, not just that there
+  was one** (2026-09-06). Issue #141, second half. The first half widened the
+  check from two agencies to fourteen (#193); this one answers the harder half
+  of the same issue — the comparison was so coarse that a wall of "yes" proved
+  almost nothing. It compared a feed's fare amount against every dollar figure
+  anywhere in that agency's prose, so "SCMTD's 3-Day Pass is $15.00" agreed with
+  the sentence "There is a $15.00 service charge on all returned checks", and
+  the module's own docstring predicted it: "a match only proves 'the feed's
+  amount appears somewhere in this agency's prose'". EXP-01's `FareFact` table
+  has existed since; the TODO to use it never got actioned.
+  - Every compared record now carries `match_mode`: `fact_row_class` (a parsed
+    fare row for this agency carries this price *and* its rider class agrees
+    with the feed row's — EXP-06's actual claim), `fact_row` (a parsed fare row
+    carries the price, class not comparable), or `prose_amount` (the coarse
+    form, kept as the fallback for agencies whose fact extraction is thin, and
+    now labelled instead of reading like the strong claim). Measured on the
+    committed corpus: of 143 feed fare rows, 35 / 82 / 9 respectively, and 17
+    match nothing.
+  - `feed_agrees` is deliberately unmoved. Every fact price is extracted from
+    the prose, so a fact-row match is a strict subset of a prose match and the
+    verdict cannot change; a test pins that.
+  - `fact_rows` names the rows behind a match, because a `fact_row` agreement is
+    no stronger than the extractor: the $15.00 returned-check sentence is parsed
+    as a priced row, and only naming it lets a reader see that.
+  - `class_prices` puts what the fare page prices that rider class at beside the
+    feed's amount — EXP-06's "the feed prices the senior single ride at $X, the
+    fare page prices it at $Y". Published as context, **not** scored as a
+    conflict: of the 70 rows where both sides name a comparable class, 35 carry
+    an amount absent from that class's fact prices and 31 of those are SCMTD
+    alone, whose prose yields four adult prices against eleven adult products in
+    the feed. That is this project's extractor being thin, and scoring it would
+    publish our own gap as a finding about the agency.
+  - `rider_class_key` is the one vocabulary both sides are reduced through, and
+    "Reduced"/"Discount" is treated as the same class as senior and disabled,
+    because that is what an agency means when it prices them as one product.
+  - Found while doing it: `tests/test_gtfs.py`'s config fixture repointed
+    `PROCESSED_DIR` but not `FACTS_PATH`, which is bound from it at import time.
+    A test that supplied one chunk was matching against the committed 630-row
+    fact table. Both corpus artifacts now move together.
 - **The feedback record can say which corpus a verdict is about** (2026-09-05).
   ROADMAP P2-3 asked for a thumbs-up/down logging "the verdict, the response
   kind, and the corpus version". The endpoint, the UI row, the closed-set
