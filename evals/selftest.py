@@ -46,7 +46,7 @@ from assistant import facts as facts_module
 from assistant.answer import AnswerResult, Citation
 from assistant.ingest import load_chunks
 from assistant.retrieve import ScoredChunk
-from evals.checks import CheckResult, run_checks
+from evals.checks import CheckResult, clock_times, format_clock, run_checks
 
 AS_OF = "2026-06-12"
 
@@ -113,6 +113,54 @@ def _mixed_freshness_passages(cited_doc_id: str) -> list[ScoredChunk]:
     return [ScoredChunk(chunk=cited, score=10.0), ScoredChunk(chunk=fresher, score=9.0)]
 
 
+def _doc_texts() -> dict[str, str]:
+    """Every corpus document's full text, keyed by doc id.
+
+    Same construction as `evals.runner`: the checks that ask "does this document
+    actually say that" read the corpus, not a fact table.
+    """
+    texts: dict[str, list[str]] = {}
+    for chunk in load_chunks():
+        texts.setdefault(chunk.doc_id, []).append(chunk.text)
+    return {doc_id: "\n".join(parts) for doc_id, parts in texts.items()}
+
+
+def _published_hour() -> tuple[str, str, str, str]:
+    """A real corpus document that publishes an office hour, and one it does not.
+
+    Returns (doc_id, agency, an hour the document publishes, an hour no document
+    in the corpus publishes). Derived from the corpus rather than hard-coded, so
+    the clean half of the scenario proves the check tolerates a *supported*
+    hour — without that, a check that failed every stated hour would look
+    identical to one that works, and the office-hours sentence would become
+    unwritable.
+    """
+    chunks = load_chunks()
+    texts: dict[str, list[str]] = {}
+    agencies: dict[str, str] = {}
+    for chunk in chunks:
+        texts.setdefault(chunk.doc_id, []).append(chunk.text)
+        agencies.setdefault(chunk.doc_id, chunk.agency)
+    everywhere = clock_times("\n".join(c.text for c in chunks))
+    for doc_id, parts in sorted(texts.items()):
+        published = clock_times("\n".join(parts))
+        if not published:
+            continue
+        absent = next(
+            (
+                (hour, 7, meridiem)
+                for meridiem in ("a", "p")
+                for hour in range(1, 12)
+                if (hour, 7, meridiem) not in everywhere
+            ),
+            None,
+        )
+        if absent is None:  # pragma: no cover - the corpus would have to name every :07
+            raise RuntimeError("no clock time absent from the corpus; cannot build self-test")
+        return doc_id, agencies[doc_id], format_clock(sorted(published)[0]), format_clock(absent)
+    raise RuntimeError("no corpus document publishes a clock time; cannot build self-test")
+
+
 @dataclass
 class Scenario:
     name: str
@@ -137,7 +185,24 @@ def _scenarios() -> list[Scenario]:
         f"The fare is {good_price} [doc:{doc_id}], based on policies published as of {AS_OF}."
     )
 
+    hours_doc, hours_agency, published_hour, absent_hour = _published_hour()
+
     return [
+        Scenario(
+            name="office hours the cited document never published",
+            check="office_hours_in_cited_source",
+            case={"expected_behavior": "answer", "language": "en"},
+            clean=_clean(
+                hours_doc,
+                f"Customer Service opens at {published_hour} [doc:{hours_doc}], "
+                f"based on policies published as of {AS_OF}.",
+                agency=hours_agency,
+            ),
+            # The rider is sent to a counter at an hour no document in the corpus
+            # publishes -- edge-052's defect, which passed every gate this
+            # repository had on the 2026-09-06 nightly.
+            mutate=lambda r: replace(r, answer=r.answer.replace(published_hour, absent_hour)),
+        ),
         Scenario(
             name="fare contradicts the corpus",
             check="fare_facts_consistent",
@@ -366,10 +431,13 @@ def _named(checks: list[CheckResult]) -> dict[str, CheckResult]:
 def run_selftest() -> list[Outcome]:
     doc_ids = _corpus_doc_ids()
     by_doc = _facts_by_doc()
+    doc_texts = _doc_texts()
     outcomes: list[Outcome] = []
     for sc in _scenarios():
-        clean = _named(run_checks(sc.case, sc.clean, doc_ids, by_doc))
-        mutated = _named(run_checks(sc.case, sc.mutate(sc.clean), doc_ids, by_doc))
+        clean = _named(run_checks(sc.case, sc.clean, doc_ids, by_doc, doc_texts=doc_texts))
+        mutated = _named(
+            run_checks(sc.case, sc.mutate(sc.clean), doc_ids, by_doc, doc_texts=doc_texts)
+        )
         # A check absent on the clean run (e.g. the case did not opt into it)
         # counts as not-passing, which would surface a mis-built scenario.
         clean_passed = sc.check in clean and clean[sc.check].passed
