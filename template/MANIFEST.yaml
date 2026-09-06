@@ -69,6 +69,15 @@ generic:
   - docs/adapting.md
 
 generic_edit:
+  - path: src/assistant/feeds.py
+    marker: "tag:evals.chelseakr.com,2026:fare-policy-assistant"
+    note: >
+      Publishing per-source change feeds from retained corpus versions is
+      generic; the identifiers in them are not. Before publishing, replace the
+      RFC 4151 tag prefix, the site origin fallback, and the snapshot repository
+      URL with the new project's own. The tag prefix is a subscriber-visible
+      identity: changing it after publication re-notifies every subscriber, so
+      choose it once.
   - path: evals/attestation.py
     marker: "fare-assistant.eval-attestation.v1"
     note: >

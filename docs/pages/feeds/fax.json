@@ -1,0 +1,66 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/fax.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "fax-fares",
+          "fax-reduced-fare-program",
+          "fax-reduced-fare-program-es"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "95794539d1d0",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 95794539d1d0, archived 2026-08-13T04:44:00+00:00.\nDocuments as of 2026-08-13.\n3 added.\nAdded: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es\nAgency: FAX.",
+      "date_published": "2026-08-13T04:44:00+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:fax:95794539d1d0",
+      "title": "FAX — corpus 95794539d1d0 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/95794539d1d0"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "5e6a24ef0702",
+        "first_snapshot": false,
+        "removed": [
+          "fax-fares",
+          "fax-reduced-fare-program",
+          "fax-reduced-fare-program-es"
+        ]
+      },
+      "content_text": "Corpus version 5e6a24ef0702, archived 2026-08-13T04:01:01+00:00.\nDocuments as of 2026-08-13.\n3 removed.\nRemoved: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es\nAgency: FAX.",
+      "date_published": "2026-08-13T04:01:01+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:fax:5e6a24ef0702",
+      "title": "FAX — corpus 5e6a24ef0702 (3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5e6a24ef0702"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "fax-fares",
+          "fax-reduced-fare-program",
+          "fax-reduced-fare-program-es"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "227cb2da65b0",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 227cb2da65b0, archived 2026-08-13T03:39:06+00:00.\nDocuments as of 2026-08-13.\n3 added.\nAdded: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es\nAgency: FAX.",
+      "date_published": "2026-08-13T03:39:06+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:fax:227cb2da65b0",
+      "title": "FAX — corpus 227cb2da65b0 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/227cb2da65b0"
+    }
+  ],
+  "title": "Fare-policy corpus changes — FAX",
+  "version": "https://jsonfeed.org/version/1.1"
+}

@@ -1,0 +1,29 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/mst.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "mst-fares",
+          "mst-fares-benefits",
+          "mst-fares-es",
+          "mst-veterans-resource"
+        ],
+        "as_of": "2026-06-17",
+        "changed": [],
+        "corpus_version": "0938fff0539a",
+        "first_snapshot": true,
+        "removed": []
+      },
+      "content_text": "Corpus version 0938fff0539a, archived 2026-07-08T07:49:28+00:00.\nDocuments as of 2026-06-17.\nFirst retained snapshot: 4 document(s).\nAdded: mst-fares, mst-fares-benefits, mst-fares-es, mst-veterans-resource\nAgency: MST.",
+      "date_published": "2026-07-08T07:49:28+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:mst:0938fff0539a",
+      "title": "MST — corpus 0938fff0539a (First retained snapshot: 4 document(s).)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0938fff0539a"
+    }
+  ],
+  "title": "Fare-policy corpus changes — MST",
+  "version": "https://jsonfeed.org/version/1.1"
+}

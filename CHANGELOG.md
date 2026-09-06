@@ -71,6 +71,40 @@ rather than tied to a published tag.
   - `corpus/manifest.yaml` records the Highway 17 discount row as a
     representational gap in the VTA shape, so the corpus says out loud that it
     carries no discount Day or 31-Day price for that tier.
+- **Per-agency fare-change feeds (Atom and JSON Feed), built from corpus diffs**
+  (2026-09-06). Issue #219, RE7. The corpus already records every change with
+  provenance — `corpus/versions/<id>/` retains each distinct `corpus_version`
+  with its full chunk set and its archive date — and the freshness workflow
+  writes that into a pull request. Watching a repository is a poor subscription
+  mechanism for the people who most want the signal: an agency's communications
+  staff, a 511 operator, a downstream assistant.
+  - `python -m assistant.feeds` (and `make feeds`) writes an Atom feed and a
+    JSON Feed 1.1 per agency under `docs/pages/feeds/`, plus a combined feed.
+    Each entry carries the corpus version, the archive timestamp, the `as_of`
+    date, the documents added / changed / removed for that agency, and a link
+    to the retained snapshot. 38 files on the current corpus.
+  - It says what changed, never what the change *means*. Summarising a fare
+    change in prose would be this project asserting something about an agency's
+    policy that no citation stands behind.
+  - Nothing reads the clock. A feed's `updated` is its newest entry's archive
+    timestamp, so regenerating against an unchanged corpus is byte-identical and
+    `make feeds-check` can be a merge gate — added to `verify` and to CI's
+    `checks` job, so a corpus refresh that forgets to regenerate leaves
+    subscribers on a record the repository no longer holds and CI says so. A
+    generator that stamped "now" would rewrite all 38 files every run and the
+    gate would mean nothing.
+  - The empty archive is dated at the epoch rather than today, so an archive
+    with nothing in it cannot look like a fresh publication to every subscriber
+    that polls it. Agency slugs that would collide are refused rather than
+    silently overwriting one another's feed, and a feed file the corpus no
+    longer produces is both removed by `make feeds` and named by
+    `make feeds-check`.
+  - Reads only committed corpus archives: no network, no git, no model.
+  - **Not wired into the published site yet.** `docs/pages/` is assembled from an
+    explicit allowlist in `.github/workflows/pages.yml`, and the hub's own
+    publication is still behind the owner-gated `NIGHTLY_HUB_PUBLISH_ENABLED`
+    switch (#140), so serving the feeds is one decision with turning the hub on.
+    The files, the gate, and the tests are in place for when it is.
 - **The feedback record can say which corpus a verdict is about** (2026-09-05).
   ROADMAP P2-3 asked for a thumbs-up/down logging "the verdict, the response
   kind, and the corpus version". The endpoint, the UI row, the closed-set

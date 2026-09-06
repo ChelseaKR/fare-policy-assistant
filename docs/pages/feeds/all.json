@@ -1,0 +1,636 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/all.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-21",
+        "changed": [
+          "yolobus-fares",
+          "yolobus-purchasing",
+          "yolobus-reduced-fare-id"
+        ],
+        "corpus_version": "10deac978967",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 10deac978967, archived 2026-08-21T21:37:43+00:00.\nDocuments as of 2026-08-21.\n3 changed.\nChanged: yolobus-fares, yolobus-purchasing, yolobus-reduced-fare-id\nAgency: All agencies.",
+      "date_published": "2026-08-21T21:37:43+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:10deac978967",
+      "title": "All agencies — corpus 10deac978967 (3 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/10deac978967"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "marin-31day-transition",
+          "marin-clipper",
+          "marin-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "3dd8b7bd757e",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 3dd8b7bd757e, archived 2026-08-14T02:22:16+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: marin-31day-transition, marin-clipper, marin-fares\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:22:16+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:3dd8b7bd757e",
+      "title": "All agencies — corpus 3dd8b7bd757e (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/3dd8b7bd757e"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "samtrans-clipper",
+          "samtrans-fare-types",
+          "samtrans-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "cbfe81efcf3f",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version cbfe81efcf3f, archived 2026-08-14T02:19:44+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: samtrans-clipper, samtrans-fare-types, samtrans-fares\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:19:44+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:cbfe81efcf3f",
+      "title": "All agencies — corpus cbfe81efcf3f (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/cbfe81efcf3f"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vine-fares",
+          "vine-go"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "09f9c297deba",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 09f9c297deba, archived 2026-08-14T02:17:33+00:00.\nDocuments as of 2026-08-14.\n2 added.\nAdded: vine-fares, vine-go\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:17:33+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:09f9c297deba",
+      "title": "All agencies — corpus 09f9c297deba (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/09f9c297deba"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vta-fares",
+          "vta-regional-transfers",
+          "vta-rtc-card"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "cbc07c922784",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version cbc07c922784, archived 2026-08-14T02:15:11+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: vta-fares, vta-regional-transfers, vta-rtc-card\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:15:11+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:cbc07c922784",
+      "title": "All agencies — corpus cbc07c922784 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/cbc07c922784"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "slorta-contactless",
+          "slorta-discounts",
+          "slorta-fares",
+          "slorta-passes"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "b21d4e3b3c98",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version b21d4e3b3c98, archived 2026-08-14T02:12:20+00:00.\nDocuments as of 2026-08-14.\n4 added.\nAdded: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:12:20+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:b21d4e3b3c98",
+      "title": "All agencies — corpus b21d4e3b3c98 (4 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/b21d4e3b3c98"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "westcat-buying",
+          "westcat-clipper",
+          "westcat-fares-all",
+          "westcat-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "8b119819d9c8",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 8b119819d9c8, archived 2026-08-14T02:06:30+00:00.\nDocuments as of 2026-08-14.\n4 added.\nAdded: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:06:30+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:8b119819d9c8",
+      "title": "All agencies — corpus 8b119819d9c8 (4 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/8b119819d9c8"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "actransit-discounts",
+          "actransit-fares",
+          "actransit-fares-es"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "5db0d6a4bfbd",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 5db0d6a4bfbd, archived 2026-08-14T02:01:41+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: actransit-discounts, actransit-fares, actransit-fares-es\nAgency: All agencies.",
+      "date_published": "2026-08-14T02:01:41+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:5db0d6a4bfbd",
+      "title": "All agencies — corpus 5db0d6a4bfbd (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5db0d6a4bfbd"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "cccta-clipper-card",
+          "cccta-fare-types-prices",
+          "cccta-link-fares",
+          "cccta-rtc-discount-card",
+          "cccta-transfers",
+          "sjrtd-dfc",
+          "sjrtd-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "d113659adda8",
+        "first_snapshot": false,
+        "removed": [
+          "marin-31day-transition",
+          "marin-clipper",
+          "marin-fares"
+        ]
+      },
+      "content_text": "Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.\nDocuments as of 2026-08-14.\n7 added, 3 removed.\nAdded: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers, sjrtd-dfc, sjrtd-fares\nRemoved: marin-31day-transition, marin-clipper, marin-fares\nAgency: All agencies.",
+      "date_published": "2026-08-14T01:56:42+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:d113659adda8",
+      "title": "All agencies — corpus d113659adda8 (7 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "marin-31day-transition",
+          "marin-clipper",
+          "marin-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "0a8bbe659de3",
+        "first_snapshot": false,
+        "removed": [
+          "samtrans-clipper",
+          "samtrans-fare-types",
+          "samtrans-fares"
+        ]
+      },
+      "content_text": "Corpus version 0a8bbe659de3, archived 2026-08-14T01:15:27+00:00.\nDocuments as of 2026-08-14.\n3 added, 3 removed.\nAdded: marin-31day-transition, marin-clipper, marin-fares\nRemoved: samtrans-clipper, samtrans-fare-types, samtrans-fares\nAgency: All agencies.",
+      "date_published": "2026-08-14T01:15:27+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:0a8bbe659de3",
+      "title": "All agencies — corpus 0a8bbe659de3 (3 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0a8bbe659de3"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "samtrans-clipper",
+          "samtrans-fare-types",
+          "samtrans-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "af0feed6c742",
+        "first_snapshot": false,
+        "removed": [
+          "vine-fares",
+          "vine-go"
+        ]
+      },
+      "content_text": "Corpus version af0feed6c742, archived 2026-08-14T01:04:00+00:00.\nDocuments as of 2026-08-14.\n3 added, 2 removed.\nAdded: samtrans-clipper, samtrans-fare-types, samtrans-fares\nRemoved: vine-fares, vine-go\nAgency: All agencies.",
+      "date_published": "2026-08-14T01:04:00+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:af0feed6c742",
+      "title": "All agencies — corpus af0feed6c742 (3 added, 2 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/af0feed6c742"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vine-fares",
+          "vine-go"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "7caf9b3638ec",
+        "first_snapshot": false,
+        "removed": [
+          "vta-fares",
+          "vta-regional-transfers",
+          "vta-rtc-card"
+        ]
+      },
+      "content_text": "Corpus version 7caf9b3638ec, archived 2026-08-14T00:57:32+00:00.\nDocuments as of 2026-08-14.\n2 added, 3 removed.\nAdded: vine-fares, vine-go\nRemoved: vta-fares, vta-regional-transfers, vta-rtc-card\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:57:32+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:7caf9b3638ec",
+      "title": "All agencies — corpus 7caf9b3638ec (2 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/7caf9b3638ec"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vta-fares",
+          "vta-regional-transfers",
+          "vta-rtc-card"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "491751588366",
+        "first_snapshot": false,
+        "removed": [
+          "westcat-buying",
+          "westcat-clipper",
+          "westcat-fares-all",
+          "westcat-transfers"
+        ]
+      },
+      "content_text": "Corpus version 491751588366, archived 2026-08-14T00:50:50+00:00.\nDocuments as of 2026-08-14.\n3 added, 4 removed.\nAdded: vta-fares, vta-regional-transfers, vta-rtc-card\nRemoved: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:50:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:491751588366",
+      "title": "All agencies — corpus 491751588366 (3 added, 4 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/491751588366"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "westcat-buying",
+          "westcat-clipper",
+          "westcat-fares-all",
+          "westcat-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "69aab4ac6576",
+        "first_snapshot": false,
+        "removed": [
+          "slorta-contactless",
+          "slorta-discounts",
+          "slorta-fares",
+          "slorta-passes"
+        ]
+      },
+      "content_text": "Corpus version 69aab4ac6576, archived 2026-08-14T00:45:22+00:00.\nDocuments as of 2026-08-14.\n4 added, 4 removed.\nAdded: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers\nRemoved: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:45:22+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:69aab4ac6576",
+      "title": "All agencies — corpus 69aab4ac6576 (4 added, 4 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/69aab4ac6576"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "slorta-contactless",
+          "slorta-discounts",
+          "slorta-fares",
+          "slorta-passes"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "21251137e67b",
+        "first_snapshot": false,
+        "removed": [
+          "actransit-discounts",
+          "actransit-fares",
+          "actransit-fares-es"
+        ]
+      },
+      "content_text": "Corpus version 21251137e67b, archived 2026-08-14T00:44:34+00:00.\nDocuments as of 2026-08-14.\n4 added, 3 removed.\nAdded: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes\nRemoved: actransit-discounts, actransit-fares, actransit-fares-es\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:44:34+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:21251137e67b",
+      "title": "All agencies — corpus 21251137e67b (4 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/21251137e67b"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "actransit-discounts",
+          "actransit-fares",
+          "actransit-fares-es"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "02c3bb15a506",
+        "first_snapshot": false,
+        "removed": [
+          "sjrtd-dfc",
+          "sjrtd-fares"
+        ]
+      },
+      "content_text": "Corpus version 02c3bb15a506, archived 2026-08-14T00:34:38+00:00.\nDocuments as of 2026-08-14.\n3 added, 2 removed.\nAdded: actransit-discounts, actransit-fares, actransit-fares-es\nRemoved: sjrtd-dfc, sjrtd-fares\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:34:38+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:02c3bb15a506",
+      "title": "All agencies — corpus 02c3bb15a506 (3 added, 2 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/02c3bb15a506"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "sjrtd-dfc",
+          "sjrtd-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "47bc4ec2e419",
+        "first_snapshot": false,
+        "removed": [
+          "cccta-clipper-card",
+          "cccta-fare-types-prices",
+          "cccta-link-fares",
+          "cccta-rtc-discount-card",
+          "cccta-transfers"
+        ]
+      },
+      "content_text": "Corpus version 47bc4ec2e419, archived 2026-08-14T00:26:06+00:00.\nDocuments as of 2026-08-14.\n2 added, 5 removed.\nAdded: sjrtd-dfc, sjrtd-fares\nRemoved: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:26:06+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:47bc4ec2e419",
+      "title": "All agencies — corpus 47bc4ec2e419 (2 added, 5 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/47bc4ec2e419"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "cccta-clipper-card",
+          "cccta-fare-types-prices",
+          "cccta-link-fares",
+          "cccta-rtc-discount-card",
+          "cccta-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "60033300dc49",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 60033300dc49, archived 2026-08-14T00:24:38+00:00.\nDocuments as of 2026-08-14.\n5 added.\nAdded: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers\nAgency: All agencies.",
+      "date_published": "2026-08-14T00:24:38+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:60033300dc49",
+      "title": "All agencies — corpus 60033300dc49 (5 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/60033300dc49"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "fax-fares",
+          "fax-reduced-fare-program",
+          "fax-reduced-fare-program-es"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "95794539d1d0",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 95794539d1d0, archived 2026-08-13T04:44:00+00:00.\nDocuments as of 2026-08-13.\n3 added.\nAdded: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es\nAgency: All agencies.",
+      "date_published": "2026-08-13T04:44:00+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:95794539d1d0",
+      "title": "All agencies — corpus 95794539d1d0 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/95794539d1d0"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "scmtd-accessibility",
+          "scmtd-fares-passes",
+          "scmtd-tap2cruz",
+          "soltrans-clipper-card",
+          "soltrans-fare-table",
+          "soltrans-paperless-fares",
+          "soltrans-ways-to-pay"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "5e6a24ef0702",
+        "first_snapshot": false,
+        "removed": [
+          "fax-fares",
+          "fax-reduced-fare-program",
+          "fax-reduced-fare-program-es"
+        ]
+      },
+      "content_text": "Corpus version 5e6a24ef0702, archived 2026-08-13T04:01:01+00:00.\nDocuments as of 2026-08-13.\n7 added, 3 removed.\nAdded: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz, soltrans-clipper-card, soltrans-fare-table, soltrans-paperless-fares, soltrans-ways-to-pay\nRemoved: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es\nAgency: All agencies.",
+      "date_published": "2026-08-13T04:01:01+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:5e6a24ef0702",
+      "title": "All agencies — corpus 5e6a24ef0702 (7 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5e6a24ef0702"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "fax-fares",
+          "fax-reduced-fare-program",
+          "fax-reduced-fare-program-es"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "227cb2da65b0",
+        "first_snapshot": false,
+        "removed": [
+          "scmtd-accessibility",
+          "scmtd-fares-passes",
+          "scmtd-tap2cruz"
+        ]
+      },
+      "content_text": "Corpus version 227cb2da65b0, archived 2026-08-13T03:39:06+00:00.\nDocuments as of 2026-08-13.\n3 added, 3 removed.\nAdded: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es\nRemoved: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz\nAgency: All agencies.",
+      "date_published": "2026-08-13T03:39:06+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:227cb2da65b0",
+      "title": "All agencies — corpus 227cb2da65b0 (3 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/227cb2da65b0"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "scmtd-accessibility",
+          "scmtd-fares-passes",
+          "scmtd-tap2cruz"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "feb21f02c510",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version feb21f02c510, archived 2026-08-13T03:37:36+00:00.\nDocuments as of 2026-08-13.\n3 added.\nAdded: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz\nAgency: All agencies.",
+      "date_published": "2026-08-13T03:37:36+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:feb21f02c510",
+      "title": "All agencies — corpus feb21f02c510 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/feb21f02c510"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "etran-fares",
+          "etran-senior-pass"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [
+          "yolobus-fares"
+        ],
+        "corpus_version": "63d6718126f1",
+        "first_snapshot": false,
+        "removed": [
+          "soltrans-clipper-card",
+          "soltrans-fare-table",
+          "soltrans-paperless-fares",
+          "soltrans-ways-to-pay"
+        ]
+      },
+      "content_text": "Corpus version 63d6718126f1, archived 2026-08-13T03:18:50+00:00.\nDocuments as of 2026-08-13.\n2 added, 1 changed, 4 removed.\nAdded: etran-fares, etran-senior-pass\nChanged: yolobus-fares\nRemoved: soltrans-clipper-card, soltrans-fare-table, soltrans-paperless-fares, soltrans-ways-to-pay\nAgency: All agencies.",
+      "date_published": "2026-08-13T03:18:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:63d6718126f1",
+      "title": "All agencies — corpus 63d6718126f1 (2 added, 1 changed, 4 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/63d6718126f1"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "soltrans-clipper-card",
+          "soltrans-fare-table",
+          "soltrans-paperless-fares",
+          "soltrans-ways-to-pay"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "a68e77ff4673",
+        "first_snapshot": false,
+        "removed": [
+          "scmtd-accessibility",
+          "scmtd-fares-passes",
+          "scmtd-tap2cruz"
+        ]
+      },
+      "content_text": "Corpus version a68e77ff4673, archived 2026-08-13T02:46:50+00:00.\nDocuments as of 2026-08-13.\n4 added, 3 removed.\nAdded: soltrans-clipper-card, soltrans-fare-table, soltrans-paperless-fares, soltrans-ways-to-pay\nRemoved: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz\nAgency: All agencies.",
+      "date_published": "2026-08-13T02:46:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:a68e77ff4673",
+      "title": "All agencies — corpus a68e77ff4673 (4 added, 3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/a68e77ff4673"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "scmtd-accessibility",
+          "scmtd-fares-passes",
+          "scmtd-tap2cruz"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "d188cfaae266",
+        "first_snapshot": false,
+        "removed": [
+          "etran-fares",
+          "etran-senior-pass"
+        ]
+      },
+      "content_text": "Corpus version d188cfaae266, archived 2026-08-13T02:27:26+00:00.\nDocuments as of 2026-08-13.\n3 added, 2 removed.\nAdded: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz\nRemoved: etran-fares, etran-senior-pass\nAgency: All agencies.",
+      "date_published": "2026-08-13T02:27:26+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:d188cfaae266",
+      "title": "All agencies — corpus d188cfaae266 (3 added, 2 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d188cfaae266"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "etran-fares",
+          "etran-senior-pass"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [
+          "yolobus-fares"
+        ],
+        "corpus_version": "e15051d6f7a1",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version e15051d6f7a1, archived 2026-08-13T02:24:18+00:00.\nDocuments as of 2026-08-13.\n2 added, 1 changed.\nAdded: etran-fares, etran-senior-pass\nChanged: yolobus-fares\nAgency: All agencies.",
+      "date_published": "2026-08-13T02:24:18+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:e15051d6f7a1",
+      "title": "All agencies — corpus e15051d6f7a1 (2 added, 1 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/e15051d6f7a1"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-13",
+        "changed": [
+          "yolobus-fares"
+        ],
+        "corpus_version": "74b05330cb39",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 74b05330cb39, archived 2026-08-13T02:07:12+00:00.\nDocuments as of 2026-08-13.\n1 changed.\nChanged: yolobus-fares\nAgency: All agencies.",
+      "date_published": "2026-08-13T02:07:12+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:74b05330cb39",
+      "title": "All agencies — corpus 74b05330cb39 (1 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/74b05330cb39"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-10",
+        "changed": [
+          "hta-fares"
+        ],
+        "corpus_version": "35ec70d6359d",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 35ec70d6359d, archived 2026-08-10T18:32:36+00:00.\nDocuments as of 2026-08-10.\n1 changed.\nChanged: hta-fares\nAgency: All agencies.",
+      "date_published": "2026-08-10T18:32:36+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:35ec70d6359d",
+      "title": "All agencies — corpus 35ec70d6359d (1 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/35ec70d6359d"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "hta-fares",
+          "mst-fares",
+          "mst-fares-benefits",
+          "mst-fares-es",
+          "mst-veterans-resource",
+          "sacrt-fares",
+          "sbmtd-farechange",
+          "sbmtd-fares-passes",
+          "yolobus-fares",
+          "yolobus-purchasing",
+          "yolobus-reduced-fare-id"
+        ],
+        "as_of": "2026-06-17",
+        "changed": [],
+        "corpus_version": "0938fff0539a",
+        "first_snapshot": true,
+        "removed": []
+      },
+      "content_text": "Corpus version 0938fff0539a, archived 2026-07-08T07:49:28+00:00.\nDocuments as of 2026-06-17.\nFirst retained snapshot: 11 document(s).\nAdded: hta-fares, mst-fares, mst-fares-benefits, mst-fares-es, mst-veterans-resource, sacrt-fares, sbmtd-farechange, sbmtd-fares-passes, yolobus-fares, yolobus-purchasing, yolobus-reduced-fare-id\nAgency: All agencies.",
+      "date_published": "2026-07-08T07:49:28+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:all:0938fff0539a",
+      "title": "All agencies — corpus 0938fff0539a (First retained snapshot: 11 document(s).)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0938fff0539a"
+    }
+  ],
+  "title": "Fare-policy corpus changes — All agencies",
+  "version": "https://jsonfeed.org/version/1.1"
+}

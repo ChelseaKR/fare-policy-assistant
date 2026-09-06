@@ -112,6 +112,14 @@ jobs:
         # HEAD actually ships, or carry a documented, reasoned waiver in
         # evals/stale_acknowledged.json (FIX-01/M-2; promoted from advisory).
         run: make provenance
+      - name: Fare-change feeds match the corpus
+        # Offline, no network and no git: `assistant.feeds` reads only the
+        # retained corpus archives under corpus/versions/ and is deterministic
+        # by construction (a feed's `updated` is its newest entry's archive
+        # timestamp, never the clock), so a corpus refresh that forgets to
+        # regenerate the published feeds fails here instead of leaving
+        # subscribers on a record the repository no longer holds (#219).
+        run: make feeds-check
 
   i18n:
     name: i18n (gettext catalog gate)

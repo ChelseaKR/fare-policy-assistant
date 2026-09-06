@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — HTA</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:hta</id>
+  <updated>2026-08-10T18:32:36+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/hta.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>HTA — corpus 35ec70d6359d (1 changed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:hta:35ec70d6359d</id>
+    <updated>2026-08-10T18:32:36+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/35ec70d6359d"/>
+    <content type="text">Corpus version 35ec70d6359d, archived 2026-08-10T18:32:36+00:00.
+Documents as of 2026-08-10.
+1 changed.
+Changed: hta-fares
+Agency: HTA.</content>
+  </entry>
+  <entry>
+    <title>HTA — corpus 0938fff0539a (First retained snapshot: 1 document(s).)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:hta:0938fff0539a</id>
+    <updated>2026-07-08T07:49:28+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0938fff0539a"/>
+    <content type="text">Corpus version 0938fff0539a, archived 2026-07-08T07:49:28+00:00.
+Documents as of 2026-06-17.
+First retained snapshot: 1 document(s).
+Added: hta-fares
+Agency: HTA.</content>
+  </entry>
+</feed>

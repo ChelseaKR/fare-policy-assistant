@@ -1,0 +1,72 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/cccta.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "cccta-clipper-card",
+          "cccta-fare-types-prices",
+          "cccta-link-fares",
+          "cccta-rtc-discount-card",
+          "cccta-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "d113659adda8",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.\nDocuments as of 2026-08-14.\n5 added.\nAdded: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers\nAgency: CCCTA.",
+      "date_published": "2026-08-14T01:56:42+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta:d113659adda8",
+      "title": "CCCTA — corpus d113659adda8 (5 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "47bc4ec2e419",
+        "first_snapshot": false,
+        "removed": [
+          "cccta-clipper-card",
+          "cccta-fare-types-prices",
+          "cccta-link-fares",
+          "cccta-rtc-discount-card",
+          "cccta-transfers"
+        ]
+      },
+      "content_text": "Corpus version 47bc4ec2e419, archived 2026-08-14T00:26:06+00:00.\nDocuments as of 2026-08-14.\n5 removed.\nRemoved: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers\nAgency: CCCTA.",
+      "date_published": "2026-08-14T00:26:06+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta:47bc4ec2e419",
+      "title": "CCCTA — corpus 47bc4ec2e419 (5 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/47bc4ec2e419"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "cccta-clipper-card",
+          "cccta-fare-types-prices",
+          "cccta-link-fares",
+          "cccta-rtc-discount-card",
+          "cccta-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "60033300dc49",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 60033300dc49, archived 2026-08-14T00:24:38+00:00.\nDocuments as of 2026-08-14.\n5 added.\nAdded: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers\nAgency: CCCTA.",
+      "date_published": "2026-08-14T00:24:38+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta:60033300dc49",
+      "title": "CCCTA — corpus 60033300dc49 (5 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/60033300dc49"
+    }
+  ],
+  "title": "Fare-policy corpus changes — CCCTA",
+  "version": "https://jsonfeed.org/version/1.1"
+}
