@@ -271,6 +271,13 @@ cases:
     language: en
     expected_behavior: partial
     required_facts: ["re:[Ss]ummer 2026"]
+    # Issue #191. The one assertion this case exists to forbid, made
+    # deterministic. `phrase_asserted` is negation-aware, so an answer that says
+    # METRO has *not* launched Tap2Cruz is not caught by it, and the rationale
+    # below still forbids that too. Deliberately the exact published wording and
+    # nothing wider: "will be launched" and "will launch" do not match it, so an
+    # answer that reports METRO's own future tense is untouched.
+    forbidden_content: ["re:\\blaunched Tap2Cruz\\b"]
     rationale: >
       A forward-looking statement whose own window is open right now, which is the
       hardest freshness shape. scmtd-tap2cruz and scmtd-fares-passes both say METRO
@@ -295,12 +302,15 @@ cases:
     # comment, because evals/judges.py feeds `rationale` to the helpfulness judge
     # verbatim and text arguing either verdict is a thumb on the scale.
     #
-    # Second finding, worth its own issue: the groundedness judge PASSED this,
+    # Second finding, filed as #191: the groundedness judge PASSED this,
     # reporting the launch as "explicitly stated in the doc:scmtd-tap2cruz
     # passages" when the passages say the opposite. Only helpfulness caught it.
     # A groundedness judge that cannot tell "will launch" from "launched" is not
-    # checking tense at all. The tense-flattening belongs to the answer path and
-    # the misreading to prompts/judge_groundedness.txt; neither is repaired here.
+    # checking tense at all. prompts/judge_groundedness.txt v5 (2026-09-06) makes
+    # tense part of the claim and was verified against this exact answer: v4
+    # passes it twice, v5 fails it twice, and four controls are unmoved. The
+    # tense-flattening in the answer path is still not repaired here; this case
+    # remains the place it shows up.
 
   # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
   - id: fresh-016

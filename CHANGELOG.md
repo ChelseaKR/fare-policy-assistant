@@ -8,6 +8,37 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Fixed
+- **The groundedness judge could not tell "will launch" from "launched"**
+  (2026-09-06). Issue #191. On the 2026-09-04 nightly, `fresh-015` asked "Can I
+  tap my credit card to pay on a Santa Cruz METRO bus today?"; both retrieved
+  passages say METRO **will launch** Tap2Cruz in Summer 2026, and the answer said
+  METRO **launched** it and told the rider to tap a card at the farebox. The
+  helpfulness judge caught that. The groundedness judge — the one whose whole job
+  is an unsupported claim — passed it, reporting the launch as "explicitly stated
+  in the passages". It had read the *topic* being present as the *claim* being
+  supported, and tense fell through the gap. It generalises past this case: any
+  passage describing a planned change (a fare increase taking effect, a program
+  opening, a pass being discontinued) could be restated in the past tense and
+  scored as grounded, and every one of those puts a rider in front of a farebox
+  acting on something that is not true yet.
+  - `prompts/judge_groundedness.txt` v4 → v5 makes tense part of the claim, in
+    both directions: a passage presenting something as planned does not support
+    an answer stating it as done, and a passage stating a rule already in force
+    does not support an answer that defers it to the future. It says explicitly
+    that this holds even when the announced window contains the snapshot date.
+  - Verified live 2026-09-06 against `claude-sonnet-4-6` on the committed corpus,
+    replaying the published `fresh-015` answer: v4 passes it on both of two runs,
+    v5 fails it on both with the right reason. Four controls score identically
+    under v4 and v5 — an honest "will launch" answer passes, a present-tense rule
+    stated as present passes, a dated rule whose effective date has already passed
+    stated as in force passes, and a live rule deferred to the future still fails.
+  - `fresh-015` gains a `forbidden_content` entry for the exact published
+    assertion, so the case is no longer judge-only. It is deliberately the
+    published wording and nothing wider: `phrase_asserted` is negation-aware, so
+    "has not launched" is untouched, and "will launch" / "will be launched" do not
+    match it.
+
 ### Added
 - **The feedback record can say which corpus a verdict is about** (2026-09-05).
   ROADMAP P2-3 asked for a thumbs-up/down logging "the verdict, the response
