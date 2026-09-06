@@ -3125,7 +3125,22 @@ def main() -> None:
         "(N=1, the default, is byte-identical to a single run). Live and paid; "
         "always bypasses the cache and excludes --since/--only-failed.",
     )
+    parser.add_argument(
+        "--controls",
+        action="store_true",
+        help="run the negative-control arms instead of an evaluation: no retrieval, "
+        "a wrong agency's passages, and an older corpus version, scored by the same "
+        "deterministic checks (issue #212). Offline and free; see evals/controls.py.",
+    )
     args = parser.parse_args()
+    if args.controls:
+        # Delegated rather than folded in: a control run answers a different
+        # question from an evaluation ("how much of this score is retrieval"),
+        # writes no run directory, updates no baseline, and must never be
+        # mistaken for a scored run in the eval history.
+        from evals import controls
+
+        raise SystemExit(controls.main([]))
     if args.promotion and not args.full:
         parser.error("--promotion requires --full")
     if args.promotion and args.update_baseline:

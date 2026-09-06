@@ -40,6 +40,40 @@ rather than tied to a published tag.
     match it.
 
 ### Added
+- **Negative controls: how much of the score is retrieval, and not the model**
+  (2026-09-06). Issue #212. The harness reported pass rates, Wilson intervals and
+  a leave-one-suite-out jackknife, and none of that could tell a grounded answer
+  from a model that knows California fares from pretraining. `make controls`
+  (`python -m evals.controls`, `python -m evals.runner --controls`) runs three
+  arms beside the baseline, each a retriever substitution and nothing else —
+  same prompt, same guards, same `run_checks`: `no_retrieval` (no passages at
+  all), `wrong_agency` (the next agency's passages), and `stale_corpus` (the
+  oldest retained corpus version). Offline against the mock answer model, which
+  answers only from the passages it is given, so it costs nothing and takes
+  about seven seconds.
+  - **The overall pass rate turned out to be the wrong thing to assert on, and
+    the run proves it.** The `no_retrieval` control scores **36/385 against the
+    baseline's 21/385 — higher**, because every refusal case passes when the
+    assistant has nothing to stand on. A control suite asserting "the control
+    must score lower" would have shipped green and measured nothing, which is
+    the gate-that-cannot-fail shape these controls exist to catch. The
+    assertions are per check instead: `no_retrieval` must put
+    `citation_present_and_resolvable` at exactly 0% (99.7% at baseline),
+    `wrong_agency` must put `correct_agency_cited` at exactly 0% (98.1%), and
+    `stale_corpus` must drop citation resolution at least 20 points against a
+    measured 47.6.
+  - Two floors guard the other direction: a baseline whose own citation or
+    agency checks fall under 90% fails as an instrument failure, because a
+    baseline that weak cannot be told apart from a control.
+  - Built against the ways a control lies. An arm that never emits the check it
+    exists to move is reported as "the control was not actually applied", not as
+    a pass; a repository with no retained corpus version loses the
+    `stale_corpus` arm rather than getting a second baseline wearing its name; a
+    check an arm never emitted renders `--`, never 0%; and `--limit` reports the
+    assertions without gating, because the floors were measured over the whole
+    suite.
+  - Wired into `verify` and CI's `checks` job. `docs/eval-controls.md` says what
+    each arm rules out and carries the measured table.
 - **A dollar amount an answer publishes must appear in a document it cites**
   (2026-09-06). Issue #195. `ground-035` told a rider that Santa Cruz METRO's
   Highway 17 Express discount 31-Day Pass costs **$72.50**. That figure is in no

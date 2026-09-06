@@ -49,6 +49,7 @@ generic:
   - src/assistant/_vendor/
   - src/assistant/i18n.py
   - src/assistant/corpus.py
+  - evals/controls.py
   - src/assistant/ingest.py
   - src/assistant/cli.py
   - src/assistant/contract.py
