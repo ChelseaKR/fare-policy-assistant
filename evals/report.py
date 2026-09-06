@@ -495,9 +495,17 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 # chunk id and score.
                 title = p.get("doc_title", "")
                 fetched = p.get("fetch_date", "")
+                # The ellipsis is conditional. Appending it unconditionally
+                # said "there is more here" of a passage that had already
+                # ended, and said the same thing of one cut at 600 characters
+                # by the recorder as of one cut at 200 by this line — a reader
+                # checking whether a document carries a figure could not tell
+                # the end of the evidence from the end of the excerpt.
+                excerpt = p["text"][:200]
+                more = len(p["text"]) > 200 or bool(p.get("text_truncated"))
                 lines.append(
                     f"- `{p['chunk_id']}` ({title} — {p['section']}, score {p['score']}, "
-                    f"fetched {fetched}): {p['text'][:200]}…"
+                    f"fetched {fetched}): {excerpt}{'…' if more else ''}"
                 )
             lines += [
                 "",

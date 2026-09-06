@@ -335,6 +335,12 @@ def test_offline_suite_run_writes_traces_and_scoreboard(tmp_runs):
         for p in r["passages"]:
             assert {"doc_id", "agency", "doc_title", "url", "fetch_date"} <= p.keys()
             assert p["doc_id"] and p["agency"] and p["url"] and p["fetch_date"]
+            # A recorded passage is an excerpt, and has to say so. Without
+            # `text_truncated` a cut-off fare table is indistinguishable from a
+            # corpus gap to anyone checking a claim against the trace.
+            assert {"text_truncated", "text_chars"} <= p.keys()
+            assert p["text_chars"] == len(p["text"]) or p["text_truncated"]
+            assert p["text_truncated"] is (p["text_chars"] > len(p["text"]))
     assert all("answer_models_served" in r and "judge_models_served" in r for r in records)
     assert all(
         r["run_context_version"] == summary["attestation"]["context_version"]

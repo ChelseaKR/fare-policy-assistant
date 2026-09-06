@@ -9,6 +9,28 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- **A recorded passage is an excerpt, and now says so** (2026-09-06).
+  `evals/runner.py` writes each retrieved passage into `results.jsonl` cut at
+  600 characters, and the record carried nothing to say it had been cut. The
+  excerpt was therefore indistinguishable from the whole passage, so a reader —
+  or a script — checking "does the source actually carry this figure?" against a
+  committed trace reads a truncated fare table as a corpus gap. That is this
+  portfolio's dominant defect class, an absence rendered as a value, sitting in
+  the harness's own evidence.
+  - Found by measurement, not by reading: replaying #195's currency-grounding
+    scan over the 2026-08-22 full live run's traces flagged **24 answers** whose
+    amounts the cited documents do carry, past character 600. Reconstructing the
+    full text from `corpus/versions/10deac978967/chunks.jsonl` left **four**,
+    all of them real. A gate built on the recorded field would have shipped
+    twenty invented findings about the assistant.
+  - Each passage now carries `text_truncated` and `text_chars`. The record does
+    not grow to hold the corpus: `chunk_id` plus the run's recorded
+    `corpus_version` resolve the full text, which is what the corrected
+    measurement above did.
+  - `evals/report.py`'s failure traces appended "…" unconditionally, saying
+    "there is more here" of a passage that had already ended, and saying the
+    same of one cut at 600 by the recorder as of one cut at 200 by the renderer.
+    The ellipsis is now conditional on there actually being more.
 - **The groundedness judge could not tell "will launch" from "launched"**
   (2026-09-06). Issue #191. On the 2026-09-04 nightly, `fresh-015` asked "Can I
   tap my credit card to pay on a Santa Cruz METRO bus today?"; both retrieved

@@ -1372,6 +1372,13 @@ def _verify_promotion_inputs_unchanged(
         raise SystemExit(f"promotion inputs failed post-run verification: {exc}") from exc
 
 
+# How much of a retrieved passage `results.jsonl` keeps. A full trace of 385
+# cases at eight passages each would carry the corpus several times over, so the
+# record keeps an excerpt and says so; `chunk_id` and the run's recorded
+# `corpus_version` resolve the rest.
+_PASSAGE_EXCERPT_CHARS = 600
+
+
 def _run_case(
     case: dict,
     *,
@@ -1592,7 +1599,20 @@ def _case_record(
                 "fetch_date": sc.chunk.fetch_date,
                 "section": sc.chunk.section,
                 "score": round(sc.score, 2),
-                "text": sc.chunk.text[:600],
+                # Truncated, and *said* to be truncated. The excerpt alone is
+                # indistinguishable from the whole passage, so a reader — or a
+                # script — checking "does the source carry this figure?" against
+                # a recorded trace reads a cut-off table as a corpus gap. That is
+                # this portfolio's dominant defect class (an absence rendered as
+                # a value) sitting in the harness's own evidence, and it is not
+                # hypothetical: replaying a currency-grounding scan over the
+                # 2026-08-22 full live run's traces flagged 24 answers whose
+                # amounts the cited documents do carry past character 600.
+                # `chunk_id` resolves the full text from the corpus version the
+                # run recorded, so nothing here needs to grow to fix it.
+                "text": sc.chunk.text[:_PASSAGE_EXCERPT_CHARS],
+                "text_truncated": len(sc.chunk.text) > _PASSAGE_EXCERPT_CHARS,
+                "text_chars": len(sc.chunk.text),
             }
             for sc in result.passages
         ],
