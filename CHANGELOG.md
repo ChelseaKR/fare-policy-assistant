@@ -40,6 +40,37 @@ rather than tied to a published tag.
     match it.
 
 ### Added
+- **A dollar amount an answer publishes must appear in a document it cites**
+  (2026-09-06). Issue #195. `ground-035` told a rider that Santa Cruz METRO's
+  Highway 17 Express discount 31-Day Pass costs **$72.50**. That figure is in no
+  corpus version: the chunker keeps the discount row's "$3.50 Cash/1 Ride" and
+  drops its Day Pass and 31-Day Pass cells, and rather than reporting the silence
+  the model completed the table by halving the adult column ($145 / 2) and
+  published the arithmetic under a citation. This is the portfolio's dominant
+  defect class — an absence rendered as a value — landing on the one field the
+  whole project is about.
+  - `evals.checks.unsourced_fare_amounts` and the new
+    `fare_amounts_in_cited_source` check walk every `$` amount in an answer
+    against the union of the documents that answer cites, the same walk
+    `office_hours_in_cited_source` (#196) already does for clock times. A source
+    document is read permissively (a flattened fare-table cell that lost its
+    dollar sign still counts), because that direction can only add support for an
+    amount, never invent an absence.
+  - #196 declined to scan currency because "the same scan over currency amounts
+    flags derived figures an answer is entitled to state". Measured on the 347
+    answered cases of the 2026-08-22 full live run, the unexempted scan flags
+    five: four comparisons ("$0.15 higher than on e-tran", "ahorras $0.20 por
+    viaje") and `edge-053`, an invented Tap2Cruz daily cap that no deterministic
+    check caught and only the groundedness judge did. Exempting an amount that
+    sits beside *comparison* language leaves exactly that one flag. The exemption
+    is deliberately not "any computed figure": #195's $72.50 is arithmetic too,
+    and it must keep failing.
+  - `ground-035` gains a `forbidden_content` entry for $72.50, the way
+    `refuse-025` and `edge-045` got theirs, and the harness self-test gains a
+    planted defect for the new check (17 scenarios, all caught).
+  - `corpus/manifest.yaml` records the Highway 17 discount row as a
+    representational gap in the VTA shape, so the corpus says out loud that it
+    carries no discount Day or 31-Day price for that tier.
 - **The feedback record can say which corpus a verdict is about** (2026-09-05).
   ROADMAP P2-3 asked for a thumbs-up/down logging "the verdict, the response
   kind, and the corpus version". The endpoint, the UI row, the closed-set

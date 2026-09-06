@@ -46,7 +46,7 @@ from assistant import facts as facts_module
 from assistant.answer import AnswerResult, Citation
 from assistant.ingest import load_chunks
 from assistant.retrieve import ScoredChunk
-from evals.checks import CheckResult, clock_times, format_clock, run_checks
+from evals.checks import CheckResult, clock_times, format_clock, money_amounts, run_checks
 
 AS_OF = "2026-06-12"
 
@@ -161,6 +161,20 @@ def _published_hour() -> tuple[str, str, str, str]:
     raise RuntimeError("no corpus document publishes a clock time; cannot build self-test")
 
 
+def _unpublished_amount(doc_text: str) -> str:
+    """A dollar amount the cited document does not publish.
+
+    Derived from the document rather than hard-coded, so the planted defect can
+    never accidentally land on a real price the way a constant would once the
+    corpus is refetched.
+    """
+    published = money_amounts(doc_text, source=True)
+    candidate = max(published, default=0.0) + 1000.0
+    while candidate in published:
+        candidate += 1.0
+    return f"${candidate:,.2f}"
+
+
 @dataclass
 class Scenario:
     name: str
@@ -186,8 +200,24 @@ def _scenarios() -> list[Scenario]:
     )
 
     hours_doc, hours_agency, published_hour, absent_hour = _published_hour()
+    unpublished_price = _unpublished_amount(_doc_texts()[doc_id])
 
     return [
+        Scenario(
+            name="a fare the cited document never published",
+            check="fare_amounts_in_cited_source",
+            case={"expected_behavior": "answer", "language": "en"},
+            clean=_clean(doc_id, base_answer, agency=fact.agency),
+            # Issue #195's defect, in its general form: a price the model
+            # produced rather than read, published under a citation. The real
+            # instance halved the adult column of a table whose discount cells
+            # the chunker had dropped, and told a rider a 31-day pass costs
+            # $72.50. No comparison language sits beside it, so the
+            # derived-amount exemption does not reach it -- which is the whole
+            # point of keeping that exemption about comparison rather than
+            # about arithmetic.
+            mutate=lambda r: replace(r, answer=r.answer.replace(good_price, unpublished_price)),
+        ),
         Scenario(
             name="office hours the cited document never published",
             check="office_hours_in_cited_source",

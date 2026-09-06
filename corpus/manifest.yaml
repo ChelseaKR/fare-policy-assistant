@@ -759,6 +759,21 @@ documents:
   # assistant that saw only the Fares page would quote a day price higher than
   # what a tapping rider actually pays. Re-check on any refetch: if METRO ever
   # publishes the cap amounts as HTML, they belong in the corpus.
+  #
+  # REPRESENTATIONAL GAP, the VTA shape on one row (issue #195). The Fares page's
+  # Amtrak/Highway 17 Express block survives ingestion as the adult row with all
+  # three of its prices ("$7.00 Cash/1 Ride", "$14", "$145") followed by the
+  # discount row as its cash fare alone ("$3.50 Cash/1 Ride"). The discount row's
+  # Day Pass and 31-Day Pass cells are dropped by the chunker the same way VTA's
+  # category-to-price tables are, so the corpus carries no discount Day or 31-Day
+  # price for this tier at any version, and none may be stated. The failure mode
+  # is not abstention but completion: on the 2026-09-04 live recording the
+  # assistant filled the two missing cells by halving the adult column and
+  # published "$7 Day Pass" and "$72.50 31-Day Pass" under a citation, where
+  # $72.50 is $145/2 and appears nowhere in the corpus. Eval case ground-035
+  # forbids that figure and `fare_amounts_in_cited_source` (evals/checks.py) is
+  # the general guard. Re-check on any refetch: if METRO publishes those two
+  # cells as labeled text, the gap closes and ground-035 should be rewritten.
 
   # ── SolTrans (Solano County Transit) ──────────────────────────────────────
   # Added as the eighth agency (2026-08-12; written as the sixth, renumbered on

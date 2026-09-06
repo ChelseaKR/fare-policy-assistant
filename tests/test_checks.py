@@ -2,7 +2,14 @@ import pytest
 
 from assistant.answer import AnswerResult, Citation
 from assistant.facts import FareFact
-from evals.checks import clock_times, phrase_asserted, run_checks, unsupported_clock_times
+from evals.checks import (
+    clock_times,
+    money_amounts,
+    phrase_asserted,
+    run_checks,
+    unsourced_fare_amounts,
+    unsupported_clock_times,
+)
 
 DOC_IDS = {"mst-fares", "yolobus-fares"}
 
@@ -641,10 +648,8 @@ class TestOfficeHoursInCitedSource:
     def test_a_price_is_not_read_as_an_hour(self):
         """`$1.00 a month` must not parse as one o'clock in the morning.
 
-        Currency is deliberately out of scope here — the same scan over dollar
-        amounts flags derived figures an answer is entitled to state ("$2.25
-        cash, $2.05 Clipper, so you save $0.20"), and whether a computed saving
-        may carry a citation is a judgement rather than a fact.
+        Currency has its own check (`fare_amounts_in_cited_source`, #195); the
+        two must not read each other's fields. This one stays a clock-time test.
         """
         answer = "The pass costs $1.00 a month and $4.00 a year [doc:mst-fares]. As of 2026-06-12."
         assert self._checks(answer, "No hours published.")["office_hours_in_cited_source"].passed
@@ -669,6 +674,142 @@ class TestOfficeHoursInCitedSource:
             )
         )
         assert "office_hours_in_cited_source" not in checks
+
+
+class TestFareAmountsInCitedSource:
+    """Issue #195. A dollar amount the answer publishes must appear in a
+    document the answer cites."""
+
+    SCMTD_HIGHWAY_17 = (
+        "Amtrak/Highway 17 Express\n"
+        "Children and Adults (age 64 and under)\n"
+        "$7.00 Cash/1 Ride\n"
+        "$14\n"
+        "$145\n"
+        "$3.50 Cash/1 Ride\n"
+    )
+
+    def _checks(self, answer: str, doc_text: str, case_extra: dict | None = None):
+        case = {
+            "id": "ground-035",
+            "question": "How much does the Amtrak/Highway 17 Express cost?",
+            "expected_behavior": "answer",
+            **(case_extra or {}),
+        }
+        return _by_name(
+            run_checks(case, _answered(answer), DOC_IDS, doc_texts={"mst-fares": doc_text})
+        )
+
+    def test_the_ground_035_defect_fails(self):
+        """The live 2026-09-04 answer, reduced to its arithmetic: the chunker
+        dropped the discount row's pass cells, and the model filled them in by
+        halving the adult column. `$72.50` is in no corpus version."""
+        answer = (
+            "Discount Fare (adults age 65 and over): $3.50 Cash/1 Ride, "
+            "$7 Day Pass, $72.50 31-Day Pass [doc:mst-fares]. "
+            "Based on policies published as of 2026-06-12."
+        )
+        check = self._checks(answer, self.SCMTD_HIGHWAY_17)["fare_amounts_in_cited_source"]
+        assert not check.passed
+        assert check.detail == "$72.50"
+
+    def test_amounts_the_cited_document_publishes_pass(self):
+        """The negative control. A check that fired on every stated price would
+        make a fare answer unwritable."""
+        answer = (
+            "The Highway 17 Express is $7.00 for a single ride, or $145 for a "
+            "31-Day Pass [doc:mst-fares]. Based on policies published as of 2026-06-12."
+        )
+        assert self._checks(answer, self.SCMTD_HIGHWAY_17)["fare_amounts_in_cited_source"].passed
+
+    def test_a_flattened_table_cell_without_its_dollar_sign_still_counts(self):
+        """Fare tables lose the currency symbol when a cell is flattened into
+        text. Reading the document more strictly than the ingest wrote it would
+        report the cleaner as an assistant defect."""
+        answer = "The 31-Day Pass is $65.00 [doc:mst-fares]. As of 2026-06-12."
+        doc = "Local Service\nDay Pass\n6\n31-Day Pass\n65.00\n"
+        assert self._checks(answer, doc)["fare_amounts_in_cited_source"].passed
+
+    def test_a_saving_derived_from_two_published_prices_is_allowed(self):
+        """`ground-samtrans-001`'s shape: both prices are published, and the
+        difference between them is arithmetic the answer is entitled to state."""
+        answer = (
+            "An adult fare is $2.25 with cash, or $2.05 with Clipper "
+            "[doc:mst-fares]. So Clipper is cheaper — you save $0.20 per ride. "
+            "As of 2026-06-12."
+        )
+        doc = "Adult\n$2.25 cash\n$2.05 Clipper\n"
+        assert self._checks(answer, doc)["fare_amounts_in_cited_source"].passed
+
+    def test_the_exemption_is_about_comparison_not_about_arithmetic(self):
+        """The hole this check would have if the exemption were "any computed
+        figure": #195's `$72.50` *is* arithmetic on a published number. It is
+        published as a price, with no comparison beside it, so it must fail —
+        and a comparison elsewhere in a long answer must not launder it."""
+        answer = (
+            "An adult fare is $2.25 with cash, or $2.05 with Clipper, so you "
+            "save $0.20 per ride [doc:mst-fares]. The discount 31-Day Pass "
+            "costs $72.50. As of 2026-06-12."
+        )
+        doc = "Adult\n$2.25 cash\n$2.05 Clipper\n"
+        check = self._checks(answer, doc)["fare_amounts_in_cited_source"]
+        assert not check.passed
+        assert check.detail == "$72.50"
+
+    def test_an_amount_the_rider_supplied_is_not_a_sourced_claim(self):
+        answer = (
+            "You asked about a $35 pass; the published policy does not list one "
+            "[doc:mst-fares]. As of 2026-06-12."
+        )
+        checks = self._checks(
+            answer,
+            "No pass prices published.",
+            {"question": "Is the $35 monthly pass worth it for me?"},
+        )
+        assert checks["fare_amounts_in_cited_source"].passed
+
+    def test_the_check_is_dormant_when_no_document_text_is_available(self):
+        case = {"id": "ground-035", "question": "q", "expected_behavior": "answer"}
+        assert "fare_amounts_in_cited_source" not in _by_name(
+            run_checks(case, _answered("The fare is $72.50 [doc:mst-fares]."), DOC_IDS)
+        )
+
+    def test_the_check_is_dormant_when_the_answer_cites_nothing_known(self):
+        case = {"id": "ground-035", "question": "q", "expected_behavior": "answer"}
+        checks = _by_name(
+            run_checks(
+                case,
+                _answered("The fare is $72.50 [doc:mst-fares]."),
+                DOC_IDS,
+                doc_texts={"some-other-doc": "$72.50"},
+            )
+        )
+        assert "fare_amounts_in_cited_source" not in checks
+
+
+class TestMoneyAmountParsing:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("The fare is $2.50", {2.5}),
+            ("$7 Day Pass and $ 14 for two", {7.0, 14.0}),
+            ("A $1,234.56 annual pass", {1234.56}),
+            ("Route 24 leaves at 8:05", set()),
+            ("Seniors are 65 and over", set()),
+        ],
+    )
+    def test_an_answer_reads_only_marked_currency(self, text, expected):
+        assert money_amounts(text) == expected
+
+    def test_a_source_document_also_reads_a_flattened_cell(self):
+        assert money_amounts("Day Pass\n6\n31-Day\n65.00", source=True) == {65.0}
+        assert money_amounts("Day Pass\n6\n31-Day\n65.00") == set()
+
+    def test_unsourced_lists_only_what_no_cited_document_carries(self):
+        assert unsourced_fare_amounts(
+            "It is $7.00 for a ride and $72.50 for a pass",
+            ["$7.00 Cash/1 Ride\n$145"],
+        ) == ["$72.50"]
 
 
 class TestClockTimeNormalisation:
