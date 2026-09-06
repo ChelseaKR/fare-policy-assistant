@@ -61,6 +61,37 @@ rather than tied to a published tag.
     "has not launched" is untouched, and "will launch" / "will be launched" do not
     match it.
 
+- **A go/no-go criterion met by missing evidence is not a decision**
+  (2026-09-06). `evals/backend_comparison.py` decides, against three criteria
+  fixed in its docstring before it was ever run, whether a local kiosk model is
+  viable (ADR 0014). Each criterion is a comparison, and each defaulted the
+  missing side to a number instead of reporting that it could not be evaluated.
+  - **Criterion (b), the guard-trip rate**, was `0.0` when *no case was
+    answered* — the best possible score. A backend that refused or errored on
+    every case tripped no guard because it never reached one, and cleared the
+    "guard-trip rate must not rise more than 5 points" limit on that basis. The
+    rate is now `None` when nothing was answered, and the criterion reports
+    itself unmet rather than satisfied.
+  - **Criterion (c), the refusal suite** — the safety criterion — read
+    `suites.get("refusal", {"passed": 0})` on both sides. A run in which the
+    refusal suite never executed compared zero against zero, found no
+    regression, and passed. It now fails, naming the backend whose evidence is
+    missing.
+  - **Criterion (a)** divided by a case count that can be zero. A backend that
+    scored nothing now reports the criterion unevaluable instead of raising
+    part-way through the decision.
+  - The printed comparison scored a suite one backend never ran as `0.0%` and
+    subtracted it, publishing a fabricated delta of up to a hundred points. An
+    unrun suite now prints the same em dash `evals/history.py` uses, and no
+    delta is computed. A genuine `0.0%` is still printed as `0.0%` (tested —
+    ADR 0014's published run has real zeroes in it).
+  - `tests/test_backend_comparison.py::test_guard_trip_rate_is_zero_when_no_flags`
+    asserted the defect: its only case was a `refuse_redirect`, never answered,
+    so it pinned the rate for a run with nothing answered while its name claimed
+    to cover an answered case with no flags. Split into the two tests it was
+    named for. The module docstring is untouched — ADR 0014 rests on it being
+    unedited since the first run.
+
 ### Added
 - **Negative controls: how much of the score is retrieval, and not the model**
   (2026-09-06). Issue #212. The harness reported pass rates, Wilson intervals and
