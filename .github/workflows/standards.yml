@@ -16,7 +16,23 @@ permissions:
   contents: read
 
 concurrency:
-  group: standards-${{ github.ref }}
+  # Key pull requests on the ref and pushes on the commit.
+  #
+  # A concurrency group holds one running run and one pending run. A third run
+  # joining the group cancels the pending one before it dispatches a single job,
+  # so that commit ends `cancelled` with zero jobs and no verdict at all. Keyed
+  # only on `github.ref`, every push to the default branch shared one group with
+  # the merge before it, so a burst of merges lost the middle ones.
+  #
+  # Same shape as `ci.yml` and `security.yml` in this repository, and `standards`
+  # is a required status check on `main`. Fixed here too so the whole required set
+  # is keyed the same way rather than one workflow drifting from the others.
+  #
+  # Keying pushes on the SHA gives every merge its own group, so pushes never
+  # contend. Pull requests keep the shared `-pr` key, so pushing again to a PR
+  # still cancels the previous, now-irrelevant run; `cancel-in-progress` is left
+  # exactly as it was, and is now unreachable for pushes.
+  group: standards-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
   cancel-in-progress: true
 
 jobs:
