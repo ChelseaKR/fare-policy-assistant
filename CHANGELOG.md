@@ -92,6 +92,25 @@ rather than tied to a published tag.
     named for. The module docstring is untouched — ADR 0014 rests on it being
     unedited since the first run.
 
+- **A run that measured nothing is not a run that scored zero** (2026-09-06).
+  `evals/history.py` renders `docs/eval-history.md` and `docs/eval-history.svg`,
+  and the SVG is published to the evidence hub by `pages.yml`. Two paths turned
+  a missing measurement into the worst score on that chart.
+  - `_overall_pct` returned `0.0` when a run scored no case at all. A run
+    aborted before it scored anything plotted as a catastrophic drop to zero,
+    indistinguishable from a run in which every case failed. It now returns
+    `None`, the table prints an em dash, and the overall line skips the run.
+  - `load_runs` built each run's suite map with `s.get("pass_rate", 0.0)`, so a
+    suite present in a summary but carrying no `pass_rate` was drawn as a real
+    0.0% point. Both renderings already handle an *absent* suite honestly — the
+    table prints an em dash, the chart breaks that suite's line across the gap —
+    and the default was routing past both. A suite with no rate is now simply
+    omitted, which is the path that was already correct.
+  - The committed `docs/eval-history.md` and `.svg` are **not** regenerated
+    here: `evals/runs/` is a gitignored local archive, so the change takes
+    effect the next time `make report` runs against real runs. For every run
+    that does carry its numbers the output is unchanged.
+
 ### Added
 - **Negative controls: how much of the score is retrieval, and not the model**
   (2026-09-06). Issue #212. The harness reported pass rates, Wilson intervals and
