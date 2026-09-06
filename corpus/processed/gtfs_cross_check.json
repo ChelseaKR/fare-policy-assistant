@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-04T20:33:46.133019+00:00",
+  "generated": "2026-09-06T19:59:26.232629+00:00",
   "records": [
     {
       "agency": "MST",
@@ -13,6 +13,18 @@
         "mst-fares#1",
         "mst-fares-es#0",
         "mst-fares-es#1"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "mst-fares#1: Regular Fixed Route / Single Ride 2 hours Cash or GoCard",
+        "mst-fares-es#1: Regular Ruta fija / Viaje \u00fanico 2 horas Efectivo o Tarjeta\u2026"
+      ],
+      "class_prices": [
+        "2.00",
+        "6.00",
+        "20.00",
+        "35.00",
+        "70.00"
       ],
       "reason": null
     },
@@ -28,6 +40,9 @@
         "mst-fares#7",
         "mst-veterans-resource#1"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -45,6 +60,15 @@
         "sbmtd-farechange#9",
         "sbmtd-fares-passes#1"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sbmtd-fares-passes#1: regular / Regular one-way Youth (K-12th grade)"
+      ],
+      "class_prices": [
+        "2.50",
+        "17.50",
+        "80.00"
+      ],
       "reason": null
     },
     {
@@ -56,6 +80,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sbmtd-fares-passes#1"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sbmtd-fares-passes#1: seniors / Seniors (age 65+) Persons with Disabilities Perso\u2026"
+      ],
+      "class_prices": [
+        "1.25",
+        "2.50",
+        "8.50",
+        "30.00"
       ],
       "reason": null
     },
@@ -74,6 +108,9 @@
         "sbmtd-fares-passes#5",
         "sbmtd-fares-passes#6"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -91,6 +128,15 @@
         "sbmtd-farechange#9",
         "sbmtd-fares-passes#1"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sbmtd-fares-passes#1: regular / Regular one-way Youth (K-12th grade)"
+      ],
+      "class_prices": [
+        "2.50",
+        "17.50",
+        "80.00"
+      ],
       "reason": null
     },
     {
@@ -103,6 +149,16 @@
       "prose_chunks": [
         "sbmtd-fares-passes#1"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sbmtd-fares-passes#1: seniors / Seniors (age 65+) Persons with Disabilities Perso\u2026"
+      ],
+      "class_prices": [
+        "1.25",
+        "2.50",
+        "8.50",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -113,6 +169,13 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "2.50",
+        "17.50",
+        "80.00"
+      ],
       "reason": null
     },
     {
@@ -123,6 +186,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.25",
+        "2.50",
+        "8.50",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -133,6 +204,13 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "2.50",
+        "17.50",
+        "80.00"
+      ],
       "reason": null
     },
     {
@@ -143,6 +221,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.25",
+        "2.50",
+        "8.50",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -155,6 +241,11 @@
       "prose_chunks": [
         "cccta-fare-types-prices#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "cccta-fare-types-prices#0: All Routes"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -172,6 +263,9 @@
         "cccta-link-fares#0",
         "cccta-rtc-discount-card#7"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -184,6 +278,11 @@
       "prose_chunks": [
         "fax-fares#3"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "fax-fares#3: Regular Fare"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -197,6 +296,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -210,6 +317,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -223,6 +338,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -236,6 +359,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -249,6 +380,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -262,6 +401,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -275,6 +422,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -288,6 +443,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -301,6 +464,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -314,6 +485,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -327,6 +506,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -340,6 +527,14 @@
         "hta-fares#0",
         "hta-fares#5"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "hta-fares#0: (unspecified)",
+        "hta-fares#0: 1 Day Pass",
+        "hta-fares#0: 2 Hour Unlimited Rides",
+        "hta-fares#5: reduced / (all rides unless eligible for a reduced fare)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -352,6 +547,13 @@
       "prose_chunks": [
         "marin-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "marin-fares#0: Persons with Disabilities",
+        "marin-fares#0: Seniors (age 65+)",
+        "marin-fares#0: Youth (5-18)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -364,6 +566,13 @@
       "prose_chunks": [
         "marin-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "marin-fares#0: Persons with Disabilities",
+        "marin-fares#0: Seniors (age 65+)",
+        "marin-fares#0: Youth (5-18)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -378,6 +587,13 @@
         "marin-fares#0",
         "marin-fares#11"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "marin-clipper#1: cash fare. Free and Discounted Transfers: Clipper offers fr\u2026",
+        "marin-fares#0: Adult",
+        "marin-fares#11: for cash fare,"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -389,6 +605,19 @@
       "prose_matches": 1,
       "prose_chunks": [
         "samtrans-fares#1"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "samtrans-fares#1: Adult (Age 19 through 64)"
+      ],
+      "class_prices": [
+        "2.00",
+        "2.05",
+        "2.25",
+        "3.00",
+        "4.50",
+        "11.00",
+        "65.60"
       ],
       "reason": null
     },
@@ -407,6 +636,9 @@
         "scmtd-fares-passes#4",
         "scmtd-fares-passes#5"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -420,6 +652,17 @@
         "scmtd-fares-passes#0",
         "scmtd-fares-passes#1"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Adult (age 18 and over) / Day Pass",
+        "scmtd-fares-passes#1: adult / adult 100+ passes: 20% 31-Day Pass, Local Service,"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -431,6 +674,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#1"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#1: service charge on all returned checks. View METRO\u2019s Check C\u2026"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
       ],
       "reason": null
     },
@@ -444,6 +697,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: discount / View Discount Fare Eligibility & Apply Adult & D\u2026"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -456,6 +719,17 @@
       "prose_chunks": [
         "scmtd-fares-passes#0",
         "scmtd-fares-passes#1"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Adult (age 18 and over) / 31-Day Pass",
+        "scmtd-fares-passes#1: adult / adult 12-50 passes: 10% 51-100 passes: 15% 101+ pas\u2026"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
       ],
       "reason": null
     },
@@ -471,6 +745,16 @@
         "scmtd-fares-passes#0",
         "scmtd-tap2cruz#2"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-tap2cruz#2: regular / Regular Fare or"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -481,6 +765,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -498,6 +790,9 @@
         "scmtd-fares-passes#4",
         "scmtd-fares-passes#5"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -511,6 +806,15 @@
         "scmtd-fares-passes#0",
         "scmtd-fares-passes#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Adult (age 18 and over) / Day Pass",
+        "scmtd-fares-passes#1: adult / adult 100+ passes: 20% 31-Day Pass, Local Service,"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -522,6 +826,14 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#1"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#1: service charge on all returned checks. View METRO\u2019s Check C\u2026"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
       ],
       "reason": null
     },
@@ -535,6 +847,14 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: discount / View Discount Fare Eligibility & Apply Adult & D\u2026"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -545,6 +865,12 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -559,6 +885,19 @@
         "scmtd-fares-passes#0",
         "scmtd-tap2cruz#2"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-accessibility#10: for the first replacement of a lost card",
+        "scmtd-accessibility#10: to process a new Photo ID Card",
+        "scmtd-fares-passes#0: Cash/1 Ride Day Pass",
+        "scmtd-tap2cruz#2: regardless how many times you tap. You will not be charged\u2026",
+        "scmtd-tap2cruz#2: regular / Regular Fare or",
+        "scmtd-tap2cruz#2: throughout this window, no matter how many times it is tapp\u2026"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -569,6 +908,12 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -580,6 +925,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#0"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Children and Adults (age 64 and under) / Amtrak/Highway 17\u2026"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
       ],
       "reason": null
     },
@@ -593,6 +948,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: (unspecified)"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -605,6 +970,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Children and Adults (age 64 and under) / View Discount Fare\u2026"
+      ],
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -615,6 +990,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "2.00",
+        "3.50",
+        "6.00",
+        "65.00"
+      ],
       "reason": null
     },
     {
@@ -626,6 +1009,14 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Children and Adults (age 64 and under) / Amtrak/Highway 17\u2026"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
       ],
       "reason": null
     },
@@ -639,6 +1030,14 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: (unspecified)"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -651,6 +1050,14 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Children and Adults (age 64 and under) / View Discount Fare\u2026"
+      ],
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -661,6 +1068,12 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "7.00",
+        "14.00"
+      ],
       "reason": null
     },
     {
@@ -678,6 +1091,9 @@
         "scmtd-fares-passes#4",
         "scmtd-fares-passes#5"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -689,6 +1105,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#0"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: (unspecified)"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
       ],
       "reason": null
     },
@@ -702,6 +1128,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Children and Adults (age 64 and under) / Amtrak/Highway 17\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -712,6 +1148,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -722,6 +1166,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -734,6 +1186,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-fares-passes#0: discount / View Discount Fare Eligibility & Apply Adult & D\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -745,6 +1207,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#0"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: (unspecified)"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
       ],
       "reason": null
     },
@@ -759,6 +1231,16 @@
         "scmtd-fares-passes#0",
         "scmtd-tap2cruz#2"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-tap2cruz#2: discount / Discount Fare when tapping to pay. Is there a we\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -771,6 +1253,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: adult / Cash/1 Ride Adult & Discount Fare Day & 31-Day Pass\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -781,6 +1273,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -791,6 +1291,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -808,6 +1316,9 @@
         "scmtd-fares-passes#4",
         "scmtd-fares-passes#5"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -819,6 +1330,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#0"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: (unspecified)"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
       ],
       "reason": null
     },
@@ -832,6 +1353,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: Children and Adults (age 64 and under) / Amtrak/Highway 17\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -842,6 +1373,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -852,6 +1391,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -864,6 +1411,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-fares-passes#0: discount / View Discount Fare Eligibility & Apply Adult & D\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -875,6 +1432,16 @@
       "prose_matches": 1,
       "prose_chunks": [
         "scmtd-fares-passes#0"
+      ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: (unspecified)"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
       ],
       "reason": null
     },
@@ -889,6 +1456,16 @@
         "scmtd-fares-passes#0",
         "scmtd-tap2cruz#2"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "scmtd-tap2cruz#2: discount / Discount Fare when tapping to pay. Is there a we\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -901,6 +1478,16 @@
       "prose_chunks": [
         "scmtd-fares-passes#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "scmtd-fares-passes#0: adult / Cash/1 Ride Adult & Discount Fare Day & 31-Day Pass\u2026"
+      ],
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -911,6 +1498,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -921,6 +1516,14 @@
       "feed_agrees": "no",
       "prose_matches": 0,
       "prose_chunks": [],
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": [
+        "1.00",
+        "2.00",
+        "5.00",
+        "32.00"
+      ],
       "reason": null
     },
     {
@@ -933,6 +1536,12 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -945,6 +1554,12 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -957,6 +1572,12 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -968,6 +1589,17 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
       ],
       "reason": null
     },
@@ -981,6 +1613,17 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -992,6 +1635,17 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
       ],
       "reason": null
     },
@@ -1005,6 +1659,15 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
+      ],
       "reason": null
     },
     {
@@ -1017,6 +1680,15 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
+      ],
       "reason": null
     },
     {
@@ -1028,6 +1700,15 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
       ],
       "reason": null
     },
@@ -1042,6 +1723,13 @@
         "sjrtd-fares#0",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026",
+        "sjrtd-fares#3: Full \u2013 Based fare per passenger for a one-way trip."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1055,6 +1743,13 @@
         "sjrtd-fares#0",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026",
+        "sjrtd-fares#3: Full \u2013 Based fare per passenger for a one-way trip."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1068,6 +1763,13 @@
         "sjrtd-fares#0",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026",
+        "sjrtd-fares#3: Full \u2013 Based fare per passenger for a one-way trip."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1079,6 +1781,17 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
       ],
       "reason": null
     },
@@ -1092,6 +1805,17 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -1103,6 +1827,17 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
       ],
       "reason": null
     },
@@ -1117,6 +1852,15 @@
         "sjrtd-fares#0",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
+      ],
       "reason": null
     },
     {
@@ -1129,6 +1873,15 @@
       "prose_chunks": [
         "sjrtd-fares#0",
         "sjrtd-fares#3"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
       ],
       "reason": null
     },
@@ -1143,6 +1896,15 @@
         "sjrtd-fares#0",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
+      ],
       "reason": null
     },
     {
@@ -1155,6 +1917,11 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1167,6 +1934,11 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1178,6 +1950,17 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
       ],
       "reason": null
     },
@@ -1191,6 +1974,17 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Discount \u2013 Valid only for seniors (ages 60 and over), perso\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -1202,6 +1996,15 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
       ],
       "reason": null
     },
@@ -1215,6 +2018,15 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
+      ],
       "reason": null
     },
     {
@@ -1227,6 +2039,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1239,6 +2060,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1251,6 +2081,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1263,6 +2098,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1275,6 +2115,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1287,6 +2136,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1299,6 +2157,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1311,6 +2174,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1323,6 +2191,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1335,6 +2212,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1347,6 +2233,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1359,6 +2250,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1371,6 +2267,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1383,6 +2288,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1395,6 +2309,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1407,6 +2326,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1419,6 +2343,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1431,6 +2364,15 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 150 \u2013 Lathrop to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Stockton to Dublin BART",
+        "sjrtd-fares#1: Route 150 \u2013 Tracy to Dublin BART",
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento",
+        "sjrtd-fares#1: Route 163 \u2013 Stockton to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1443,6 +2385,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1455,6 +2402,11 @@
       "prose_chunks": [
         "sjrtd-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#1: Route 163 \u2013 Lodi to Sacramento"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1467,6 +2419,18 @@
       "prose_chunks": [
         "sjrtd-fares#2",
         "sjrtd-fares#3"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#2: Full \u2013 One-way fare. Reservations required in advance. For\u2026",
+        "sjrtd-fares#3: Discount \u2013 Based fare per passenger for a one-way trip. Val\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
       ],
       "reason": null
     },
@@ -1481,6 +2445,13 @@
         "sjrtd-fares#0",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#0: Full \u2013 Ages 18 to 59.",
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026",
+        "sjrtd-fares#3: Full \u2013 Based fare per passenger for a one-way trip."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1494,6 +2465,18 @@
         "sjrtd-fares#2",
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#2: Full \u2013 One-way fare. Reservations required in advance. For\u2026",
+        "sjrtd-fares#3: Discount \u2013 Based fare per passenger for a one-way trip. Val\u2026"
+      ],
+      "class_prices": [
+        "0.50",
+        "0.75",
+        "2.00",
+        "3.00",
+        "30.00"
+      ],
       "reason": null
     },
     {
@@ -1506,6 +2489,12 @@
       "prose_chunks": [
         "sjrtd-fares#3"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "sjrtd-fares#3: Discount \u2013 Based fare per passenger for a one-way trip. Val\u2026",
+        "sjrtd-fares#3: Full \u2013 Based fare per passenger for a one-way trip."
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1518,6 +2507,15 @@
       "prose_chunks": [
         "sjrtd-fares#0"
       ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
+      ],
       "reason": null
     },
     {
@@ -1529,6 +2527,15 @@
       "prose_matches": 1,
       "prose_chunks": [
         "sjrtd-fares#0"
+      ],
+      "match_mode": "fact_row_class",
+      "fact_rows": [
+        "sjrtd-fares#0: Student \u2013 Ages 5 to 17 and college students with valid stud\u2026"
+      ],
+      "class_prices": [
+        "1.50",
+        "4.00",
+        "40.00"
       ],
       "reason": null
     },
@@ -1544,6 +2551,15 @@
         "slorta-fares#0",
         "slorta-passes#2"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "slorta-contactless#7: Fixed Route Discount Fare",
+        "slorta-contactless#7: Fixed Route Regular Fare",
+        "slorta-fares#0: Regular",
+        "slorta-fares#0: Students (K\u201312)",
+        "slorta-passes#2: seniors / Seniors (65\u201379) / Disabled Available on the Bus,\u2026"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1558,6 +2574,16 @@
         "slorta-contactless#7",
         "slorta-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "slorta-contactless#6: discount / Discount Fare when tapping to pay. Discounted fa\u2026",
+        "slorta-contactless#7: Fixed Route Discount Fare",
+        "slorta-fares#0: Disabled",
+        "slorta-fares#0: Medicare Cardholders",
+        "slorta-fares#0: Senior (65\u201379)",
+        "slorta-fares#0: Students (K\u201312)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1574,6 +2600,16 @@
         "slorta-fares#0",
         "slorta-passes#6"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "slorta-contactless#4: , so a rider who commutes to and from work 40 times in a ty\u2026",
+        "slorta-contactless#6: regular / Regular Fare or",
+        "slorta-contactless#7: Fixed Route Discount Fare",
+        "slorta-contactless#7: Fixed Route Regular Fare",
+        "slorta-fares#0: Regular",
+        "slorta-passes#6: (unspecified)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1590,6 +2626,9 @@
         "slorta-passes#7",
         "slorta-passes#8"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1602,6 +2641,11 @@
       "prose_chunks": [
         "soltrans-fare-table#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "soltrans-fare-table#0: Local"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1614,6 +2658,11 @@
       "prose_chunks": [
         "soltrans-fare-table#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "soltrans-fare-table#0: Reduced / Local"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1626,6 +2675,11 @@
       "prose_chunks": [
         "soltrans-fare-table#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "soltrans-fare-table#0: Reduced / SolanoExpress Within Solano County"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1638,6 +2692,11 @@
       "prose_chunks": [
         "soltrans-fare-table#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "soltrans-fare-table#0: youth / Route 82 Youth (18 &under) FREE Local SolanoExpress\u2026"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1650,6 +2709,11 @@
       "prose_chunks": [
         "vine-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vine-fares#0: Adult (19-64)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1662,6 +2726,11 @@
       "prose_chunks": [
         "vine-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vine-fares#0: Adult (19-64)"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1675,6 +2744,12 @@
         "vine-fares#0",
         "vine-fares#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vine-fares#0: Express",
+        "vine-fares#1: Day Pass / Half"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1687,6 +2762,11 @@
       "prose_chunks": [
         "vine-fares#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vine-fares#0: BART"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1701,6 +2781,14 @@
         "vta-fares#4",
         "vta-regional-transfers#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vta-fares#1: Single Ride",
+        "vta-fares#4: 8-Hour Light Rail Pass",
+        "vta-regional-transfers#1: discount / discount from their BART fare. If their total BA\u2026",
+        "vta-regional-transfers#1: for a VTA local fare, they will receive an automatic"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1714,6 +2802,12 @@
         "vta-fares#1",
         "vta-fares#2"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vta-fares#1: 8-Hour Light Rail Pass",
+        "vta-fares#2: Single Ride"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1728,6 +2822,14 @@
         "vta-fares#4",
         "vta-regional-transfers#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vta-fares#1: Single Ride",
+        "vta-fares#4: 8-Hour Light Rail Pass",
+        "vta-regional-transfers#1: discount / discount from their BART fare. If their total BA\u2026",
+        "vta-regional-transfers#1: for a VTA local fare, they will receive an automatic"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1741,6 +2843,12 @@
         "vta-fares#1",
         "vta-fares#2"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "vta-fares#1: 8-Hour Light Rail Pass",
+        "vta-fares#2: Single Ride"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1758,6 +2866,9 @@
         "vta-fares#4",
         "vta-fares#5"
       ],
+      "match_mode": "prose_amount",
+      "fact_rows": null,
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1773,6 +2884,14 @@
         "westcat-fares-all#0",
         "westcat-fares-all#1"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "westcat-clipper#0: senior / in cash value, or have a valid pass loaded. Senior\u2026",
+        "westcat-clipper#1: senior / in cash value, or have a valid pass loaded. Senior\u2026",
+        "westcat-fares-all#0: Local Fixed Route and Express Bus",
+        "westcat-fares-all#1: senior / for senior and Clipper Access customers) on any co\u2026"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1785,6 +2904,11 @@
       "prose_chunks": [
         "westcat-fares-all#0"
       ],
+      "match_mode": "fact_row",
+      "fact_rows": [
+        "westcat-fares-all#0: LYNX Transbay Bus"
+      ],
+      "class_prices": null,
       "reason": null
     },
     {
@@ -1795,6 +2919,9 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": null,
       "reason": "https://api.actransit.org/transit/gtfs/download returns HTTP 401 \"A valid API token is required to use the AC Transit API\" (checked 2026-09-04, and re-confirmed the same day on a spaced-out retry rather than inside the fetch burst). The older catalog row points at the retired transitfeeds.com aggregator. This project does not hold agency API credentials and will not fetch a feed it cannot fetch anonymously, so AC Transit fare rows stay uncross-checked. A standing condition, not a transient failure: an API-token requirement does not come and go."
     },
     {
@@ -1805,6 +2932,9 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": null,
       "reason": "No first-party Elk Grove GTFS feed found (checked 2026-09-04, and re-confirmed the same day on a spaced-out retry). The Mobility Database's active row, https://elkgrovetransit.com/gtfs, 302s to an unrelated commercial site on another domain; every path on that host does, on both attempts. SacRT, which operates e-tran and publishes the prose corpus for it, serves a GTFS feed with no fare table at all. A standing condition: a domain that resolves somewhere else is not a load artifact."
     },
     {
@@ -1815,6 +2945,9 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": null,
       "reason": "https://www.sacrt.com/wp-content/uploads/google_transit.zip downloads a valid 2.7 MB GTFS ZIP (11 members) that contains neither fare_attributes.txt nor fare_products.txt; the older iportal.sacrt.com row serves a different 2.3 MB ZIP with the same absence (checked 2026-09-04, both re-confirmed the same day on a spaced-out retry). There is nothing to cross-check against the prose until SacRT publishes fare data in its feed. A structural absence rather than a fetch failure: the download succeeds."
     },
     {
@@ -1825,6 +2958,9 @@
       "feed_agrees": "no_feed",
       "prose_matches": null,
       "prose_chunks": null,
+      "match_mode": null,
+      "fact_rows": null,
+      "class_prices": null,
       "reason": "Yolobus's own GTFS page links one feed, https://avl.yctd.org/RealTime/google_transit.zip, and it downloads a valid 485 KB ZIP (7 members) that contains no fare file. The Mobility Database's direct_download for Yolobus, yolobus.com/GTFS/google_transit.zip, 404s. Checked 2026-09-04 and both re-confirmed the same day on a spaced-out retry, honouring yolobus.com's Crawl-delay of 10. Same outcome as SacRT for a different reason, and structural the same way: the download succeeds, the fares are not in it."
     }
   ]

@@ -30,6 +30,12 @@ def _point_config_at(tmp_path, monkeypatch):
     processed = tmp_path / "processed"
     monkeypatch.setattr(config, "RAW_DIR", raw)
     monkeypatch.setattr(config, "PROCESSED_DIR", processed)
+    # `config.FACTS_PATH` is bound at import time from the real PROCESSED_DIR, so
+    # repointing PROCESSED_DIR alone leaves `cross_check` reading the committed
+    # fact table while the chunks come from the test. It did, and the CLI test
+    # printed a match against real MST rows a test that supplies one chunk could
+    # not have produced. Both corpus artifacts move together or neither does.
+    monkeypatch.setattr(config, "FACTS_PATH", processed / "facts.jsonl")
     monkeypatch.setattr(gtfs, "GTFS_RAW_DIR", raw / "gtfs")
     monkeypatch.setattr(gtfs, "CROSS_CHECK_PATH", processed / "gtfs_cross_check.json")
     return raw, processed
@@ -437,7 +443,9 @@ def test_cross_check_agrees_when_feed_amount_in_prose(tmp_path, monkeypatch):
     # One prose chunk carries $2.00, so the agreement is a specific match rather
     # than a collision — the count and the chunk id are what say which (#141).
     assert records == [
-        gtfs.CrossCheckRecord("MST", "Regular", "Regular", "2.00", "yes", 1, ["c#0"])
+        gtfs.CrossCheckRecord(
+            "MST", "Regular", "Regular", "2.00", "yes", 1, ["c#0"], match_mode="prose_amount"
+        )
     ]
 
 
@@ -555,6 +563,164 @@ def test_a_colliding_agreement_says_how_many_chunks_it_matched(tmp_path, monkeyp
 
     assert record.feed_agrees == "yes"
     assert record.prose_matches == 3
+
+
+# ── how strong an agreement is (issue #141, part 2) ──────────────────────────
+
+
+def _write_facts(processed, rows):
+    processed.mkdir(parents=True, exist_ok=True)
+    (processed / "facts.jsonl").write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8"
+    )
+
+
+def _fact(agency="MST", rider_class="", program="", price=2.0, chunk_id="c#0"):
+    return {
+        "agency": agency,
+        "doc_id": "doc",
+        "chunk_id": chunk_id,
+        "program": program,
+        "rider_class": rider_class,
+        "price": price,
+        "currency": "USD",
+        "age_min": None,
+        "age_max": None,
+        "confidence": "parsed",
+    }
+
+
+def _one_fare_agency(tmp_path, monkeypatch, *, price="2.00", fare_id="Regular"):
+    raw, processed = _point_config_at(tmp_path, monkeypatch)
+    agency_dir = raw / "gtfs" / "MST"
+    agency_dir.mkdir(parents=True)
+    (agency_dir / "fare_attributes.txt").write_text(f"fare_id,price\n{fare_id},{price}\n")
+    monkeypatch.setattr(
+        gtfs, "load_gtfs_manifest", lambda: [{"agency": "MST", "url": "https://mst.org/g.zip"}]
+    )
+    return raw, processed
+
+
+class TestMatchStrength:
+    """A "yes" is graded, not binary. `feed_agrees` never moves — every fact
+    price is extracted from the prose, so a fact-row match is a strict subset of
+    a prose match — but the mode says how much the same verdict is worth."""
+
+    def test_a_fact_row_for_the_same_rider_class_is_the_strongest_match(
+        self, tmp_path, monkeypatch
+    ):
+        _, processed = _one_fare_agency(tmp_path, monkeypatch, fare_id="Adult Cash Fare")
+        _write_facts(processed, [_fact(rider_class="Adult (19-64)", price=2.0, chunk_id="mst#1")])
+        (record,) = gtfs.cross_check([_chunk("MST", "Adult fare is $2.00.", "mst#1")])
+        assert record.feed_agrees == "yes"
+        assert record.match_mode == "fact_row_class"
+        assert record.fact_rows == ["mst#1: Adult (19-64)"]
+
+    def test_a_fact_row_whose_class_cannot_be_compared_is_weaker(self, tmp_path, monkeypatch):
+        _, processed = _one_fare_agency(tmp_path, monkeypatch, fare_id="Regular")
+        _write_facts(processed, [_fact(rider_class="", program="Single Ride", chunk_id="mst#1")])
+        (record,) = gtfs.cross_check([_chunk("MST", "The fare is $2.00.", "mst#1")])
+        assert record.match_mode == "fact_row"
+        assert record.fact_rows == ["mst#1: Single Ride"]
+
+    def test_an_amount_in_the_prose_and_no_fare_row_is_the_coarse_fallback(
+        self, tmp_path, monkeypatch
+    ):
+        """The pre-#141 behaviour, kept for agencies whose fact extraction is
+        thin — and now labelled, so it stops reading like the strong claim."""
+        _one_fare_agency(tmp_path, monkeypatch)
+        (record,) = gtfs.cross_check([_chunk("MST", "A replacement card costs $2.00.", "mst#1")])
+        assert record.feed_agrees == "yes"
+        assert record.match_mode == "prose_amount"
+        assert record.fact_rows is None
+
+    def test_a_missing_fact_table_degrades_to_the_coarse_match(self, tmp_path, monkeypatch):
+        """`facts.jsonl` not generated must not read as a stronger agreement or
+        as a disagreement. It degrades to what the check always did."""
+        _one_fare_agency(tmp_path, monkeypatch)
+        (record,) = gtfs.cross_check([_chunk("MST", "The fare is $2.00.", "mst#1")])
+        assert record.match_mode == "prose_amount"
+
+    def test_the_verdict_does_not_move_when_the_fact_table_is_added(self, tmp_path, monkeypatch):
+        """The safety property. Grading may change how a "yes" reads; it may
+        never turn a "yes" into a "no" or the reverse."""
+        _, processed = _one_fare_agency(tmp_path, monkeypatch, price="9.00")
+        _write_facts(processed, [_fact(rider_class="Adult", price=2.0, chunk_id="mst#1")])
+        (record,) = gtfs.cross_check([_chunk("MST", "Adult fare is $2.00.", "mst#1")])
+        assert record.feed_agrees == "no"
+        assert record.match_mode is None
+        assert record.fact_rows is None
+
+    def test_reduced_senior_and_disabled_are_one_class(self, tmp_path, monkeypatch):
+        """SBMTD's feed prices a "Reduced One-way Cash Fare" and its fare page
+        prices "Seniors (age 65+) / Persons with Disabilities". A strict string
+        match would call that class incomparable and throw away the strongest
+        evidence in the report."""
+        _, processed = _one_fare_agency(
+            tmp_path, monkeypatch, price="1.25", fare_id="Reduced One-way Cash Fare"
+        )
+        _write_facts(
+            processed,
+            [_fact(rider_class="Seniors (age 65+) Persons with Disabilities", price=1.25)],
+        )
+        (record,) = gtfs.cross_check([_chunk("MST", "Seniors pay $1.25.")])
+        assert record.match_mode == "fact_row_class"
+
+    def test_the_fare_page_prices_for_that_class_ride_along_as_context(self, tmp_path, monkeypatch):
+        """EXP-06's comparison, published rather than scored. The corpus side is
+        an extraction, so a missing row there is not a disagreement — a human
+        reads the two columns and decides."""
+        _, processed = _one_fare_agency(
+            tmp_path, monkeypatch, price="48.00", fare_id="Youth 31-Day"
+        )
+        _write_facts(
+            processed,
+            [
+                _fact(rider_class="Youth", price=7.0, chunk_id="mst#1"),
+                _fact(rider_class="Youth", price=14.0, chunk_id="mst#1"),
+            ],
+        )
+        (record,) = gtfs.cross_check([_chunk("MST", "Youth pay $7.00 or $14.00.", "mst#1")])
+        assert record.feed_agrees == "no"
+        assert record.class_prices == ["7.00", "14.00"]
+
+    def test_a_free_fare_stays_on_the_coarse_path(self, tmp_path, monkeypatch):
+        """A zero fare is evidenced by the word "free", not by a parsed price."""
+        _, processed = _one_fare_agency(tmp_path, monkeypatch, price="0.00", fare_id="Free")
+        _write_facts(processed, [_fact(rider_class="Adult", price=0.0)])
+        (record,) = gtfs.cross_check([_chunk("MST", "Children under 5 ride free.")])
+        assert record.feed_agrees == "yes"
+        assert record.match_mode == "prose_amount"
+
+
+class TestRiderClassKey:
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [
+            ("Seniors (age 65+)", "senior"),
+            ("Persons with Disabilities", "disabled"),
+            ("RTC Discount Card", "disabled"),
+            ("Youth (K-12th grade)", "youth"),
+            ("Veterans", "veteran"),
+            ("Reduced One-way Cash Fare", "reduced"),
+            ("Standard One-way Cash Fare", "adult"),
+            ("Amtrak/Highway 17 Express", None),
+            ("", None),
+            (None, None),
+        ],
+    )
+    def test_one_vocabulary_reduces_both_sides(self, label, expected):
+        assert gtfs.rider_class_key(label) == expected
+
+    def test_the_specific_class_wins_over_the_generic_bucket(self):
+        """ "Senior/Disabled Discount" is a senior fare, not an unlabelled
+        discount, so the specific patterns are tested first."""
+        assert gtfs.rider_class_key("Senior/Disabled Discount") == "senior"
+
+    def test_the_first_label_given_wins(self):
+        """Callers pass the most specific label first: a GTFS
+        `rider_category_id` before a fare product name."""
+        assert gtfs.rider_class_key("youth", "Adult Day Pass") == "youth"
 
 
 def test_a_no_feed_record_counts_nothing(tmp_path, monkeypatch):
@@ -736,6 +902,9 @@ def test_write_report_shape(tmp_path, monkeypatch):
             "feed_agrees": "yes",
             "prose_matches": 1,
             "prose_chunks": ["mst#0"],
+            "match_mode": None,
+            "fact_rows": None,
+            "class_prices": None,
             "reason": None,
         }
     ]
@@ -777,7 +946,7 @@ def test_main_check_prints_the_evidence_behind_each_verdict(tmp_path, monkeypatc
     gtfs.main()
 
     captured = capsys.readouterr()
-    assert "1 prose chunk(s): mst-fares#0" in captured.out
+    assert "prose_amount only, 1 chunk(s): mst-fares#0" in captured.out
     assert "no prose chunk states this amount" in captured.out
     assert "feed carries no fare table" in captured.out
     assert "coverage: 1 of 2 corpus agencies" in captured.out
