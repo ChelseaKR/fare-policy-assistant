@@ -31,6 +31,15 @@ _REDIRECT_RE = re.compile(
     re.I,
 )
 
+# A clock time: "8:00 AM", "8 a.m.", "4:30 p.m.", and the corpus cleaner's own
+# "1.a.m." — a period where the source had a space, the same class of artifact
+# as the "805. 963.3364" phone number recorded in evals/plumbline/target.toml.
+# Tolerated here rather than fixed here, because a check that reads a document
+# more strictly than the ingest wrote it reports the cleaner as an assistant
+# defect. The trailing \b before the optional final period is load-bearing: it
+# is what stops "$1.00 a month" from parsing as one o'clock in the morning.
+_CLOCK_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*\.?\s*([ap])\.?\s?m\b\.?", re.I)
+
 
 @dataclass
 class CheckResult:
@@ -285,6 +294,46 @@ def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[
     return False
 
 
+def clock_times(text: str) -> set[tuple[int, int, str]]:
+    """Every clock time in `text`, normalised to (hour mod 12, minute, am/pm).
+
+    Normalising is the whole job. "8:00 AM", "8 a.m." and "8am" are the same
+    time written three ways, and an office hour that survives a document's
+    formatting must not be reported as absent because the answer punctuated it
+    differently. Hours outside 1-12 are not clock times; dropping them is what
+    keeps a stray "24 pm" out of the comparison.
+    """
+    out: set[tuple[int, int, str]] = set()
+    for hour, minute, meridiem in _CLOCK_RE.findall(text):
+        value = int(hour)
+        if 1 <= value <= 12:
+            out.add((value % 12, int(minute or 0), meridiem.lower()))
+    return out
+
+
+def format_clock(moment: tuple[int, int, str]) -> str:
+    hour, minute, meridiem = moment
+    return f"{hour or 12}:{minute:02d} {meridiem}m"
+
+
+def unsupported_clock_times(
+    answer: str,
+    cited_texts: Sequence[str],
+    asked: str = "",
+) -> list[str]:
+    """Clock times the answer states that no document it cites publishes.
+
+    `asked` is the rider's own words, exempted because an answer that repeats a
+    time back to the rider who supplied it is not sourcing a claim from a
+    document.
+    """
+    supported: set[tuple[int, int, str]] = set()
+    for text in cited_texts:
+        supported |= clock_times(text)
+    supported |= clock_times(asked)
+    return sorted(format_clock(moment) for moment in clock_times(answer) - supported)
+
+
 def run_checks(
     case: dict,
     result: AnswerResult,
@@ -295,6 +344,7 @@ def run_checks(
         Sequence[fare_table.StructuredFare],
     ]
     | None = None,
+    doc_texts: Mapping[str, str] | None = None,
 ) -> list[CheckResult]:
     out: list[CheckResult] = []
     expected = case["expected_behavior"]  # answer | partial | refuse_redirect
@@ -494,6 +544,55 @@ def run_checks(
                         "structured_fare_consistent",
                         not feed_conflicts,
                         "; ".join(feed_conflicts),
+                    )
+                )
+
+        # 8c. An office hour the rider is told to turn up at must appear in a
+        # document the answer cites (#196).
+        #
+        # `edge-052` is the case this is for. A rider asks how to apply for
+        # Santa Cruz METRO's Discount Photo ID Card and is told to "visit
+        # Customer Service ... during business hours (Monday-Friday, 8:00 AM -
+        # 5:00 PM) [doc:scmtd-accessibility]". That document's "Where to Apply"
+        # section reads, in full, "Visit Customer Service at our Transit Centers
+        # in downtown Santa Cruz and Watsonville during business hours." It
+        # publishes no clock time anywhere. The hours came off a Tap2Cruz
+        # passage in a different document that retrieval had put in the same
+        # context window.
+        #
+        # Every gate in this repository passed that case: no check failed, and
+        # neither judge did. A price has `fare_facts_consistent` and the
+        # GTFS-Fares cross-check behind it; an hour had nothing, and an hour is
+        # what decides whether a rider finds an open counter.
+        #
+        # Deliberately narrow, in two ways.
+        #
+        # Only clock times. The same scan over currency amounts flags derived
+        # figures an answer is entitled to state -- "$2.25 cash, $2.05 Clipper,
+        # so you save $0.20" -- and whether a computed saving may carry a
+        # citation is a judgement, not a fact. Nobody derives an office hour.
+        #
+        # Only the union of the documents the answer cites, not per sentence.
+        # Per-sentence attribution reads a markdown list as belonging to the
+        # citation *after* it and flags a whole fare table for the wrong
+        # document; measured, that produced three false positives for every two
+        # real findings on the 2026-09-06 nightly. The union is the conservative
+        # claim -- "no document this answer cites publishes this hour" -- and it
+        # still catches every case here.
+        if doc_texts is not None and result.kind == "answered":
+            cited_texts = [
+                doc_texts[citation.doc_id]
+                for citation in result.citations
+                if citation.doc_id in doc_texts
+            ]
+            if cited_texts:
+                asked = " ".join([case.get("question") or "", *(case.get("turns") or [])])
+                unsupported = unsupported_clock_times(answer, cited_texts, asked)
+                out.append(
+                    CheckResult(
+                        "office_hours_in_cited_source",
+                        not unsupported,
+                        "; ".join(unsupported),
                     )
                 )
 

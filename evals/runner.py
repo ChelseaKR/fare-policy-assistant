@@ -1381,6 +1381,7 @@ def _run_case(
     cfg: config.Config,
     corpus_doc_ids: set[str],
     facts_by_doc: dict[str, list] | None,
+    doc_texts: Mapping[str, str],
     structured_fares_by_agency: Mapping[
         str,
         Sequence[fare_table.StructuredFare],
@@ -1458,6 +1459,7 @@ def _run_case(
         corpus_doc_ids,
         facts_by_doc,
         structured_fares_by_agency,
+        doc_texts=doc_texts,
     )
     # A case whose supporting document the operator has disabled was never
     # given the evidence it was written against: `answer.answer_question`
@@ -1773,6 +1775,14 @@ def _run_resolved(
     facts_by_doc: dict[str, list] = collections.defaultdict(list)
     for fact in captured_inputs.facts:
         facts_by_doc[fact.doc_id].append(fact)
+    # The full text of each corpus document, for the checks that ask "does this
+    # document actually say that" rather than "does the fact table agree".
+    # Built from the same captured chunks the retriever is given, so a check
+    # can never read a corpus the run did not use.
+    _doc_chunks: dict[str, list[str]] = collections.defaultdict(list)
+    for chunk in chunks:
+        _doc_chunks[chunk.doc_id].append(chunk.text)
+    doc_texts: dict[str, str] = {doc_id: "\n".join(texts) for doc_id, texts in _doc_chunks.items()}
     retriever = Retriever(chunks, cfg.retrieval)
     run_judges = have_key and cfg.models.provider != "mock"
     live = not offline and have_key and cfg.models.provider != "mock"
@@ -1996,6 +2006,7 @@ def _run_resolved(
                 cfg=cfg,
                 corpus_doc_ids=corpus_doc_ids,
                 facts_by_doc=facts_by_doc,
+                doc_texts=doc_texts,
                 structured_fares_by_agency=(captured_inputs.structured_fares_by_agency),
                 answer_system_prompt=captured_inputs.prompts["system"],
                 answer_user_prompt=captured_inputs.prompts["answer_user"],
