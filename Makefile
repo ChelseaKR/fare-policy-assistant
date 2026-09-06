@@ -189,7 +189,7 @@ i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .p
 	done
 	@echo "i18n-compile: refreshed messages.mo for $(SUPPORTED_LOCALES)."
 
-verify: check i18n a11y report-regression provenance feeds-check  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate + fare-change feeds
+verify: check i18n a11y report-regression provenance feeds-check controls  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate + fare-change feeds + negative controls
 
 report-regression:  ## Committed EVALS.md must not regress vs evals/baseline.json (see docs/audits/eval-regression-2026-06-30.md)
 	uv run python -m evals.check_report_regression
@@ -199,6 +199,9 @@ feeds:        ## Regenerate the per-agency fare-change feeds under docs/pages/fe
 
 feeds-check:  ## BLOCKING: the committed feeds must match the retained corpus versions
 	uv run python -m assistant.feeds --check
+
+controls:     ## BLOCKING: negative controls — no retrieval / wrong agency / stale corpus, scored by the same deterministic checks (offline, mock model, ~7s)
+	uv run python -m evals.controls
 
 mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; never a merge gate)
 	# Scoped in [tool.mutmut] to evals/checks.py + evals/judges.py, run against

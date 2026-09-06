@@ -120,6 +120,15 @@ jobs:
         # regenerate the published feeds fails here instead of leaving
         # subscribers on a record the repository no longer holds (#219).
         run: make feeds-check
+      - name: Negative controls (how much of the score is retrieval)
+        # Offline and free: the mock answer model answers only from the
+        # passages it is given, so substituting the retriever is a real control
+        # rather than a second implementation. Asserts per check, not on the
+        # overall pass rate -- offline, a control that retrieves nothing scores
+        # HIGHER than the baseline because every refusal case passes, so a
+        # "the control must score lower" gate would have shipped green and
+        # measured nothing (#212).
+        run: make controls
 
   i18n:
     name: i18n (gettext catalog gate)
