@@ -385,11 +385,34 @@ jobs:
       - name: Evidence bundle matches the recording
         run: uv run python -m evals.plumbline_export --check
       - name: Run the pinned external harness
-        # Same file the laptop reads (plumbline.pin), same command. Its exit
-        # code is not the gate; see the job comment above.
-        run: ./plumbline-gate.sh --summary-file "$GITHUB_STEP_SUMMARY" || true
+        # Same file the laptop reads (plumbline.pin), same command. A FAIL
+        # verdict is not the gate; see the job comment above.
+        #
+        # But that is exit 1 alone. This step used to end `|| true`, which also
+        # swallowed exit 2 (usage), 3 (integrity refusal — the evidence did not
+        # verify and nothing was scored) and 4 (configuration or environment
+        # error, including "the harness could not be resolved"). On all three the
+        # harness writes no report, and the guard below then graded the newest
+        # report.json on disk by mtime — the *committed* one, restored by
+        # checkout, clean since the day it was committed. So this required check
+        # went green over an audit that never ran, with the reason visible only
+        # to someone opening the step log a green check gives nobody a reason to
+        # open. That is #183.
+        run: |
+          echo "AUDIT_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
+          set +e
+          ./plumbline-gate.sh --summary-file "$GITHUB_STEP_SUMMARY"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
+            echo "::error::plumbline-gate.sh exited $status — it scored nothing. Only 0 (PASS) and 1 (ran, reported FAIL) mean the audit ran; a gate that could not run is not a gate that passed (#183)."
+            exit "$status"
+          fi
       - name: Gate the audit report
-        run: uv run python -m evals.plumbline_guard
+        # --not-before is the second defence: it refuses a report last written
+        # before this run started, so even an unforeseen way of producing no
+        # report fails here rather than being graded from the committed one.
+        run: uv run python -m evals.plumbline_guard --not-before "$AUDIT_STARTED_AT"
       - name: Upload audit report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4

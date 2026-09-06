@@ -94,16 +94,40 @@ audit:        ## Independent Plumbline audit: rebuild the evidence bundle, run t
 	#      baseline, any hard failure nobody acknowledged, and any
 	#      acknowledgement that has stopped firing.
 	#
-	# Step 2's own exit code is deliberately not the gate. Several floors in
+	# Step 2's own FAIL verdict is deliberately not the gate. Several floors in
 	# evals/plumbline/target.toml sit below the harness's defaults, with reasons,
 	# and the audit's 76 hard failures across five suites are recorded in
 	# evals/plumbline/acknowledged_findings.json rather than hidden by lowering
 	# something. `plumbline gate` therefore reports FAIL today and will until
 	# those findings are fixed; the guard is what decides whether the build
-	# stops. `|| true` on that line is the one place this is written down.
+	# stops. This recipe is the one place that is written down.
+	#
+	# But it is exit 1 alone that means "ran, and reported FAIL". This line used
+	# to be `./plumbline-gate.sh || true`, which swallowed every other exit code
+	# too: 2 (usage), 3 (integrity refusal — the evidence did not verify and
+	# nothing was scored) and 4 (configuration or environment error, including
+	# "the harness could not be resolved"). None of those scored anything, and on
+	# all three the harness writes no report — so the guard fell back to the
+	# newest report.json on disk by mtime, which is the *committed* one from a
+	# previous run. It was clean when it was committed, so the guard passed, and
+	# `make audit` exited 0 with a CONFIGURATION ERROR sitting in the scrollback.
+	# That is #183, and it is the exact property plumbline.pin's own header
+	# promises: a gate that could not run is not a gate that passed.
+	#
+	# So: accept 0 and 1, abort on anything else, and hand the guard the second
+	# this run started so it refuses a report older than the run itself. The two
+	# halves are separate defences — the exit code catches a gate that failed
+	# loudly, the timestamp catches one that failed some way nobody predicted.
 	uv run python -m evals.plumbline_export --check
-	./plumbline-gate.sh || true
-	uv run python -m evals.plumbline_guard
+	@started=$$(date +%s); \
+	./plumbline-gate.sh; status=$$?; \
+	if [ "$$status" -ne 0 ] && [ "$$status" -ne 1 ]; then \
+		echo "make audit: plumbline-gate.sh exited $$status — it scored nothing." >&2; \
+		echo "make audit: only 0 (PASS) and 1 (ran, reported FAIL) mean the audit ran." >&2; \
+		echo "make audit: a gate that could not run is not a gate that passed. See #183." >&2; \
+		exit "$$status"; \
+	fi; \
+	uv run python -m evals.plumbline_guard --not-before "$$started"
 
 audit-record:  ## Re-derive the Plumbline bundle from the recording (offline; run after evals/govchat_export or a suite edit)
 	uv run python -m evals.plumbline_export

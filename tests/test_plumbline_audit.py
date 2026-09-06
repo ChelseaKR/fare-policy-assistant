@@ -309,3 +309,157 @@ class TestTheTargetConfigExplainsItself:
 )
 def test_the_bundle_ships_every_file_the_audit_reads(path: str) -> None:
     assert (export.BUNDLE_DIR / path).is_file()
+
+
+class TestAGateThatCouldNotRunIsNotAGateThatPassed:
+    """#183: `make audit` and the `independent-audit` job could both exit 0
+    over an audit that never happened.
+
+    Two individually reasonable pieces combined into a hole. `plumbline gate`'s
+    FAIL verdict is deliberately not this repository's merge gate, so the call
+    ended `|| true` — which swallowed exit 2 (usage), 3 (integrity refusal:
+    the evidence bundle did not verify and nothing was scored) and 4
+    (configuration or environment error) just as happily as exit 1. On all
+    three the harness writes no report, and `latest_report()` then fell back to
+    the newest `report.json` on disk by mtime: the committed one, restored by
+    checkout, and clean since the day it was committed. The guard graded that,
+    found nothing wrong with it, and the build went green.
+
+    Not red-and-ignored. Green, with the reason visible only in a step log that
+    a green check gives nobody a reason to open.
+    """
+
+    GATE_RAN = (0, 1)  # PASS, and ran-then-reported-FAIL
+    GATE_SCORED_NOTHING = (2, 3, 4)  # usage, integrity refusal, environment
+
+    def _audit_harness(self, tmp_path: Path, gate_exit: int) -> tuple[int, str]:
+        """Run the real `audit` recipe against a gate that exits `gate_exit`.
+
+        The Makefile is copied verbatim rather than re-spelled, so this cannot
+        drift from the recipe it is pinning. `uv` is stubbed with a script that
+        logs its arguments, which is what lets the assertion be "the guard was
+        never reached" rather than "the exit code looked right".
+        """
+        import os
+        import shutil
+        import subprocess
+
+        shutil.copy(config.REPO_ROOT / "Makefile", tmp_path / "Makefile")
+
+        gate = tmp_path / "plumbline-gate.sh"
+        gate.write_text(f"#!/bin/sh\necho 'stub gate, exiting {gate_exit}'\nexit {gate_exit}\n")
+        gate.chmod(0o755)
+
+        log = tmp_path / "uv-calls.log"
+        stub_bin = tmp_path / "bin"
+        stub_bin.mkdir()
+        uv = stub_bin / "uv"
+        uv.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\nexit 0\n')
+        uv.chmod(0o755)
+
+        env = dict(os.environ, PATH=f"{stub_bin}:{os.environ['PATH']}")
+        proc = subprocess.run(
+            ["make", "audit"],
+            cwd=tmp_path,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return proc.returncode, log.read_text(encoding="utf-8") if log.exists() else ""
+
+    @pytest.mark.parametrize("gate_exit", GATE_SCORED_NOTHING)
+    def test_make_audit_stops_when_the_gate_scored_nothing(
+        self, tmp_path: Path, gate_exit: int
+    ) -> None:
+        returncode, calls = self._audit_harness(tmp_path, gate_exit)
+        assert returncode != 0, (
+            f"plumbline-gate.sh exited {gate_exit} — it scored nothing — and `make audit` "
+            "still succeeded. This is #183: the build passes over an audit that never ran."
+        )
+        assert "plumbline_guard" not in calls, (
+            "the guard was reached after a gate that wrote no report, so the only thing "
+            "left for it to grade is the committed report from a previous run"
+        )
+
+    @pytest.mark.parametrize("gate_exit", GATE_RAN)
+    def test_make_audit_still_grades_a_gate_that_ran(self, tmp_path: Path, gate_exit: int) -> None:
+        """The negative control. A FAIL verdict must still reach the guard, or
+        this fix would have replaced a gate that cannot fail with one that
+        cannot pass — and the guard, not the harness's verdict, is the gate."""
+        returncode, calls = self._audit_harness(tmp_path, gate_exit)
+        assert "plumbline_guard" in calls, (
+            f"plumbline-gate.sh exited {gate_exit}, which means it ran; the guard is the "
+            "merge gate and must still be the thing that decides"
+        )
+        assert returncode == 0
+        assert "--not-before" in calls, (
+            "the guard must be handed the second this run started, so a report older "
+            "than the run is refused rather than graded"
+        )
+
+    def test_the_ci_job_does_not_swallow_a_gate_that_scored_nothing(self) -> None:
+        """The Makefile is a laptop; `independent-audit` is the required check.
+
+        Fixing only one of them leaves the hole open where it costs the most.
+        """
+        text = (config.REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        job = text.split("independent-audit:", 1)[1]
+        body = "\n".join(line for line in job.splitlines() if not line.lstrip().startswith("#"))
+        assert './plumbline-gate.sh --summary-file "$GITHUB_STEP_SUMMARY" || true' not in body, (
+            "`|| true` accepts exit 2, 3 and 4 as readily as exit 1, and on all three the "
+            "harness wrote no report for the guard to grade"
+        )
+        assert "plumbline_guard --not-before" in body, (
+            "the guard step must refuse a report older than this run"
+        )
+
+    def test_a_report_older_than_the_run_is_refused_rather_than_graded(
+        self, tmp_path: Path
+    ) -> None:
+        """The second defence, exercised directly: an unforeseen way of writing
+        no report still cannot be graded from a leftover."""
+        import os
+
+        run_dir = tmp_path / "abc123"
+        run_dir.mkdir()
+        report = run_dir / "report.json"
+        report.write_text("{}", encoding="utf-8")
+
+        started = 2_000_000_000.0
+        os.utime(report, (started - 3600, started - 3600))
+
+        with pytest.raises(SystemExit) as excinfo:
+            guard.latest_report(tmp_path, not_before=started)
+        message = str(excinfo.value)
+        assert "before this run started" in message
+        assert str(report) in message, "the message must name the leftover it refused"
+
+    def test_a_report_this_run_produced_is_graded(self, tmp_path: Path) -> None:
+        """Negative control for the timestamp: a fresh report must still pass,
+        or `--not-before` would be a check that can only fail."""
+        import os
+
+        run_dir = tmp_path / "abc123"
+        run_dir.mkdir()
+        report = run_dir / "report.json"
+        report.write_text("{}", encoding="utf-8")
+
+        started = 2_000_000_000.0
+        os.utime(report, (started + 1, started + 1))
+
+        assert guard.latest_report(tmp_path, not_before=started) == report
+
+    def test_no_timestamp_still_reads_the_latest(self, tmp_path: Path) -> None:
+        """`--not-before` is opt-in, so `uv run python -m evals.plumbline_guard
+        --report <path>` and a bare interactive run keep working."""
+        import os
+
+        for name, mtime in (("old", 1_000_000_000), ("new", 2_000_000_000)):
+            run_dir = tmp_path / name
+            run_dir.mkdir()
+            report = run_dir / "report.json"
+            report.write_text("{}", encoding="utf-8")
+            os.utime(report, (mtime, mtime))
+
+        assert guard.latest_report(tmp_path).parent.name == "new"
