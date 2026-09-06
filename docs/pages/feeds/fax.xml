@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — FAX</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:fax</id>
+  <updated>2026-08-13T04:44:00+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/fax.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>FAX — corpus 95794539d1d0 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:fax:95794539d1d0</id>
+    <updated>2026-08-13T04:44:00+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/95794539d1d0"/>
+    <content type="text">Corpus version 95794539d1d0, archived 2026-08-13T04:44:00+00:00.
+Documents as of 2026-08-13.
+3 added.
+Added: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es
+Agency: FAX.</content>
+  </entry>
+  <entry>
+    <title>FAX — corpus 5e6a24ef0702 (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:fax:5e6a24ef0702</id>
+    <updated>2026-08-13T04:01:01+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5e6a24ef0702"/>
+    <content type="text">Corpus version 5e6a24ef0702, archived 2026-08-13T04:01:01+00:00.
+Documents as of 2026-08-13.
+3 removed.
+Removed: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es
+Agency: FAX.</content>
+  </entry>
+  <entry>
+    <title>FAX — corpus 227cb2da65b0 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:fax:227cb2da65b0</id>
+    <updated>2026-08-13T03:39:06+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/227cb2da65b0"/>
+    <content type="text">Corpus version 227cb2da65b0, archived 2026-08-13T03:39:06+00:00.
+Documents as of 2026-08-13.
+3 added.
+Added: fax-fares, fax-reduced-fare-program, fax-reduced-fare-program-es
+Agency: FAX.</content>
+  </entry>
+</feed>

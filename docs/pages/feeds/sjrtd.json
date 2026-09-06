@@ -1,0 +1,63 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/sjrtd.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "sjrtd-dfc",
+          "sjrtd-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "d113659adda8",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.\nDocuments as of 2026-08-14.\n2 added.\nAdded: sjrtd-dfc, sjrtd-fares\nAgency: SJRTD.",
+      "date_published": "2026-08-14T01:56:42+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd:d113659adda8",
+      "title": "SJRTD — corpus d113659adda8 (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "02c3bb15a506",
+        "first_snapshot": false,
+        "removed": [
+          "sjrtd-dfc",
+          "sjrtd-fares"
+        ]
+      },
+      "content_text": "Corpus version 02c3bb15a506, archived 2026-08-14T00:34:38+00:00.\nDocuments as of 2026-08-14.\n2 removed.\nRemoved: sjrtd-dfc, sjrtd-fares\nAgency: SJRTD.",
+      "date_published": "2026-08-14T00:34:38+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd:02c3bb15a506",
+      "title": "SJRTD — corpus 02c3bb15a506 (2 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/02c3bb15a506"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "sjrtd-dfc",
+          "sjrtd-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "47bc4ec2e419",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 47bc4ec2e419, archived 2026-08-14T00:26:06+00:00.\nDocuments as of 2026-08-14.\n2 added.\nAdded: sjrtd-dfc, sjrtd-fares\nAgency: SJRTD.",
+      "date_published": "2026-08-14T00:26:06+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd:47bc4ec2e419",
+      "title": "SJRTD — corpus 47bc4ec2e419 (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/47bc4ec2e419"
+    }
+  ],
+  "title": "Fare-policy corpus changes — SJRTD",
+  "version": "https://jsonfeed.org/version/1.1"
+}

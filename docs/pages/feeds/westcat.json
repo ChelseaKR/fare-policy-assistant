@@ -1,0 +1,69 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/westcat.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "westcat-buying",
+          "westcat-clipper",
+          "westcat-fares-all",
+          "westcat-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "8b119819d9c8",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 8b119819d9c8, archived 2026-08-14T02:06:30+00:00.\nDocuments as of 2026-08-14.\n4 added.\nAdded: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers\nAgency: WestCAT.",
+      "date_published": "2026-08-14T02:06:30+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat:8b119819d9c8",
+      "title": "WestCAT — corpus 8b119819d9c8 (4 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/8b119819d9c8"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "491751588366",
+        "first_snapshot": false,
+        "removed": [
+          "westcat-buying",
+          "westcat-clipper",
+          "westcat-fares-all",
+          "westcat-transfers"
+        ]
+      },
+      "content_text": "Corpus version 491751588366, archived 2026-08-14T00:50:50+00:00.\nDocuments as of 2026-08-14.\n4 removed.\nRemoved: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers\nAgency: WestCAT.",
+      "date_published": "2026-08-14T00:50:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat:491751588366",
+      "title": "WestCAT — corpus 491751588366 (4 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/491751588366"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "westcat-buying",
+          "westcat-clipper",
+          "westcat-fares-all",
+          "westcat-transfers"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "69aab4ac6576",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 69aab4ac6576, archived 2026-08-14T00:45:22+00:00.\nDocuments as of 2026-08-14.\n4 added.\nAdded: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers\nAgency: WestCAT.",
+      "date_published": "2026-08-14T00:45:22+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat:69aab4ac6576",
+      "title": "WestCAT — corpus 69aab4ac6576 (4 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/69aab4ac6576"
+    }
+  ],
+  "title": "Fare-policy corpus changes — WestCAT",
+  "version": "https://jsonfeed.org/version/1.1"
+}

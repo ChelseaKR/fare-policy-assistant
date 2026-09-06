@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — Marin Transit</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit</id>
+  <updated>2026-08-14T02:22:16+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/marin-transit.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>Marin Transit — corpus 3dd8b7bd757e (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit:3dd8b7bd757e</id>
+    <updated>2026-08-14T02:22:16+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/3dd8b7bd757e"/>
+    <content type="text">Corpus version 3dd8b7bd757e, archived 2026-08-14T02:22:16+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: marin-31day-transition, marin-clipper, marin-fares
+Agency: Marin Transit.</content>
+  </entry>
+  <entry>
+    <title>Marin Transit — corpus d113659adda8 (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit:d113659adda8</id>
+    <updated>2026-08-14T01:56:42+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"/>
+    <content type="text">Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.
+Documents as of 2026-08-14.
+3 removed.
+Removed: marin-31day-transition, marin-clipper, marin-fares
+Agency: Marin Transit.</content>
+  </entry>
+  <entry>
+    <title>Marin Transit — corpus 0a8bbe659de3 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit:0a8bbe659de3</id>
+    <updated>2026-08-14T01:15:27+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0a8bbe659de3"/>
+    <content type="text">Corpus version 0a8bbe659de3, archived 2026-08-14T01:15:27+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: marin-31day-transition, marin-clipper, marin-fares
+Agency: Marin Transit.</content>
+  </entry>
+</feed>

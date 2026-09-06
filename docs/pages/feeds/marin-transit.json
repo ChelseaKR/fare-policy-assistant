@@ -1,0 +1,66 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/marin-transit.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "marin-31day-transition",
+          "marin-clipper",
+          "marin-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "3dd8b7bd757e",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 3dd8b7bd757e, archived 2026-08-14T02:22:16+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: marin-31day-transition, marin-clipper, marin-fares\nAgency: Marin Transit.",
+      "date_published": "2026-08-14T02:22:16+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit:3dd8b7bd757e",
+      "title": "Marin Transit — corpus 3dd8b7bd757e (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/3dd8b7bd757e"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "d113659adda8",
+        "first_snapshot": false,
+        "removed": [
+          "marin-31day-transition",
+          "marin-clipper",
+          "marin-fares"
+        ]
+      },
+      "content_text": "Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.\nDocuments as of 2026-08-14.\n3 removed.\nRemoved: marin-31day-transition, marin-clipper, marin-fares\nAgency: Marin Transit.",
+      "date_published": "2026-08-14T01:56:42+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit:d113659adda8",
+      "title": "Marin Transit — corpus d113659adda8 (3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "marin-31day-transition",
+          "marin-clipper",
+          "marin-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "0a8bbe659de3",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 0a8bbe659de3, archived 2026-08-14T01:15:27+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: marin-31day-transition, marin-clipper, marin-fares\nAgency: Marin Transit.",
+      "date_published": "2026-08-14T01:15:27+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:marin-transit:0a8bbe659de3",
+      "title": "Marin Transit — corpus 0a8bbe659de3 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0a8bbe659de3"
+    }
+  ],
+  "title": "Fare-policy corpus changes — Marin Transit",
+  "version": "https://jsonfeed.org/version/1.1"
+}

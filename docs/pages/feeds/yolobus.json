@@ -1,0 +1,98 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/yolobus.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-21",
+        "changed": [
+          "yolobus-fares",
+          "yolobus-purchasing",
+          "yolobus-reduced-fare-id"
+        ],
+        "corpus_version": "10deac978967",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 10deac978967, archived 2026-08-21T21:37:43+00:00.\nDocuments as of 2026-08-21.\n3 changed.\nChanged: yolobus-fares, yolobus-purchasing, yolobus-reduced-fare-id\nAgency: Yolobus.",
+      "date_published": "2026-08-21T21:37:43+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:10deac978967",
+      "title": "Yolobus — corpus 10deac978967 (3 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/10deac978967"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-13",
+        "changed": [
+          "yolobus-fares"
+        ],
+        "corpus_version": "63d6718126f1",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 63d6718126f1, archived 2026-08-13T03:18:50+00:00.\nDocuments as of 2026-08-13.\n1 changed.\nChanged: yolobus-fares\nAgency: Yolobus.",
+      "date_published": "2026-08-13T03:18:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:63d6718126f1",
+      "title": "Yolobus — corpus 63d6718126f1 (1 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/63d6718126f1"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-13",
+        "changed": [
+          "yolobus-fares"
+        ],
+        "corpus_version": "e15051d6f7a1",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version e15051d6f7a1, archived 2026-08-13T02:24:18+00:00.\nDocuments as of 2026-08-13.\n1 changed.\nChanged: yolobus-fares\nAgency: Yolobus.",
+      "date_published": "2026-08-13T02:24:18+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:e15051d6f7a1",
+      "title": "Yolobus — corpus e15051d6f7a1 (1 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/e15051d6f7a1"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-13",
+        "changed": [
+          "yolobus-fares"
+        ],
+        "corpus_version": "74b05330cb39",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 74b05330cb39, archived 2026-08-13T02:07:12+00:00.\nDocuments as of 2026-08-13.\n1 changed.\nChanged: yolobus-fares\nAgency: Yolobus.",
+      "date_published": "2026-08-13T02:07:12+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:74b05330cb39",
+      "title": "Yolobus — corpus 74b05330cb39 (1 changed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/74b05330cb39"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "yolobus-fares",
+          "yolobus-purchasing",
+          "yolobus-reduced-fare-id"
+        ],
+        "as_of": "2026-06-17",
+        "changed": [],
+        "corpus_version": "0938fff0539a",
+        "first_snapshot": true,
+        "removed": []
+      },
+      "content_text": "Corpus version 0938fff0539a, archived 2026-07-08T07:49:28+00:00.\nDocuments as of 2026-06-17.\nFirst retained snapshot: 3 document(s).\nAdded: yolobus-fares, yolobus-purchasing, yolobus-reduced-fare-id\nAgency: Yolobus.",
+      "date_published": "2026-07-08T07:49:28+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:0938fff0539a",
+      "title": "Yolobus — corpus 0938fff0539a (First retained snapshot: 3 document(s).)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0938fff0539a"
+    }
+  ],
+  "title": "Fare-policy corpus changes — Yolobus",
+  "version": "https://jsonfeed.org/version/1.1"
+}
