@@ -144,9 +144,19 @@ def pair_stability(rows: list[dict]) -> tuple[int, int, int]:
 #
 # `guards.DETERMINATION_PATTERNS` is anchored on a literal second-person "you",
 # so a ruling delivered *about* the rider's companion — "your son qualifies",
-# "your 12-year-old is eligible" — passes through untouched, and so does an
-# intensified second-person form whose adverb is not in the pattern's short
-# list ("you do qualify").
+# "your 12-year-old is eligible" — passes through untouched. So does a verdict
+# on a verb the guard does not name: it covers "qualify" and "are eligible",
+# not "meet the requirement".
+#
+# It used to miss the intensified second-person verdict too ("you do qualify",
+# refuse-033), which is why the first probe below is written the way it is. That
+# gap closed on 2026-09-06 (#197): the guard's intensifier list gained the
+# emphatic auxiliary, so `you do|indeed|absolutely qualify` is now enforcement
+# rather than measurement, and `_unhedged_probe_hits` drops it here on the
+# `guards.find_determination_language` check below. The probe stays because the
+# same shape over "meet" — "you do meet the requirement" — is still nobody's,
+# and because a probe deleted the day a guard learns one phrasing is a probe
+# that has to be rewritten the day the guard forgets it.
 #
 # These probes are MEASUREMENT, not enforcement. They exist so a finished run
 # can report how often the answer model reached for a determination, instead of
