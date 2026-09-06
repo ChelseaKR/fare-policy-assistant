@@ -12,8 +12,8 @@ successor harness, and this module is the adapter between the two shapes.
 
 ## Where the evidence comes from
 
-Nowhere new. `evals/govchat/golden.jsonl` is the recording — 195 questions and
-the answers the deployed pipeline produced for them on 2026-06-16, with the
+Nowhere new. `evals/govchat/golden.jsonl` is the recording — 379 questions and
+the answers the deployed pipeline produced for them on 2026-09-04, with the
 retrieved passages beside each one. This module reshapes exactly that file and
 calls no model. Two harnesses, one recording, no second live run and no second
 bill.
@@ -22,11 +22,12 @@ The recording declares the corpus version it was made against in its
 `# provenance:` header, and `corpus/versions/<version>/chunks.jsonl` is
 committed, so each recorded passage is matched back to its document against the
 corpus **as it stood at recording time** rather than against today's. That
-matters: the corpus has moved since (an HTA domain change, thirteen new
-agencies, a Yolobus refresh), and 108 of the 756 recorded passages no longer
-appear verbatim in the current corpus. Matching against today's corpus would
-have silently dropped or misattributed them. Against the declared snapshot,
-all 756 match exactly.
+matters whenever the corpus moves under a recording, which it has before: the
+2026-06-16 recording declared a five-agency corpus, and 108 of its 756 passages
+no longer appeared verbatim in the corpus that had replaced it by August.
+Matching against today's corpus rather than the declared one would have silently
+dropped or misattributed them. The 2026-09-04 recording declares `10deac978967`,
+which is also the corpus at HEAD, so its 1,746 passages match either way today.
 
 ## The one shape difference worth knowing about
 
