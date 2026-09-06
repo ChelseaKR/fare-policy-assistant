@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 import pytest
 
@@ -19,6 +20,10 @@ from web import ratelimit
 TABLE = "fare-policy-assistant-demo-limits"
 SECRET = "a" * 64
 CALLER = "203.0.113.47"
+
+# An instant safely inside a fixed window: 1_800_000_000 is exactly divisible by
+# RATE_LIMIT_WINDOW_SECONDS, so this sits 30 seconds into one, 30 from the next.
+MID_WINDOW = 1_800_000_030.0
 
 
 class FakeDynamo:
@@ -46,6 +51,48 @@ class FakeDynamo:
         if self.breaker is None:
             return {}
         return {"Item": {"pk": {"S": ratelimit.BREAKER_KEY}, "open": {"BOOL": self.breaker}}}
+
+
+class PinnedWindowClock:
+    """`web.ratelimit`'s clock, with the fixed window pinned.
+
+    The two limiters on ``/api/ask`` measure time differently. ``ratelimit.check``
+    counts in a fixed wall-clock window
+    (``window_index(now) = int(time.time() // RATE_LIMIT_WINDOW_SECONDS)``), while
+    ``web.handler._over_budget`` is a sliding window on ``time.monotonic()``. Only
+    the per-caller 429 carries ``offline`` and ``guide``.
+
+    A test that drives the handler in a loop is therefore racing the wall clock:
+    if the loop straddles a minute boundary the fixed window rolls over, the
+    per-caller counter resets to 1, the request the test expects that limiter to
+    refuse is admitted, and the container backstop answers instead — with a body
+    that has no ``offline`` key. The odds are the loop's duration over 60
+    seconds, so it is near zero on a laptop and real on a slow runner (#206).
+
+    Pinning the window is the fix, rather than loosening the assertion: the
+    assertion is the property the test exists for. ``monotonic`` is deliberately
+    left real. The sliding backstop is not the racy half — it is reset per test
+    by ``clean_limiter`` clearing ``_RECENT`` — and freezing it would stop these
+    tests from exercising it at all.
+    """
+
+    def __init__(self, at: float = MID_WINDOW) -> None:
+        self.at = at
+
+    def time(self) -> float:
+        return self.at
+
+    @staticmethod
+    def monotonic() -> float:
+        return time.monotonic()
+
+
+@pytest.fixture
+def pinned_window(monkeypatch):
+    """Pin the per-caller limiter's fixed window for the duration of a test."""
+    clock = PinnedWindowClock()
+    monkeypatch.setattr(ratelimit, "time", clock)
+    return clock
 
 
 @pytest.fixture(autouse=True)
@@ -274,6 +321,13 @@ class TestSpendBreaker:
 
 
 class TestHandlerWiring:
+    @pytest.fixture(autouse=True)
+    def _pin_the_window(self, pinned_window):
+        """Every test in this class drives the handler in a loop, so every one of
+        them was racing the fixed window's rollover (#206). Pinned once here
+        rather than per test, because the race is a property of the loop and not
+        of any one assertion."""
+
     def test_ask_returns_429_and_points_at_the_offline_routes(self, limiter, caplog):
         limiter()
         limit = config.RATE_LIMIT_ASK_PER_WINDOW
@@ -283,12 +337,68 @@ class TestHandlerWiring:
         with caplog.at_level(logging.INFO, logger="fare_assistant"):
             response = web_handler.handler(_event(body={"question": "One more MST fare question?"}))
         assert response["statusCode"] == 429
-        body = json.loads(response["body"])
-        assert body["offline"] == "/offline"
-        assert body["guide"] == "/guide"
+        # Which limiter fired is asserted before the body is read. Both return
+        # 429 and only one carries `offline`, so reading the body first turns
+        # "the wrong limiter answered" into a bare KeyError that says nothing
+        # about why.
         record = _log_records(caplog, "caller_rate_limited")[-1]
         assert record.route == "ask"
         assert record.limit == limit
+        body = json.loads(response["body"])
+        assert body["offline"] == "/offline"
+        assert body["guide"] == "/guide"
+
+    def test_a_window_rollover_hands_the_refusal_to_the_container_backstop(
+        self, limiter, pinned_window, caplog
+    ):
+        """The trap behind #206, made a pinned property instead of a surprise.
+
+        This is the same loop as the test above with one difference: the fixed
+        window rolls over before the final request. The per-caller counter resets
+        to 1, so that limiter admits the request, and the per-container sliding
+        backstop refuses it instead — with a different body.
+
+        Asserted rather than fixed. The two controls answer different questions
+        ("this caller has had its share" against "this container is spending too
+        fast"), the ordering between them is deliberate and documented in
+        `assistant.config` (the ask quota of 10 sits above the container budget
+        of 8 on purpose), and changing either body is a rider-facing decision,
+        not a test fix. What was wrong was a test that could land on either side
+        of it depending on when the clock ticked.
+        """
+        limiter()
+        for i in range(config.RATE_LIMIT_ASK_PER_WINDOW):
+            web_handler.handler(_event(body={"question": f"MST fare question {i}?"}))
+
+        pinned_window.at += config.RATE_LIMIT_WINDOW_SECONDS
+
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = web_handler.handler(_event(body={"question": "One more MST fare question?"}))
+        assert response["statusCode"] == 429
+        body = json.loads(response["body"])
+        assert body["error"].startswith("Too many requests right now"), (
+            "the container backstop should be the one refusing after a rollover"
+        )
+        assert "offline" not in body, (
+            "only the per-caller 429 points a rate-limited rider at the "
+            "zero-model-call routes; this asymmetry is what made #206 a KeyError"
+        )
+
+    def test_the_window_stays_pinned_across_a_loop(self, pinned_window):
+        """Negative control for the fixture itself.
+
+        A pin that silently stopped applying would read exactly like a fix: the
+        test above would go back to passing locally and flaking in CI, with a
+        fixture in the file suggesting otherwise.
+        """
+        before = ratelimit.window_index(ratelimit.time.time())
+        for _ in range(config.RATE_LIMIT_ASK_PER_WINDOW + 1):
+            assert ratelimit.window_index(ratelimit.time.time()) == before
+        assert ratelimit.time.time() == pinned_window.at
+        assert ratelimit.time is not time, "the pin never landed on the module under test"
+        assert ratelimit.time.monotonic() == pytest.approx(time.monotonic(), abs=1.0), (
+            "monotonic must stay real, or the sliding container backstop stops being exercised"
+        )
 
     def test_a_limited_caller_does_not_block_another(self, limiter):
         limiter()
