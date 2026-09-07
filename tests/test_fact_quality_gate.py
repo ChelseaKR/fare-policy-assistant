@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from assistant import config
+from assistant import config, ingest
 from assistant.facts import label_defect, load_facts, refusal_reason
 from tools import check_fact_quality
 
@@ -23,9 +23,25 @@ def corpus(tmp_path, monkeypatch):
     processed = tmp_path / "processed"
     processed.mkdir()
     monkeypatch.setattr(config, "FACTS_PATH", processed / "facts.jsonl")
-    monkeypatch.setattr(config, "FACTS_REFUSED_PATH", processed / "facts_refused.jsonl")
     monkeypatch.setattr(config, "FACT_QUALITY_PIN_PATH", tmp_path / "fact-quality-pin.json")
     return tmp_path
+
+
+def _chunk():
+    return ingest.Chunk(
+        chunk_id="mst-fares#0",
+        doc_id="mst-fares",
+        agency="MST",
+        agency_full="Monterey-Salinas Transit",
+        doc_title="Fares",
+        url="https://mst.org/fares/",
+        fetch_date="2026-06-12",
+        language="en",
+        section="Fares",
+        # One clean pairing and one prose fragment, so the run produces both a
+        # published row and a refused one.
+        text="Monthly GoPass (31 Days)\n$70.00\nCapped at $20.00 per week, or\n",
+    )
 
 
 def _row(**overrides):
@@ -47,7 +63,7 @@ def _row(**overrides):
 
 def _write(corpus, facts, refusals=(), ceiling=0):
     config.FACTS_PATH.write_text("".join(json.dumps(f) + "\n" for f in facts), encoding="utf-8")
-    config.FACTS_REFUSED_PATH.write_text(
+    config.facts_refused_path().write_text(
         "".join(json.dumps(r) + "\n" for r in refusals), encoding="utf-8"
     )
     config.FACT_QUALITY_PIN_PATH.write_text(
@@ -66,7 +82,7 @@ class TestTheCommittedCorpus:
 
     def test_the_refusal_record_exists(self):
         # A silent drop is the same defect as publishing the garbage.
-        assert config.FACTS_REFUSED_PATH.exists()
+        assert config.facts_refused_path().exists()
 
     def test_the_spanish_page_states_the_regular_monthly_fare_it_publishes(self):
         # The defect this gate was written for: mst-fares-es asserted a $35
@@ -79,6 +95,27 @@ class TestTheCommittedCorpus:
 
     def test_the_gate_passes_on_the_committed_corpus(self, capsys):
         assert check_fact_quality.main([]) == 0
+
+
+class TestTheRefusalRecordFollowsTheFactTable:
+    def test_redirecting_the_fact_table_redirects_the_refusals(self, tmp_path, monkeypatch):
+        # Bound as its own module constant, the refusal path stayed pointed at
+        # the repository from every test that redirected FACTS_PATH at a
+        # tmpdir. Measured: one such test emptied the committed
+        # corpus/processed/facts_refused.jsonl on a full-suite run.
+        monkeypatch.setattr(config, "FACTS_PATH", tmp_path / "facts.jsonl")
+        assert config.facts_refused_path() == tmp_path / "facts_refused.jsonl"
+
+    def test_ingest_writes_the_refusals_beside_the_fact_table_it_was_given(
+        self, tmp_path, monkeypatch
+    ):
+        processed = tmp_path / "processed"
+        processed.mkdir()
+        monkeypatch.setattr(config, "FACTS_PATH", processed / "facts.jsonl")
+        monkeypatch.setattr(ingest, "load_chunks", lambda: [_chunk()])
+        ingest.build_facts()
+        assert (processed / "facts_refused.jsonl").exists()
+        assert config.REPO_ROOT not in (processed / "facts_refused.jsonl").parents
 
 
 class TestTheGateCanFail:
@@ -113,7 +150,7 @@ class TestTheGateCanFail:
 
     def test_a_missing_refusal_record_fails_the_gate(self, corpus, capsys):
         _write(corpus, [_row()])
-        config.FACTS_REFUSED_PATH.unlink()
+        config.facts_refused_path().unlink()
         assert check_fact_quality.main([]) == 1
         assert "must record them" in capsys.readouterr().err
 

@@ -144,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     facts_path = config.FACTS_PATH
-    refused_path = config.FACTS_REFUSED_PATH
+    refused_path = config.facts_refused_path()
     pin_path = config.FACT_QUALITY_PIN_PATH
 
     if not facts_path.exists():

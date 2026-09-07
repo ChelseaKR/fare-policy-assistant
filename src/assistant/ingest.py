@@ -466,11 +466,11 @@ def build_facts() -> None:
     parsed, refused = facts_module.build_facts_with_refusals(chunks)
     all_facts = facts_module.merge_manual_rows(parsed, config.FACTS_PATH)
     facts_module.write_facts(all_facts, config.FACTS_PATH)
-    facts_module.write_refusals(refused, config.FACTS_REFUSED_PATH)
+    facts_module.write_refusals(refused, config.facts_refused_path())
     manual_count = sum(1 for f in all_facts if f.confidence == "manual")
     print(f"wrote {len(all_facts)} fare facts ({manual_count} manual) → {config.FACTS_PATH}")
     by_reason = collections.Counter(row.reason for row in refused)
-    print(f"refused {len(refused)} unparseable rows → {config.FACTS_REFUSED_PATH}")
+    print(f"refused {len(refused)} unparseable rows → {config.facts_refused_path()}")
     for reason, count in sorted(by_reason.items(), key=lambda item: (-item[1], item[0])):
         print(f"  {count:4d}  {reason}")
 
