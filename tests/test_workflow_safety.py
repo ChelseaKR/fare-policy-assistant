@@ -1,5 +1,7 @@
 """Static release-workflow invariants that must hold even when a job fails."""
 
+import subprocess
+
 import pytest
 import yaml
 
@@ -162,4 +164,73 @@ def test_ci_checks_job_calls_the_makefile_gate_targets_rather_than_respelling_th
     assert not respelled, (
         f"these steps bypass the Makefile's LINT_PATHS/TYPE_PATHS: {respelled}. "
         "A hand-copied path list is the exact drift this job is guarded against."
+    )
+
+
+def _corpus_freshness_workflow() -> dict:
+    text = (config.REPO_ROOT / ".github" / "workflows" / "corpus-freshness.yml").read_text(
+        encoding="utf-8"
+    )
+    parsed = yaml.load(text, Loader=yaml.BaseLoader)
+    assert isinstance(parsed, dict)
+    return parsed
+
+
+def _refresh_pr_add_paths() -> list[str]:
+    """The pathspecs the corpus-refresh PR step hands to `git add`.
+
+    `peter-evans/create-pull-request` splits `add-paths` on newlines and passes
+    each line to `git add --` as one argument, with no shell in between.
+    """
+    steps = _corpus_freshness_workflow()["jobs"]["refresh"]["steps"]
+    pr_step = next(step for step in steps if str(step.get("uses", "")).startswith("peter-evans/"))
+    return [line for line in pr_step["with"]["add-paths"].splitlines() if line.strip()]
+
+
+def test_the_corpus_refresh_pathspecs_are_ones_git_actually_accepts(tmp_path):
+    """The refresh PR step's `add-paths` must survive a real `git add`.
+
+    Read as a string this list looked right for eight weeks. It was not: the
+    exclude was written as ``':!corpus/raw/fetch-failures.json'`` and the quotes
+    went to git as part of the pathspec, so git answered ``fatal: pathspec
+    '':!corpus/raw/fetch-failures.json'' did not match any files``, staged
+    nothing, and the action aborted with an empty "Unexpected error". Every run
+    of the workflow from 2026-07-13 to 2026-09-07 failed there, and no corpus
+    refresh PR has ever opened.
+
+    A string assertion would only have caught the shape someone thought to
+    forbid, so this runs the pathspecs against git instead. `git add` is the
+    thing that was wrong; `git add` is the thing that gets tested.
+    """
+    repo = tmp_path / "repo"
+    (repo / "corpus" / "raw").mkdir(parents=True)
+    (repo / "corpus" / "manifest.yaml").write_text("documents: []\n", encoding="utf-8")
+    (repo / "corpus" / "raw" / "kept.html").write_text("<p>kept</p>\n", encoding="utf-8")
+    (repo / "corpus" / "raw" / "fetch-failures.json").write_text(
+        '{"failed": []}\n', encoding="utf-8"
+    )
+    subprocess.run(["git", "init", "--quiet"], cwd=repo, check=True)
+
+    add = subprocess.run(
+        ["git", "add", "--", *_refresh_pr_add_paths()],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    assert add.returncode == 0, (
+        "git rejected the workflow's add-paths, so the refresh PR step stages "
+        f"nothing and the action aborts: {add.stderr.strip()}"
+    )
+
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--name-only"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert "corpus/manifest.yaml" in staged, "the refresh must stage the corpus it just rebuilt"
+    assert "corpus/raw/kept.html" in staged
+    assert "corpus/raw/fetch-failures.json" not in staged, (
+        "the unreachable-sources report is a run artifact, not corpus content"
     )
