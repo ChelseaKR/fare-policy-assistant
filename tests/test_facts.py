@@ -6,6 +6,7 @@ document would misparse, not just a synthetic fixture.
 
 from assistant.facts import (
     FareFact,
+    extract_chunk_candidates,
     extract_chunk_facts,
     extract_chunk_rows,
     label_defect,
@@ -269,6 +270,18 @@ class TestSpanishDecimalComma:
         assert monthly["Descuento Ruta fija"] == 35.00
 
     def test_no_row_is_labelled_with_the_orphaned_decimal_tail(self):
+        # Prose, deliberately: in the grid above every amount is claimed by a
+        # structured pass, so the fallback never sees one and this assertion
+        # cannot fail there however the money pattern is written. Here the
+        # fallback is the only thing that labels the amount, which is the
+        # shape the real page produced -- the pre-fix pattern ended the match
+        # at "$ 70" and the label began ",00 por mes".
+        text = "Nunca se le cobrara mas de $ 70,00 por mes en el sistema.\n"
+        candidates = extract_chunk_candidates("MST", "mst-fares-es", "mst-fares-es#0", text)
+        assert candidates, "the fallback must still see the amount"
+        assert not [r for r in candidates if r.program.lstrip().startswith(",")]
+
+    def test_the_grid_itself_carries_no_orphaned_decimal_tail(self):
         rows = extract_chunk_facts("MST", "mst-fares-es", "mst-fares-es#1", self.TEXT)
         assert not [r for r in rows if r.program.startswith(",")]
 
