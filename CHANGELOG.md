@@ -9,6 +9,26 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- **The release pipeline called a reusable workflow it could never resolve**
+  (2026-09-07). `release.yml`'s `authorize` job pointed at
+  `ChelseaKR/portfolio-standards/.github/workflows/release-authorize.yml`, and
+  that repository is private. A public repository cannot call a reusable
+  workflow living in a private one, whatever the private repository's Actions
+  access level says, and GitHub reports the refusal as `failed to parse
+  workflow: error parsing called workflow "...": workflow was not found`. That
+  reads as a deleted file and is not one: the commit exists, the file exists at
+  it, and the access level is already `user`. Every dispatch would have died at
+  parse time, before `release-tests`, before `build`, before anything capable of
+  reporting a useful error. `release.yml` has zero runs in this repository's
+  history and this is the reason.
+  - Re-pinned at the public copy in `ChelseaKR/.github`. Diffed against the pin
+    it replaces, the public file differs by exactly one line, `timeout-minutes:
+    30` on the `authorize` job, so the move tightens the trust boundary rather
+    than substituting a different one.
+  - `tests/test_workflow_safety.py` now refuses a reusable-workflow call to a
+    repository not on a confirmed-public list, and refuses a moving ref on one.
+    A dispatch-only workflow is exercised by nothing, so a static guard is the
+    only thing that could have caught this, and there was none.
 - **The fare-fact table published prices under labels that named nothing**
   (2026-09-07). `corpus/processed/facts.jsonl` is the table a numeric claim in
   an answer is checked against, and 630 of its rows included a price attached
