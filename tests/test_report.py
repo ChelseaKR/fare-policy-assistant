@@ -1,3 +1,4 @@
+from evals import provenance
 from evals.report import generate_markdown
 
 SUMMARY = {
@@ -156,3 +157,28 @@ def test_scoreboard_renders_wilson_interval_when_replicated():
     md = generate_markdown(summary, RECORDS)
     assert "| groundedness | 1 | 2 | 50.0% (23.7–76.3) |" in md
     assert "mean over 3 replicate runs" in md
+
+
+def test_evals_md_provenance_block_declares_the_runs_pipeline_version():
+    """EVALS.md must say which answer pipeline produced the numbers in it.
+
+    Read from the run's own summary, never recomputed: regenerating the report
+    on a newer checkout must not be able to relabel an old run as current.
+    """
+    summary = dict(SUMMARY, pipeline_version="recorded-pipe")
+    md = generate_markdown(summary, RECORDS)
+    payload = provenance.read_evals_md(md)
+    assert payload is not None
+    assert payload["pipeline_version"] == "recorded-pipe"
+
+
+def test_evals_md_declares_no_pipeline_version_for_a_run_that_recorded_none():
+    """A run from before the field existed declares None, not today's digest.
+
+    None is what the provenance gate reports on; substituting HEAD's value here
+    would silently launder a pre-2026-09-06 run into a current-looking one.
+    """
+    md = generate_markdown(SUMMARY, RECORDS)
+    payload = provenance.read_evals_md(md)
+    assert payload is not None
+    assert payload["pipeline_version"] is None

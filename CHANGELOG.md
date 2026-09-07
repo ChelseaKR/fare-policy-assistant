@@ -9,6 +9,36 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- **The provenance gate could not see a retrieval change** (2026-09-06).
+  `evals/provenance.py` compared each published artifact's declared prompt
+  versions and corpus version against HEAD, and nothing else. Neither field
+  covers `src/assistant/retrieve.py` or `src/assistant/answer.py` — the two
+  modules that decide which passages the model is shown and how its answer is
+  composed — so an artifact recorded before either moved stayed green on every
+  field the gate compared. A check that passes because it is not looking at the
+  thing that moved is this portfolio's dominant defect class, sitting in the
+  gate whose whole job is to stop a stale artifact looking current.
+  - Not hypothetical. `43d8d46` (#192) landed +330 lines in
+    `src/assistant/retrieve.py` on 2026-09-04 at 13:38 PDT, **36 minutes after**
+    the `golden.jsonl` re-recording on PR #194 was taken at 13:02. `#194`'s own
+    body names `assistant.retrieve` as an invalidating input. The gate reported
+    green on that recording anyway, because corpus and both answer prompts still
+    matched.
+  - Artifacts now declare a `pipeline_version`: a twelve-hex digest over the
+    bytes of every file in `provenance.PIPELINE_SOURCES`, each preceded by its
+    own repo-relative path so that moving a line from one module to the other
+    still changes the digest. `evals/runner.py` records it in `summary.json`,
+    `update_baseline` carries it from the run rather than recomputing it, and
+    `evals/report.py` writes the run's own value into `EVALS.md` — so
+    regenerating a report cannot relabel an old run as current.
+  - An artifact that declares **no** `pipeline_version` is reported, not skipped:
+    "I cannot tell which pipeline produced this" and "the pipeline matches" must
+    not be the same verdict. All three committed artifacts predate the field and
+    are waived once, loudly, in `evals/stale_acknowledged.json`, clearing on the
+    next promoted live run.
+  - A path in `PIPELINE_SOURCES` that does not exist raises rather than being
+    skipped, and a test asserts both named files exist in the checkout — a
+    rename must not be able to quietly empty the hash input.
 - **A recorded passage is an excerpt, and now says so** (2026-09-06).
   `evals/runner.py` writes each retrieved passage into `results.jsonl` cut at
   600 characters, and the record carried nothing to say it had been cut. The

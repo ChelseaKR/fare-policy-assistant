@@ -543,6 +543,11 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
             {
                 "run_id": summary["run_at"],
                 "corpus_version": _corpus_version(summary),
+                # From the run, not from HEAD: regenerating the report must not
+                # be able to relabel an old run with today's pipeline. A run
+                # recorded before this field existed declares None, which the
+                # provenance gate reports rather than passing over.
+                "pipeline_version": summary.get("pipeline_version"),
                 "prompt_versions": summary["prompt_versions"],
                 "suites": summary["suites"],
                 # None when the run had no complete mirror pairs; the

@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import pytest
 
 from assistant import config
-from evals import runner
+from evals import provenance, runner
 
 
 @pytest.fixture
@@ -1540,6 +1540,35 @@ def test_update_baseline_writes_from_summary(tmp_runs):
     baseline = json.loads((tmp_runs.parent / "baseline.json").read_text())
     assert baseline["suites"]["refusal"]["passed"] == 9
     assert baseline["mode"] == "suite:refusal"
+
+
+def test_update_baseline_carries_the_runs_pipeline_version_not_the_working_trees(tmp_runs):
+    """A baseline records the pipeline the run used, not today's checkout.
+
+    Recomputing the digest at promotion time would relabel an old run with the
+    current source and make the provenance gate green on evidence produced by
+    code nobody is running any more.
+    """
+    run_dir = _write_run(
+        tmp_runs / "r7", {"refusal": {"passed": 9, "total": 10, "pass_rate": 90.0}}
+    )
+    summary = json.loads((run_dir / "summary.json").read_text())
+    summary["pipeline_version"] = "recorded-pipe"
+    (run_dir / "summary.json").write_text(json.dumps(summary))
+    runner.update_baseline(run_dir)
+    baseline = json.loads((tmp_runs.parent / "baseline.json").read_text())
+    assert baseline["provenance"]["pipeline_version"] == "recorded-pipe"
+    assert baseline["provenance"]["pipeline_version"] != provenance.head_pipeline_version()
+
+
+def test_a_run_summary_records_the_pipeline_version_it_ran_under(tmp_runs, monkeypatch):
+    """The field has to reach summary.json, or every downstream artifact
+    declares None forever and the gate is permanently waived."""
+    monkeypatch.setattr("sys.argv", ["runner", "--offline", "--suite", "refusal"])
+    runner.main()
+    run_dirs = list(tmp_runs.iterdir())
+    summary = _summary(run_dirs[0])
+    assert summary["pipeline_version"] == provenance.head_pipeline_version()
 
 
 # ── CLI entry point ──────────────────────────────────────────────────────────

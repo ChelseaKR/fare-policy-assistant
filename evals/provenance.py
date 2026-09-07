@@ -7,18 +7,32 @@ three published artifacts describe the *current* system:
 * `evals/baseline.json`  — the regression-gate reference;
 * `evals/govchat/golden.jsonl` — the independent-audit dataset.
 
-Each of these is generated against a specific set of prompt versions and a
-specific corpus. When a prompt is bumped (v6→v7) or the corpus changes, an
-artifact that still records the old versions silently describes a different
-system than the one at HEAD. For a journalist or procurement reviewer a stale
-report that *looks* current is worse than no report.
+Each of these is generated against a specific set of prompt versions, a
+specific corpus, and a specific answer pipeline. When a prompt is bumped
+(v6→v7), the corpus changes, or the code that retrieves passages and composes
+an answer changes, an artifact that still records the old versions silently
+describes a different system than the one at HEAD. For a journalist or
+procurement reviewer a stale report that *looks* current is worse than no
+report.
 
 This module extracts the versions each artifact declares and compares them to
 HEAD (`config.prompt_version` for the four prompts, `corpus.corpus_version` for
-the corpus). A mismatch fails the gate unless it is explicitly listed in
-`evals/stale_acknowledged.json` — the loud, documented escape that lets an
-author be honest about a known-stale artifact (typically one whose refresh is
-credential-gated) without lying about it.
+the corpus, `head_pipeline_version` for the answer pipeline). A mismatch fails
+the gate unless it is explicitly listed in `evals/stale_acknowledged.json` —
+the loud, documented escape that lets an author be honest about a known-stale
+artifact (typically one whose refresh is credential-gated) without lying about
+it.
+
+**Why `pipeline_version` exists.** Until 2026-09-06 this gate compared the
+prompts and the corpus and nothing else, so it was structurally unable to
+notice a change to `assistant.retrieve` or `assistant.answer` — the two
+modules that decide which passages the model sees and how its answer is
+composed. That is not a hypothetical: PR #192 landed +330 lines in
+`src/assistant/retrieve.py` on 2026-09-04, thirty-six minutes after a
+`golden.jsonl` re-recording was taken, and the gate stayed green on a
+recording that no longer described the running system. A check that passes
+because it is not looking at the thing that moved is this repository's own
+recurring defect shape, and this is one instance of it.
 
     python -m evals.provenance          # check; exit 1 on unacknowledged drift
 
@@ -35,6 +49,7 @@ emitted by `evals/report.py`, `evals/runner.py:update_baseline`, and
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -48,6 +63,23 @@ ALL_PROMPTS = ("system", "answer_user", "judge_groundedness", "judge_helpfulness
 # The golden dataset records answers only, so its provenance covers the two
 # answer-side prompts; the judge prompts belong to govchat-eval's own judge.
 ANSWER_PROMPTS = ("system", "answer_user")
+
+#: The source modules that decide what an answer *says*, relative to the repo
+#: root. `retrieve` chooses the passages the model is shown; `answer` composes
+#: the request around them and post-processes what comes back. A recording, a
+#: baseline, or a report taken before either of these moved describes a
+#: pipeline that is no longer running, however current its prompts and corpus
+#: look.
+#:
+#: Deliberately narrow. `guards` and `contract` also shape a response, but they
+#: reject or reshape one rather than decide its content, and widening this
+#: tuple costs a waiver on every artifact each time an unrelated module is
+#: touched. Widen it when a change to a module here is shown to have moved
+#: answers, not on suspicion.
+PIPELINE_SOURCES: tuple[str, ...] = (
+    "src/assistant/answer.py",
+    "src/assistant/retrieve.py",
+)
 
 EVALS_MD_PATH = config.REPO_ROOT / "EVALS.md"
 BASELINE_PATH = config.REPO_ROOT / "evals" / "baseline.json"
@@ -74,11 +106,41 @@ def head_corpus_version() -> str:
     return corpus.corpus_version()
 
 
+def head_pipeline_version(sources: tuple[str, ...] = PIPELINE_SOURCES) -> str:
+    """A short, stable id for the answer pipeline's source at HEAD.
+
+    Hashes the raw bytes of each file in `PIPELINE_SOURCES`, each preceded by
+    its own repo-relative path, in sorted path order. Reading bytes rather than
+    text keeps the digest independent of the reader's locale; including the
+    path means moving a line between the two modules still changes the digest.
+    Truncated to twelve hex characters, matching `corpus.corpus_version`.
+
+    A file named here that does not exist is an error, never a skip: silently
+    hashing nothing would make this whole check a gate that cannot fail — the
+    exact defect it was added to remove.
+    """
+    h = hashlib.sha256()
+    for rel in sorted(sources):
+        path = config.REPO_ROOT / rel
+        if not path.is_file():
+            raise SystemExit(
+                f"provenance: PIPELINE_SOURCES names {rel}, which does not exist. "
+                "A pipeline digest over a missing file is not a digest; fix the "
+                "path or remove the entry."
+            )
+        h.update(rel.encode("utf-8"))
+        h.update(b"\0")
+        h.update(path.read_bytes())
+        h.update(b"\0")
+    return h.hexdigest()[:12]
+
+
 def provenance_block(run_id: str, prompt_names: tuple[str, ...] = ALL_PROMPTS) -> dict:
     """The machine-readable provenance payload for an artifact generated now."""
     return {
         "run_id": run_id,
         "corpus_version": head_corpus_version(),
+        "pipeline_version": head_pipeline_version(),
         "prompt_versions": head_prompt_versions(prompt_names),
     }
 
@@ -117,6 +179,7 @@ def _compare(
     declared: dict | None,
     expected_prompts: dict[str, str],
     expected_corpus: str,
+    expected_pipeline: str,
 ) -> list[Mismatch]:
     if declared is None:
         return [Mismatch(artifact, "provenance", None, "a declared provenance block")]
@@ -124,6 +187,20 @@ def _compare(
     if declared.get("corpus_version") != expected_corpus:
         out.append(
             Mismatch(artifact, "corpus_version", declared.get("corpus_version"), expected_corpus)
+        )
+    # An artifact that declares no pipeline_version at all is reported, not
+    # skipped. Every artifact committed before this field existed lands here,
+    # which is the point: "I cannot tell which pipeline produced this" and "the
+    # pipeline matches" must not be the same verdict. Each of those is waived
+    # once, loudly, in stale_acknowledged.json until its next regeneration.
+    if declared.get("pipeline_version") != expected_pipeline:
+        out.append(
+            Mismatch(
+                artifact,
+                "pipeline_version",
+                declared.get("pipeline_version"),
+                expected_pipeline,
+            )
         )
     declared_prompts = declared.get("prompt_versions", {}) or {}
     for name, want in expected_prompts.items():
@@ -176,11 +253,12 @@ def check_all(
     all_prompts = head_prompt_versions(ALL_PROMPTS)
     answer_prompts = {k: all_prompts[k] for k in ANSWER_PROMPTS}
     cv = head_corpus_version()
+    pv = head_pipeline_version()
 
     mismatches = (
-        _compare("EVALS.md", read_evals_md(evals_md), all_prompts, cv)
-        + _compare("baseline.json", read_baseline(baseline), all_prompts, cv)
-        + _compare("golden.jsonl", read_golden(golden), answer_prompts, cv)
+        _compare("EVALS.md", read_evals_md(evals_md), all_prompts, cv, pv)
+        + _compare("baseline.json", read_baseline(baseline), all_prompts, cv, pv)
+        + _compare("golden.jsonl", read_golden(golden), answer_prompts, cv, pv)
     )
     failures = [m for m in mismatches if (m.artifact, m.field) not in acknowledged]
     warnings = [m for m in mismatches if (m.artifact, m.field) in acknowledged]
@@ -207,7 +285,7 @@ def main() -> int:
         return 1
     print(
         "provenance: EVALS.md, baseline.json, and golden.jsonl match HEAD "
-        f"(corpus {head_corpus_version()})."
+        f"(corpus {head_corpus_version()}, pipeline {head_pipeline_version()})."
     )
     return 0
 
