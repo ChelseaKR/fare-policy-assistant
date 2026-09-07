@@ -9,6 +9,52 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- **The fare-fact table published prices under labels that named nothing**
+  (2026-09-07). `corpus/processed/facts.jsonl` is the table a numeric claim in
+  an answer is checked against, and 630 of its rows included a price attached
+  to a sentence fragment, a bare decimal tail, or nothing at all. The worst of
+  them was on MST's Spanish page: `program=",00 — Pago sin contacto …"`,
+  `rider_class="regular"`, `price=35.0`. MST's regular monthly GoPass is $70;
+  $35 is the *discount* price. The corpus asserted the discount fare as the
+  regular fare, in Spanish, for the readers least able to check it.
+  - **The money pattern could not read a decimal comma.** `\$\s?\d+(?:\.\d{2})?`
+    stopped at the comma in "$ 35,00", took `$ 35`, and left the orphan `,00`
+    to be picked up as the *label* of the following row. The pattern now reads
+    both conventions and distinguishes a decimal comma from a thousands
+    separator, so E-tran's "$100,000 program fund" is no longer a $100 fare.
+  - **The Spanish fare grids are now recognised as grids.** The rider-class and
+    program keyword vocabularies were English-only, so MST's Spanish table
+    matched `Regular` (a word both languages share) and nothing else, and its
+    entire discount half fell through to the prose fallback. `mst-fares-es` now
+    parses exactly like `mst-fares`: eight rows, $70 regular, $35 discount.
+  - **A row that cannot be read into a real (program, rider_class, price)
+    triple is refused rather than published.** `assistant.facts.refusal_reason`
+    holds every parsed row to a label contract — no bare decimal fragment, no
+    dangling conjunction, no sentence, no single-character table sentinel, no
+    price with no label at all. 251 candidate rows are refused; 372 publish.
+  - **A refused row is recorded, not dropped.** They are written with their
+    reason to `corpus/processed/facts_refused.jsonl` and counted by `make
+    ingest`. A parser that silently discarded what it could not read would
+    publish a corpus that reads as complete, which is the same defect as
+    publishing the garbage, told the other way round.
+  - **Two axes that were swapped are now read from the header.** VINE publishes
+    its passes rider-class-down, program-across; all 95 of its rows carried a
+    rider class in the program column. VineGo's paratransit fares are an
+    origin-city/destination-city matrix, where neither axis is a program or a
+    rider class — those rows are refused outright, and the refusal is no longer
+    undone one line later by the prose fallback re-guessing the same amounts.
+  - **An age bound is paired with the rider class that states it.** The
+    extractor took the first rider-class keyword on a line and the first age
+    bound on the line independently, pairing them across whatever lay between.
+    CCCTA's "Clipper START/Youth (6-18)/ Senior (65+)/Disabled (RTC)" published
+    *youth means 65+*; VTA's "Seniors must be age 65 or older and Youth must be
+    age 5-18" published *seniors means 5-18*.
+- **New blocking gate: `make fact-quality`** (2026-09-07). Holds the committed
+  corpus to the publication contract (zero violations), ratchets the refusal
+  count against `corpus/fact-quality-pin.json` so it cannot grow quietly, and
+  requires the committed table to be exactly what the extractor derives from
+  the committed chunks — a gate over a file nobody regenerates measures the
+  file, not the parser. Wired into `make verify` and the CI `checks` job.
 - **The provenance gate could not see a retrieval change** (2026-09-06).
   `evals/provenance.py` compared each published artifact's declared prompt
   versions and corpus version against HEAD, and nothing else. Neither field

@@ -7,11 +7,16 @@ document would misparse, not just a synthetic fixture.
 from assistant.facts import (
     FareFact,
     extract_chunk_facts,
+    extract_chunk_rows,
+    label_defect,
     load_facts,
+    load_refusals,
     merge_manual_rows,
     parse_age_claims,
     parse_price_claims,
+    refusal_reason,
     write_facts,
+    write_refusals,
 )
 
 
@@ -237,3 +242,181 @@ class TestAnswerClaimParsing:
         claims = parse_age_claims("Seniors (age 65+) and riders 62 years and older both qualify.")
         assert (65, None) in claims
         assert (62, None) in claims
+
+
+class TestSpanishDecimalComma:
+    """MST's Spanish page writes "$ 35,00", and until 2026-09-07 the money
+    pattern stopped at the comma: it read `$ 35`, then labelled the *next*
+    row with the orphan `,00`. On mst-fares-es that published a regular
+    monthly fare of $35 when the regular monthly fare is $70 — the discount
+    price presented as the regular one."""
+
+    TEXT = (
+        "Viaje único 2 horas Efectivo o Tarjeta Go\n"
+        "GoPass mensual (31 días)\n"
+        "Regular Ruta fija\n"
+        "$ 2.00\n"
+        "$ 70,00\n"
+        "Descuento Ruta fija\n"
+        "$ 1,00\n"
+        "$ 35,00\n"
+    )
+
+    def test_a_decimal_comma_is_a_decimal_point(self):
+        rows = extract_chunk_facts("MST", "mst-fares-es", "mst-fares-es#1", self.TEXT)
+        monthly = {r.rider_class: r.price for r in rows if r.program == "GoPass mensual (31 días)"}
+        assert monthly["Regular Ruta fija"] == 70.00
+        assert monthly["Descuento Ruta fija"] == 35.00
+
+    def test_no_row_is_labelled_with_the_orphaned_decimal_tail(self):
+        rows = extract_chunk_facts("MST", "mst-fares-es", "mst-fares-es#1", self.TEXT)
+        assert not [r for r in rows if r.program.startswith(",")]
+
+    def test_the_regular_monthly_fare_is_never_the_discount_price(self):
+        rows = extract_chunk_facts("MST", "mst-fares-es", "mst-fares-es#1", self.TEXT)
+        regular = {r.price for r in rows if "regular" in r.rider_class.lower()}
+        assert 35.00 not in regular
+
+    def test_a_thousands_separator_is_not_a_decimal_comma(self):
+        # E-tran's senior-pass page says the program runs "until the $100,000
+        # program fund is fully expended". Read as `$100` it was a fare.
+        assert parse_price_claims("until the $100,000 program fund is expended") == [100000.0]
+        assert parse_price_claims("a $1,234.50 charge") == [1234.50]
+
+    def test_english_decimal_prices_are_unchanged(self):
+        assert parse_price_claims("$2.50, $0.25 and $125.00") == [2.50, 0.25, 125.00]
+
+
+class TestPublicationContract:
+    """A price must arrive attached to a label that is a label."""
+
+    def test_prose_fragment_program_is_refused_not_published(self):
+        # SBMTD's fare-capping paragraph: the fallback labelled $1.00 with the
+        # sentence that followed it.
+        text = (
+            "$1.00 over the dollar value of pass activations needed to be fare "
+            "capped, the passenger will be refunded the difference.\n"
+        )
+        published, refused = extract_chunk_rows("SBMTD", "sbmtd-farechange", "s#1", text)
+        assert not published
+        assert [r.reason for r in refused] == ["program_sentence_length"]
+        assert refused[0].price == 1.00
+
+    def test_dangling_conjunction_program_is_refused(self):
+        text = "Group rates are $20.00 per week, or $70.00 per month.\n"
+        published, refused = extract_chunk_rows("MST", "mst-fares", "m#1", text)
+        assert not published
+        assert "program_dangling_word" in {r.reason for r in refused}
+        assert {r.price for r in refused} == {20.00, 70.00}
+
+    def test_bare_decimal_fragment_program_is_refused(self):
+        assert label_defect(",00") == "decimal_fragment"
+        assert label_defect(".50") == "decimal_fragment"
+
+    def test_a_price_with_no_label_at_all_is_refused(self):
+        text = "$1.75\n"
+        published, refused = extract_chunk_rows("SBMTD", "sbmtd-fares-passes", "s#1", text)
+        assert not published
+        assert [r.reason for r in refused] == ["program_unlabelled_price"]
+
+    def test_a_single_character_table_sentinel_is_not_a_program(self):
+        assert label_defect("X") == "too_short"
+
+    def test_a_real_program_label_is_published(self):
+        for label in (
+            "Monthly GoPass (31 Days)",
+            "Super Senior Monthly Pass/Sticker (age 75+)",
+            "20 Single Ride Prepaid Cards (Reduced Fare)",
+            "SolanoExpress Within Solano County",
+            "Full – Ages 18 to 59.",
+        ):
+            assert label_defect(label) is None, label
+
+    def test_refusals_are_recorded_rather_than_dropped(self, tmp_path):
+        # A silent drop is the same defect wearing the other mask: the corpus
+        # would read as if the page held nothing the parser mishandled.
+        text = "Day Pass\n$6.00\nfor a $1.75 surcharge, or\n"
+        published, refused = extract_chunk_rows("SBMTD", "sbmtd-fares-passes", "s#1", text)
+        assert [r.program for r in published] == ["Day Pass"]
+        assert refused and all(r.reason for r in refused)
+        path = tmp_path / "facts_refused.jsonl"
+        write_refusals(refused, path)
+        assert load_refusals(path) == refused
+
+    def test_manual_rows_are_never_second_guessed(self):
+        manual = FareFact(
+            agency="MST",
+            doc_id="mst-fares",
+            chunk_id="mst-fares#0",
+            program="per week, or",
+            rider_class="",
+            price=20.0,
+            currency="USD",
+            age_min=None,
+            age_max=None,
+            confidence="manual",
+        )
+        assert refusal_reason(manual) is None
+
+
+class TestAxisOrientation:
+    """VINE publishes its passes rider-class-down, program-across."""
+
+    TEXT = (
+        "Day Pass* | 20-Ride Pass** | 31-Day Pass* | BART 31-Day Pass***\n"
+        "Adult (19-64) | $7.00 | $30.00 | $55.00 | $125.00\n"
+        "Half | $3.50 | $15.00 | $27.50 | $125.00\n"
+    )
+
+    def test_the_program_column_holds_the_program(self):
+        rows = extract_chunk_facts("VINE", "vine-fares", "vine-fares#1", self.TEXT)
+        adult = {r.program: r.price for r in rows if r.rider_class == "Adult (19-64)"}
+        assert adult["Day Pass"] == 7.00
+        assert adult["31-Day Pass"] == 55.00
+
+    def test_every_row_of_one_table_reads_the_same_way(self):
+        # "Half" is not a word this module recognises as a rider class.
+        # Deciding orientation per row left it transposed relative to the row
+        # directly above it, in the same table.
+        rows = extract_chunk_facts("VINE", "vine-fares", "vine-fares#1", self.TEXT)
+        assert {r.rider_class for r in rows} == {"Adult (19-64)", "Half"}
+        assert {r.program for r in rows} == {
+            "Day Pass",
+            "20-Ride Pass",
+            "31-Day Pass",
+            "BART 31-Day Pass",
+        }
+
+    def test_a_bare_rider_class_row_does_not_become_a_program(self):
+        rows = extract_chunk_facts("VINE", "vine-fares", "vine-fares#0", "Adult (19-64) | $2.00\n")
+        assert [(r.program, r.rider_class, r.price) for r in rows] == [("", "Adult (19-64)", 2.00)]
+
+    def test_a_symmetric_matrix_is_refused_on_both_axes(self):
+        # VineGo's paratransit fares are origin city down, destination city
+        # across. Neither axis is a program and neither is a rider class.
+        text = "Calistoga | St. Helena | Napa\nNapa | $4.00 | $4.00 | $4.00\n"
+        published, refused = extract_chunk_rows("VINE", "vine-go", "vine-go#1", text)
+        assert not published
+        assert {r.reason for r in refused} == {"matrix_axis_is_not_a_program"}
+
+    def test_a_refused_price_does_not_return_through_the_prose_fallback(self):
+        text = "Calistoga | St. Helena | Napa\nNapa | $4.00 | $4.00 | $4.00\n"
+        _, refused = extract_chunk_rows("VINE", "vine-go", "vine-go#1", text)
+        assert all(r.reason == "matrix_axis_is_not_a_program" for r in refused)
+
+
+class TestAgeOnlyPairing:
+    def test_each_rider_class_takes_the_age_bound_in_its_own_segment(self):
+        # CCCTA's line published "youth means 65+": the first class keyword on
+        # the line was paired with the first age bound on the line, across the
+        # class that actually owned it.
+        text = "Clipper START/Youth (6-18)/ Senior (65+)/Disabled (RTC)\n"
+        rows = extract_chunk_facts("CCCTA", "cccta-fare-types-prices", "c#1", text)
+        bounds = {r.rider_class: (r.age_min, r.age_max) for r in rows}
+        assert bounds["youth"] == (6, 18)
+        assert bounds["senior"] == (65, None)
+
+    def test_a_class_whose_segment_states_no_age_yields_no_row(self):
+        text = "Seniors must be age 65 or older and Youth must be age 5-18.\n"
+        rows = extract_chunk_facts("VTA", "vta-fares", "v#1", text)
+        assert [(r.rider_class, r.age_min, r.age_max) for r in rows] == [("youth", 5, 18)]

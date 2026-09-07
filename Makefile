@@ -6,7 +6,7 @@
 # archived, so the audit could not be reproduced by anyone outside the project
 # and only by someone inside who still had the clone.
 
-.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
+.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fact-quality fares relabel spanish-quality
 
 # The committed relabeling worksheet `make relabel` opens by default.
 WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
@@ -189,7 +189,7 @@ i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .p
 	done
 	@echo "i18n-compile: refreshed messages.mo for $(SUPPORTED_LOCALES)."
 
-verify: check i18n a11y report-regression provenance feeds-check controls  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate + fare-change feeds + negative controls
+verify: check i18n a11y report-regression provenance feeds-check fact-quality controls  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate + fare-change feeds + fare-fact corpus quality + negative controls
 
 report-regression:  ## Committed EVALS.md must not regress vs evals/baseline.json (see docs/audits/eval-regression-2026-06-30.md)
 	uv run python -m evals.check_report_regression
@@ -199,6 +199,9 @@ feeds:        ## Regenerate the per-agency fare-change feeds under docs/pages/fe
 
 feeds-check:  ## BLOCKING: the committed feeds must match the retained corpus versions
 	uv run python -m assistant.feeds --check
+
+fact-quality: ## BLOCKING: the committed fare-fact table holds no prose-labelled or unlabelled price, the refusal count stays under its pin, and the table is reproducible from the committed chunks
+	uv run python -m tools.check_fact_quality
 
 controls:     ## BLOCKING: negative controls — no retrieval / wrong agency / stale corpus, scored by the same deterministic checks (offline, mock model, ~7s)
 	uv run python -m evals.controls

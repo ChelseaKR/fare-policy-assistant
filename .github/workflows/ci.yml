@@ -120,6 +120,15 @@ jobs:
         # regenerate the published feeds fails here instead of leaving
         # subscribers on a record the repository no longer holds (#219).
         run: make feeds-check
+      - name: Fare-fact corpus quality
+        # Offline, no network and no model call. The corpus the assistant
+        # answers from must not contain a price published under a label that
+        # names nothing: `program=",00"` (a decimal-comma price split in half),
+        # `program="per week, or"`, `program="(unspecified)"`. Each of those is
+        # a real dollar amount presented as a real fare, and a rider can act on
+        # it. Also ratchets the count of rows the extractor refuses, so a
+        # corpus refresh that starts producing more unparseable rows is loud.
+        run: make fact-quality
       - name: Negative controls (how much of the score is retrieval)
         # Offline and free: the mock answer model answers only from the
         # passages it is given, so substituting the retriever is a real control

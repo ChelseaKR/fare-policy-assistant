@@ -31,6 +31,13 @@ VERSIONS_DIR = CORPUS_DIR / "versions"
 # exact raw bytes and fetch receipt needed to re-verify its provenance.
 SNAPSHOTS_DIR = CORPUS_DIR / "snapshots"
 FACTS_PATH = PROCESSED_DIR / "facts.jsonl"
+# Candidate fare rows the extractor built and then declined to publish, with
+# the reason for each (assistant.facts.refusal_reason). Committed alongside
+# facts.jsonl so a refusal is visible and countable: a parser that silently
+# drops what it cannot read publishes a corpus that reads as complete.
+FACTS_REFUSED_PATH = PROCESSED_DIR / "facts_refused.jsonl"
+# The ratchet the refusal count is held against (tools/check_fact_quality.py).
+FACT_QUALITY_PIN_PATH = CORPUS_DIR / "fact-quality-pin.json"
 PROMPTS_DIR = REPO_ROOT / "prompts"
 ANSWER_SCHEMA_PATH = REPO_ROOT / "docs" / "answer-contract.schema.json"
 RELEASE_DESCRIPTOR_PATH = REPO_ROOT / "release" / "release.json"
