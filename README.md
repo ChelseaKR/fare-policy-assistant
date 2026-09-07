@@ -23,7 +23,9 @@ uv run python -m assistant.cli --offline "What proof do I need for the veteran f
 ```
 
 `make verify` runs the whole merge gate the same way: lint, types, tests,
-accessibility, i18n, and the committed-report regression check, all offline.
+accessibility, i18n, the committed-report regression check, and the fare-fact
+corpus gate (`make fact-quality`, which refuses to ship a price published under
+a label that names nothing), all offline.
 Live model runs and the other backends are in
 [Live runs and backends](#live-runs-and-backends). The committed evaluation
 report is [EVALS.md](EVALS.md).
