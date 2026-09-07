@@ -87,7 +87,7 @@ from assistant.release_identity import (
 )
 from assistant.retrieve import Retriever
 from evals import attestation as eval_attestation
-from evals import checks, judges
+from evals import checks, judges, provenance
 from evals.cache import CachingModel, EvalCache, case_content_key
 from evals.checks import run_checks
 from evals.stats import wilson_interval
@@ -2177,6 +2177,10 @@ def _run_resolved(
         # Pinned so the provenance gate (evals/provenance.py) can prove EVALS.md,
         # the baseline, and the audit dataset describe the same corpus HEAD ships.
         "corpus_version": corpus_version,
+        # And the same answer pipeline. Prompts and corpus do not cover
+        # assistant.retrieve / assistant.answer, so without this a run recorded
+        # before a retrieval change stays "current" by every field it declares.
+        "pipeline_version": provenance.head_pipeline_version(),
         "duration_seconds": round(time.monotonic() - started, 1),
         "cost": _cost_block(cfg, usage),
         "execution": {
@@ -3047,6 +3051,7 @@ def check_regression(
         expected_provenance = {
             "prompt_versions": summary.get("prompt_versions") or {},
             "corpus_version": summary.get("corpus_version"),
+            "pipeline_version": summary.get("pipeline_version"),
         }
         if baseline.get("provenance") != expected_provenance:
             raise SystemExit("promotion regression baseline provenance does not match")
@@ -3079,6 +3084,10 @@ def update_baseline(run_dir: Path) -> None:
         "provenance": {
             "prompt_versions": summary.get("prompt_versions") or {},
             "corpus_version": summary.get("corpus_version") or corpus.corpus_version(),
+            # Read from the summary, never recomputed from the working tree: a
+            # baseline must record the pipeline the run actually used, not the
+            # one checked out when someone got round to promoting it.
+            "pipeline_version": summary.get("pipeline_version"),
         },
         "suites": summary["suites"],
     }
