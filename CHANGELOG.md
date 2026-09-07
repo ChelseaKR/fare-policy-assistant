@@ -39,6 +39,31 @@ rather than tied to a published tag.
   - A path in `PIPELINE_SOURCES` that does not exist raises rather than being
     skipped, and a test asserts both named files exist in the checkout — a
     rename must not be able to quietly empty the hash input.
+- **The README described a release trigger the workflow has not had since July**
+  (2026-09-06). The Release & Versioning conformance row said
+  `.github/workflows/release.yml` "is tag-triggered on `v*`". `bd083d5`
+  (2026-07-23, "harden release authorization") replaced `push: tags: ["v*"]`
+  with `workflow_dispatch` taking an existing signed tag as an input, so a
+  reader following the README would push a signed tag and watch nothing
+  happen — for forty-five days, in the table written for the reader least able
+  to check.
+  - It is the only evidence anyone has about how a release is cut here, because
+    the repository has **no tags and no releases**: `pyproject.toml` and
+    `CITATION.cff` declare `0.1.0` and `CHANGELOG.md` carries a matching
+    `## [0.1.0] - 2026-06-30` section, but nothing is tagged, so the pipeline
+    has never run and no run has ever contradicted the prose. Cutting a tag is
+    the maintainer's call and this change does not make it.
+  - `tests/test_doc_counts.py` now derives the claim from the workflow's own
+    `on:` block instead of trusting the prose, and pins it in both directions:
+    a dispatch-only workflow may not be called tag-triggered, and a restored
+    tag trigger must be described in the present tense — a substring check
+    would have accepted this entry's own history note as a live claim.
+  - A second test asserts `pyproject.toml`, `CITATION.cff` and `CHANGELOG.md`
+    agree on the version. The release job requires the tag to equal the package
+    version and extracts notes by matching a `## [<version>]` heading, failing
+    on an empty extract; with no release ever cut, a drift there would first
+    surface as a failed release attempt.
+
 - **A recorded passage is an excerpt, and now says so** (2026-09-06).
   `evals/runner.py` writes each retrieved passage into `results.jsonl` cut at
   600 characters, and the record carried nothing to say it had been cut. The
