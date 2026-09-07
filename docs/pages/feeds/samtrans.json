@@ -1,0 +1,66 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/samtrans.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "samtrans-clipper",
+          "samtrans-fare-types",
+          "samtrans-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "cbfe81efcf3f",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version cbfe81efcf3f, archived 2026-08-14T02:19:44+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: samtrans-clipper, samtrans-fare-types, samtrans-fares\nAgency: SamTrans.",
+      "date_published": "2026-08-14T02:19:44+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans:cbfe81efcf3f",
+      "title": "SamTrans — corpus cbfe81efcf3f (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/cbfe81efcf3f"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "0a8bbe659de3",
+        "first_snapshot": false,
+        "removed": [
+          "samtrans-clipper",
+          "samtrans-fare-types",
+          "samtrans-fares"
+        ]
+      },
+      "content_text": "Corpus version 0a8bbe659de3, archived 2026-08-14T01:15:27+00:00.\nDocuments as of 2026-08-14.\n3 removed.\nRemoved: samtrans-clipper, samtrans-fare-types, samtrans-fares\nAgency: SamTrans.",
+      "date_published": "2026-08-14T01:15:27+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans:0a8bbe659de3",
+      "title": "SamTrans — corpus 0a8bbe659de3 (3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0a8bbe659de3"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "samtrans-clipper",
+          "samtrans-fare-types",
+          "samtrans-fares"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "af0feed6c742",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version af0feed6c742, archived 2026-08-14T01:04:00+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: samtrans-clipper, samtrans-fare-types, samtrans-fares\nAgency: SamTrans.",
+      "date_published": "2026-08-14T01:04:00+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans:af0feed6c742",
+      "title": "SamTrans — corpus af0feed6c742 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/af0feed6c742"
+    }
+  ],
+  "title": "Fare-policy corpus changes — SamTrans",
+  "version": "https://jsonfeed.org/version/1.1"
+}

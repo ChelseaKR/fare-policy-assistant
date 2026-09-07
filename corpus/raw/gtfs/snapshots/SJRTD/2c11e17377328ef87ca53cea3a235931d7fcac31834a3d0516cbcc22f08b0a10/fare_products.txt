@@ -1,0 +1,51 @@
+fare_product_id,fare_product_name,amount,currency,fare_media_id,rider_category_id
+1ride_adult_cash,Local/Express 1-Ride - Adult (Cash),1.50,USD,cash,adult
+1ride_adult_ticket,Local/Express 1-Ride - Adult (Ticket),1.50,USD,ticket,adult
+1ride_adult_vamos,Local/Express 1-Ride - Adult (Vamos),1.50,USD,vamos,adult
+1ride_discount_cash,Local/Express 1-Ride - Discount (Cash),0.75,USD,cash,discount
+1ride_discount_ticket,Local/Express 1-Ride - Discount (Ticket),0.75,USD,ticket,discount
+1ride_discount_vamos,Local/Express 1-Ride - Discount (Vamos),0.75,USD,vamos,discount
+1ride_student_cash,Local/Express 1-Ride - Student (Cash),1.50,USD,cash,student
+1ride_student_ticket,Local/Express 1-Ride - Student (Ticket),1.50,USD,ticket,student
+1ride_student_vamos,Local/Express 1-Ride - Student (Vamos),1.50,USD,vamos,student
+1day_adult_cash,Local/Express 1-Day Pass - Adult (Cash),4.00,USD,cash,adult
+1day_adult_vamos,Local/Express 1-Day Pass - Adult (Vamos),4.00,USD,vamos,adult
+1day_adult_ticket,Local/Express 1-Day Pass - Adult (Ticket),4.00,USD,ticket,adult
+1day_discount_cash,Local/Express 1-Day Pass - Discount (Cash),2.00,USD,cash,discount
+1day_discount_ticket,Local/Express 1-Day Pass - Discount (Ticket),2.00,USD,ticket,discount
+1day_discount_vamos,Local/Express 1-Day Pass - Discount (Vamos),2.00,USD,vamos,discount
+1day_student_cash,Local/Express 1-Day Pass - Student (Cash),4.00,USD,cash,student
+1day_student_ticket,Local/Express 1-Day Pass - Student (Ticket),4.00,USD,ticket,student
+1day_student_vamos,Local/Express 1-Day Pass - Student (Vamos),4.00,USD,vamos,student
+31day_adult_vamos,Local/Express 31-Day Pass - Adult (Vamos),65.00,USD,vamos,adult
+31day_adult_ticket,Local/Express 31-Day Pass - Adult (Ticket),65.00,USD,ticket,adult
+31day_discount_vamos,Local/Express 31-Day Pass - Discount (Vamos),30.00,USD,vamos,discount
+31day_discount_ticket,Local/Express 31-Day Pass - Discount (Ticket),30.00,USD,ticket,discount
+31day_student_vamos,Local/Express 31-Day Pass - Student (Vamos),40.00,USD,vamos,student
+31day_student_ticket,Local/Express 31-Day Pass - Student (Ticket),40.00,USD,ticket,student
+comm_150_stk_dub_oneway_vamos,Commuter Rte 150 Stockton-Dublin BART One-Way (Vamos),7.00,USD,vamos,adult
+comm_150_stk_dub_oneway_ticket,Commuter Rte 150 Stockton-Dublin BART One-Way (Ticket),7.00,USD,ticket,adult
+comm_150_stk_dub_monthly_vamos,Commuter Rte 150 Stockton-Dublin BART Monthly (Vamos),191.00,USD,vamos,adult
+comm_150_stk_dub_monthly_ticket,Commuter Rte 150 Stockton-Dublin BART Monthly (Ticket),191.00,USD,ticket,adult
+comm_150_lth_dub_oneway_vamos,Commuter Rte 150 Lathrop-Dublin BART One-Way (Vamos),7.00,USD,vamos,adult
+comm_150_lth_dub_oneway_ticket,Commuter Rte 150 Lathrop-Dublin BART One-Way (Ticket),7.00,USD,ticket,adult
+comm_150_lth_dub_monthly_vamos,Commuter Rte 150 Lathrop-Dublin BART Monthly (Vamos),175.00,USD,vamos,adult
+comm_150_lth_dub_monthly_ticket,Commuter Rte 150 Lathrop-Dublin BART Monthly (Ticket),175.00,USD,ticket,adult
+comm_150_trcy_dub_oneway_vamos,Commuter Rte 150 Tracy-Dublin BART One-Way (Vamos),7.00,USD,vamos,adult
+comm_150_trcy_dub_oneway_ticket,Commuter Rte 150 Tracy-Dublin BART One-Way (Ticket),7.00,USD,ticket,adult
+comm_150_trcy_dub_monthly_vamos,Commuter Rte 150 Tracy-Dublin BART Monthly (Vamos),158.00,USD,vamos,adult
+comm_150_trcy_dub_monthly_ticket,Commuter Rte 150 Tracy-Dublin BART Monthly (Ticket),158.00,USD,ticket,adult
+comm_163_stk_sac_oneway_vamos,Commuter Rte 163 Stockton-Sacramento One-Way (Vamos),7.00,USD,vamos,adult
+comm_163_stk_sac_oneway_ticket,Commuter Rte 163 Stockton-Sacramento One-Way (Ticket),7.00,USD,ticket,adult
+comm_163_stk_sac_monthly_vamos,Commuter Rte 163 Stockton-Sacramento Monthly (Vamos),176.00,USD,vamos,adult
+comm_163_stk_sac_monthly_ticket,Commuter Rte 163 Stockton-Sacramento Monthly (Ticket),176.00,USD,ticket,adult
+comm_163_lodi_sac_oneway_vamos,Commuter Rte 163 Lodi-Sacramento One-Way (Vamos),7.00,USD,vamos,adult
+comm_163_lodi_sac_oneway_ticket,Commuter Rte 163 Lodi-Sacramento One-Way (Ticket),7.00,USD,ticket,adult
+comm_163_lodi_sac_monthly_vamos,Commuter Rte 163 Lodi-Sacramento Monthly (Vamos),167.00,USD,vamos,adult
+comm_163_lodi_sac_monthly_ticket,Commuter Rte 163 Lodi-Sacramento Monthly (Ticket),167.00,USD,ticket,adult
+para_1ride_ticket,Paratransit One-Way (Ticket),3.00,USD,ticket,paratransit
+vg_full_base,Van Go! Full Fare - First 5 Miles,4.00,USD,van_go,adult
+vg_discount_base,Van Go! Discount Fare - First 5 Miles,3.00,USD,van_go,discount
+vg_per_mile,Van Go! Additional Mile Charge,0.50,USD,van_go,
+child_additional_1ride_cash,Local/Express 1-Ride - Additional Child (Cash),1.50,USD,cash,child
+child_additional_1ride_vamos,Local/Express 1-Ride - Additional Child (Vamos),1.50,USD,cash,child

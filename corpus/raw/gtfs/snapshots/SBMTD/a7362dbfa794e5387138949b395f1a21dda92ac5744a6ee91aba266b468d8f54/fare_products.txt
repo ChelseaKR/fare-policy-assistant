@@ -1,0 +1,10 @@
+fare_product_id,fare_product_name,fare_media_id,amount,currency,rider_category_id
+regular_route_standard_cash_fare,Standard One-way Cash Fare,CashFare,2.50,USD,standard
+regular_route_reduced_cash_fare,Reduced One-way Cash Fare,CashFare,1.25,USD,reduced
+regular_route_child_free_fare,Free Child Fare,,0.00,USD,free
+regular_route_standard_contactless_fare,Standard One-way Contactless Fare,ContactlessFare,2.50,USD,standard
+regular_route_reduced_contactless_fare,Reduced One-way Contactless Fare,ContactlessFare,1.25,USD,reduced
+downtown_waterfront_shuttle_standard_cash_fare,Waterfront Shuttle One-way Cash Fare,CashFare,0.50,USD,standard
+downtown_waterfront_reduced_cash_fare,Waterfront Shuttle Reduced One-way Cash Fare,CashFare,0.25,USD,reduced
+downtown_waterfront_shuttle_standard_contactless_fare,Waterfront Shuttle One-way Contactless Fare,ContactlessFare,0.50,USD,standard
+downtown_waterfront_reduced_contactless_fare,Waterfront Shuttle Reduced One-way Contactless Fare,ContactlessFare,0.25,USD,reduced

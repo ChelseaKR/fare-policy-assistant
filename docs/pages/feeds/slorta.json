@@ -1,0 +1,69 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/slorta.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "slorta-contactless",
+          "slorta-discounts",
+          "slorta-fares",
+          "slorta-passes"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "b21d4e3b3c98",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version b21d4e3b3c98, archived 2026-08-14T02:12:20+00:00.\nDocuments as of 2026-08-14.\n4 added.\nAdded: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes\nAgency: SLORTA.",
+      "date_published": "2026-08-14T02:12:20+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta:b21d4e3b3c98",
+      "title": "SLORTA — corpus b21d4e3b3c98 (4 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/b21d4e3b3c98"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "69aab4ac6576",
+        "first_snapshot": false,
+        "removed": [
+          "slorta-contactless",
+          "slorta-discounts",
+          "slorta-fares",
+          "slorta-passes"
+        ]
+      },
+      "content_text": "Corpus version 69aab4ac6576, archived 2026-08-14T00:45:22+00:00.\nDocuments as of 2026-08-14.\n4 removed.\nRemoved: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes\nAgency: SLORTA.",
+      "date_published": "2026-08-14T00:45:22+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta:69aab4ac6576",
+      "title": "SLORTA — corpus 69aab4ac6576 (4 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/69aab4ac6576"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "slorta-contactless",
+          "slorta-discounts",
+          "slorta-fares",
+          "slorta-passes"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "21251137e67b",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 21251137e67b, archived 2026-08-14T00:44:34+00:00.\nDocuments as of 2026-08-14.\n4 added.\nAdded: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes\nAgency: SLORTA.",
+      "date_published": "2026-08-14T00:44:34+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta:21251137e67b",
+      "title": "SLORTA — corpus 21251137e67b (4 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/21251137e67b"
+    }
+  ],
+  "title": "Fare-policy corpus changes — SLORTA",
+  "version": "https://jsonfeed.org/version/1.1"
+}

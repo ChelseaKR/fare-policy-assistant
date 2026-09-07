@@ -154,3 +154,108 @@ def test_empty_runs_dir_is_graceful(tmp_path: Path) -> None:
     assert "No runs found" in md
     svg = history.generate_svg(runs)
     assert svg.startswith("<svg")
+
+
+# ── a run that measured nothing must not plot as a run that scored zero ───────
+
+
+def _minimal(run_at: str, *, total: dict, suites: dict) -> dict:
+    return {
+        "run_at": run_at,
+        "mode": "full",
+        "offline": True,
+        "prompt_versions": {"system": "v1 2026-06-11"},
+        "duration_seconds": 1.0,
+        "suites": suites,
+        "total": total,
+    }
+
+
+def test_a_run_that_scored_no_case_has_no_overall_rate(tmp_path: Path) -> None:
+    """0.0% is the worst score on a published chart; "no cases" is not a score.
+
+    A run aborted before it scored anything used to render as a catastrophic
+    drop to zero, indistinguishable from a run in which everything failed.
+    """
+
+    runs_dir = tmp_path / "runs"
+    _write_run(
+        runs_dir,
+        "20260701T000000Z",
+        _minimal("2026-07-01T00:00:00+00:00", total={"passed": 0, "total": 0}, suites={}),
+    )
+
+    run = history.load_runs(runs_dir)[0]
+
+    assert run["overall"] is None
+
+
+def test_a_suite_with_no_pass_rate_is_absent_rather_than_zero(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runs"
+    _write_run(
+        runs_dir,
+        "20260701T000000Z",
+        _minimal(
+            "2026-07-01T00:00:00+00:00",
+            total={"passed": 3, "total": 4},
+            suites={
+                "refusal": {"passed": 3, "total": 4, "pass_rate": 75.0},
+                "freshness": {"passed": 0, "total": 0},
+            },
+        ),
+    )
+
+    run = history.load_runs(runs_dir)[0]
+
+    assert run["suites"] == {"refusal": 75.0}
+    assert "freshness" not in run["suites"]
+
+
+def test_the_table_prints_an_em_dash_for_an_unmeasured_overall(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runs"
+    _write_run(
+        runs_dir,
+        "20260701T000000Z",
+        _minimal("2026-07-01T00:00:00+00:00", total={"passed": 0, "total": 0}, suites={}),
+    )
+
+    markdown = history.generate_markdown(history.load_runs(runs_dir))
+    row = next(line for line in markdown.splitlines() if "2026-07-01" in line)
+
+    assert "0.0%" not in row, f"a run that scored nothing was published as a rate: {row!r}"
+    assert "—" in row
+
+
+def test_the_chart_omits_a_run_with_no_overall_rate_from_the_overall_line(
+    tmp_path: Path,
+) -> None:
+    """The chart already breaks a suite's line across a run that lacks it. The
+    overall line took every run unconditionally, so an unmeasured run would
+    either be drawn at zero or crash the renderer."""
+
+    runs_dir = tmp_path / "runs"
+    for index, total in enumerate(
+        [
+            {"passed": 4, "total": 4},
+            {"passed": 0, "total": 0},
+            {"passed": 3, "total": 4},
+        ]
+    ):
+        _write_run(
+            runs_dir,
+            f"2026070{index + 1}T000000Z",
+            _minimal(
+                f"2026-07-0{index + 1}T00:00:00+00:00",
+                total=total,
+                suites={"refusal": {"passed": total["passed"], "total": 4, "pass_rate": 50.0}},
+            ),
+        )
+
+    svg = history.generate_svg(history.load_runs(runs_dir))
+    overall = [
+        line for line in svg.splitlines() if "polyline" in line and history._OVERALL_COLOR in line
+    ]
+
+    assert len(overall) == 1
+    # Two plotted runs, not three: the unmeasured one contributes no point.
+    assert overall[0].count(",") == 2

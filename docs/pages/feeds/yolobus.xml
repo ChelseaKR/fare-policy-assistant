@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — Yolobus</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus</id>
+  <updated>2026-08-21T21:37:43+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/yolobus.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>Yolobus — corpus 10deac978967 (3 changed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:10deac978967</id>
+    <updated>2026-08-21T21:37:43+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/10deac978967"/>
+    <content type="text">Corpus version 10deac978967, archived 2026-08-21T21:37:43+00:00.
+Documents as of 2026-08-21.
+3 changed.
+Changed: yolobus-fares, yolobus-purchasing, yolobus-reduced-fare-id
+Agency: Yolobus.</content>
+  </entry>
+  <entry>
+    <title>Yolobus — corpus 63d6718126f1 (1 changed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:63d6718126f1</id>
+    <updated>2026-08-13T03:18:50+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/63d6718126f1"/>
+    <content type="text">Corpus version 63d6718126f1, archived 2026-08-13T03:18:50+00:00.
+Documents as of 2026-08-13.
+1 changed.
+Changed: yolobus-fares
+Agency: Yolobus.</content>
+  </entry>
+  <entry>
+    <title>Yolobus — corpus e15051d6f7a1 (1 changed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:e15051d6f7a1</id>
+    <updated>2026-08-13T02:24:18+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/e15051d6f7a1"/>
+    <content type="text">Corpus version e15051d6f7a1, archived 2026-08-13T02:24:18+00:00.
+Documents as of 2026-08-13.
+1 changed.
+Changed: yolobus-fares
+Agency: Yolobus.</content>
+  </entry>
+  <entry>
+    <title>Yolobus — corpus 74b05330cb39 (1 changed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:74b05330cb39</id>
+    <updated>2026-08-13T02:07:12+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/74b05330cb39"/>
+    <content type="text">Corpus version 74b05330cb39, archived 2026-08-13T02:07:12+00:00.
+Documents as of 2026-08-13.
+1 changed.
+Changed: yolobus-fares
+Agency: Yolobus.</content>
+  </entry>
+  <entry>
+    <title>Yolobus — corpus 0938fff0539a (First retained snapshot: 3 document(s).)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:yolobus:0938fff0539a</id>
+    <updated>2026-07-08T07:49:28+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0938fff0539a"/>
+    <content type="text">Corpus version 0938fff0539a, archived 2026-07-08T07:49:28+00:00.
+Documents as of 2026-06-17.
+First retained snapshot: 3 document(s).
+Added: yolobus-fares, yolobus-purchasing, yolobus-reduced-fare-id
+Agency: Yolobus.</content>
+  </entry>
+</feed>

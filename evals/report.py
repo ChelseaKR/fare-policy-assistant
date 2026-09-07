@@ -236,7 +236,7 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
     offline runs have no judge verdicts to compare against."""
     if not summary.get("judges_ran"):
         return None
-    from evals.calibration import calibrate
+    from evals.calibration import calibrate, calibration_status, labeled_on
 
     try:
         c = calibrate(records)
@@ -290,8 +290,47 @@ def _calibration_section(summary: dict, records: list[dict]) -> str | None:
         lines.append(
             f"- Unbound (no answer hash; not staleness-checked): {', '.join(c['unbound'])}"
         )
+    if c.get("criterion_stale"):
+        lines.append(
+            "- **Criterion-stale** (the answer held but the judge prompt moved since the label "
+            "was written, so the human and the judge answered different questions): "
+            f"{', '.join(c['criterion_stale'])}"
+        )
+    if c.get("criterion_unbound"):
+        lines.append(
+            "- Criterion-unbound (the label does not record which judge prompt version it was "
+            f"given under, so a prompt bump cannot be detected): {len(c['criterion_unbound'])} "
+            "of the scored labels"
+        )
     if c["unmatched"]:
         lines.append(f"- Unmatched (no judge verdict in this run): {', '.join(c['unmatched'])}")
+
+    # The three §3 auto-gates, named and scored. Until this was here the section
+    # said the sample was "provisional", which is a word, and left a reader to
+    # work out that the project's own standard makes calibration merge-blocking
+    # and that this misses it. Freshness (AIEV-20) was not reported at all, so
+    # the one gate that fails purely with the passage of time was invisible.
+    # "unmeasured" is its own verdict on purpose: an undefined κ and a κ of 0.9
+    # over four labels are both things this section must not let read as a pass.
+    marks = {"pass": "PASS", "fail": "**FAIL**", "unmeasured": "**not measured**"}
+    lines += [
+        "",
+        "**Against `STANDARDS/AI-EVALUATION-STANDARD.md` §3, which makes these merge-blocking:**",
+        "",
+        "| Gate | Target | This run | |",
+        "|---|---|---|---|",
+    ]
+    for gate in calibration_status(c, labeled_on()):
+        lines.append(
+            f"| {gate['id']} {gate['name']} | {gate['target']} | {gate['actual']} | "
+            f"{marks[gate['verdict']]} |"
+        )
+    lines.append("")
+    lines.append(
+        "Closing these needs human labels, not a code change: "
+        "`evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` holds the rows and "
+        "`make relabel` walks them. See [docs/judge-calibration.md](docs/judge-calibration.md)."
+    )
     return "\n".join(lines)
 
 
@@ -456,9 +495,17 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
                 # chunk id and score.
                 title = p.get("doc_title", "")
                 fetched = p.get("fetch_date", "")
+                # The ellipsis is conditional. Appending it unconditionally
+                # said "there is more here" of a passage that had already
+                # ended, and said the same thing of one cut at 600 characters
+                # by the recorder as of one cut at 200 by this line — a reader
+                # checking whether a document carries a figure could not tell
+                # the end of the evidence from the end of the excerpt.
+                excerpt = p["text"][:200]
+                more = len(p["text"]) > 200 or bool(p.get("text_truncated"))
                 lines.append(
                     f"- `{p['chunk_id']}` ({title} — {p['section']}, score {p['score']}, "
-                    f"fetched {fetched}): {p['text'][:200]}…"
+                    f"fetched {fetched}): {excerpt}{'…' if more else ''}"
                 )
             lines += [
                 "",
@@ -496,6 +543,11 @@ def generate_markdown(summary: dict, records: list[dict]) -> str:
             {
                 "run_id": summary["run_at"],
                 "corpus_version": _corpus_version(summary),
+                # From the run, not from HEAD: regenerating the report must not
+                # be able to relabel an old run with today's pipeline. A run
+                # recorded before this field existed declares None, which the
+                # provenance gate reports rather than passing over.
+                "pipeline_version": summary.get("pipeline_version"),
                 "prompt_versions": summary["prompt_versions"],
                 "suites": summary["suites"],
                 # None when the run had no complete mirror pairs; the

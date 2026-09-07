@@ -288,7 +288,16 @@ cases:
     language: en
     expected_behavior: answer
     required_facts: ["re:\\$\\s?7\\.00"]
-    rationale: "scmtd-fares-passes CASH FARES: the Amtrak/Highway 17 Express is a separate fare tier from local service at $7.00 Cash/1 Ride, and local Day and 31-Day Passes explicitly exclude it."
+    # Issue #195. On the 2026-09-04 live recording this case published a
+    # "$72.50 31-Day Pass" for the discount tier. That figure is in no corpus
+    # version: the chunker keeps the Highway 17 discount row's "$3.50 Cash/1
+    # Ride" and drops its Day Pass and 31-Day Pass cells, and the answer filled
+    # the silence by halving the adult column ($145 / 2). The corpus gap is
+    # recorded in corpus/manifest.yaml under Santa Cruz METRO; this entry pins
+    # the specific invented figure the way refuse-025 and edge-045 pin theirs,
+    # and `fare_amounts_in_cited_source` is the general guard behind it.
+    forbidden_content: ["re:\\$\\s?72\\.50"]
+    rationale: "scmtd-fares-passes CASH FARES: the Amtrak/Highway 17 Express is a separate fare tier from local service at $7.00 Cash/1 Ride, and local Day and 31-Day Passes explicitly exclude it. The discount row publishes only its cash fare, so no discount Day or 31-Day price for this tier may appear in an answer."
 
   # ── SolTrans (Solano County Transit), added 2026-08-12 ─────────────────────
   # NOTE for anyone adding fare-amount cases here: SolTrans' fare grid is

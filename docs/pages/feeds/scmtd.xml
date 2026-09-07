@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — SCMTD</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:scmtd</id>
+  <updated>2026-08-13T04:01:01+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/scmtd.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>SCMTD — corpus 5e6a24ef0702 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:scmtd:5e6a24ef0702</id>
+    <updated>2026-08-13T04:01:01+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5e6a24ef0702"/>
+    <content type="text">Corpus version 5e6a24ef0702, archived 2026-08-13T04:01:01+00:00.
+Documents as of 2026-08-13.
+3 added.
+Added: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz
+Agency: SCMTD.</content>
+  </entry>
+  <entry>
+    <title>SCMTD — corpus 227cb2da65b0 (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:scmtd:227cb2da65b0</id>
+    <updated>2026-08-13T03:39:06+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/227cb2da65b0"/>
+    <content type="text">Corpus version 227cb2da65b0, archived 2026-08-13T03:39:06+00:00.
+Documents as of 2026-08-13.
+3 removed.
+Removed: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz
+Agency: SCMTD.</content>
+  </entry>
+  <entry>
+    <title>SCMTD — corpus feb21f02c510 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:scmtd:feb21f02c510</id>
+    <updated>2026-08-13T03:37:36+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/feb21f02c510"/>
+    <content type="text">Corpus version feb21f02c510, archived 2026-08-13T03:37:36+00:00.
+Documents as of 2026-08-13.
+3 added.
+Added: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz
+Agency: SCMTD.</content>
+  </entry>
+  <entry>
+    <title>SCMTD — corpus a68e77ff4673 (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:scmtd:a68e77ff4673</id>
+    <updated>2026-08-13T02:46:50+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/a68e77ff4673"/>
+    <content type="text">Corpus version a68e77ff4673, archived 2026-08-13T02:46:50+00:00.
+Documents as of 2026-08-13.
+3 removed.
+Removed: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz
+Agency: SCMTD.</content>
+  </entry>
+  <entry>
+    <title>SCMTD — corpus d188cfaae266 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:scmtd:d188cfaae266</id>
+    <updated>2026-08-13T02:27:26+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d188cfaae266"/>
+    <content type="text">Corpus version d188cfaae266, archived 2026-08-13T02:27:26+00:00.
+Documents as of 2026-08-13.
+3 added.
+Added: scmtd-accessibility, scmtd-fares-passes, scmtd-tap2cruz
+Agency: SCMTD.</content>
+  </entry>
+</feed>

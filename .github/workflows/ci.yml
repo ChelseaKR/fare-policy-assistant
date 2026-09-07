@@ -16,6 +16,13 @@ on:
     # day except Monday" is Sunday plus Tuesday-Saturday: 0,2-6.
     - cron: "17 9 * * 0,2-6"  # nightly full suite (cache-backed)
     - cron: "17 9 * * 1"      # weekly cold full suite (cache refreshed)
+    #
+    # A red run here used to be visible only in this tab: fourteen straight
+    # nights of `failure` (2026-08-22 through 2026-09-04) went unnoticed
+    # while unrelated commits kept landing on main. nightly-eval-alert.yml
+    # polls this job's own run history daily and turns a red (or missing)
+    # nightly into a durable, numbered GitHub issue with the actual failing
+    # numbers, closed automatically once this goes green again.
 
 # Least privilege by default; jobs that need AWS add id-token themselves.
 permissions:
@@ -23,15 +30,34 @@ permissions:
 
 # Cancel superseded in-flight runs for the same PR to save Actions minutes.
 # Scoped to pull_request only, so pushes to main and the nightly schedule are
-# never cancelled mid-run.
+# never cancelled mid-run. That alone was not enough: an uncancellable run still
+# shared a group with the next push, and a group evicts its *pending* run —
+# see the group key below.
 concurrency:
-  group: ci-${{ github.ref }}
+  # Key pull requests on the ref and pushes on the commit.
+  #
+  # A concurrency group holds one running run and one pending run. A third run
+  # joining the group cancels the pending one before it dispatches a single job,
+  # so that commit ends `cancelled` with zero jobs and no verdict at all. Keyed
+  # only on `github.ref`, every push to the default branch shared one group with
+  # the merge before it, so a burst of merges lost the middle ones.
+  #
+  # Measured 2026-09-05 over the 100 most recent `ci` runs on `main`: 11 ended
+  # `cancelled`, 10 of them with zero jobs dispatched. This workflow produces the
+  # `checks`, `smoke-evals`, `a11y-browser` and `i18n` required status checks.
+  #
+  # Keying pushes on the SHA gives every merge its own group, so pushes never
+  # contend. Pull requests keep the shared `-pr` key, so pushing again to a PR
+  # still cancels the previous, now-irrelevant run; `cancel-in-progress` is left
+  # exactly as it was, and is now unreachable for pushes.
+  group: ci-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -86,11 +112,38 @@ jobs:
         # HEAD actually ships, or carry a documented, reasoned waiver in
         # evals/stale_acknowledged.json (FIX-01/M-2; promoted from advisory).
         run: make provenance
+      - name: Fare-change feeds match the corpus
+        # Offline, no network and no git: `assistant.feeds` reads only the
+        # retained corpus archives under corpus/versions/ and is deterministic
+        # by construction (a feed's `updated` is its newest entry's archive
+        # timestamp, never the clock), so a corpus refresh that forgets to
+        # regenerate the published feeds fails here instead of leaving
+        # subscribers on a record the repository no longer holds (#219).
+        run: make feeds-check
+      - name: Fare-fact corpus quality
+        # Offline, no network and no model call. The corpus the assistant
+        # answers from must not contain a price published under a label that
+        # names nothing: `program=",00"` (a decimal-comma price split in half),
+        # `program="per week, or"`, `program="(unspecified)"`. Each of those is
+        # a real dollar amount presented as a real fare, and a rider can act on
+        # it. Also ratchets the count of rows the extractor refuses, so a
+        # corpus refresh that starts producing more unparseable rows is loud.
+        run: make fact-quality
+      - name: Negative controls (how much of the score is retrieval)
+        # Offline and free: the mock answer model answers only from the
+        # passages it is given, so substituting the retriever is a real control
+        # rather than a second implementation. Asserts per check, not on the
+        # overall pass rate -- offline, a control that retrieves nothing scores
+        # HIGHER than the baseline because every refusal case passes, so a
+        # "the control must score lower" gate would have shipped green and
+        # measured nothing (#212).
+        run: make controls
 
   i18n:
     name: i18n (gettext catalog gate)
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -128,6 +181,7 @@ jobs:
     # now fails a build instead of shipping.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -177,6 +231,7 @@ jobs:
     # The first real served-model smoke receipt is produced only after merge.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -197,6 +252,7 @@ jobs:
     # configured role still produce an ordinary offline smoke receipt.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       id-token: write
       contents: read
@@ -261,6 +317,7 @@ jobs:
   full-evals-nightly:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       id-token: write
       contents: read
@@ -343,6 +400,7 @@ jobs:
     # acknowledgement that has stopped firing.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -353,11 +411,34 @@ jobs:
       - name: Evidence bundle matches the recording
         run: uv run python -m evals.plumbline_export --check
       - name: Run the pinned external harness
-        # Same file the laptop reads (plumbline.pin), same command. Its exit
-        # code is not the gate; see the job comment above.
-        run: ./plumbline-gate.sh --summary-file "$GITHUB_STEP_SUMMARY" || true
+        # Same file the laptop reads (plumbline.pin), same command. A FAIL
+        # verdict is not the gate; see the job comment above.
+        #
+        # But that is exit 1 alone. This step used to end `|| true`, which also
+        # swallowed exit 2 (usage), 3 (integrity refusal — the evidence did not
+        # verify and nothing was scored) and 4 (configuration or environment
+        # error, including "the harness could not be resolved"). On all three the
+        # harness writes no report, and the guard below then graded the newest
+        # report.json on disk by mtime — the *committed* one, restored by
+        # checkout, clean since the day it was committed. So this required check
+        # went green over an audit that never ran, with the reason visible only
+        # to someone opening the step log a green check gives nobody a reason to
+        # open. That is #183.
+        run: |
+          echo "AUDIT_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
+          set +e
+          ./plumbline-gate.sh --summary-file "$GITHUB_STEP_SUMMARY"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
+            echo "::error::plumbline-gate.sh exited $status — it scored nothing. Only 0 (PASS) and 1 (ran, reported FAIL) mean the audit ran; a gate that could not run is not a gate that passed (#183)."
+            exit "$status"
+          fi
       - name: Gate the audit report
-        run: uv run python -m evals.plumbline_guard
+        # --not-before is the second defence: it refuses a report last written
+        # before this run started, so even an unforeseen way of producing no
+        # report fails here rather than being graded from the committed one.
+        run: uv run python -m evals.plumbline_guard --not-before "$AUDIT_STARTED_AT"
       - name: Upload audit report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4

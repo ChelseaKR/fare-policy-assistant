@@ -16,13 +16,31 @@ permissions:
   contents: read
 
 concurrency:
-  group: security-${{ github.ref }}
+  # Key pull requests on the ref and pushes on the commit.
+  #
+  # A concurrency group holds one running run and one pending run. A third run
+  # joining the group cancels the pending one before it dispatches a single job,
+  # so that commit ends `cancelled` with zero jobs and no verdict at all. Keyed
+  # only on `github.ref`, every push to the default branch shared one group with
+  # the merge before it, so a burst of merges lost the middle ones.
+  #
+  # Measured 2026-09-05 over the 100 most recent runs on `main`: 16 ended
+  # `cancelled`, 6 of them with zero jobs dispatched. This workflow produces four
+  # required status checks: the dependency scan, the secret scan, Semgrep, and
+  # zizmor.
+  #
+  # Keying pushes on the SHA gives every merge its own group, so pushes never
+  # contend. Pull requests keep the shared `-pr` key, so pushing again to a PR
+  # still cancels the previous, now-irrelevant run; `cancel-in-progress` is left
+  # exactly as it was, and is now unreachable for pushes.
+  group: security-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
   cancel-in-progress: true
 
 jobs:
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read
@@ -43,6 +61,7 @@ jobs:
   sast:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -52,6 +71,8 @@ jobs:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Semgrep scan (blocking on ERROR severity)
         # Pinned tool version; default + python registry rulesets. --error makes
         # any ERROR-severity finding fail the build (no `|| true`).
@@ -71,6 +92,7 @@ jobs:
     # a schedule but nothing previously blocked a merge that introduced or kept
     # a known-vulnerable dependency; this closes that gap.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -80,6 +102,8 @@ jobs:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: Lockfile drift check
         # Fails if uv.lock is stale relative to pyproject.toml (CQ-09) before
         # auditing a lockfile that might not even describe what CI installs.
@@ -107,6 +131,7 @@ jobs:
     # this would start clean was wrong; those were fixed in the same pass that
     # added this job, so it starts clean going forward, not by coincidence.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -116,6 +141,8 @@ jobs:
           persist-credentials: false  # read-only job; no credential should outlive checkout (zizmor artipacked)
       - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4
+        with:
+          enable-cache: true
       - name: zizmor (blocking; no mute)
         # Pinned tool version, like the Semgrep job above. No --fix here (fixes
         # are for a human/author to apply and review, not to auto-commit in CI).

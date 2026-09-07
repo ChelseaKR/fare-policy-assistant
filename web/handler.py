@@ -178,6 +178,25 @@ def _corpus_summary() -> dict:
     return _CORPUS_SUMMARY
 
 
+def _serving_corpus_version() -> str | None:
+    """The corpus version this container is serving, for the feedback record.
+
+    Separate from `_corpus_summary()["corpus_version"]` at the call site for
+    one reason: `/api/feedback` calls no model and reads no corpus today, so a
+    corpus that cannot be summarized must not turn a working feedback route
+    into a 500 through the handler's catch-all. A verdict recorded without its
+    corpus version is still a usable verdict; a verdict lost because an
+    unrelated read failed is not recoverable. `None` is the honest
+    representation of "this deployment could not say", and it is never
+    recorded as some other version.
+    """
+    try:
+        version = _corpus_summary()["corpus_version"]
+    except Exception:  # a summary fault must not cost the verdict
+        return None
+    return version if isinstance(version, str) else None
+
+
 def _known_versions() -> list[str]:
     """Retained corpus versions (EXP-05), most recent first, capped so the
     payload stays small. `corpus/versions/` is a dev/provenance artifact, not
@@ -777,9 +796,20 @@ def _ask(event: dict) -> dict:
 
 
 def _feedback(event: dict) -> dict:
-    """Record a thumbs up/down. Logs only the verdict, the response kind, and the
-    language — never the question or answer. Nothing identifies the rider; the
-    aggregate is queryable in CloudWatch without storing any content.
+    """Record a thumbs up/down. Logs only the verdict, the response kind, the
+    language, and the corpus version the deployment is serving. Never the
+    question or answer. Nothing identifies the rider; the aggregate is
+    queryable in CloudWatch without storing any content (infra/README.md,
+    "Reading the feedback signal").
+
+    Three of those four fields come from the body and are checked against a
+    closed set before they are recorded, so an unknown value becomes `None`
+    rather than a free-text field. The fourth, the corpus version, is not read
+    from the body at all: the server already knows which corpus it is serving,
+    and taking it from the request would add the one client-controlled string
+    this record is designed not to have. Hashing the question was considered
+    and rejected for the same reason a plaintext question is: a hash of a
+    short fare question is recoverable by enumerating the question space.
 
     Rate-limited per caller on its own quota. This route calls no model, so it
     was previously left unguarded, but "free" is not the same as "harmless": an
@@ -817,6 +847,7 @@ def _feedback(event: dict) -> dict:
         and kind in {"answered", "answered_guarded", "refused_input", "refused_no_support"}
         else None,
         language=language if isinstance(language, str) and language in {"en", "es", "tl"} else None,
+        corpus_version=_serving_corpus_version(),
     )
     return _json(200, {"ok": True})
 

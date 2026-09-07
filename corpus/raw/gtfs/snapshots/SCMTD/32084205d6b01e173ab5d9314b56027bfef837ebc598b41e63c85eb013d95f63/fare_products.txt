@@ -1,0 +1,45 @@
+fare_product_id,fare_product_name,fare_media_id,amount,currency,rider_category_id
+free-adult,Free Service,,0.00,USD,adult
+1-day-adult,Day Pass (Local Service in Santa Cruz County),,6.00,USD,adult
+3-day-adult,3-Day Pass (Local Service in Santa Cruz County),,15.00,USD,adult
+7-day-adult,7-Day Pass (Local Service in Santa Cruz County),,32.00,USD,adult
+31-day-adult,31-Day Pass (Local Service in Santa Cruz County),,65.00,USD,adult
+1-ride-adult,Cash/1-Ride Pass (Local Service in Santa Cruz County),,2.00,USD,adult
+15-ride-adult,15-Ride Pass (Local Service in Santa Cruz County),,27.00,USD,adult
+free-youth,Free Service,,0.00,USD,youth
+1-day-youth,Day Pass (Local Service in Santa Cruz County),,6.00,USD,youth
+3-day-youth,3-Day Pass (Local Service in Santa Cruz County),,15.00,USD,youth
+7-day-youth,7-Day Pass (Local Service in Santa Cruz County),,32.00,USD,youth
+31-day-youth,31-Day Pass (Local Service in Santa Cruz County),,48.00,USD,youth
+1-ride-youth,Cash/1-Ride Pass (Local Service in Santa Cruz County),,2.00,USD,youth
+15-ride-youth,15-Ride Pass (Local Service in Santa Cruz County),,27.00,USD,youth
+1-day-adult-hw17,Day Pass (Amtrak/Highway 17 Express),,14.00,USD,adult
+31-day-adult-hw17,31-Day Pass (Amtrak/Highway 17 Express),,145.00,USD,adult
+1-ride-adult-hw17,Cash/1-Ride Pass (Amtrak/Highway 17 Express),,7.00,USD,adult
+15-ride-adult-hw17,15-Ride Pass (Amtrak/Highway 17 Express),,94.50,USD,adult
+1-day-youth-hw17,Day Pass (Amtrak/Highway 17 Express),,14.00,USD,youth
+31-day-youth-hw17,31-Day Pass (Amtrak/Highway 17 Express),,145.00,USD,youth
+1-ride-youth-hw17,Cash/1-Ride Pass (Amtrak/Highway 17 Express),,7.00,USD,youth
+15-ride-youth-hw17,15-Ride Pass (Amtrak/Highway 17 Express),,94.50,USD,youth
+free-senior,Free Service,,0.00,USD,senior
+1-day-senior,Day Pass (Local Service in Santa Cruz County),,3.00,USD,senior
+1-day-senior-hw17,Day Pass (Amtrak/Highway 17 Express),,14.00,USD,senior
+3-day-senior,3-Day Pass (Local Service in Santa Cruz County),,7.50,USD,senior
+7-day-senior,7-Day Pass (Local Service in Santa Cruz County),,16.00,USD,senior
+31-day-senior,31-Day Pass (Local Service in Santa Cruz County),,32.00,USD,senior
+31-day-senior-hw17,31-Day Pass (Amtrak/Highway 17 Express),,145.00,USD,senior
+1-ride-senior,Cash/1-Ride Pass (Local Service in Santa Cruz County),,1.00,USD,senior
+1-ride-senior-hw17,Cash/1-Ride Pass (Amtrak/Highway 17 Express),,3.50,USD,senior
+15-ride-senior,15-Ride Pass (Local Service in Santa Cruz County),,13.50,USD,senior
+15-ride-senior-hw17,15-Ride Pass (Amtrak/Highway 17 Express),,94.50,USD,senior
+free-discount,Free Service,,0.00,USD,discount
+1-day-discount,Day Pass (Local Service in Santa Cruz County),,3.00,USD,discount
+1-day-discount-hw17,Day Pass (Amtrak/Highway 17 Express),,14.00,USD,discount
+3-day-discount,3-Day Pass (Local Service in Santa Cruz County),,7.50,USD,discount
+7-day-discount,7-Day Pass (Local Service in Santa Cruz County),,16.00,USD,discount
+31-day-discount,31-Day Pass (Local Service in Santa Cruz County),,32.00,USD,discount
+31-day-discount-hw17,31-Day Pass (Amtrak/Highway 17 Express),,145.00,USD,discount
+1-ride-discount,Cash/1-Ride Pass (Local Service in Santa Cruz County),,1.00,USD,discount
+1-ride-discount-hw17,Cash/1-Ride Pass (Amtrak/Highway 17 Express),,3.50,USD,discount
+15-ride-discount,15-Ride Pass (Local Service in Santa Cruz County),,13.50,USD,discount
+15-ride-discount-hw17,15-Ride Pass (Amtrak/Highway 17 Express),,94.50,USD,discount

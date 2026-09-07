@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — SamTrans</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans</id>
+  <updated>2026-08-14T02:19:44+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/samtrans.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>SamTrans — corpus cbfe81efcf3f (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans:cbfe81efcf3f</id>
+    <updated>2026-08-14T02:19:44+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/cbfe81efcf3f"/>
+    <content type="text">Corpus version cbfe81efcf3f, archived 2026-08-14T02:19:44+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: samtrans-clipper, samtrans-fare-types, samtrans-fares
+Agency: SamTrans.</content>
+  </entry>
+  <entry>
+    <title>SamTrans — corpus 0a8bbe659de3 (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans:0a8bbe659de3</id>
+    <updated>2026-08-14T01:15:27+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0a8bbe659de3"/>
+    <content type="text">Corpus version 0a8bbe659de3, archived 2026-08-14T01:15:27+00:00.
+Documents as of 2026-08-14.
+3 removed.
+Removed: samtrans-clipper, samtrans-fare-types, samtrans-fares
+Agency: SamTrans.</content>
+  </entry>
+  <entry>
+    <title>SamTrans — corpus af0feed6c742 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:samtrans:af0feed6c742</id>
+    <updated>2026-08-14T01:04:00+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/af0feed6c742"/>
+    <content type="text">Corpus version af0feed6c742, archived 2026-08-14T01:04:00+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: samtrans-clipper, samtrans-fare-types, samtrans-fares
+Agency: SamTrans.</content>
+  </entry>
+</feed>

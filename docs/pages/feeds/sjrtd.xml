@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — SJRTD</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd</id>
+  <updated>2026-08-14T01:56:42+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/sjrtd.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>SJRTD — corpus d113659adda8 (2 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd:d113659adda8</id>
+    <updated>2026-08-14T01:56:42+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"/>
+    <content type="text">Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.
+Documents as of 2026-08-14.
+2 added.
+Added: sjrtd-dfc, sjrtd-fares
+Agency: SJRTD.</content>
+  </entry>
+  <entry>
+    <title>SJRTD — corpus 02c3bb15a506 (2 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd:02c3bb15a506</id>
+    <updated>2026-08-14T00:34:38+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/02c3bb15a506"/>
+    <content type="text">Corpus version 02c3bb15a506, archived 2026-08-14T00:34:38+00:00.
+Documents as of 2026-08-14.
+2 removed.
+Removed: sjrtd-dfc, sjrtd-fares
+Agency: SJRTD.</content>
+  </entry>
+  <entry>
+    <title>SJRTD — corpus 47bc4ec2e419 (2 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:sjrtd:47bc4ec2e419</id>
+    <updated>2026-08-14T00:26:06+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/47bc4ec2e419"/>
+    <content type="text">Corpus version 47bc4ec2e419, archived 2026-08-14T00:26:06+00:00.
+Documents as of 2026-08-14.
+2 added.
+Added: sjrtd-dfc, sjrtd-fares
+Agency: SJRTD.</content>
+  </entry>
+</feed>

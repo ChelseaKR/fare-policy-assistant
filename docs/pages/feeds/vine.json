@@ -1,0 +1,63 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/vine.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vine-fares",
+          "vine-go"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "09f9c297deba",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 09f9c297deba, archived 2026-08-14T02:17:33+00:00.\nDocuments as of 2026-08-14.\n2 added.\nAdded: vine-fares, vine-go\nAgency: VINE.",
+      "date_published": "2026-08-14T02:17:33+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:vine:09f9c297deba",
+      "title": "VINE — corpus 09f9c297deba (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/09f9c297deba"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "af0feed6c742",
+        "first_snapshot": false,
+        "removed": [
+          "vine-fares",
+          "vine-go"
+        ]
+      },
+      "content_text": "Corpus version af0feed6c742, archived 2026-08-14T01:04:00+00:00.\nDocuments as of 2026-08-14.\n2 removed.\nRemoved: vine-fares, vine-go\nAgency: VINE.",
+      "date_published": "2026-08-14T01:04:00+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:vine:af0feed6c742",
+      "title": "VINE — corpus af0feed6c742 (2 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/af0feed6c742"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vine-fares",
+          "vine-go"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "7caf9b3638ec",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 7caf9b3638ec, archived 2026-08-14T00:57:32+00:00.\nDocuments as of 2026-08-14.\n2 added.\nAdded: vine-fares, vine-go\nAgency: VINE.",
+      "date_published": "2026-08-14T00:57:32+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:vine:7caf9b3638ec",
+      "title": "VINE — corpus 7caf9b3638ec (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/7caf9b3638ec"
+    }
+  ],
+  "title": "Fare-policy corpus changes — VINE",
+  "version": "https://jsonfeed.org/version/1.1"
+}

@@ -17,17 +17,17 @@
 # whether src/ changed at all, then at whether the judge configuration hash
 # moved, then run the gate and compare the run id.
 #
-# KNOWN DEFECT IN THE PINNED COMMIT, and why the pin is here anyway:
-# `plumbline.bundle.hashed_files` walks the evidence directory with `iterdir()`,
-# so only top-level files are hashed. Anything inside a subdirectory of a bundle
-# is neither hashed nor reported as unlisted, which is an integrity hole in a
-# harness whose first promise is that it refuses to score tampered evidence.
-# This bundle is flat — five files, no subdirectories — so the hole is not open
-# here, and `evals/plumbline_export.py` seals with a recursive walk of its own so
-# it would not be open even if the bundle grew a directory. A fix is in flight
-# upstream. Advance this ref once it lands, and expect the bundle hash and the
-# run id to be unchanged when you do, because nothing about this evidence
-# depends on the buggy path.
+# KNOWN DEFECT IN THE PREVIOUSLY PINNED COMMIT, FIXED AS OF v0.2.0 (a258b2e):
+# `plumbline.bundle.hashed_files` walked the evidence directory with
+# `iterdir()`, so only top-level files were hashed. Anything inside a
+# subdirectory of a bundle was neither hashed nor reported as unlisted, which
+# was an integrity hole in a harness whose first promise is that it refuses to
+# score tampered evidence. This bundle is flat — five files, no subdirectories
+# — so the hole was never open here, and `evals/plumbline_export.py` seals with
+# a recursive walk of its own so it would not have been open even if the bundle
+# grew a directory. v0.2.0 walks recursively (`_walk`, plumbline/bundle.py).
+# Confirmed on this bump: dataset_sha256 (330fdc7e44f6) is unchanged, exactly
+# as expected for a flat bundle unaffected by the buggy path either way.
 #
 # The harness is NOT a dependency of this project. It is resolved at run time
 # into .plumbline-cache/ and verified to be at the pinned commit. This repo's
@@ -41,7 +41,7 @@
 # a build log like a configuration problem rather than an unaudited release.
 
 repo = https://github.com/ChelseaKR/plumbline.git
-ref  = df95fce6eb8637bdaf46d0a4f03709b7ccce231f
+ref  = a258b2e2e3cd859b1f80caaeb417ad579ade9ac2
 
 config = evals/plumbline/target.toml
 out = docs/audits/plumbline

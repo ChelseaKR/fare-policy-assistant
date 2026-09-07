@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — SLORTA</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta</id>
+  <updated>2026-08-14T02:12:20+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/slorta.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>SLORTA — corpus b21d4e3b3c98 (4 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta:b21d4e3b3c98</id>
+    <updated>2026-08-14T02:12:20+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/b21d4e3b3c98"/>
+    <content type="text">Corpus version b21d4e3b3c98, archived 2026-08-14T02:12:20+00:00.
+Documents as of 2026-08-14.
+4 added.
+Added: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes
+Agency: SLORTA.</content>
+  </entry>
+  <entry>
+    <title>SLORTA — corpus 69aab4ac6576 (4 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta:69aab4ac6576</id>
+    <updated>2026-08-14T00:45:22+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/69aab4ac6576"/>
+    <content type="text">Corpus version 69aab4ac6576, archived 2026-08-14T00:45:22+00:00.
+Documents as of 2026-08-14.
+4 removed.
+Removed: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes
+Agency: SLORTA.</content>
+  </entry>
+  <entry>
+    <title>SLORTA — corpus 21251137e67b (4 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:slorta:21251137e67b</id>
+    <updated>2026-08-14T00:44:34+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/21251137e67b"/>
+    <content type="text">Corpus version 21251137e67b, archived 2026-08-14T00:44:34+00:00.
+Documents as of 2026-08-14.
+4 added.
+Added: slorta-contactless, slorta-discounts, slorta-fares, slorta-passes
+Agency: SLORTA.</content>
+  </entry>
+</feed>

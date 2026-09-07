@@ -1,0 +1,492 @@
+name: Nightly eval alert
+
+# The scheduled `full-evals-nightly` job in ci.yml concluded `failure` on
+# every run for fourteen consecutive nights (2026-08-22 through 2026-09-04)
+# before anyone acted on it. The gates were correctly red the whole time —
+# Spanish parity and cross_agency really were failing — but a red run sitting
+# in the Actions tab is not a signal anyone reads, and the repo kept taking
+# unrelated commits on main across that whole window. See the retrospective
+# issue filed alongside this workflow for the dates and numbers.
+#
+# This workflow is the fix for THAT gap, not for the gates themselves (those
+# are sibling work). On its own daily schedule it looks up the most recent
+# scheduled CI run and turns that run's own conclusion into a durable,
+# numbered, self-updating GitHub issue instead of a color nobody opens. It
+# does not react via `workflow_run`: that trigger is a well-known "pwn
+# request" shape (a run with repo permissions reacting to a workflow that can
+# be influenced by untrusted PR content), and every sibling watcher in this
+# portfolio (gtfs-scorecard's watchdog.yml, the live-integrity.yml family,
+# id-churn-sentinel's watch.yml) polls run history from its own cron instead
+# — this follows that house style rather than inventing a new one, and it
+# means zizmor has nothing to flag here (`make lint`'s workflow SAST, see
+# zizmor.yml).
+#
+# Polling on a fixed schedule also fixes a sharper problem than "the run was
+# red": a run that never happens at all reports no failures, and a naive
+# check that only looks for a red conclusion would read that silence as
+# health — the more dangerous state, and invisible to exactly the kind of
+# check this workflow exists to replace. ci.yml's own comment on the nightly
+# cron notes a concrete way this happens: a malformed schedule expression is
+# a silent `startup_failure` with no run object at all. So before this
+# workflow trusts any conclusion, it first checks that the most recent
+# scheduled run is actually recent — see "did the nightly run at all"
+# below. Gate on the run having happened AND passed, never on the absence of
+# a failure.
+#
+# It distinguishes two failure shapes that need different humans and
+# different urgency, and must never be conflated — conflating them is exactly
+# what trains a reader to stop trusting the alert, which is the same failure
+# mode that let the real regression go unnoticed for two weeks:
+#
+#   - QUALITY REGRESSION: the eval ran to completion, wrote a scoreboard, and
+#     its own gate said `gate_status: failed` (evals/runner.py's
+#     `_finalize_run_gates`). Real numbers, a content/retrieval/prompt
+#     problem. Labeled `quality-regression`.
+#   - INFRASTRUCTURE FAILURE: no scoreboard was produced at all — the nightly
+#     never ran, the AWS OIDC step failed, the eval process died before it
+#     could write a report, or the runner was cancelled or timed out. There
+#     is nothing to regress against; the harness itself didn't run or didn't
+#     finish. Labeled `infra-failure`.
+#
+# One open issue per kind, found by label and reused across nights — a run
+# that goes red again comments on the SAME issue rather than filing a
+# fifteenth copy of it — and closed automatically the first time the nightly
+# is green again. A stale open alert after a real recovery would be the same
+# "absence rendered as a value" defect this portfolio keeps finding
+# elsewhere: closing has to be as automatic as opening.
+#
+# workflow_dispatch (with an optional run_id) exists so this can be exercised
+# by hand against a past run — including the fourteen already on record —
+# without waiting for tomorrow's cron.
+
+on:
+  schedule:
+    # ci.yml's nightly cron fires at 09:17 UTC (both its cache-backed and its
+    # weekly cold variant). This polls two hours later: comfortably past every
+    # observed nightly duration (the slowest of the last 20 runs was ~16
+    # minutes) with headroom for GitHub's own scheduling jitter, so a run
+    # still legitimately in progress is never mistaken for one that never
+    # started.
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "CI run id to triage (defaults to the most recent scheduled CI run on main)"
+        required: false
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: nightly-eval-alert
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read # read the triaged run's own jobs, steps, and artifacts
+      issues: write # file, comment on, and close the alert issue
+    steps:
+      - name: Ensure the alert labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh label create "nightly-eval-failure" --repo "$GITHUB_REPOSITORY" \
+            --color "B60205" --force \
+            --description "The scheduled nightly full live eval on main concluded failure."
+          gh label create "quality-regression" --repo "$GITHUB_REPOSITORY" \
+            --color "D93F0B" --force \
+            --description "The eval ran to completion; a real gate failed on real numbers."
+          gh label create "infra-failure" --repo "$GITHUB_REPOSITORY" \
+            --color "FBCA04" --force \
+            --description "The eval produced no report: credentials, provider, or the runner."
+
+      - name: Resolve which CI run to triage
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN_ID: ${{ github.event.inputs.run_id }}
+        run: |
+          set -euo pipefail
+          run_id="$INPUT_RUN_ID"
+          used_fallback=false
+          if [ -z "$run_id" ]; then
+            # The normal path: no run_id given (every scheduled trigger, and a
+            # workflow_dispatch with the input left blank) means "tell me
+            # about the most recent scheduled CI run", which is also what
+            # makes the staleness check below meaningful — it only judges "did
+            # last night's nightly happen" when this is the run we went
+            # looking for, not one a human named on purpose.
+            used_fallback=true
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --branch main \
+              --event schedule --status completed --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "::error::could not resolve a CI run id to triage"
+            exit 1
+          fi
+          echo "run-id=${run_id}" >> "$GITHUB_OUTPUT"
+          echo "used-fallback=${used_fallback}" >> "$GITHUB_OUTPUT"
+
+      - name: Read the run's conclusion and the nightly job's step outcomes
+        id: run_detail
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.resolve.outputs.run-id }}
+        run: |
+          set -euo pipefail
+          run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          conclusion=$(echo "$run_json" | jq -r '.conclusion // "unknown"')
+          created_at=$(echo "$run_json" | jq -r '.created_at')
+          echo "conclusion=${conclusion}" >> "$GITHUB_OUTPUT"
+          echo "run-url=$(echo "$run_json" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
+          echo "head-sha=$(echo "$run_json" | jq -r '.head_sha')" >> "$GITHUB_OUTPUT"
+          echo "created-at=${created_at}" >> "$GITHUB_OUTPUT"
+
+          # "Did the nightly run at all" — checked before anything about this
+          # run's conclusion is trusted. A cron that silently stops firing
+          # (a bad schedule expression is a `startup_failure` with no run
+          # object, per ci.yml's own comment on the nightly cron) produces
+          # zero red runs, and the most recent *completed* scheduled run this
+          # workflow can find keeps getting older every night nobody notices.
+          # 20 hours comfortably separates "ran a couple of hours ago, normal"
+          # from "the last one was from yesterday's poll or earlier" while
+          # tolerating this workflow's own two-hour offset and any scheduling
+          # jitter GitHub introduces on either cron.
+          created_epoch=$(date -u -d "$created_at" +%s)
+          now_epoch=$(date -u +%s)
+          age_hours=$(( (now_epoch - created_epoch) / 3600 ))
+          echo "age-hours=${age_hours}" >> "$GITHUB_OUTPUT"
+          if [ "$age_hours" -gt 20 ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # full-evals-nightly is the only job the schedule trigger runs (every
+          # other ci.yml job is `if: github.event_name != 'schedule'`), so its
+          # step outcomes are what distinguish an infrastructure failure from a
+          # completed run with a red gate.
+          jobs_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs")
+          job=$(echo "$jobs_json" | jq -c '[.jobs[] | select(.name == "full-evals-nightly")][0] // empty')
+          if [ -z "$job" ]; then
+            echo "job-found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "job-found=true" >> "$GITHUB_OUTPUT"
+            echo "job-conclusion=$(echo "$job" | jq -r '.conclusion // "unknown"')" >> "$GITHUB_OUTPUT"
+            echo "eval-step-conclusion=$(echo "$job" | jq -r '[.steps[]? | select(.name == "Full eval run")][0].conclusion // "missing"')" >> "$GITHUB_OUTPUT"
+            echo "aws-step-conclusion=$(echo "$job" | jq -r '[.steps[]? | select(.name == "Configure AWS credentials via OIDC")][0].conclusion // "missing"')" >> "$GITHUB_OUTPUT"
+          fi
+
+          # The nightly job's "Upload report" step runs with `if: always()`
+          # specifically so a red gate still leaves EVALS.md, the HTML report,
+          # and evals/runs/ behind (ci.yml). Whether that artifact actually
+          # exists is the cleanest signal this workflow has for "did the
+          # evaluator finish and produce numbers" vs. "did something die
+          # before it could".
+          artifacts_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts")
+          artifact_id=$(echo "$artifacts_json" | jq -r '[.artifacts[] | select(.name == "eval-report" and (.expired == false))][0].id // empty')
+          if [ -n "$artifact_id" ]; then
+            echo "has-report=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-report=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download the run's eval report, if it produced one
+        if: steps.run_detail.outputs.has-report == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: eval-report
+          path: nightly-report
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.resolve.outputs.run-id }}
+
+      # Every value this script reads comes in through env: and os.environ, not
+      # through `${{ }}` interpolated into the script body — none of it is
+      # attacker-controlled here (it is our own scheduled run's own metadata),
+      # but shelling it in directly is the pattern that bites the next
+      # workflow that copies this one for a trigger where it does matter.
+      - name: Classify the run and draft the alert
+        id: draft
+        env:
+          CONCLUSION: ${{ steps.run_detail.outputs.conclusion }}
+          RUN_URL: ${{ steps.run_detail.outputs.run-url }}
+          HEAD_SHA: ${{ steps.run_detail.outputs.head-sha }}
+          CREATED_AT: ${{ steps.run_detail.outputs.created-at }}
+          AGE_HOURS: ${{ steps.run_detail.outputs.age-hours }}
+          STALE: ${{ steps.run_detail.outputs.stale }}
+          USED_FALLBACK: ${{ steps.resolve.outputs.used-fallback }}
+          JOB_FOUND: ${{ steps.run_detail.outputs.job-found }}
+          JOB_CONCLUSION: ${{ steps.run_detail.outputs.job-conclusion }}
+          EVAL_STEP: ${{ steps.run_detail.outputs.eval-step-conclusion }}
+          AWS_STEP: ${{ steps.run_detail.outputs.aws-step-conclusion }}
+          HAS_REPORT: ${{ steps.run_detail.outputs.has-report }}
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import glob
+          import json
+          import os
+          import re
+
+          conclusion = os.environ.get("CONCLUSION", "unknown")
+          run_url = os.environ.get("RUN_URL", "")
+          head_sha = (os.environ.get("HEAD_SHA") or "")[:12]
+          created_at = os.environ.get("CREATED_AT", "")
+          age_hours = os.environ.get("AGE_HOURS", "?")
+          stale = os.environ.get("STALE") == "true"
+          used_fallback = os.environ.get("USED_FALLBACK") == "true"
+          job_found = os.environ.get("JOB_FOUND") == "true"
+          job_conclusion = os.environ.get("JOB_CONCLUSION", "unknown")
+          eval_step = os.environ.get("EVAL_STEP", "missing")
+          aws_step = os.environ.get("AWS_STEP", "missing")
+          has_report = os.environ.get("HAS_REPORT") == "true"
+
+          # "Did the nightly run at all" is judged before anything about this
+          # run's conclusion — including a conclusion of "success" — is
+          # trusted. Only applies when this run was found by looking for "the
+          # most recent scheduled run" (used_fallback): a workflow_dispatch
+          # naming a specific past run_id is asking about that run on
+          # purpose, and its age says nothing about whether last night's
+          # nightly happened.
+          missing_nightly = used_fallback and stale
+
+          summary = None
+          evals_md = ""
+          if has_report:
+              matches = glob.glob("nightly-report/evals/runs/*/summary.json")
+              if matches:
+                  with open(matches[0], encoding="utf-8") as fh:
+                      summary = json.load(fh)
+              if os.path.exists("nightly-report/EVALS.md"):
+                  with open("nightly-report/EVALS.md", encoding="utf-8") as fh:
+                      evals_md = fh.read()
+
+          # gate_status is written by evals/runner.py's _finalize_run_gates
+          # after check_coverage/check_parity/check_regression all run, so it
+          # is the harness's own verdict — not this workflow re-deriving pass
+          # or fail from prose. A report existing with gate_status == "failed"
+          # is the one condition trusted as a genuine quality regression.
+          gate_status = (summary or {}).get("gate_status")
+
+          if missing_nightly:
+              # Checked first, ahead of conclusion == "success": the run this
+              # workflow found is the most recent one that exists, but it is
+              # too old to be last night's — so even a "success" conclusion
+              # on it is not evidence that last night's nightly passed. It is
+              # evidence there wasn't one.
+              kind = "infra"
+          elif conclusion == "success":
+              kind = "green"
+          elif has_report and gate_status == "failed":
+              kind = "quality"
+          else:
+              kind = "infra"
+
+          title = ""
+          if missing_nightly:
+              # run_url/created_at/head_sha describe the stale run this
+              # workflow found while looking for tonight's — heading the
+              # issue with them as "Run:" would read as if that run were the
+              # failure, when the finding is that no newer run exists.
+              body_lines: list[str] = [
+                  f"Most recent scheduled CI run found: {run_url}",
+                  f"That run started: {created_at} ({age_hours}h ago)",
+                  "",
+              ]
+          else:
+              body_lines = [
+                  f"Run: {run_url}",
+                  f"Started: {created_at}",
+                  f"Commit: `{head_sha}`",
+                  "",
+              ]
+
+          if kind == "quality":
+              title = "Nightly full eval is red: quality gate failure"
+              scoreboard = ""
+              m = re.search(r"^## Scoreboard\n(.*?)(?=\n## )", evals_md, re.S | re.M)
+              if m:
+                  scoreboard = m.group(1).strip()
+              below_macro = re.findall(r"^\*\*Below-macro suite:\*\*.*$", evals_md, re.M)
+              # Reported in its own "### Below the macro floor" section below;
+              # drop it from the reproduced scoreboard block so it isn't shown
+              # twice.
+              for line in below_macro:
+                  scoreboard = scoreboard.replace(line, "").strip()
+              parity = re.search(r"^Parity delta:.*$", evals_md, re.M)
+              corpus = re.search(r"^- Corpus version: `([^`]+)`", evals_md, re.M)
+
+              body_lines += [
+                  "The nightly full live eval ran to completion and its own gate "
+                  "reported `gate_status: failed` (`evals/runner.py`). These are "
+                  "real numbers from a live run against the committed corpus"
+                  + (f" (`{corpus.group(1)}`)" if corpus else "")
+                  + " — a content, retrieval, or prompt regression, not an "
+                  "infrastructure problem.",
+                  "",
+                  "### Scoreboard",
+                  "",
+                  scoreboard or "_(scoreboard table not found in this run's EVALS.md)_",
+                  "",
+              ]
+              if below_macro:
+                  body_lines += ["### Below the macro floor", ""]
+                  body_lines += [f"- {line}" for line in below_macro]
+                  body_lines.append("")
+              if parity:
+                  body_lines += ["### Bilingual parity gate (M-1)", "", parity.group(0), ""]
+              if not below_macro and not parity:
+                  body_lines += [
+                      "Neither a below-macro line nor a Spanish-parity line appears in "
+                      "this run's EVALS.md, so the gate failed for a different reason "
+                      "(coverage or a baseline regression) — open the `eval-report` "
+                      "artifact on the run above for the failing check.",
+                      "",
+                  ]
+              body_lines.append(
+                  "Full traces, the HTML report, and every case result are in this "
+                  "run's `eval-report` artifact, linked from the run page above."
+              )
+
+          elif kind == "infra":
+              title = "Nightly full eval is red: infrastructure failure"
+              if missing_nightly:
+                  reason = (
+                      f"the nightly does not appear to have run at all: the most "
+                      f"recent scheduled CI run on main is {age_hours} hours old "
+                      "(started "
+                      f"{created_at}), past the 20-hour window a healthy nightly "
+                      "always falls inside. This is not that run's conclusion "
+                      f"(`{conclusion}`) being wrong — it means no newer scheduled "
+                      "run exists to have a conclusion at all. Check the Actions "
+                      "tab for a `startup_failure` and the `schedule:` cron "
+                      "expressions in ci.yml; a malformed one fails workflow "
+                      "validation before any job runs, silently, with no run "
+                      "object produced."
+                  )
+              elif not job_found:
+                  reason = (
+                      "the `full-evals-nightly` job does not appear in this run at "
+                      "all — a workflow-level failure (a bad cron/schema, or a "
+                      "checkout problem) rather than anything the evaluator did."
+                  )
+              elif aws_step not in ("success", "skipped"):
+                  reason = (
+                      f"the `Configure AWS credentials via OIDC` step concluded "
+                      f"`{aws_step}` — Bedrock access was never established, so no "
+                      "case could run."
+                  )
+              elif eval_step == "failure" and not has_report:
+                  reason = (
+                      "the `Full eval run` step failed and no `eval-report` "
+                      "artifact was produced — the evaluator died before it could "
+                      "write a scoreboard (a crash, an unhandled provider error, "
+                      "or a hung run)."
+                  )
+              elif conclusion in ("cancelled", "timed_out"):
+                  reason = (
+                      f"the run itself concluded `{conclusion}` — the runner did "
+                      "not finish."
+                  )
+              else:
+                  reason = (
+                      f"the job concluded `{job_conclusion}` (eval step "
+                      f"`{eval_step}`) without a confirmed `gate_status` in its "
+                      "report, so there are no gate numbers to report with "
+                      "confidence — filed as infrastructure rather than guessed "
+                      "as a quality regression."
+                  )
+              body_lines += [
+                  f"No scoreboard was produced this run: {reason}",
+                  "",
+                  "Filed as infrastructure, not a quality regression: there is "
+                  "nothing here to attribute to a prompt, retrieval, or corpus "
+                  "change. Open the run's logs above; likely causes are Bedrock "
+                  "throttling, expired or misconfigured OIDC credentials, or a "
+                  "runner problem.",
+              ]
+
+          body = "\n".join(body_lines)
+          with open("/tmp/alert-kind", "w", encoding="utf-8") as fh:
+              fh.write(kind)
+          with open("/tmp/alert-title", "w", encoding="utf-8") as fh:
+              fh.write(title)
+          with open("/tmp/alert-body.md", "w", encoding="utf-8") as fh:
+              fh.write(body)
+
+          # Best-effort recovery numbers: when the nightly is green again and
+          # produced a report, put the new scoreboard total in the closing
+          # comment so a reader is not sent back to the run just to see what
+          # "green" means. Absence of this line is not itself alarming — the
+          # close comment always states the run URL regardless.
+          recovery = ""
+          if kind == "green" and has_report:
+              m = re.search(r"^\| \*\*all\*\* .*$", evals_md, re.M)
+              if m:
+                  recovery = m.group(0)
+          with open("/tmp/alert-recovery.md", "w", encoding="utf-8") as fh:
+              fh.write(recovery)
+          PY
+
+      - name: File, update, or close the alert issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ steps.run_detail.outputs.run-url }}
+          CREATED_AT: ${{ steps.run_detail.outputs.created-at }}
+        run: |
+          set -euo pipefail
+          kind=$(cat /tmp/alert-kind)
+
+          if [ "$kind" = "green" ]; then
+            # Close every open alert, both kinds: a green run is proof the
+            # gates pass again AND that the harness itself ran to completion,
+            # so it clears both an open quality-regression alert and an open
+            # infra-failure alert. A stale open issue after a real recovery
+            # is the same "absence rendered as a value" defect this portfolio
+            # keeps finding elsewhere — closing has to be this automatic.
+            open_issues=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+              --label "nightly-eval-failure" --json number --jq '.[].number')
+            if [ -z "$open_issues" ]; then
+              echo "nightly is green; no open alert to close"
+              exit 0
+            fi
+            recovery=$(cat /tmp/alert-recovery.md 2>/dev/null || true)
+            comment="The nightly full live eval is green again: ${RUN_URL} (started ${CREATED_AT})."
+            if [ -n "$recovery" ]; then
+              comment="${comment}"$'\n\n'"${recovery}"
+            fi
+            for num in $open_issues; do
+              gh issue close "$num" --repo "$GITHUB_REPOSITORY" --reason completed --comment "$comment"
+            done
+            exit 0
+          fi
+
+          title=$(cat /tmp/alert-title)
+          if [ "$kind" = "quality" ]; then
+            kind_label="quality-regression"
+          else
+            kind_label="infra-failure"
+          fi
+
+          # Reuse across nights: a run that goes red again for the same
+          # reason comments on the existing open issue for that kind instead
+          # of filing a duplicate. Quality and infra never share an issue —
+          # an infra night filed or updated while a quality issue is already
+          # open must not be folded into it, and vice versa; each label pair
+          # is looked up and acted on independently.
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --label "nightly-eval-failure" --label "$kind_label" \
+            --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/alert-body.md
+            echo "updated #$existing"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+              --label "nightly-eval-failure" --label "$kind_label" \
+              --body-file /tmp/alert-body.md
+          fi

@@ -87,7 +87,7 @@ from assistant.release_identity import (
 )
 from assistant.retrieve import Retriever
 from evals import attestation as eval_attestation
-from evals import checks, judges
+from evals import checks, judges, provenance
 from evals.cache import CachingModel, EvalCache, case_content_key
 from evals.checks import run_checks
 from evals.stats import wilson_interval
@@ -1372,6 +1372,13 @@ def _verify_promotion_inputs_unchanged(
         raise SystemExit(f"promotion inputs failed post-run verification: {exc}") from exc
 
 
+# How much of a retrieved passage `results.jsonl` keeps. A full trace of 385
+# cases at eight passages each would carry the corpus several times over, so the
+# record keeps an excerpt and says so; `chunk_id` and the run's recorded
+# `corpus_version` resolve the rest.
+_PASSAGE_EXCERPT_CHARS = 600
+
+
 def _run_case(
     case: dict,
     *,
@@ -1381,6 +1388,7 @@ def _run_case(
     cfg: config.Config,
     corpus_doc_ids: set[str],
     facts_by_doc: dict[str, list] | None,
+    doc_texts: Mapping[str, str],
     structured_fares_by_agency: Mapping[
         str,
         Sequence[fare_table.StructuredFare],
@@ -1458,6 +1466,7 @@ def _run_case(
         corpus_doc_ids,
         facts_by_doc,
         structured_fares_by_agency,
+        doc_texts=doc_texts,
     )
     # A case whose supporting document the operator has disabled was never
     # given the evidence it was written against: `answer.answer_question`
@@ -1590,7 +1599,20 @@ def _case_record(
                 "fetch_date": sc.chunk.fetch_date,
                 "section": sc.chunk.section,
                 "score": round(sc.score, 2),
-                "text": sc.chunk.text[:600],
+                # Truncated, and *said* to be truncated. The excerpt alone is
+                # indistinguishable from the whole passage, so a reader — or a
+                # script — checking "does the source carry this figure?" against
+                # a recorded trace reads a cut-off table as a corpus gap. That is
+                # this portfolio's dominant defect class (an absence rendered as
+                # a value) sitting in the harness's own evidence, and it is not
+                # hypothetical: replaying a currency-grounding scan over the
+                # 2026-08-22 full live run's traces flagged 24 answers whose
+                # amounts the cited documents do carry past character 600.
+                # `chunk_id` resolves the full text from the corpus version the
+                # run recorded, so nothing here needs to grow to fix it.
+                "text": sc.chunk.text[:_PASSAGE_EXCERPT_CHARS],
+                "text_truncated": len(sc.chunk.text) > _PASSAGE_EXCERPT_CHARS,
+                "text_chars": len(sc.chunk.text),
             }
             for sc in result.passages
         ],
@@ -1773,6 +1795,14 @@ def _run_resolved(
     facts_by_doc: dict[str, list] = collections.defaultdict(list)
     for fact in captured_inputs.facts:
         facts_by_doc[fact.doc_id].append(fact)
+    # The full text of each corpus document, for the checks that ask "does this
+    # document actually say that" rather than "does the fact table agree".
+    # Built from the same captured chunks the retriever is given, so a check
+    # can never read a corpus the run did not use.
+    _doc_chunks: dict[str, list[str]] = collections.defaultdict(list)
+    for chunk in chunks:
+        _doc_chunks[chunk.doc_id].append(chunk.text)
+    doc_texts: dict[str, str] = {doc_id: "\n".join(texts) for doc_id, texts in _doc_chunks.items()}
     retriever = Retriever(chunks, cfg.retrieval)
     run_judges = have_key and cfg.models.provider != "mock"
     live = not offline and have_key and cfg.models.provider != "mock"
@@ -1996,6 +2026,7 @@ def _run_resolved(
                 cfg=cfg,
                 corpus_doc_ids=corpus_doc_ids,
                 facts_by_doc=facts_by_doc,
+                doc_texts=doc_texts,
                 structured_fares_by_agency=(captured_inputs.structured_fares_by_agency),
                 answer_system_prompt=captured_inputs.prompts["system"],
                 answer_user_prompt=captured_inputs.prompts["answer_user"],
@@ -2146,6 +2177,10 @@ def _run_resolved(
         # Pinned so the provenance gate (evals/provenance.py) can prove EVALS.md,
         # the baseline, and the audit dataset describe the same corpus HEAD ships.
         "corpus_version": corpus_version,
+        # And the same answer pipeline. Prompts and corpus do not cover
+        # assistant.retrieve / assistant.answer, so without this a run recorded
+        # before a retrieval change stays "current" by every field it declares.
+        "pipeline_version": provenance.head_pipeline_version(),
         "duration_seconds": round(time.monotonic() - started, 1),
         "cost": _cost_block(cfg, usage),
         "execution": {
@@ -3016,6 +3051,7 @@ def check_regression(
         expected_provenance = {
             "prompt_versions": summary.get("prompt_versions") or {},
             "corpus_version": summary.get("corpus_version"),
+            "pipeline_version": summary.get("pipeline_version"),
         }
         if baseline.get("provenance") != expected_provenance:
             raise SystemExit("promotion regression baseline provenance does not match")
@@ -3048,6 +3084,10 @@ def update_baseline(run_dir: Path) -> None:
         "provenance": {
             "prompt_versions": summary.get("prompt_versions") or {},
             "corpus_version": summary.get("corpus_version") or corpus.corpus_version(),
+            # Read from the summary, never recomputed from the working tree: a
+            # baseline must record the pipeline the run actually used, not the
+            # one checked out when someone got round to promoting it.
+            "pipeline_version": summary.get("pipeline_version"),
         },
         "suites": summary["suites"],
     }
@@ -3114,7 +3154,22 @@ def main() -> None:
         "(N=1, the default, is byte-identical to a single run). Live and paid; "
         "always bypasses the cache and excludes --since/--only-failed.",
     )
+    parser.add_argument(
+        "--controls",
+        action="store_true",
+        help="run the negative-control arms instead of an evaluation: no retrieval, "
+        "a wrong agency's passages, and an older corpus version, scored by the same "
+        "deterministic checks (issue #212). Offline and free; see evals/controls.py.",
+    )
     args = parser.parse_args()
+    if args.controls:
+        # Delegated rather than folded in: a control run answers a different
+        # question from an evaluation ("how much of this score is retrieval"),
+        # writes no run directory, updates no baseline, and must never be
+        # mistaken for a scored run in the eval history.
+        from evals import controls
+
+        raise SystemExit(controls.main([]))
     if args.promotion and not args.full:
         parser.error("--promotion requires --full")
     if args.promotion and args.update_baseline:

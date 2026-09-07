@@ -8,7 +8,380 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Fixed
+- **The fare-fact table published prices under labels that named nothing**
+  (2026-09-07). `corpus/processed/facts.jsonl` is the table a numeric claim in
+  an answer is checked against, and 630 of its rows included a price attached
+  to a sentence fragment, a bare decimal tail, or nothing at all. The worst of
+  them was on MST's Spanish page: `program=",00 — Pago sin contacto …"`,
+  `rider_class="regular"`, `price=35.0`. MST's regular monthly GoPass is $70;
+  $35 is the *discount* price. The corpus asserted the discount fare as the
+  regular fare, in Spanish, for the readers least able to check it.
+  - **The money pattern could not read a decimal comma.** `\$\s?\d+(?:\.\d{2})?`
+    stopped at the comma in "$ 35,00", took `$ 35`, and left the orphan `,00`
+    to be picked up as the *label* of the following row. The pattern now reads
+    both conventions and distinguishes a decimal comma from a thousands
+    separator, so E-tran's "$100,000 program fund" is no longer a $100 fare.
+  - **The Spanish fare grids are now recognised as grids.** The rider-class and
+    program keyword vocabularies were English-only, so MST's Spanish table
+    matched `Regular` (a word both languages share) and nothing else, and its
+    entire discount half fell through to the prose fallback. `mst-fares-es` now
+    parses exactly like `mst-fares`: eight rows, $70 regular, $35 discount.
+  - **A row that cannot be read into a real (program, rider_class, price)
+    triple is refused rather than published.** `assistant.facts.refusal_reason`
+    holds every parsed row to a label contract — no bare decimal fragment, no
+    dangling conjunction, no sentence, no single-character table sentinel, no
+    price with no label at all. 251 candidate rows are refused; 372 publish.
+  - **A refused row is recorded, not dropped.** They are written with their
+    reason to `corpus/processed/facts_refused.jsonl` and counted by `make
+    ingest`. A parser that silently discarded what it could not read would
+    publish a corpus that reads as complete, which is the same defect as
+    publishing the garbage, told the other way round.
+  - **Two axes that were swapped are now read from the header.** VINE publishes
+    its passes rider-class-down, program-across; all 95 of its rows carried a
+    rider class in the program column. VineGo's paratransit fares are an
+    origin-city/destination-city matrix, where neither axis is a program or a
+    rider class — those rows are refused outright, and the refusal is no longer
+    undone one line later by the prose fallback re-guessing the same amounts.
+  - **An age bound is paired with the rider class that states it.** The
+    extractor took the first rider-class keyword on a line and the first age
+    bound on the line independently, pairing them across whatever lay between.
+    CCCTA's "Clipper START/Youth (6-18)/ Senior (65+)/Disabled (RTC)" published
+    *youth means 65+*; VTA's "Seniors must be age 65 or older and Youth must be
+    age 5-18" published *seniors means 5-18*.
+- **New blocking gate: `make fact-quality`** (2026-09-07). Holds the committed
+  corpus to the publication contract (zero violations), ratchets the refusal
+  count against `corpus/fact-quality-pin.json` so it cannot grow quietly, and
+  requires the committed table to be exactly what the extractor derives from
+  the committed chunks — a gate over a file nobody regenerates measures the
+  file, not the parser. Wired into `make verify` and the CI `checks` job.
+- **The provenance gate could not see a retrieval change** (2026-09-06).
+  `evals/provenance.py` compared each published artifact's declared prompt
+  versions and corpus version against HEAD, and nothing else. Neither field
+  covers `src/assistant/retrieve.py` or `src/assistant/answer.py` — the two
+  modules that decide which passages the model is shown and how its answer is
+  composed — so an artifact recorded before either moved stayed green on every
+  field the gate compared. A check that passes because it is not looking at the
+  thing that moved is this portfolio's dominant defect class, sitting in the
+  gate whose whole job is to stop a stale artifact looking current.
+  - Not hypothetical. `43d8d46` (#192) landed +330 lines in
+    `src/assistant/retrieve.py` on 2026-09-04 at 13:38 PDT, **36 minutes after**
+    the `golden.jsonl` re-recording on PR #194 was taken at 13:02. `#194`'s own
+    body names `assistant.retrieve` as an invalidating input. The gate reported
+    green on that recording anyway, because corpus and both answer prompts still
+    matched.
+  - Artifacts now declare a `pipeline_version`: a twelve-hex digest over the
+    bytes of every file in `provenance.PIPELINE_SOURCES`, each preceded by its
+    own repo-relative path so that moving a line from one module to the other
+    still changes the digest. `evals/runner.py` records it in `summary.json`,
+    `update_baseline` carries it from the run rather than recomputing it, and
+    `evals/report.py` writes the run's own value into `EVALS.md` — so
+    regenerating a report cannot relabel an old run as current.
+  - An artifact that declares **no** `pipeline_version` is reported, not skipped:
+    "I cannot tell which pipeline produced this" and "the pipeline matches" must
+    not be the same verdict. All three committed artifacts predate the field and
+    are waived once, loudly, in `evals/stale_acknowledged.json`, clearing on the
+    next promoted live run.
+  - A path in `PIPELINE_SOURCES` that does not exist raises rather than being
+    skipped, and a test asserts both named files exist in the checkout — a
+    rename must not be able to quietly empty the hash input.
+- **The README described a release trigger the workflow has not had since July**
+  (2026-09-06). The Release & Versioning conformance row said
+  `.github/workflows/release.yml` "is tag-triggered on `v*`". `bd083d5`
+  (2026-07-23, "harden release authorization") replaced `push: tags: ["v*"]`
+  with `workflow_dispatch` taking an existing signed tag as an input, so a
+  reader following the README would push a signed tag and watch nothing
+  happen — for forty-five days, in the table written for the reader least able
+  to check.
+  - It is the only evidence anyone has about how a release is cut here, because
+    the repository has **no tags and no releases**: `pyproject.toml` and
+    `CITATION.cff` declare `0.1.0` and `CHANGELOG.md` carries a matching
+    `## [0.1.0] - 2026-06-30` section, but nothing is tagged, so the pipeline
+    has never run and no run has ever contradicted the prose. Cutting a tag is
+    the maintainer's call and this change does not make it.
+  - `tests/test_doc_counts.py` now derives the claim from the workflow's own
+    `on:` block instead of trusting the prose, and pins it in both directions:
+    a dispatch-only workflow may not be called tag-triggered, and a restored
+    tag trigger must be described in the present tense — a substring check
+    would have accepted this entry's own history note as a live claim.
+  - A second test asserts `pyproject.toml`, `CITATION.cff` and `CHANGELOG.md`
+    agree on the version. The release job requires the tag to equal the package
+    version and extracts notes by matching a `## [<version>]` heading, failing
+    on an empty extract; with no release ever cut, a drift there would first
+    surface as a failed release attempt.
+
+- **A recorded passage is an excerpt, and now says so** (2026-09-06).
+  `evals/runner.py` writes each retrieved passage into `results.jsonl` cut at
+  600 characters, and the record carried nothing to say it had been cut. The
+  excerpt was therefore indistinguishable from the whole passage, so a reader —
+  or a script — checking "does the source actually carry this figure?" against a
+  committed trace reads a truncated fare table as a corpus gap. That is this
+  portfolio's dominant defect class, an absence rendered as a value, sitting in
+  the harness's own evidence.
+  - Found by measurement, not by reading: replaying #195's currency-grounding
+    scan over the 2026-08-22 full live run's traces flagged **24 answers** whose
+    amounts the cited documents do carry, past character 600. Reconstructing the
+    full text from `corpus/versions/10deac978967/chunks.jsonl` left **four**,
+    all of them real. A gate built on the recorded field would have shipped
+    twenty invented findings about the assistant.
+  - Each passage now carries `text_truncated` and `text_chars`. The record does
+    not grow to hold the corpus: `chunk_id` plus the run's recorded
+    `corpus_version` resolve the full text, which is what the corrected
+    measurement above did.
+  - `evals/report.py`'s failure traces appended "…" unconditionally, saying
+    "there is more here" of a passage that had already ended, and saying the
+    same of one cut at 600 by the recorder as of one cut at 200 by the renderer.
+    The ellipsis is now conditional on there actually being more.
+- **The groundedness judge could not tell "will launch" from "launched"**
+  (2026-09-06). Issue #191. On the 2026-09-04 nightly, `fresh-015` asked "Can I
+  tap my credit card to pay on a Santa Cruz METRO bus today?"; both retrieved
+  passages say METRO **will launch** Tap2Cruz in Summer 2026, and the answer said
+  METRO **launched** it and told the rider to tap a card at the farebox. The
+  helpfulness judge caught that. The groundedness judge — the one whose whole job
+  is an unsupported claim — passed it, reporting the launch as "explicitly stated
+  in the passages". It had read the *topic* being present as the *claim* being
+  supported, and tense fell through the gap. It generalises past this case: any
+  passage describing a planned change (a fare increase taking effect, a program
+  opening, a pass being discontinued) could be restated in the past tense and
+  scored as grounded, and every one of those puts a rider in front of a farebox
+  acting on something that is not true yet.
+  - `prompts/judge_groundedness.txt` v4 → v5 makes tense part of the claim, in
+    both directions: a passage presenting something as planned does not support
+    an answer stating it as done, and a passage stating a rule already in force
+    does not support an answer that defers it to the future. It says explicitly
+    that this holds even when the announced window contains the snapshot date.
+  - Verified live 2026-09-06 against `claude-sonnet-4-6` on the committed corpus,
+    replaying the published `fresh-015` answer: v4 passes it on both of two runs,
+    v5 fails it on both with the right reason. Four controls score identically
+    under v4 and v5 — an honest "will launch" answer passes, a present-tense rule
+    stated as present passes, a dated rule whose effective date has already passed
+    stated as in force passes, and a live rule deferred to the future still fails.
+  - `fresh-015` gains a `forbidden_content` entry for the exact published
+    assertion, so the case is no longer judge-only. It is deliberately the
+    published wording and nothing wider: `phrase_asserted` is negation-aware, so
+    "has not launched" is untouched, and "will launch" / "will be launched" do not
+    match it.
+
+- **A go/no-go criterion met by missing evidence is not a decision**
+  (2026-09-06). `evals/backend_comparison.py` decides, against three criteria
+  fixed in its docstring before it was ever run, whether a local kiosk model is
+  viable (ADR 0014). Each criterion is a comparison, and each defaulted the
+  missing side to a number instead of reporting that it could not be evaluated.
+  - **Criterion (b), the guard-trip rate**, was `0.0` when *no case was
+    answered* — the best possible score. A backend that refused or errored on
+    every case tripped no guard because it never reached one, and cleared the
+    "guard-trip rate must not rise more than 5 points" limit on that basis. The
+    rate is now `None` when nothing was answered, and the criterion reports
+    itself unmet rather than satisfied.
+  - **Criterion (c), the refusal suite** — the safety criterion — read
+    `suites.get("refusal", {"passed": 0})` on both sides. A run in which the
+    refusal suite never executed compared zero against zero, found no
+    regression, and passed. It now fails, naming the backend whose evidence is
+    missing.
+  - **Criterion (a)** divided by a case count that can be zero. A backend that
+    scored nothing now reports the criterion unevaluable instead of raising
+    part-way through the decision.
+  - The printed comparison scored a suite one backend never ran as `0.0%` and
+    subtracted it, publishing a fabricated delta of up to a hundred points. An
+    unrun suite now prints the same em dash `evals/history.py` uses, and no
+    delta is computed. A genuine `0.0%` is still printed as `0.0%` (tested —
+    ADR 0014's published run has real zeroes in it).
+  - `tests/test_backend_comparison.py::test_guard_trip_rate_is_zero_when_no_flags`
+    asserted the defect: its only case was a `refuse_redirect`, never answered,
+    so it pinned the rate for a run with nothing answered while its name claimed
+    to cover an answered case with no flags. Split into the two tests it was
+    named for. The module docstring is untouched — ADR 0014 rests on it being
+    unedited since the first run.
+
+- **A run that measured nothing is not a run that scored zero** (2026-09-06).
+  `evals/history.py` renders `docs/eval-history.md` and `docs/eval-history.svg`,
+  and the SVG is published to the evidence hub by `pages.yml`. Two paths turned
+  a missing measurement into the worst score on that chart.
+  - `_overall_pct` returned `0.0` when a run scored no case at all. A run
+    aborted before it scored anything plotted as a catastrophic drop to zero,
+    indistinguishable from a run in which every case failed. It now returns
+    `None`, the table prints an em dash, and the overall line skips the run.
+  - `load_runs` built each run's suite map with `s.get("pass_rate", 0.0)`, so a
+    suite present in a summary but carrying no `pass_rate` was drawn as a real
+    0.0% point. Both renderings already handle an *absent* suite honestly — the
+    table prints an em dash, the chart breaks that suite's line across the gap —
+    and the default was routing past both. A suite with no rate is now simply
+    omitted, which is the path that was already correct.
+  - The committed `docs/eval-history.md` and `.svg` are **not** regenerated
+    here: `evals/runs/` is a gitignored local archive, so the change takes
+    effect the next time `make report` runs against real runs. For every run
+    that does carry its numbers the output is unchanged.
+
 ### Added
+- **Negative controls: how much of the score is retrieval, and not the model**
+  (2026-09-06). Issue #212. The harness reported pass rates, Wilson intervals and
+  a leave-one-suite-out jackknife, and none of that could tell a grounded answer
+  from a model that knows California fares from pretraining. `make controls`
+  (`python -m evals.controls`, `python -m evals.runner --controls`) runs three
+  arms beside the baseline, each a retriever substitution and nothing else —
+  same prompt, same guards, same `run_checks`: `no_retrieval` (no passages at
+  all), `wrong_agency` (the next agency's passages), and `stale_corpus` (the
+  oldest retained corpus version). Offline against the mock answer model, which
+  answers only from the passages it is given, so it costs nothing and takes
+  about seven seconds.
+  - **The overall pass rate turned out to be the wrong thing to assert on, and
+    the run proves it.** The `no_retrieval` control scores **36/385 against the
+    baseline's 21/385 — higher**, because every refusal case passes when the
+    assistant has nothing to stand on. A control suite asserting "the control
+    must score lower" would have shipped green and measured nothing, which is
+    the gate-that-cannot-fail shape these controls exist to catch. The
+    assertions are per check instead: `no_retrieval` must put
+    `citation_present_and_resolvable` at exactly 0% (99.7% at baseline),
+    `wrong_agency` must put `correct_agency_cited` at exactly 0% (98.1%), and
+    `stale_corpus` must drop citation resolution at least 20 points against a
+    measured 47.6.
+  - Two floors guard the other direction: a baseline whose own citation or
+    agency checks fall under 90% fails as an instrument failure, because a
+    baseline that weak cannot be told apart from a control.
+  - Built against the ways a control lies. An arm that never emits the check it
+    exists to move is reported as "the control was not actually applied", not as
+    a pass; a repository with no retained corpus version loses the
+    `stale_corpus` arm rather than getting a second baseline wearing its name; a
+    check an arm never emitted renders `--`, never 0%; and `--limit` reports the
+    assertions without gating, because the floors were measured over the whole
+    suite.
+  - Wired into `verify` and CI's `checks` job. `docs/eval-controls.md` says what
+    each arm rules out and carries the measured table.
+- **A dollar amount an answer publishes must appear in a document it cites**
+  (2026-09-06). Issue #195. `ground-035` told a rider that Santa Cruz METRO's
+  Highway 17 Express discount 31-Day Pass costs **$72.50**. That figure is in no
+  corpus version: the chunker keeps the discount row's "$3.50 Cash/1 Ride" and
+  drops its Day Pass and 31-Day Pass cells, and rather than reporting the silence
+  the model completed the table by halving the adult column ($145 / 2) and
+  published the arithmetic under a citation. This is the portfolio's dominant
+  defect class — an absence rendered as a value — landing on the one field the
+  whole project is about.
+  - `evals.checks.unsourced_fare_amounts` and the new
+    `fare_amounts_in_cited_source` check walk every `$` amount in an answer
+    against the union of the documents that answer cites, the same walk
+    `office_hours_in_cited_source` (#196) already does for clock times. A source
+    document is read permissively (a flattened fare-table cell that lost its
+    dollar sign still counts), because that direction can only add support for an
+    amount, never invent an absence.
+  - #196 declined to scan currency because "the same scan over currency amounts
+    flags derived figures an answer is entitled to state". Measured on the 347
+    answered cases of the 2026-08-22 full live run, the unexempted scan flags
+    five: four comparisons ("$0.15 higher than on e-tran", "ahorras $0.20 por
+    viaje") and `edge-053`, an invented Tap2Cruz daily cap that no deterministic
+    check caught and only the groundedness judge did. Exempting an amount that
+    sits beside *comparison* language leaves exactly that one flag. The exemption
+    is deliberately not "any computed figure": #195's $72.50 is arithmetic too,
+    and it must keep failing.
+  - `ground-035` gains a `forbidden_content` entry for $72.50, the way
+    `refuse-025` and `edge-045` got theirs, and the harness self-test gains a
+    planted defect for the new check (17 scenarios, all caught).
+  - `corpus/manifest.yaml` records the Highway 17 discount row as a
+    representational gap in the VTA shape, so the corpus says out loud that it
+    carries no discount Day or 31-Day price for that tier.
+- **Per-agency fare-change feeds (Atom and JSON Feed), built from corpus diffs**
+  (2026-09-06). Issue #219, RE7. The corpus already records every change with
+  provenance — `corpus/versions/<id>/` retains each distinct `corpus_version`
+  with its full chunk set and its archive date — and the freshness workflow
+  writes that into a pull request. Watching a repository is a poor subscription
+  mechanism for the people who most want the signal: an agency's communications
+  staff, a 511 operator, a downstream assistant.
+  - `python -m assistant.feeds` (and `make feeds`) writes an Atom feed and a
+    JSON Feed 1.1 per agency under `docs/pages/feeds/`, plus a combined feed.
+    Each entry carries the corpus version, the archive timestamp, the `as_of`
+    date, the documents added / changed / removed for that agency, and a link
+    to the retained snapshot. 38 files on the current corpus.
+  - It says what changed, never what the change *means*. Summarising a fare
+    change in prose would be this project asserting something about an agency's
+    policy that no citation stands behind.
+  - Nothing reads the clock. A feed's `updated` is its newest entry's archive
+    timestamp, so regenerating against an unchanged corpus is byte-identical and
+    `make feeds-check` can be a merge gate — added to `verify` and to CI's
+    `checks` job, so a corpus refresh that forgets to regenerate leaves
+    subscribers on a record the repository no longer holds and CI says so. A
+    generator that stamped "now" would rewrite all 38 files every run and the
+    gate would mean nothing.
+  - The empty archive is dated at the epoch rather than today, so an archive
+    with nothing in it cannot look like a fresh publication to every subscriber
+    that polls it. Agency slugs that would collide are refused rather than
+    silently overwriting one another's feed, and a feed file the corpus no
+    longer produces is both removed by `make feeds` and named by
+    `make feeds-check`.
+  - Reads only committed corpus archives: no network, no git, no model.
+  - **Not wired into the published site yet.** `docs/pages/` is assembled from an
+    explicit allowlist in `.github/workflows/pages.yml`, and the hub's own
+    publication is still behind the owner-gated `NIGHTLY_HUB_PUBLISH_ENABLED`
+    switch (#140), so serving the feeds is one decision with turning the hub on.
+    The files, the gate, and the tests are in place for when it is.
+- **The GTFS cross-check says how strong an agreement is, not just that there
+  was one** (2026-09-06). Issue #141, second half. The first half widened the
+  check from two agencies to fourteen (#193); this one answers the harder half
+  of the same issue — the comparison was so coarse that a wall of "yes" proved
+  almost nothing. It compared a feed's fare amount against every dollar figure
+  anywhere in that agency's prose, so "SCMTD's 3-Day Pass is $15.00" agreed with
+  the sentence "There is a $15.00 service charge on all returned checks", and
+  the module's own docstring predicted it: "a match only proves 'the feed's
+  amount appears somewhere in this agency's prose'". EXP-01's `FareFact` table
+  has existed since; the TODO to use it never got actioned.
+  - Every compared record now carries `match_mode`: `fact_row_class` (a parsed
+    fare row for this agency carries this price *and* its rider class agrees
+    with the feed row's — EXP-06's actual claim), `fact_row` (a parsed fare row
+    carries the price, class not comparable), or `prose_amount` (the coarse
+    form, kept as the fallback for agencies whose fact extraction is thin, and
+    now labelled instead of reading like the strong claim). Measured on the
+    committed corpus: of 143 feed fare rows, 35 / 82 / 9 respectively, and 17
+    match nothing.
+  - `feed_agrees` is deliberately unmoved. Every fact price is extracted from
+    the prose, so a fact-row match is a strict subset of a prose match and the
+    verdict cannot change; a test pins that.
+  - `fact_rows` names the rows behind a match, because a `fact_row` agreement is
+    no stronger than the extractor: the $15.00 returned-check sentence is parsed
+    as a priced row, and only naming it lets a reader see that.
+  - `class_prices` puts what the fare page prices that rider class at beside the
+    feed's amount — EXP-06's "the feed prices the senior single ride at $X, the
+    fare page prices it at $Y". Published as context, **not** scored as a
+    conflict: of the 70 rows where both sides name a comparable class, 35 carry
+    an amount absent from that class's fact prices and 31 of those are SCMTD
+    alone, whose prose yields four adult prices against eleven adult products in
+    the feed. That is this project's extractor being thin, and scoring it would
+    publish our own gap as a finding about the agency.
+  - `rider_class_key` is the one vocabulary both sides are reduced through, and
+    "Reduced"/"Discount" is treated as the same class as senior and disabled,
+    because that is what an agency means when it prices them as one product.
+  - Found while doing it: `tests/test_gtfs.py`'s config fixture repointed
+    `PROCESSED_DIR` but not `FACTS_PATH`, which is bound from it at import time.
+    A test that supplied one chunk was matching against the committed 630-row
+    fact table. Both corpus artifacts now move together.
+- **The feedback record can say which corpus a verdict is about** (2026-09-05).
+  ROADMAP P2-3 asked for a thumbs-up/down logging "the verdict, the response
+  kind, and the corpus version". The endpoint, the UI row, the closed-set
+  validation, the per-route rate limit, and the `FeedbackDown` alarm were all
+  already shipped and the roadmap had simply never been updated to say so. The
+  corpus version was the part that was genuinely missing, and it is the field
+  that made the aggregate answerable: without it a helpfulness rate cannot be
+  attributed to the policy text a rider was reading, so a corpus refresh that
+  made answers worse looks the same as one that made them better.
+  - `telemetry.log_feedback` now records `corpus_version`, and `_feedback`
+    reads it from `web.handler._serving_corpus_version()` rather than the
+    request body. `/api/ask` already returns a `corpus_version` to the page, so
+    echoing it back was the shorter path; it would also have been forgeable and
+    the only client-controlled string on a record whose value is having none.
+  - A corpus that cannot be summarized costs the version, not the verdict.
+    `/api/feedback` reads no corpus otherwise, and a summary fault reaching the
+    handler's catch-all would have turned a working route into a 500. The field
+    degrades to `null`, which is never confused with a real version.
+  - `TestFeedback` asserts the record's field set as a closed set built from a
+    real `LogRecord`, so a future field cannot widen it quietly. The previous
+    tests checked that specific known-bad strings were absent, which passes for
+    a record that has since gained a `question` field. New cases cover the
+    smuggling attempts directly: body keys named `question`, `answer`,
+    `history`, `citations`, and the record's own field names all fail to reach
+    the log or add to it, and a client-supplied `corpus_version` is ignored in
+    favour of the served one.
+  - `infra/README.md` gains "Reading the feedback signal" with the Logs
+    Insights query that produces helpfulness by corpus version, kind, and
+    language. ADR 0019's event table now lists the field, and records why a
+    question hash was rejected: short fare questions are enumerable, so a
+    digest of one is a reversible copy rather than a de-identified token.
 - **The evidence hub can say where it is** (2026-08-28). A technical SEO audit of
   `evals.chelseakr.com` found neither published page carrying a meta description,
   a canonical link, or a share card, and `/robots.txt` and `/sitemap.xml` both
@@ -78,6 +451,80 @@ rather than tied to a published tag.
   operator-visible source kill switch.
 
 ### Fixed
+- **The relabeling worksheet could not be labeled by anyone, on any checkout
+  (#143).** `evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl` had held
+  37 unlabeled rows for a month, and the reading of that was that nobody had
+  found the hour. On 2026-09-04, `make relabel` on it exited 2: `no results.jsonl
+  in evals/runs/20260712T050117Z`. The worksheet is bound to a run directory,
+  `evals/runs/` is gitignored, and the promoted 2026-07-12 run had been pruned
+  from the one machine that ever held it. The hour of work was not declined; it
+  was never available, and it would not have been available to a reader who
+  cloned the project either.
+  - A worksheet now ships with a committed evidence packet beside it —
+    `judge_relabel_worksheet_<date>.jsonl` pairs with
+    `judge_relabel_evidence_<date>.jsonl` — carrying per case the question, prior
+    turns, expected behavior, rationale, retrieved passages with source URL and
+    fetch date, the answer, and the criterion text each judge was given.
+    `--review` reads the run directory when it is there and the packet when it is
+    not, so the fallback needs no flag. `--pack <run_dir> --for <worksheet>`
+    writes one while a run still exists.
+  - The packet holds no judge verdict and no judge reasoning, and that is
+    enforced rather than intended: `load_evidence_packet` raises on a row
+    carrying any judge field. Committing the evidence must not become the way the
+    judge's call reaches a reviewer before they have given theirs.
+  - The packet carries the judge criteria because a worksheet outlives the prompt
+    it was generated under. `prompts/judge_groundedness.txt` was v2 when this run
+    was judged and is v3 at HEAD; asking a reviewer to apply v3 to an answer v2's
+    judge ruled on would have measured the prompt edit, not the judge.
+  - `evals/calibration/judge_relabel_evidence_2026-08-05.jsonl` is rebuilt from
+    committed history by `tools/rebuild_calibration_evidence.py`: answers from
+    `evals/govchat/golden.jsonl` and the 2026-07-11 label packet, passages joined
+    to `corpus/processed/chunks.jsonl` at the promoting commit, case metadata from
+    the suites there. Every answer is checked against the `answer_sha256` the
+    worksheet already declared, and a row that does not hash fails the rebuild.
+    Two things it cannot restore are rendered as absent rather than as values:
+    retrieval scores were never committed for that run and read "score not
+    recorded", and the judge's reasoning died with the run directory.
+  - Passages carry provenance the era's groundedness judge did not see. That
+    asymmetry is disclosed on the review screen rather than removed: reproducing
+    the blind spot that made the judge wrong about `fresh-001` — a dated claim
+    checked against evidence the dates were cut out of — would calibrate nothing.
+  - `--limit N` bounds a sitting. The worksheet is already ordered failures-first
+    and already resumable; what was missing was any statement of what the work
+    costs before it starts, so `--review` now opens with the row counts, which
+    nine come first and why, and a per-row estimate.
+  - No `human_passed` was filled in. All 37 rows are still blank, and a test
+    asserts they are: these verdicts are a person's to give, and a file claiming
+    a human decided something no human decided is the one thing this artifact
+    cannot survive.
+- **A label was bound to the answer it graded but not to the criterion it graded
+  under (#143).** A verdict is a judgment about an answer *under a criterion*,
+  and only the answer half was bound. PR #179 is that gap with a date on it: it
+  moves `prompts/judge_groundedness.txt` from v3 to v4 and changes which "as of"
+  claims count as supported. Not one of the sixteen committed labels goes stale
+  under it, because no answer moves, so all sixteen would have gone on being
+  scored against verdicts from a rubric their author never read. The mechanism
+  that exists to stop precisely this would not have fired, and the reported
+  agreement would have been wrong rather than absent.
+  - A label now carries `judge_prompt_sha256`, and `calibrate` reports a
+    `criterion_stale` label exactly as it reports a stale one: skipped, listed,
+    relabelable. Labels predating the binding are `criterion_unbound` and still
+    scored, the same treatment `answer_sha256` gave its own legacy, so the blind
+    spot is a count on the page rather than an implication. All sixteen are
+    `criterion_unbound` today.
+  - `--review` stamps the criterion it actually put on screen, so a verdict
+    recorded from here is bound to both halves without the reviewer doing
+    anything.
+- **An undefined kappa and a stale label set read as a passing calibration
+  (#143).** The report said the four-label sample was "provisional" and did not
+  report freshness at all, so the one gate that fails purely with the passage of
+  time was invisible. `EVALS.md`'s calibration section now scores the three §3
+  auto-gates by name — AIEV-18 agreement, AIEV-19 kappa, AIEV-20 freshness — with
+  "not measured" as its own verdict, distinct from a pass: an undefined kappa and
+  a kappa of 0.9 over four labels are both things that section must not let read
+  as evidence. `judge_labels.jsonl` gained a `# labeled_on:` directive, read from
+  git rather than guessed from a file mtime, because AIEV-20 is a question about
+  a date and a set that does not record one is not fresh.
 - **`xagency-010` was unpassable by construction, and nothing could tell (#162).**
   The case's rationale still described the six-agency corpus — "SolTrans is the
   only Clipper participant documented in this corpus" — after the corpus had

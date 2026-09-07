@@ -6,7 +6,7 @@
 # archived, so the audit could not be reproduced by anyone outside the project
 # and only by someone inside who still had the clone.
 
-.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fares relabel spanish-quality
+.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fact-quality fares relabel spanish-quality
 
 # The committed relabeling worksheet `make relabel` opens by default.
 WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
@@ -94,16 +94,40 @@ audit:        ## Independent Plumbline audit: rebuild the evidence bundle, run t
 	#      baseline, any hard failure nobody acknowledged, and any
 	#      acknowledgement that has stopped firing.
 	#
-	# Step 2's own exit code is deliberately not the gate. Several floors in
+	# Step 2's own FAIL verdict is deliberately not the gate. Several floors in
 	# evals/plumbline/target.toml sit below the harness's defaults, with reasons,
 	# and the audit's 76 hard failures across five suites are recorded in
 	# evals/plumbline/acknowledged_findings.json rather than hidden by lowering
 	# something. `plumbline gate` therefore reports FAIL today and will until
 	# those findings are fixed; the guard is what decides whether the build
-	# stops. `|| true` on that line is the one place this is written down.
+	# stops. This recipe is the one place that is written down.
+	#
+	# But it is exit 1 alone that means "ran, and reported FAIL". This line used
+	# to be `./plumbline-gate.sh || true`, which swallowed every other exit code
+	# too: 2 (usage), 3 (integrity refusal — the evidence did not verify and
+	# nothing was scored) and 4 (configuration or environment error, including
+	# "the harness could not be resolved"). None of those scored anything, and on
+	# all three the harness writes no report — so the guard fell back to the
+	# newest report.json on disk by mtime, which is the *committed* one from a
+	# previous run. It was clean when it was committed, so the guard passed, and
+	# `make audit` exited 0 with a CONFIGURATION ERROR sitting in the scrollback.
+	# That is #183, and it is the exact property plumbline.pin's own header
+	# promises: a gate that could not run is not a gate that passed.
+	#
+	# So: accept 0 and 1, abort on anything else, and hand the guard the second
+	# this run started so it refuses a report older than the run itself. The two
+	# halves are separate defences — the exit code catches a gate that failed
+	# loudly, the timestamp catches one that failed some way nobody predicted.
 	uv run python -m evals.plumbline_export --check
-	./plumbline-gate.sh || true
-	uv run python -m evals.plumbline_guard
+	@started=$$(date +%s); \
+	./plumbline-gate.sh; status=$$?; \
+	if [ "$$status" -ne 0 ] && [ "$$status" -ne 1 ]; then \
+		echo "make audit: plumbline-gate.sh exited $$status — it scored nothing." >&2; \
+		echo "make audit: only 0 (PASS) and 1 (ran, reported FAIL) mean the audit ran." >&2; \
+		echo "make audit: a gate that could not run is not a gate that passed. See #183." >&2; \
+		exit "$$status"; \
+	fi; \
+	uv run python -m evals.plumbline_guard --not-before "$$started"
 
 audit-record:  ## Re-derive the Plumbline bundle from the recording (offline; run after evals/govchat_export or a suite edit)
 	uv run python -m evals.plumbline_export
@@ -165,10 +189,22 @@ i18n-compile: ## Compile the committed PO catalogs to MO (run after editing a .p
 	done
 	@echo "i18n-compile: refreshed messages.mo for $(SUPPORTED_LOCALES)."
 
-verify: check i18n a11y report-regression provenance  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate
+verify: check i18n a11y report-regression provenance feeds-check fact-quality controls  ## Full offline gate = the exact CI `checks`+`i18n` gate set: lint + format + typecheck + coverage-gated tests + a11y + i18n + committed-report regression + provenance gate + fare-change feeds + fare-fact corpus quality + negative controls
 
 report-regression:  ## Committed EVALS.md must not regress vs evals/baseline.json (see docs/audits/eval-regression-2026-06-30.md)
 	uv run python -m evals.check_report_regression
+
+feeds:        ## Regenerate the per-agency fare-change feeds under docs/pages/feeds/ (offline; no network, no git)
+	uv run python -m assistant.feeds
+
+feeds-check:  ## BLOCKING: the committed feeds must match the retained corpus versions
+	uv run python -m assistant.feeds --check
+
+fact-quality: ## BLOCKING: the committed fare-fact table holds no prose-labelled or unlabelled price, the refusal count stays under its pin, and the table is reproducible from the committed chunks
+	uv run python -m tools.check_fact_quality
+
+controls:     ## BLOCKING: negative controls — no retrieval / wrong agency / stale corpus, scored by the same deterministic checks (offline, mock model, ~7s)
+	uv run python -m evals.controls
 
 mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; never a merge gate)
 	# Scoped in [tool.mutmut] to evals/checks.py + evals/judges.py, run against

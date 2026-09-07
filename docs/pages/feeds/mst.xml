@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — MST</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:mst</id>
+  <updated>2026-07-08T07:49:28+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/mst.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>MST — corpus 0938fff0539a (First retained snapshot: 4 document(s).)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:mst:0938fff0539a</id>
+    <updated>2026-07-08T07:49:28+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/0938fff0539a"/>
+    <content type="text">Corpus version 0938fff0539a, archived 2026-07-08T07:49:28+00:00.
+Documents as of 2026-06-17.
+First retained snapshot: 4 document(s).
+Added: mst-fares, mst-fares-benefits, mst-fares-es, mst-veterans-resource
+Agency: MST.</content>
+  </entry>
+</feed>

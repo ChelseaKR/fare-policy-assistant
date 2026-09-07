@@ -1,0 +1,66 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/ac-transit.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "actransit-discounts",
+          "actransit-fares",
+          "actransit-fares-es"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "5db0d6a4bfbd",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 5db0d6a4bfbd, archived 2026-08-14T02:01:41+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: actransit-discounts, actransit-fares, actransit-fares-es\nAgency: AC Transit.",
+      "date_published": "2026-08-14T02:01:41+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit:5db0d6a4bfbd",
+      "title": "AC Transit — corpus 5db0d6a4bfbd (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5db0d6a4bfbd"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "21251137e67b",
+        "first_snapshot": false,
+        "removed": [
+          "actransit-discounts",
+          "actransit-fares",
+          "actransit-fares-es"
+        ]
+      },
+      "content_text": "Corpus version 21251137e67b, archived 2026-08-14T00:44:34+00:00.\nDocuments as of 2026-08-14.\n3 removed.\nRemoved: actransit-discounts, actransit-fares, actransit-fares-es\nAgency: AC Transit.",
+      "date_published": "2026-08-14T00:44:34+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit:21251137e67b",
+      "title": "AC Transit — corpus 21251137e67b (3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/21251137e67b"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "actransit-discounts",
+          "actransit-fares",
+          "actransit-fares-es"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "02c3bb15a506",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 02c3bb15a506, archived 2026-08-14T00:34:38+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: actransit-discounts, actransit-fares, actransit-fares-es\nAgency: AC Transit.",
+      "date_published": "2026-08-14T00:34:38+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit:02c3bb15a506",
+      "title": "AC Transit — corpus 02c3bb15a506 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/02c3bb15a506"
+    }
+  ],
+  "title": "Fare-policy corpus changes — AC Transit",
+  "version": "https://jsonfeed.org/version/1.1"
+}

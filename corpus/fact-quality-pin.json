@@ -1,0 +1,18 @@
+{
+  "max_refused_rows": 251,
+  "refused_by_reason": {
+    "matrix_axis_is_not_a_program": 31,
+    "program_complete_sentence": 3,
+    "program_dangling_punctuation": 3,
+    "program_dangling_word": 15,
+    "program_fragment_start": 31,
+    "program_mid_sentence": 40,
+    "program_sentence_length": 40,
+    "program_too_short": 7,
+    "program_unlabelled_price": 73,
+    "rider_class_complete_sentence": 3,
+    "rider_class_mid_sentence": 1,
+    "rider_class_sentence_length": 4
+  },
+  "note": "Ratchet for tools/check_fact_quality.py. The refusal count may fall freely; it may only rise with a deliberate re-pin, so a corpus refresh that starts producing more unparseable rows is loud rather than silent."
+}

@@ -70,6 +70,22 @@ def _log_records(caplog, event: str) -> list[logging.LogRecord]:
     return [record for record in caplog.records if getattr(record, "event", None) == event]
 
 
+# Everything logging itself puts on a record, so a test can isolate the fields
+# this application chose to emit. Built from a real LogRecord rather than a
+# hand-typed list, so a Python release that adds an attribute does not read as
+# an application field leaking into the log.
+_LOGGING_OWN_FIELDS = set(vars(logging.LogRecord("n", logging.INFO, "p", 1, "m", None, None))) | {
+    "message",
+    "asctime",
+    "taskName",
+}
+
+
+def _emitted_fields(record: logging.LogRecord) -> set[str]:
+    """The field names this application attached to one log record."""
+    return set(vars(record)) - _LOGGING_OWN_FIELDS
+
+
 class TestRouting:
     def test_index_served_at_root(self):
         resp = web_handler.handler(_event(method="GET", path="/"))
@@ -1029,6 +1045,88 @@ class TestFeedback:
         assert record.kind is None
         assert record.language is None
         assert "SECRET" not in repr(vars(record))
+
+    # The allowlist is the whole feature. P2-3 asks for a helpfulness signal
+    # that is *structurally* unable to reconstruct what anyone asked, so the
+    # record's field set is asserted as a closed set rather than by checking
+    # that a few known-bad strings are absent. A test that only greps for
+    # "SECRET" passes for a record that quietly gained a `question` field the
+    # day someone thought it would be useful.
+    _ALLOWED_FEEDBACK_FIELDS = {
+        "event",
+        "runtime_request_id",
+        "function_version",
+        "verdict",
+        "kind",
+        "language",
+        "corpus_version",
+    }
+
+    def test_feedback_record_carries_exactly_the_allowlisted_fields(self, caplog):
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            self._fb({"verdict": "up", "kind": "answered", "language": "en"})
+        record = _log_records(caplog, "feedback")[-1]
+        assert _emitted_fields(record) == self._ALLOWED_FEEDBACK_FIELDS
+
+    def test_no_client_field_can_widen_the_feedback_record(self, caplog):
+        # Every plausible way a caller could try to attach rider content: the
+        # names the record already uses, the names the /api/ask response hands
+        # the page, and a free-text field of its own. None of them may reach
+        # the store, and none may add a field to it.
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = self._fb(
+                {
+                    "verdict": "down",
+                    "kind": "answered",
+                    "language": "en",
+                    "question": "SMUGGLED am I eligible for the senior fare",
+                    "answer": "SMUGGLED the published criteria are",
+                    "history": [{"q": "SMUGGLED", "a": "SMUGGLED"}],
+                    "citations": ["SMUGGLED"],
+                    "note": "SMUGGLED",
+                    "comment": "SMUGGLED",
+                    "event": "SMUGGLED",
+                    "runtime_request_id": "SMUGGLED",
+                    "function_version": "SMUGGLED",
+                }
+            )
+        assert response["statusCode"] == 200
+        record = _log_records(caplog, "feedback")[-1]
+        assert _emitted_fields(record) == self._ALLOWED_FEEDBACK_FIELDS
+        assert record.event == "feedback"
+        assert "SMUGGLED" not in repr(vars(record))
+
+    def test_feedback_records_the_corpus_version_the_server_is_serving(self, caplog):
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            self._fb({"verdict": "up", "kind": "answered", "language": "en"})
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.corpus_version == web_handler._corpus_summary()["corpus_version"]
+
+    def test_client_cannot_choose_the_corpus_version_it_is_counted_against(self, caplog):
+        # /api/ask hands the page a corpus_version, so echoing it back is the
+        # obvious implementation. It is the wrong one: it would let a caller
+        # attribute verdicts to a corpus the deployment never served, and it
+        # would put a client-controlled string on the record.
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            self._fb({"verdict": "down", "corpus_version": "0000deadbeef"})
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.corpus_version == web_handler._corpus_summary()["corpus_version"]
+        assert record.corpus_version != "0000deadbeef"
+
+    def test_unreadable_corpus_costs_the_version_not_the_verdict(self, caplog, monkeypatch):
+        # The route reads no corpus otherwise, so a summary fault must not turn
+        # a working feedback endpoint into a 500 through the handler's
+        # catch-all. The version degrades to None; it is never guessed.
+        def boom():
+            raise RuntimeError("corpus unreadable")
+
+        monkeypatch.setattr(web_handler, "_corpus_summary", boom)
+        with caplog.at_level(logging.INFO, logger="fare_assistant"):
+            response = self._fb({"verdict": "up", "kind": "answered", "language": "en"})
+        assert response["statusCode"] == 200
+        record = _log_records(caplog, "feedback")[-1]
+        assert record.corpus_version is None
+        assert record.verdict == "up"
 
     def test_feedback_get_405(self):
         resp = web_handler.handler(

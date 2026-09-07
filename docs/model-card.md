@@ -1,6 +1,6 @@
 # Model Card — Transit Fare Policy Assistant
 
-Reference implementation, not a product. Last updated 2026-07-11.
+Reference implementation, not a product. Last updated 2026-09-04.
 
 ## Purpose
 
@@ -141,21 +141,33 @@ Known limits found by the harness so far:
   `assistant.guards.detect_language` identifies it, and fixed guard/no-support
   copy plus core injection, PII lead-in, determination, and as-of patterns now
   have Tagalog coverage. This strengthens the deterministic safety seam but
-  does not create source-language parity. The current live stretch suite is
-  15/15, but that measures cross-lingual retrieval and guarded output—not an
-  agency-authored Tagalog policy corpus or fluent-human translation review. The
-  remaining constraint stays visible in the
-  "Stretch-language parity (Tagalog)" table in EVALS.md, not a bug to
-  silence. Chinese, Vietnamese, and Korean remain unaddressed; Tagalog was
+  does not create source-language parity. The live stretch-suite score moves
+  run to run — it read 15/15 on the 2026-07-12 promoted run and has read lower
+  on fuller runs since the corpus grew to eighteen agencies — but whatever it
+  reads, it measures cross-lingual retrieval and guarded output, not an
+  agency-authored Tagalog policy corpus or fluent-human translation review.
+  Current numbers are in the
+  "Stretch-language parity (Tagalog)" table in EVALS.md; the remaining
+  constraint stays visible there rather than as a fixed number in this
+  sentence. Chinese, Vietnamese, and Korean remain unaddressed; Tagalog was
   chosen first because it is space-delimited Latin script, which the
   existing tokenizer already handles (docs/ROADMAP.md P3-3).
-- The overall pass count moves by a couple of cases run to run. A handful of
-  cases sit at the LLM judge's groundedness/helpfulness decision boundary (and
-  the answer model is not perfectly deterministic at temperature 0 on Bedrock),
-  so the headline is a band (the consolidation run was 160 of 201) rather than a fixed number. The
-  deterministic safety checks — no determination language, citation present,
-  PII not echoed — do not vary. The regression gate ignores single-case suite
-  moves for this reason and trips only on a drop of two cases or more.
+- The overall pass count moves by a couple of cases between full runs. A
+  handful of cases sit at the LLM judge's groundedness/helpfulness decision
+  boundary, so the headline is a band (the consolidation run was 160 of 201)
+  rather than a fixed number. That variance is not model stochasticity: a
+  direct probe (2026-07-11, recorded in the README's Standards conformance
+  table) confirmed both the answer and judge models are deterministic at
+  temperature 0, so an identical prompt against an identical pinned model
+  returns an identical output. What moves the count between runs is whatever
+  is upstream of that determinism — a newer corpus version, a bumped prompt,
+  or, on the weekly cold run that bypasses the cache, the provider changing
+  what a pinned model ID actually serves, which the persisted-cache decision
+  treats as a real, separately-monitored risk rather than an assumption
+  (`docs/decisions/0022`). The deterministic safety checks — no determination
+  language, citation present, PII not echoed — do not vary. The regression
+  gate ignores single-case suite moves for this reason and trips only on a
+  drop of two cases or more.
 
 ## Escalation
 

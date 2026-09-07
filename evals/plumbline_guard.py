@@ -21,9 +21,21 @@ problem is a lie that accumulates.
 
     uv run python -m evals.plumbline_guard          # gate the latest report
     uv run python -m evals.plumbline_guard --report <path/to/report.json>
+    uv run python -m evals.plumbline_guard --not-before <epoch seconds>
+
+`--not-before` is what stops this module from grading yesterday's evidence.
+Without a report of its own, `latest_report()` reads the newest `report.json`
+on disk by mtime — and `docs/audits/plumbline/<run>/report.json` is committed,
+so on a run where `plumbline-gate.sh` wrote nothing at all there is still a
+clean report sitting there to find. It was clean when it was committed, the
+guard says so, and the build goes green over a gate that never ran (#183).
+The `audit` target and the `independent-audit` job both stamp the second they
+started and pass it here, so a report that predates this run is refused instead
+of graded.
 
 Exit 0 clean, 1 on any of: a suite below baseline, an unacknowledged hard
-failure, a stale acknowledgement, a missing or unreadable report.
+failure, a stale acknowledgement, a missing or unreadable report, or a report
+older than the run that was supposed to produce it.
 """
 
 from __future__ import annotations
@@ -71,14 +83,31 @@ _EXTRA_HARD_FAILURE_KEYS = (
 )
 
 
-def latest_report(audit_dir: Path = AUDIT_DIR) -> Path:
+def latest_report(audit_dir: Path = AUDIT_DIR, not_before: float | None = None) -> Path:
+    """The newest report.json on disk, refusing one this run did not produce.
+
+    `not_before` is an epoch second captured before `plumbline-gate.sh` was
+    invoked. The harness rewrites its report on every run, so the report of a
+    run that happened is always at least that new; a report that is older is a
+    leftover, and grading it would report on evidence from a different run.
+    """
     reports = sorted(audit_dir.glob("*/report.json"), key=lambda p: p.stat().st_mtime)
     if not reports:
         raise SystemExit(
             f"no report.json under {audit_dir}. Run ./plumbline-gate.sh first; a guard "
             "with nothing to read is not a guard that passed."
         )
-    return reports[-1]
+    newest = reports[-1]
+    if not_before is not None and newest.stat().st_mtime < not_before:
+        raise SystemExit(
+            f"the newest report under {audit_dir} is {newest}, last written "
+            f"{newest.stat().st_mtime:.0f}, before this run started ({not_before:.0f}). "
+            "`plumbline-gate.sh` produced no report this run, so the only thing left to "
+            "grade is a committed one from a previous run — and it was clean when it was "
+            "committed, so grading it would pass the build over a gate that never ran. "
+            "Read the gate's own output above for why it wrote nothing."
+        )
+    return newest
 
 
 def hard_failures(report: dict) -> dict[str, list[str]]:
@@ -162,9 +191,19 @@ def check(report: dict, baseline: dict, acknowledged: dict) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path, help="a report.json (default: the latest)")
+    parser.add_argument(
+        "--not-before",
+        type=float,
+        metavar="EPOCH",
+        help=(
+            "refuse a report last written before this epoch second. Stamp it "
+            "immediately before invoking plumbline-gate.sh, so a run that wrote no "
+            "report cannot be graded against a committed one from a previous run."
+        ),
+    )
     args = parser.parse_args()
 
-    report_path = args.report or latest_report()
+    report_path = args.report or latest_report(not_before=args.not_before)
     report = json.loads(report_path.read_text(encoding="utf-8"))
     baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
     acknowledged_doc = json.loads(ACK_PATH.read_text(encoding="utf-8"))

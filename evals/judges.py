@@ -155,6 +155,23 @@ def judge_groundedness(
     *,
     system_prompt: str | None = None,
 ) -> JudgeVerdict:
+    """Score one answer for groundedness against the passages it was given.
+
+    Coupling worth knowing before you change either side: the judge prompt
+    encodes the same "as of" rule that `assistant.answer._as_of_cited` and
+    `assistant.answer._align_as_of_prose` implement, and that
+    `evals.checks.as_of_matches_oldest_citation` enforces on the structured
+    field. The headline date is the oldest fetch date among the *cited*
+    passages, deliberately, so the freshness claim is a floor rather than an
+    average. Nothing tells the judge that unless the prompt does.
+
+    Leaving it untold is what broke the 2026-09-04 nightly. Fixing #163 moved
+    the sentence onto the oldest cited date without moving the rubric, so the
+    judge went on reading the line as a claim that every cited document was
+    fetched that day, and failed answers for a date the guard had just
+    corrected. Whoever changes the convention has to change this prompt in the
+    same commit; the two are one contract in two places.
+    """
     user = (
         f"{_history_block(history)}"
         f"Question: {result.question}\n\n"

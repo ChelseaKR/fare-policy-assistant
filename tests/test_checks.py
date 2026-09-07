@@ -1,6 +1,15 @@
+import pytest
+
 from assistant.answer import AnswerResult, Citation
 from assistant.facts import FareFact
-from evals.checks import phrase_asserted, run_checks
+from evals.checks import (
+    clock_times,
+    money_amounts,
+    phrase_asserted,
+    run_checks,
+    unsourced_fare_amounts,
+    unsupported_clock_times,
+)
 
 DOC_IDS = {"mst-fares", "yolobus-fares"}
 
@@ -546,3 +555,284 @@ class TestStructuredFareConsistent:
         from evals.checks import structured_fare_contradictions
 
         assert structured_fare_contradictions({"Yolobus"}, "Yolobus senior fare is $9.99.") == []
+
+
+class TestOfficeHoursInCitedSource:
+    """#196: an office hour a rider is told to turn up at must appear in a
+    document the answer cites.
+
+    `edge-052` is the case. A rider asks how to apply for Santa Cruz METRO's
+    Discount Photo ID Card and is told to visit Customer Service "during
+    business hours (Monday-Friday, 8:00 AM - 5:00 PM) [doc:scmtd-accessibility]".
+    That document's "Where to Apply" section, in full, is "Visit Customer Service
+    at our Transit Centers in downtown Santa Cruz and Watsonville during business
+    hours." It publishes no clock time anywhere; the hours came off a Tap2Cruz
+    passage in a different document that retrieval put in the same window.
+
+    On the 2026-09-06 nightly that case passed every gate this repository has:
+    no check failed and neither judge did. A price has `fare_facts_consistent`
+    and the GTFS-Fares cross-check behind it. An hour had nothing, and an hour
+    decides whether the rider finds an open counter.
+    """
+
+    EDGE_052 = (
+        "To apply for the Discount Photo ID Card, visit Customer Service at "
+        "METRO's Transit Centers in downtown Santa Cruz or Watsonville during "
+        "business hours (Monday-Friday, 8:00 AM - 5:00 PM). There is a $2.00 "
+        "processing fee for a new Photo ID Card [doc:mst-fares]. "
+        "Based on policies published as of 2026-06-12."
+    )
+    WHERE_TO_APPLY = (
+        "Visit Customer Service at our Transit Centers in downtown Santa Cruz "
+        "and Watsonville during business hours.\nProcessing and Replacement Fees"
+    )
+
+    def _checks(self, answer: str, doc_text: str, case_extra: dict | None = None):
+        case = {
+            "id": "edge-052",
+            "question": "How do I apply for the Discount Photo ID Card?",
+            "expected_behavior": "answer",
+            "agency_scope": "MST",
+            **(case_extra or {}),
+        }
+        return _by_name(
+            run_checks(
+                case,
+                _answered(answer),
+                DOC_IDS,
+                doc_texts={"mst-fares": doc_text},
+            )
+        )
+
+    def test_hours_the_cited_document_never_published_fail(self):
+        check = self._checks(self.EDGE_052, self.WHERE_TO_APPLY)["office_hours_in_cited_source"]
+        assert not check.passed
+        assert "8:00 am" in check.detail and "5:00 pm" in check.detail
+
+    def test_hours_the_cited_document_publishes_pass(self):
+        """The negative control. A check that fired on every stated hour would
+        make the handoff sentence unwritable, which is the opposite of what this
+        repository wants an answer to do."""
+        doc = self.WHERE_TO_APPLY + "\nCustomer Service hours: Monday-Friday, 8:00 AM - 5:00 PM."
+        assert self._checks(self.EDGE_052, doc)["office_hours_in_cited_source"].passed
+
+    @pytest.mark.parametrize(
+        "written",
+        ["8:00 AM", "8:00 a.m.", "8 a.m.", "8am", "8 AM", "8.a.m."],
+        ids=["colon-caps", "colon-dotted", "bare-dotted", "run-together", "bare-caps", "cleaner"],
+    )
+    def test_the_same_hour_written_six_ways_is_one_hour(self, written):
+        """An hour that survives a document's formatting must not be reported
+        absent because the answer punctuated it differently.
+
+        `8.a.m.` is not hypothetical: `corpus/processed/chunks.jsonl` renders
+        E-tran's "until 1 a.m." as "until 1.a.m.", the same class of cleaner
+        artifact as the "805. 963.3364" phone number already acknowledged in
+        `evals/plumbline/target.toml`. Reading the document more strictly than
+        the ingest wrote it would report the cleaner as an assistant defect.
+        """
+        answer = f"Visit Customer Service after {written} [doc:mst-fares]. As of 2026-06-12."
+        doc = "Customer Service opens at 8:00 AM."
+        assert self._checks(answer, doc)["office_hours_in_cited_source"].passed
+
+    def test_an_hour_the_rider_supplied_is_not_a_sourced_claim(self):
+        answer = "You asked about 7:30 AM service; the published policy does not "
+        answer += "say [doc:mst-fares]. As of 2026-06-12."
+        checks = self._checks(
+            answer,
+            "No hours published.",
+            {"question": "Does the 7:30 AM bus take Clipper?"},
+        )
+        assert checks["office_hours_in_cited_source"].passed
+
+    def test_a_price_is_not_read_as_an_hour(self):
+        """`$1.00 a month` must not parse as one o'clock in the morning.
+
+        Currency has its own check (`fare_amounts_in_cited_source`, #195); the
+        two must not read each other's fields. This one stays a clock-time test.
+        """
+        answer = "The pass costs $1.00 a month and $4.00 a year [doc:mst-fares]. As of 2026-06-12."
+        assert self._checks(answer, "No hours published.")["office_hours_in_cited_source"].passed
+
+    def test_the_check_is_dormant_when_no_document_text_is_available(self):
+        """Same shape as `fare_facts_consistent`: a run that cannot supply the
+        corpus falls back to previous behaviour rather than failing every case
+        against an empty source."""
+        case = {"id": "edge-052", "question": "q", "expected_behavior": "answer"}
+        assert "office_hours_in_cited_source" not in _by_name(
+            run_checks(case, _answered(self.EDGE_052), DOC_IDS)
+        )
+
+    def test_the_check_is_dormant_when_the_answer_cites_nothing_known(self):
+        case = {"id": "edge-052", "question": "q", "expected_behavior": "answer"}
+        checks = _by_name(
+            run_checks(
+                case,
+                _answered(self.EDGE_052),
+                DOC_IDS,
+                doc_texts={"some-other-doc": "8:00 AM"},
+            )
+        )
+        assert "office_hours_in_cited_source" not in checks
+
+
+class TestFareAmountsInCitedSource:
+    """Issue #195. A dollar amount the answer publishes must appear in a
+    document the answer cites."""
+
+    SCMTD_HIGHWAY_17 = (
+        "Amtrak/Highway 17 Express\n"
+        "Children and Adults (age 64 and under)\n"
+        "$7.00 Cash/1 Ride\n"
+        "$14\n"
+        "$145\n"
+        "$3.50 Cash/1 Ride\n"
+    )
+
+    def _checks(self, answer: str, doc_text: str, case_extra: dict | None = None):
+        case = {
+            "id": "ground-035",
+            "question": "How much does the Amtrak/Highway 17 Express cost?",
+            "expected_behavior": "answer",
+            **(case_extra or {}),
+        }
+        return _by_name(
+            run_checks(case, _answered(answer), DOC_IDS, doc_texts={"mst-fares": doc_text})
+        )
+
+    def test_the_ground_035_defect_fails(self):
+        """The live 2026-09-04 answer, reduced to its arithmetic: the chunker
+        dropped the discount row's pass cells, and the model filled them in by
+        halving the adult column. `$72.50` is in no corpus version."""
+        answer = (
+            "Discount Fare (adults age 65 and over): $3.50 Cash/1 Ride, "
+            "$7 Day Pass, $72.50 31-Day Pass [doc:mst-fares]. "
+            "Based on policies published as of 2026-06-12."
+        )
+        check = self._checks(answer, self.SCMTD_HIGHWAY_17)["fare_amounts_in_cited_source"]
+        assert not check.passed
+        assert check.detail == "$72.50"
+
+    def test_amounts_the_cited_document_publishes_pass(self):
+        """The negative control. A check that fired on every stated price would
+        make a fare answer unwritable."""
+        answer = (
+            "The Highway 17 Express is $7.00 for a single ride, or $145 for a "
+            "31-Day Pass [doc:mst-fares]. Based on policies published as of 2026-06-12."
+        )
+        assert self._checks(answer, self.SCMTD_HIGHWAY_17)["fare_amounts_in_cited_source"].passed
+
+    def test_a_flattened_table_cell_without_its_dollar_sign_still_counts(self):
+        """Fare tables lose the currency symbol when a cell is flattened into
+        text. Reading the document more strictly than the ingest wrote it would
+        report the cleaner as an assistant defect."""
+        answer = "The 31-Day Pass is $65.00 [doc:mst-fares]. As of 2026-06-12."
+        doc = "Local Service\nDay Pass\n6\n31-Day Pass\n65.00\n"
+        assert self._checks(answer, doc)["fare_amounts_in_cited_source"].passed
+
+    def test_a_saving_derived_from_two_published_prices_is_allowed(self):
+        """`ground-samtrans-001`'s shape: both prices are published, and the
+        difference between them is arithmetic the answer is entitled to state."""
+        answer = (
+            "An adult fare is $2.25 with cash, or $2.05 with Clipper "
+            "[doc:mst-fares]. So Clipper is cheaper — you save $0.20 per ride. "
+            "As of 2026-06-12."
+        )
+        doc = "Adult\n$2.25 cash\n$2.05 Clipper\n"
+        assert self._checks(answer, doc)["fare_amounts_in_cited_source"].passed
+
+    def test_the_exemption_is_about_comparison_not_about_arithmetic(self):
+        """The hole this check would have if the exemption were "any computed
+        figure": #195's `$72.50` *is* arithmetic on a published number. It is
+        published as a price, with no comparison beside it, so it must fail —
+        and a comparison elsewhere in a long answer must not launder it."""
+        answer = (
+            "An adult fare is $2.25 with cash, or $2.05 with Clipper, so you "
+            "save $0.20 per ride [doc:mst-fares]. The discount 31-Day Pass "
+            "costs $72.50. As of 2026-06-12."
+        )
+        doc = "Adult\n$2.25 cash\n$2.05 Clipper\n"
+        check = self._checks(answer, doc)["fare_amounts_in_cited_source"]
+        assert not check.passed
+        assert check.detail == "$72.50"
+
+    def test_an_amount_the_rider_supplied_is_not_a_sourced_claim(self):
+        answer = (
+            "You asked about a $35 pass; the published policy does not list one "
+            "[doc:mst-fares]. As of 2026-06-12."
+        )
+        checks = self._checks(
+            answer,
+            "No pass prices published.",
+            {"question": "Is the $35 monthly pass worth it for me?"},
+        )
+        assert checks["fare_amounts_in_cited_source"].passed
+
+    def test_the_check_is_dormant_when_no_document_text_is_available(self):
+        case = {"id": "ground-035", "question": "q", "expected_behavior": "answer"}
+        assert "fare_amounts_in_cited_source" not in _by_name(
+            run_checks(case, _answered("The fare is $72.50 [doc:mst-fares]."), DOC_IDS)
+        )
+
+    def test_the_check_is_dormant_when_the_answer_cites_nothing_known(self):
+        case = {"id": "ground-035", "question": "q", "expected_behavior": "answer"}
+        checks = _by_name(
+            run_checks(
+                case,
+                _answered("The fare is $72.50 [doc:mst-fares]."),
+                DOC_IDS,
+                doc_texts={"some-other-doc": "$72.50"},
+            )
+        )
+        assert "fare_amounts_in_cited_source" not in checks
+
+
+class TestMoneyAmountParsing:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("The fare is $2.50", {2.5}),
+            ("$7 Day Pass and $ 14 for two", {7.0, 14.0}),
+            ("A $1,234.56 annual pass", {1234.56}),
+            ("Route 24 leaves at 8:05", set()),
+            ("Seniors are 65 and over", set()),
+        ],
+    )
+    def test_an_answer_reads_only_marked_currency(self, text, expected):
+        assert money_amounts(text) == expected
+
+    def test_a_source_document_also_reads_a_flattened_cell(self):
+        assert money_amounts("Day Pass\n6\n31-Day\n65.00", source=True) == {65.0}
+        assert money_amounts("Day Pass\n6\n31-Day\n65.00") == set()
+
+    def test_unsourced_lists_only_what_no_cited_document_carries(self):
+        assert unsourced_fare_amounts(
+            "It is $7.00 for a ride and $72.50 for a pass",
+            ["$7.00 Cash/1 Ride\n$145"],
+        ) == ["$72.50"]
+
+
+class TestClockTimeNormalisation:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("Open 8:00 AM to 5:00 PM", {(8, 0, "a"), (5, 0, "p")}),
+            ("Open 12:00 AM", {(0, 0, "a")}),
+            ("Open 12 p.m.", {(0, 0, "p")}),
+            ("until 1.a.m. the day after", {(1, 0, "a")}),
+            ("$1.00 a month", set()),
+            ("Route 24 pm", set()),
+            ("call 916-321-BUSS", set()),
+        ],
+    )
+    def test_parsing(self, text, expected):
+        assert clock_times(text) == expected
+
+    def test_noon_and_midnight_do_not_collide(self):
+        assert clock_times("12:00 AM") != clock_times("12:00 PM")
+
+    def test_unsupported_lists_only_what_no_cited_document_carries(self):
+        assert unsupported_clock_times(
+            "Open 8:00 AM to 5:00 PM",
+            ["We open at 8 a.m."],
+        ) == ["5:00 pm"]

@@ -69,6 +69,13 @@ _CASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _GIT_REVISION = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _LEGACY_CORPUS_VERSION = re.compile(r"^[0-9a-f]{12}$")
 _SAFE_PATH_PART = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+# An agency identifier is a path segment *and* the join key onto the prose
+# corpus, and two of the corpus's eighteen agency names contain a space
+# ("AC Transit", "Marin Transit"). Only that character was added for issue #141;
+# the segment still starts and ends alphanumeric, so it cannot be "." or ".."
+# and cannot carry leading or trailing whitespace, and it still admits no path
+# separator. `assistant.gtfs._AGENCY` enforces the same shape on the write side.
+_SAFE_AGENCY_PART = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$")
 _SENSITIVE_KEY = re.compile(
     r"(?:^|[_-])(?:"
     r"api[_-]?key|secret|password|passwd|credential|authorization|cookie|"
@@ -416,9 +423,10 @@ def facts_identity(path: Path | str) -> dict[str, object]:
 
 def _safe_agency(value: object, context: str) -> str:
     agency = _trimmed_string(value, context)
-    if agency in {".", ".."} or not _SAFE_PATH_PART.fullmatch(agency):
+    if agency in {".", ".."} or not _SAFE_AGENCY_PART.fullmatch(agency):
         raise EvalAttestationError(
-            f"{context} must be one safe path segment containing letters, digits, '.', '_', or '-'"
+            f"{context} must be one safe path segment containing letters, digits, "
+            "spaces, '.', '_', or '-'"
         )
     return agency
 

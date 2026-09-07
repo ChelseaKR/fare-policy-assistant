@@ -10,6 +10,18 @@
 # so a prompt bump can never silently score the judge against a stale answer.
 # Regenerate the templates from a run with `python -m evals.calibration --emit <run_dir>`.
 # Bound to run 20260630T042120Z (system v6 / answer_user v3 / judge_groundedness v1 / judge_helpfulness v2).
+#
+# labeled_on: 2026-06-16
+#
+# That directive is the input to AIEV-20, which fails a calibration set not
+# relabeled within 30 days, so it states a date rather than letting one be
+# guessed from a file mtime that changes on every checkout. It is read from git,
+# not asserted: the sixteen verdicts and their notes were written in 62b8a2f
+# (2026-06-16, "P0: make the model-card claims real"). What happened on
+# 2026-07-05 in 7f6e9c1 was narrower — every row gained the `answer_sha256` that
+# binds it to an answer, with no note and no verdict edited — so the labels are
+# bound to the 2026-06-30 run but were authored two weeks before it. The older
+# date is the honest one to report an age from, and a re-label would replace it.
 {"case_id": "ground-001", "judge": "groundedness", "human_passed": true, "answer_sha256": "1aba062c7e39fa196a8b8b67b747cf1db7b601c6cc681d9239889d710af0bf91", "note": "MST cash single $2.00 is stated verbatim in the fare table"}
 {"case_id": "ground-006", "judge": "groundedness", "human_passed": true, "answer_sha256": "5d7681b2e931e6b253353563151b27d0d2cf4f7b5c2f853aad2573890412b430", "note": "SBMTD senior $1.25 at 65+ is in the passage"}
 {"case_id": "ground-016", "judge": "groundedness", "human_passed": true, "answer_sha256": "b2c40488dc9afd5be8e1814dc6aa25403dc9a9fbd3e47e895518ecd2d019c1ff", "note": "Salinas Transit Center outlet is listed"}

@@ -15,6 +15,7 @@ counts wrongly is worse than no guard at all.
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -109,3 +110,81 @@ def test_docs_do_not_understate_the_agency_count() -> None:
             if int(digits) != actual:
                 wrong.append(f"{name} says '{digits} agencies'")
     assert not wrong, f"{wrong}; the manifest holds {actual}"
+
+
+# ── the release pipeline the README describes ───────────────────────────────
+#
+# Added after finding the README's Release & Versioning conformance row saying
+# `release.yml` "is tag-triggered on `v*`" for the 45 days after bd083d5
+# (2026-07-23) replaced that trigger with `workflow_dispatch`. A reader
+# following the README would push a signed tag and watch nothing happen. The
+# repository has no tags and no releases, so the documented path was the only
+# evidence anyone had about how a release is cut, and it was wrong.
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+README = REPO_ROOT / "README.md"
+RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
+
+
+def _release_triggers() -> dict:
+    """The `on:` block of the release workflow, as data.
+
+    PyYAML resolves the bare key `on` to the boolean `True` (YAML 1.1), which
+    is why this looks the key up both ways rather than as the string alone. A
+    lookup that quietly found nothing would make every assertion below vacuous.
+    """
+    data = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    for key in ("on", True):
+        if key in data:
+            return data[key] or {}
+    raise AssertionError(f"{RELEASE_WORKFLOW.name} has no `on:` block")
+
+
+def test_readme_describes_the_release_workflows_actual_trigger():
+    triggers = _release_triggers()
+    push_tags = (triggers.get("push") or {}).get("tags")
+    readme = README.read_text(encoding="utf-8")
+
+    if push_tags:
+        # The affirmative phrasing, not merely the words. This README now
+        # contains "was tag-triggered ... until", which is a history note; a
+        # substring check would accept it as a live claim and let a restored
+        # tag trigger go undocumented.
+        assert "is tag-triggered on" in readme, (
+            "release.yml fires on a tag push and the README does not say so in the present tense"
+        )
+    else:
+        assert "is tag-triggered on" not in readme, (
+            "the README calls release.yml tag-triggered, but its `on:` block has "
+            f"no push.tags — it is {sorted(triggers)}. A reader following this "
+            "pushes a tag and nothing runs."
+        )
+        assert "workflow_dispatch" in readme, (
+            "release.yml is dispatch-only; the README must say how it is actually "
+            "invoked, or the pipeline is undocumented"
+        )
+    assert "workflow_dispatch" in triggers or push_tags, "release.yml must be reachable somehow"
+
+
+def test_the_version_the_release_pipeline_would_check_is_consistent():
+    """`pyproject`, `CITATION.cff` and `CHANGELOG.md` have to agree.
+
+    The workflow's build job requires the tag to equal `pyproject.toml`'s
+    version and then extracts release notes by matching a `## [<version>]`
+    heading in `CHANGELOG.md`, failing on an empty extract. If those three
+    drift, the first release anyone attempts dies at that step — and since
+    this repository has never cut one, nothing else would have caught it.
+    """
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    version = pyproject["project"]["version"]
+
+    citation = yaml.safe_load((REPO_ROOT / "CITATION.cff").read_text(encoding="utf-8"))
+    assert str(citation["version"]) == version, (
+        f"CITATION.cff declares {citation['version']!r}, pyproject {version!r}"
+    )
+
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert f"## [{version}]" in changelog, (
+        f"CHANGELOG.md has no '## [{version}]' section, so the release "
+        "workflow's notes extraction would produce an empty file and fail"
+    )

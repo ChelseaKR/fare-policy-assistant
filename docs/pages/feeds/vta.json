@@ -1,0 +1,66 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/vta.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vta-fares",
+          "vta-regional-transfers",
+          "vta-rtc-card"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "cbc07c922784",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version cbc07c922784, archived 2026-08-14T02:15:11+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: vta-fares, vta-regional-transfers, vta-rtc-card\nAgency: VTA.",
+      "date_published": "2026-08-14T02:15:11+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:vta:cbc07c922784",
+      "title": "VTA — corpus cbc07c922784 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/cbc07c922784"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "7caf9b3638ec",
+        "first_snapshot": false,
+        "removed": [
+          "vta-fares",
+          "vta-regional-transfers",
+          "vta-rtc-card"
+        ]
+      },
+      "content_text": "Corpus version 7caf9b3638ec, archived 2026-08-14T00:57:32+00:00.\nDocuments as of 2026-08-14.\n3 removed.\nRemoved: vta-fares, vta-regional-transfers, vta-rtc-card\nAgency: VTA.",
+      "date_published": "2026-08-14T00:57:32+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:vta:7caf9b3638ec",
+      "title": "VTA — corpus 7caf9b3638ec (3 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/7caf9b3638ec"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "vta-fares",
+          "vta-regional-transfers",
+          "vta-rtc-card"
+        ],
+        "as_of": "2026-08-14",
+        "changed": [],
+        "corpus_version": "491751588366",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 491751588366, archived 2026-08-14T00:50:50+00:00.\nDocuments as of 2026-08-14.\n3 added.\nAdded: vta-fares, vta-regional-transfers, vta-rtc-card\nAgency: VTA.",
+      "date_published": "2026-08-14T00:50:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:vta:491751588366",
+      "title": "VTA — corpus 491751588366 (3 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/491751588366"
+    }
+  ],
+  "title": "Fare-policy corpus changes — VTA",
+  "version": "https://jsonfeed.org/version/1.1"
+}

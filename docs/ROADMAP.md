@@ -191,7 +191,9 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
 > post-guard replay. Item 4 (dense-retrieval decision) is settled with evidence
 > (ADR 0007): a retrieval-recall ablation shows the dense hybrid is worse
 > everywhere and −11.8 points on Spanish — the case it was meant to help — so it
-> stays off, behind its flag. Item 3 (feedback) is open. Item 5 (a11y wiring)
+> stays off, behind its flag. Item 3 (feedback) is done: the endpoint, the UI
+> row, and the CloudWatch alarm predate this note, and the corpus version the
+> item names is now on the record, sourced server-side. Item 5 (a11y wiring)
 > is code-complete — GovChat-Eval's a11y suite now audits every recorded
 > transcript — with only the manual screen-reader/keyboard walkthrough left,
 > which needs a human at a real assistive-tech session, not automation.
@@ -207,10 +209,22 @@ The product surface CLAUDE.md scopes but the current build only partly covers.
    passes (guard the full text, then replay it as SSE) so perceived latency on
    the ~5s Bedrock call improves without weakening the guarantee. Done = the
    demo renders progressively; the guard still sees complete text.
-3. **Privacy-safe feedback.** No "was this helpful?" signal today. Add a
-   thumbs-up/down that logs only the verdict, the response kind, and the
-   corpus version — never the question or answer. Done = aggregate helpfulness
-   is queryable without storing any rider content.
+3. **Privacy-safe feedback.** *(Done.)* Every answered turn carries a "Was this
+   helpful?" row (`web/index.html`) posting to `/api/feedback`, which records
+   one `feedback` event holding the verdict, the response kind, the language,
+   and the corpus version the deployment is serving — never the question or
+   answer. The three client-supplied fields are checked against a closed set
+   server-side, so an unrecognized value becomes `None` rather than free text;
+   the corpus version is not read from the body at all, because `/api/ask`
+   hands the page one and echoing it back would be both forgeable and the one
+   client-controlled string on the record. No question hash either: short fare
+   questions are enumerable, so a digest is a reversible copy rather than a
+   token. `tests/test_web.py::TestFeedback` asserts the record's field set as a
+   closed set, so a later field cannot widen it quietly. Aggregate helpfulness
+   is queryable by corpus version, kind, and language through Logs Insights
+   (infra/README.md, "Reading the feedback signal"); `FeedbackDown` alarms on
+   the raw count, and the route carries its own rate limit and body-size cap
+   (ADR 0025) so one source cannot flood the log group or skew the metric.
 4. **Settle dense retrieval with an ADR.** `FPA_DENSE` is implemented but off;
    the multilingual suite (at 95%) is meant to decide whether it earns its
    place, especially for Spanish questions over English-only docs. Run the

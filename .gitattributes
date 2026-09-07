@@ -3,6 +3,15 @@
 corpus/raw/*.html binary
 corpus/raw/*.pdf binary
 corpus/raw/*.meta.yaml -text
+# Every file in a GTFS snapshot is byte-addressed, not just the ZIP. The
+# receipt records each extracted member's exact SHA-256 and byte count, and
+# `_validate_feed_snapshot` re-reads the member and compares it to the bytes
+# inside feed.zip. Nine of the thirteen captured feeds ship CRLF fare tables,
+# so with only the feed.zip line here, `core.autocrlf=input` silently rewrote
+# CCCTA's fare_attributes.txt from 106 bytes to 104 on `git add` and every
+# fresh clone would then fail the check with "retained GTFS file differs from
+# the exact ZIP". The whole tree is evidence; none of it is text to normalize.
+corpus/raw/gtfs/snapshots/** -text
 corpus/raw/gtfs/snapshots/**/feed.zip binary
 corpus/snapshots/** -text
 corpus/snapshots/**/raw/*.html binary

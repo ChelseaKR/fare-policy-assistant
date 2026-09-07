@@ -208,13 +208,33 @@ cases:
     rationale: "Spanish mirror of edge-045 (RR4): explain the 65+ criterion in Spanish, never rule on the rider, and route to the next step (tarjeta de cortesía o verificación con Cal-ITP). Parity on the positive verification handoff. Mirror repaired 2026-08-05: this pointed at edge-034, the Yolobus case in the same RR4 family, so the pair compared an MST answer against a Yolobus answer and measured corpus difference as if it were language difference. edge-045 is the MST member of that family and asks this exact question in English."
 
   - id: ml-023
-    question: "¿Cuánto cuesta un viaje sencillo en Santa Cruz METRO?"
+    question: "¿Cuánto cuesta un viaje sencillo en el servicio local de Santa Cruz METRO si pago en efectivo?"
     agency_scope: SCMTD
     language: es
     expected_behavior: answer
     required_facts: ["re:\\$\\s?2[.,]00"]
     mirror_of: ground-033
-    rationale: "Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are <html lang=\"en\"> and carry no hreflang alternate), so this mirrors ground-033 against English-only sources. The answer must be in Spanish and the fare must still be $2.00."
+    rationale: >
+      Cross-lingual: scmetro.org publishes no Spanish fares page (its pages are
+      <html lang="en"> and carry no hreflang alternate), so this mirrors
+      ground-033 against English-only sources. The answer must be in Spanish and
+      the fare must still be $2.00.
+
+      Mirror repaired 2026-09-04, the same defect class as ml-008/ml-011/ml-022
+      on 2026-08-05 (see `mirror_problems`): this asked a strictly shorter
+      question than its mirror. ground-033 asks about "local service" and "if I
+      pay cash"; this asked neither. Both clauses are load-bearing on retrieval,
+      because the chunk that carries the $2.00 fare is scmtd-fares-passes#0,
+      whose section heading is "CASH FARES" and whose first line is "Local
+      Service in Santa Cruz County". Measured on the committed corpus, the
+      English mirror retrieves that chunk at rank 3 and the short Spanish
+      question did not retrieve it at all — so the pair was scoring a missing
+      clause as if it were a missing language capability, and the Spanish case
+      was unpassable for a reason that had nothing to do with Spanish. The
+      question now says what its mirror says; no required fact was dropped and
+      the answer must still be in Spanish. `mirror_problems` counts facts but
+      cannot read a question, so this class of asymmetry is caught by
+      `evals/spanish_retrieval_parity.py` from here on.
 
   # ── SolTrans (added 2026-08-12) ────────────────────────────────────────────
   # SolTrans publishes no Spanish pages — its sitemap enumerates the whole site

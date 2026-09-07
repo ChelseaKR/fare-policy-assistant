@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — WestCAT</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat</id>
+  <updated>2026-08-14T02:06:30+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/westcat.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>WestCAT — corpus 8b119819d9c8 (4 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat:8b119819d9c8</id>
+    <updated>2026-08-14T02:06:30+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/8b119819d9c8"/>
+    <content type="text">Corpus version 8b119819d9c8, archived 2026-08-14T02:06:30+00:00.
+Documents as of 2026-08-14.
+4 added.
+Added: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers
+Agency: WestCAT.</content>
+  </entry>
+  <entry>
+    <title>WestCAT — corpus 491751588366 (4 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat:491751588366</id>
+    <updated>2026-08-14T00:50:50+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/491751588366"/>
+    <content type="text">Corpus version 491751588366, archived 2026-08-14T00:50:50+00:00.
+Documents as of 2026-08-14.
+4 removed.
+Removed: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers
+Agency: WestCAT.</content>
+  </entry>
+  <entry>
+    <title>WestCAT — corpus 69aab4ac6576 (4 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:westcat:69aab4ac6576</id>
+    <updated>2026-08-14T00:45:22+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/69aab4ac6576"/>
+    <content type="text">Corpus version 69aab4ac6576, archived 2026-08-14T00:45:22+00:00.
+Documents as of 2026-08-14.
+4 added.
+Added: westcat-buying, westcat-clipper, westcat-fares-all, westcat-transfers
+Agency: WestCAT.</content>
+  </entry>
+</feed>

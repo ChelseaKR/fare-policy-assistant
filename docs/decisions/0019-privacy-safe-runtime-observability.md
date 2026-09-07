@@ -38,7 +38,7 @@ Application records use fixed messages and structured `LogRecord` extras:
 | `genai_call` | `INFO` on a recorded completion, `ERROR` on failure | Canonical `gen_ai.*` model, token, and duration fields plus filter-safe aliases and application-estimated USD |
 | `answer_request` | `INFO` | Terminal result kind, bounded language/length/turn counts, cache disposition, request duration, model-called state, and status |
 | `handler_error` | `ERROR` | Route class and exception class only |
-| `feedback` | `INFO` | Allowlisted verdict, result kind, and language only |
+| `feedback` | `INFO` | Allowlisted verdict, result kind, and language, plus the corpus version the deployment is serving |
 
 `context.aws_request_id` is the sole correlation source. It is serialized as
 `runtime_request_id` because Lambda's Python JSON formatter reserves and omits
@@ -113,6 +113,17 @@ versions.
 - **Log prompts or responses behind a debug flag.** A forgotten flag would
   turn CloudWatch into a rider-content store and contradict the service's
   public privacy promise.
+- **Take the feedback record's corpus version from the request body.** The
+  `/api/ask` response already hands the page a `corpus_version`, so echoing it
+  back is the shortest path. It would also be the only client-controlled
+  string on a record whose value is that it has none, and it would let a caller
+  attribute verdicts to a corpus the deployment never served. The handler reads
+  its own serving version instead, and records `None` if it cannot.
+- **Record a hash of the question alongside the verdict.** It would group
+  verdicts by question without appearing to store one. Fare questions are short
+  and formulaic, so the space is enumerable and the digest is a reversible copy
+  of the question rather than a de-identified token. Grouping by corpus version
+  and result kind answers the same operational question without the liability.
 - **Use client request IDs, IPs, or user agents for correlation.** They add
   spoofable or identifying signals and are unnecessary for one Lambda
   invocation.

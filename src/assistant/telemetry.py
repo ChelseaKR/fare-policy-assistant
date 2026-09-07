@@ -110,8 +110,22 @@ def log_answer_request(
     )
 
 
-def log_feedback(*, verdict: str, kind: str | None, language: str | None) -> None:
-    """Record a bounded feedback classification, never free-form client fields."""
+def log_feedback(
+    *,
+    verdict: str,
+    kind: str | None,
+    language: str | None,
+    corpus_version: str | None,
+) -> None:
+    """Record a bounded feedback classification, never free-form client fields.
+
+    ``corpus_version`` is the corpus the deployment is serving, read by the
+    handler from its own state. It is never accepted from the request body:
+    the verdict is worth having only if it can be attributed to the policy
+    text the rider actually saw, and a client-supplied version would be both
+    forgeable and a free-text field on a record whose whole point is that it
+    has none.
+    """
     _emit(
         logging.INFO,
         "feedback",
@@ -119,6 +133,7 @@ def log_feedback(*, verdict: str, kind: str | None, language: str | None) -> Non
             "verdict": verdict,
             "kind": kind,
             "language": language,
+            "corpus_version": corpus_version,
         },
     )
 

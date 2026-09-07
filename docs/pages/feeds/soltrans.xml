@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — SolTrans</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:soltrans</id>
+  <updated>2026-08-13T04:01:01+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/soltrans.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>SolTrans — corpus 5e6a24ef0702 (4 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:soltrans:5e6a24ef0702</id>
+    <updated>2026-08-13T04:01:01+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5e6a24ef0702"/>
+    <content type="text">Corpus version 5e6a24ef0702, archived 2026-08-13T04:01:01+00:00.
+Documents as of 2026-08-13.
+4 added.
+Added: soltrans-clipper-card, soltrans-fare-table, soltrans-paperless-fares, soltrans-ways-to-pay
+Agency: SolTrans.</content>
+  </entry>
+  <entry>
+    <title>SolTrans — corpus 63d6718126f1 (4 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:soltrans:63d6718126f1</id>
+    <updated>2026-08-13T03:18:50+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/63d6718126f1"/>
+    <content type="text">Corpus version 63d6718126f1, archived 2026-08-13T03:18:50+00:00.
+Documents as of 2026-08-13.
+4 removed.
+Removed: soltrans-clipper-card, soltrans-fare-table, soltrans-paperless-fares, soltrans-ways-to-pay
+Agency: SolTrans.</content>
+  </entry>
+  <entry>
+    <title>SolTrans — corpus a68e77ff4673 (4 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:soltrans:a68e77ff4673</id>
+    <updated>2026-08-13T02:46:50+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/a68e77ff4673"/>
+    <content type="text">Corpus version a68e77ff4673, archived 2026-08-13T02:46:50+00:00.
+Documents as of 2026-08-13.
+4 added.
+Added: soltrans-clipper-card, soltrans-fare-table, soltrans-paperless-fares, soltrans-ways-to-pay
+Agency: SolTrans.</content>
+  </entry>
+</feed>

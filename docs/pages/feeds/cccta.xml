@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — CCCTA</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta</id>
+  <updated>2026-08-14T01:56:42+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/cccta.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>CCCTA — corpus d113659adda8 (5 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta:d113659adda8</id>
+    <updated>2026-08-14T01:56:42+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d113659adda8"/>
+    <content type="text">Corpus version d113659adda8, archived 2026-08-14T01:56:42+00:00.
+Documents as of 2026-08-14.
+5 added.
+Added: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers
+Agency: CCCTA.</content>
+  </entry>
+  <entry>
+    <title>CCCTA — corpus 47bc4ec2e419 (5 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta:47bc4ec2e419</id>
+    <updated>2026-08-14T00:26:06+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/47bc4ec2e419"/>
+    <content type="text">Corpus version 47bc4ec2e419, archived 2026-08-14T00:26:06+00:00.
+Documents as of 2026-08-14.
+5 removed.
+Removed: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers
+Agency: CCCTA.</content>
+  </entry>
+  <entry>
+    <title>CCCTA — corpus 60033300dc49 (5 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:cccta:60033300dc49</id>
+    <updated>2026-08-14T00:24:38+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/60033300dc49"/>
+    <content type="text">Corpus version 60033300dc49, archived 2026-08-14T00:24:38+00:00.
+Documents as of 2026-08-14.
+5 added.
+Added: cccta-clipper-card, cccta-fare-types-prices, cccta-link-fares, cccta-rtc-discount-card, cccta-transfers
+Agency: CCCTA.</content>
+  </entry>
+</feed>

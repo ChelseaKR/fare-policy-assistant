@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — VTA</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:vta</id>
+  <updated>2026-08-14T02:15:11+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/vta.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>VTA — corpus cbc07c922784 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:vta:cbc07c922784</id>
+    <updated>2026-08-14T02:15:11+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/cbc07c922784"/>
+    <content type="text">Corpus version cbc07c922784, archived 2026-08-14T02:15:11+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: vta-fares, vta-regional-transfers, vta-rtc-card
+Agency: VTA.</content>
+  </entry>
+  <entry>
+    <title>VTA — corpus 7caf9b3638ec (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:vta:7caf9b3638ec</id>
+    <updated>2026-08-14T00:57:32+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/7caf9b3638ec"/>
+    <content type="text">Corpus version 7caf9b3638ec, archived 2026-08-14T00:57:32+00:00.
+Documents as of 2026-08-14.
+3 removed.
+Removed: vta-fares, vta-regional-transfers, vta-rtc-card
+Agency: VTA.</content>
+  </entry>
+  <entry>
+    <title>VTA — corpus 491751588366 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:vta:491751588366</id>
+    <updated>2026-08-14T00:50:50+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/491751588366"/>
+    <content type="text">Corpus version 491751588366, archived 2026-08-14T00:50:50+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: vta-fares, vta-regional-transfers, vta-rtc-card
+Agency: VTA.</content>
+  </entry>
+</feed>

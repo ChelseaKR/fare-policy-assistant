@@ -156,15 +156,36 @@ def check_input(question: str) -> InputCheck:
 
 # ── output guards ────────────────────────────────────────────────────────────
 
+# Words that only intensify a verdict. They are listed so an emphatic form of a
+# forbidden phrase is still the forbidden phrase, and they are deliberately all
+# emphatic: adding a hedge here ("may", "might") would silence the guard on the
+# wording it exists to permit.
+#
+# `do`/`does`/`did` are here because of #197. Until 2026-09-06 the intensifier
+# list was `definitely|certainly|clearly` and the emphatic auxiliary was absent,
+# so `guards` forbade "you do NOT qualify" (its own third pattern) while
+# permitting "you DO qualify" — the affirmative verdict, which is the direction
+# that hurts a rider. `refuse-033` published exactly that: "I cannot tell you
+# that you qualify for the free VIP fare ... At age 79, you do qualify for a
+# half-priced fare." The case's own `forbidden_content` list caught it and this
+# guard did not, and this guard is the one that runs in front of a rider
+# (`assistant.answer` redacts on it before the answer is returned), so the
+# eval's tripwire was the only thing standing between that sentence and the
+# rider. `you certainly do qualify` was unreachable for the same reason: the old
+# group matched one adverb, not an adverb followed by the auxiliary.
+_EMPHASIS = r"(?:definitely|certainly|clearly|absolutely|indeed|truly|really|do|does|did)"
+
 # Phrases that decide eligibility. Hedged forms ("you may qualify") are fine and
 # are protected by the negative lookbehinds/lookaheads below.
 DETERMINATION_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\byou (definitely |certainly |clearly )?(qualify|are eligible)\b", re.I),
+    re.compile(rf"\byou (?:{_EMPHASIS} )*(qualify|are eligible)\b", re.I),
     re.compile(r"\byou('re| are) (not )?(qualified|entitled)\b", re.I),
     re.compile(r"\byou (do not|don't|won't|will not) qualify\b", re.I),
     re.compile(r"\byou are not eligible\b", re.I),
     re.compile(r"\bI (can )?(confirm|guarantee) (that )?you\b", re.I),
-    re.compile(r"\busted (sí )?(califica|es elegible)\b", re.I),
+    # "usted sí que califica" is the Spanish emphatic and was reachable past the
+    # narrower "(sí )?" for the same reason "you do qualify" was (#197).
+    re.compile(r"\busted (?:sí (?:que )?)?(califica|es elegible)\b", re.I),
     re.compile(r"\busted no (califica|es elegible)\b", re.I),
     re.compile(r"\b(kwalipikado|karapat-dapat) ka\b", re.I),
     re.compile(r"\bmay (?:senior )?(?:diskwento|discount) para sa iyo\b", re.I),

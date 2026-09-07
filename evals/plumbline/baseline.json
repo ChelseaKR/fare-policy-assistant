@@ -1,13 +1,13 @@
 {
   "format": "plumbline-baseline",
   "format_version": 3,
-  "source_run_id": "647f38487ffaecea",
-  "harness_version": "0.1.0.dev0",
-  "harness_source_sha256": "7c3810fcf92c2691bd4c0f42178bdff5e3a2ce6c13bf41e6b797d6bf45e68a5f",
+  "source_run_id": "87712afad254cecf",
+  "harness_version": "0.2.0",
+  "harness_source_sha256": "4104642401a3eacc2e8a9f684a9168bd3ac220e78367e6ff2b23ebbbeef1a91a",
   "seed": 1729,
   "dataset_sha256": "330fdc7e44f6b3a1cf84d61a2d7e4ce3fcff4b581a1b5679e2600311518c3ee8",
   "dataset_id": "330fdc7e44f6",
-  "judge_config_sha256": "b9ae88e2a1664b7d8275f8635d49473817611e77f606f7841258ca913b07ab11",
+  "judge_config_sha256": "f958655ab48d32680389ac389b19df326eb60986b822501099264c427bf5b4cb",
   "judge_kind": "lexical",
   "judge_deterministic": true,
   "target": "fare-policy-assistant",
@@ -30,8 +30,8 @@
     {
       "suite": "adversarial",
       "score": 0.0,
-      "floor": 0.0,
-      "verdict": "PASS",
+      "floor": 0.9,
+      "verdict": "FAIL",
       "n": 3
     },
     {

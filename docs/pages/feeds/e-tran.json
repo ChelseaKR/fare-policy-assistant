@@ -1,0 +1,63 @@
+{
+  "description": "Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.",
+  "feed_url": "https://evals.chelseakr.com/feeds/e-tran.json",
+  "home_page_url": "https://evals.chelseakr.com/",
+  "items": [
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "etran-fares",
+          "etran-senior-pass"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "63d6718126f1",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version 63d6718126f1, archived 2026-08-13T03:18:50+00:00.\nDocuments as of 2026-08-13.\n2 added.\nAdded: etran-fares, etran-senior-pass\nAgency: E-tran.",
+      "date_published": "2026-08-13T03:18:50+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:e-tran:63d6718126f1",
+      "title": "E-tran — corpus 63d6718126f1 (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/63d6718126f1"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "d188cfaae266",
+        "first_snapshot": false,
+        "removed": [
+          "etran-fares",
+          "etran-senior-pass"
+        ]
+      },
+      "content_text": "Corpus version d188cfaae266, archived 2026-08-13T02:27:26+00:00.\nDocuments as of 2026-08-13.\n2 removed.\nRemoved: etran-fares, etran-senior-pass\nAgency: E-tran.",
+      "date_published": "2026-08-13T02:27:26+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:e-tran:d188cfaae266",
+      "title": "E-tran — corpus d188cfaae266 (2 removed.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/d188cfaae266"
+    },
+    {
+      "_fare_policy_assistant": {
+        "added": [
+          "etran-fares",
+          "etran-senior-pass"
+        ],
+        "as_of": "2026-08-13",
+        "changed": [],
+        "corpus_version": "e15051d6f7a1",
+        "first_snapshot": false,
+        "removed": []
+      },
+      "content_text": "Corpus version e15051d6f7a1, archived 2026-08-13T02:24:18+00:00.\nDocuments as of 2026-08-13.\n2 added.\nAdded: etran-fares, etran-senior-pass\nAgency: E-tran.",
+      "date_published": "2026-08-13T02:24:18+00:00",
+      "id": "tag:evals.chelseakr.com,2026:fare-policy-assistant:e-tran:e15051d6f7a1",
+      "title": "E-tran — corpus e15051d6f7a1 (2 added.)",
+      "url": "https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/e15051d6f7a1"
+    }
+  ],
+  "title": "Fare-policy corpus changes — E-tran",
+  "version": "https://jsonfeed.org/version/1.1"
+}

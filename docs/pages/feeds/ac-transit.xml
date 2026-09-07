@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fare-policy corpus changes — AC Transit</title>
+  <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit</id>
+  <updated>2026-08-14T02:01:41+00:00</updated>
+  <link rel="self" href="https://evals.chelseakr.com/feeds/ac-transit.xml"/>
+  <link rel="alternate" href="https://evals.chelseakr.com/"/>
+  <author><name>fare-policy-assistant</name></author>
+  <subtitle>Document-level changes to the published fare pages this project snapshots. Not an interpretation of the policy change.</subtitle>
+  <entry>
+    <title>AC Transit — corpus 5db0d6a4bfbd (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit:5db0d6a4bfbd</id>
+    <updated>2026-08-14T02:01:41+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/5db0d6a4bfbd"/>
+    <content type="text">Corpus version 5db0d6a4bfbd, archived 2026-08-14T02:01:41+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: actransit-discounts, actransit-fares, actransit-fares-es
+Agency: AC Transit.</content>
+  </entry>
+  <entry>
+    <title>AC Transit — corpus 21251137e67b (3 removed.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit:21251137e67b</id>
+    <updated>2026-08-14T00:44:34+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/21251137e67b"/>
+    <content type="text">Corpus version 21251137e67b, archived 2026-08-14T00:44:34+00:00.
+Documents as of 2026-08-14.
+3 removed.
+Removed: actransit-discounts, actransit-fares, actransit-fares-es
+Agency: AC Transit.</content>
+  </entry>
+  <entry>
+    <title>AC Transit — corpus 02c3bb15a506 (3 added.)</title>
+    <id>tag:evals.chelseakr.com,2026:fare-policy-assistant:ac-transit:02c3bb15a506</id>
+    <updated>2026-08-14T00:34:38+00:00</updated>
+    <link rel="alternate" href="https://github.com/ChelseaKR/fare-policy-assistant/tree/main/corpus/versions/02c3bb15a506"/>
+    <content type="text">Corpus version 02c3bb15a506, archived 2026-08-14T00:34:38+00:00.
+Documents as of 2026-08-14.
+3 added.
+Added: actransit-discounts, actransit-fares, actransit-fares-es
+Agency: AC Transit.</content>
+  </entry>
+</feed>
