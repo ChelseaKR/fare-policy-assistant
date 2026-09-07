@@ -116,6 +116,17 @@ jobs:
           title: "Corpus refresh: published fare pages changed"
           body-path: /tmp/pr-body.md
           labels: corpus, automated
+          # Each line is handed to `git add --` as one argument, with no shell
+          # in between. Quote characters written here therefore become part of
+          # the pathspec: from 2026-07-13 to 2026-09-07 the exclude below was
+          # written as `':!corpus/raw/fetch-failures.json'` and git answered
+          # `fatal: pathspec '':!corpus/raw/fetch-failures.json'' did not match
+          # any files`, so nothing was staged, the commit failed, and the action
+          # aborted with an empty "Unexpected error". Every run of this workflow
+          # in that window failed for that one reason and no refresh PR has ever
+          # opened. tests/test_workflow_safety.py now runs these pathspecs
+          # against a real `git add` rather than reading them as strings.
+          # The exclude is belt-and-braces: .gitignore already lists the file.
           add-paths: |
             corpus/
-            ':!corpus/raw/fetch-failures.json'
+            :!corpus/raw/fetch-failures.json
