@@ -10,6 +10,8 @@ flow* is asserted separately in test_guards.py; this file asserts the *text*.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from assistant.i18n import (
@@ -152,3 +154,222 @@ def test_the_committed_template_is_not_empty():
     from tools import check_catalog_parity as gate
 
     assert len(gate._ids(gate._load(gate.POT, None))) >= 6
+
+
+# ── the identity-translation check ───────────────────────────────────────────
+#
+# Key parity, completeness and placeholder parity are all satisfied by a Spanish
+# catalog that is verbatim English: its keys match, its msgstrs are non-empty,
+# and its placeholders are trivially identical. Until 2026-09-07 nothing in
+# `make i18n` looked at whether any translating had happened.
+
+
+def _identity_fixture(tmp_path, catalogs: dict[str, dict[str, str]], exemptions=None):
+    """Write a template plus one PO per locale, and point the gate at them.
+
+    ``catalogs`` maps locale -> {msgid: msgstr}. The template is built from the
+    first locale's msgids, so key parity holds and the identity rule is the only
+    thing under test.
+    """
+    from babel.messages.catalog import Catalog
+    from babel.messages.pofile import write_po
+
+    from tools import check_catalog_parity as gate
+
+    locales = tmp_path / "locales"
+    locales.mkdir(parents=True, exist_ok=True)
+
+    template = Catalog()
+    for msgid in next(iter(catalogs.values())):
+        template.add(msgid, string="")
+    with (locales / "messages.pot").open("wb") as fh:
+        write_po(fh, template)
+
+    for name, entries in catalogs.items():
+        catalog = Catalog(locale=name)
+        for msgid, msgstr in entries.items():
+            catalog.add(msgid, string=msgstr)
+        (locales / name / "LC_MESSAGES").mkdir(parents=True, exist_ok=True)
+        with (locales / name / "LC_MESSAGES" / "messages.po").open("wb") as fh:
+            write_po(fh, catalog)
+
+    exemption_path = locales / "identical_by_design.json"
+    if exemptions is not None:
+        exemption_path.write_text(json.dumps({"identical_by_design": exemptions}), encoding="utf-8")
+    return gate, locales, exemption_path
+
+
+def _run_gate(monkeypatch, gate, locales, exemption_path, names):
+    monkeypatch.setattr(gate, "LOCALES", locales)
+    monkeypatch.setattr(gate, "POT", locales / "messages.pot")
+    monkeypatch.setattr(gate, "EXEMPTIONS", exemption_path)
+    monkeypatch.setattr(gate, "CATALOGS", names)
+    return gate.main()
+
+
+SENTENCE = "Please check the agency's website for current information."
+SPANISH = "Consulte el sitio web de la agencia para obtener información actualizada."
+
+
+def test_a_verbatim_english_spanish_msgstr_fails(tmp_path, monkeypatch, capsys):
+    """The negative control: a real untranslated sentence must be caught.
+
+    Every other check in this gate passes on this catalog.
+    """
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {SENTENCE: SENTENCE}, "es": {SENTENCE: SENTENCE}},
+        exemptions=[],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 1
+    err = capsys.readouterr().err
+    assert "byte-identical to the English msgid" in err
+
+
+def test_a_translated_spanish_msgstr_passes(tmp_path, monkeypatch):
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {SENTENCE: SENTENCE}, "es": {SENTENCE: SPANISH}},
+        exemptions=[],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 0
+
+
+@pytest.mark.parametrize(
+    "msgid",
+    [
+        "CSV",
+        "OK",
+        "PDF",
+        "GTFS",
+        "TK-12",
+        "https://example.org/fares",
+        "{where}",
+        "2026",
+        "$2.50",
+    ],
+)
+def test_the_gate_does_not_fire_on_a_msgid_with_nothing_to_translate(tmp_path, monkeypatch, msgid):
+    """The positive control: these are legitimately identical in every language.
+
+    A blanket must-differ rule fails on all of them, and a gate with false
+    positives is a gate that gets switched off.
+    """
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {msgid: msgid}, "es": {msgid: msgid}},
+        exemptions=[],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 0
+
+
+@pytest.mark.parametrize("msgid", ["Help", "Fares", "Senior", "Clipper", "Ask a question"])
+def test_an_ordinary_word_is_not_exempt_just_for_being_short(msgid):
+    """The mechanical exemptions are about a msgid having no prose in it, not
+    about a word happening to be spelled the same. A product name (`Clipper`)
+    is a real judgement call and belongs in the reasoned list, not in a regex.
+    """
+    from tools import check_catalog_parity as gate
+
+    assert gate.untranslatable_reason(msgid) is None
+
+
+def test_an_exemption_with_a_reason_allows_the_identical_row(tmp_path, monkeypatch):
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {"Clipper": "Clipper"}, "es": {"Clipper": "Clipper"}},
+        exemptions=[
+            {
+                "locale": "es",
+                "msgid": "Clipper",
+                "reason": "the Bay Area regional fare card's product name, unchanged in Spanish",
+            }
+        ],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 0
+
+
+def test_an_exemption_without_a_reason_is_refused(tmp_path, monkeypatch, capsys):
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {"Clipper": "Clipper"}, "es": {"Clipper": "Clipper"}},
+        exemptions=[{"locale": "es", "msgid": "Clipper", "reason": "   "}],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 1
+    assert "no reason" in capsys.readouterr().err
+
+
+def test_an_exemption_that_has_stopped_applying_must_be_deleted(tmp_path, monkeypatch, capsys):
+    """Otherwise the list only grows, and stops describing the catalogs."""
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {"Clipper": "Clipper"}, "es": {"Clipper": "la tarjeta Clipper"}},
+        exemptions=[{"locale": "es", "msgid": "Clipper", "reason": "a product name"}],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 1
+    assert "which is now translated" in capsys.readouterr().err
+
+
+def test_an_exemption_for_a_msgid_the_template_dropped_must_be_deleted(
+    tmp_path, monkeypatch, capsys
+):
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {SENTENCE: SENTENCE}, "es": {SENTENCE: SPANISH}},
+        exemptions=[{"locale": "es", "msgid": "Clipper", "reason": "a product name"}],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 1
+    assert "no longer declares" in capsys.readouterr().err
+
+
+def test_an_english_msgstr_that_drifts_from_its_msgid_fails(tmp_path, monkeypatch, capsys):
+    """`en` is the source language: its catalog is an identity map. A drifting
+    English msgstr means the rendered English and the extracted source have
+    quietly parted company."""
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {SENTENCE: SENTENCE + " Thanks!"}, "es": {SENTENCE: SPANISH}},
+        exemptions=[],
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 1
+    assert "differs from its msgid" in capsys.readouterr().err
+
+
+def test_the_identity_check_refuses_to_run_against_no_target_locale(tmp_path, monkeypatch, capsys):
+    """A gate that cannot fail. With `en` the only catalog, the differ-from-
+    source rule iterates over nothing and reports that identity holds."""
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path, {"en": {SENTENCE: SENTENCE}}, exemptions=[]
+    )
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en",)) == 1
+    assert "ran against nothing" in capsys.readouterr().err
+
+
+def test_a_malformed_exemption_file_fails_rather_than_reading_as_empty(
+    tmp_path, monkeypatch, capsys
+):
+    """An exemption file that fails open turns the check it guards into one that
+    cannot fail."""
+    gate, locales, exemptions = _identity_fixture(
+        tmp_path,
+        {"en": {SENTENCE: SENTENCE}, "es": {SENTENCE: SPANISH}},
+        exemptions=[],
+    )
+    exemptions.write_text("{not json", encoding="utf-8")
+    assert _run_gate(monkeypatch, gate, locales, exemptions, ("en", "es")) == 1
+    assert "could not be read as JSON" in capsys.readouterr().err
+
+
+def test_the_committed_catalogs_carry_no_untranslated_string():
+    """Measured, not assumed: `es` and `tl` translate all seven msgids today,
+    and the reasoned exemption list is empty."""
+    from tools import check_catalog_parity as gate
+
+    catalogs = {
+        name: gate._load(gate.LOCALES / name / "LC_MESSAGES" / "messages.po", name)
+        for name in gate.CATALOGS
+    }
+    exemptions, errors = gate._load_exemptions(gate.EXEMPTIONS)
+    assert errors == []
+    assert exemptions == {}
+    assert gate._identity_errors(catalogs, exemptions) == []
