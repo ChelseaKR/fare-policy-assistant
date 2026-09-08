@@ -490,10 +490,23 @@ def run_checks(
     # phrase_present) so an answer that correctly *denies* or quotes-to-reject a
     # forbidden claim is not miscounted as asserting it (class A of
     # docs/audits/eval-remediation-2026-07-11.md).
-    forbidden = [
-        phrase for phrase in case.get("forbidden_content", []) if phrase_asserted(phrase, answer)
-    ]
-    out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
+    #
+    # Emitted only for a case that declares `forbidden_content`, which is the
+    # convention `required_facts_present` below already follows. Until
+    # 2026-09-08 this check was appended unconditionally, and `not []` is True,
+    # so every case declaring no forbidden content carried a recorded pass over
+    # a list nothing had read. Measured 2026-09-08: 327 of the 385 cases a run
+    # assembles (307 of the 355 `cases:` blocks committed under evals/suites,
+    # before the 15 sensitivity pairs flatten into 30 variants) were that pass.
+    # A check that examines nothing is omitted, so its absence from a case's
+    # check list is the legible record that there was nothing to examine. The
+    # counts above are an observation with a date on it; the property is pinned
+    # by tests/test_check_emission_census.py, which re-derives it from the
+    # committed suites on every run.
+    declared_forbidden = case.get("forbidden_content") or []
+    if declared_forbidden:
+        forbidden = [phrase for phrase in declared_forbidden if phrase_asserted(phrase, answer)]
+        out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
 
     # 3. Response language matches the question language.
     expected_lang = case.get("language", "en")
