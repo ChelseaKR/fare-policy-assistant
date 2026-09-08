@@ -30,6 +30,7 @@ from bs4 import BeautifulSoup
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "pages.yml"
 _NIGHTLY_TEMPLATE = _REPO_ROOT / "docs" / "pages" / "nightly-index.html"
+_FEEDS = _REPO_ROOT / "docs" / "pages" / "feeds"
 _NODE = shutil.which("node")
 
 #: The exact set the render step (extracted below) knows how to fill. Kept as
@@ -52,6 +53,7 @@ _EXPECTED_PLACEHOLDERS = {
     "EXPIRES_AT",
     "SUITE_ROWS",
     "FRESHNESS_SCRIPT",
+    "FEED_LINKS",
 }
 
 
@@ -213,17 +215,23 @@ def _run_render_step(
     conclusion: str,
     evals_md: str,
     run_url: str = "https://github.com/ChelseaKR/fare-policy-assistant/actions/runs/1",
+    feeds: tuple[str, ...] = ("all.xml", "all.json", "yolobus.xml", "yolobus.json"),
 ) -> subprocess.CompletedProcess[str]:
     (tmp_path / "nightly-report" / "docs").mkdir(parents=True)
     (tmp_path / "nightly-report" / "EVALS.md").write_text(evals_md, encoding="utf-8")
     (tmp_path / "nightly-report" / "docs" / "eval-report.html").write_text(
         "<html><body>sanitized report</body></html>", encoding="utf-8"
     )
-    (tmp_path / "source" / "docs" / "pages").mkdir(parents=True)
+    (tmp_path / "source" / "docs" / "pages").mkdir(parents=True, exist_ok=True)
     shutil.copy(_NIGHTLY_TEMPLATE, tmp_path / "source" / "docs" / "pages" / "nightly-index.html")
     (tmp_path / "source" / "docs" / "pages" / "CNAME").write_text(
         "evals.chelseakr.com\n", encoding="ascii"
     )
+    if feeds:
+        feeds_dir = tmp_path / "source" / "docs" / "pages" / "feeds"
+        feeds_dir.mkdir()
+        for name in feeds:
+            shutil.copy(_FEEDS / name, feeds_dir / name)
     script = tmp_path / "render.sh"
     script.write_text(_extract_render_step(), encoding="utf-8")
     env = dict(os.environ, RUN_CONCLUSION=conclusion, RUN_URL=run_url)
@@ -272,6 +280,68 @@ def test_render_step_publishes_a_failing_run_labeled_as_failing(tmp_path: Path) 
 
     report = (tmp_path / "_site" / "report.html").read_text(encoding="utf-8")
     assert "sanitized report" in report
+
+
+def test_render_step_serves_the_feeds_and_advertises_only_what_it_serves(
+    tmp_path: Path,
+) -> None:
+    """The second publication path had the same hole as the first.
+
+    Every file `assistant.feeds` writes states its own address as
+    `evals.chelseakr.com/feeds/<name>`; neither this job nor the dispatch
+    renderer copied one into `_site`, so all 38 of those addresses answered 404.
+    """
+    completed = _run_render_step(tmp_path, conclusion="success", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+
+    served = tmp_path / "_site" / "feeds"
+    assert sorted(path.name for path in served.iterdir()) == [
+        "all.json",
+        "all.xml",
+        "yolobus.json",
+        "yolobus.xml",
+    ]
+    for path in served.iterdir():
+        address = f"https://evals.chelseakr.com/feeds/{path.name}"
+        assert address in path.read_text(encoding="utf-8"), path.name
+
+    page = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    advertised = [
+        str(link["href"])
+        for link in BeautifulSoup(page, "html.parser").find_all("link", rel="alternate")
+    ]
+    assert advertised == [
+        "https://evals.chelseakr.com/feeds/all.xml",
+        "https://evals.chelseakr.com/feeds/all.json",
+    ]
+
+
+def test_render_step_advertises_no_feed_when_it_publishes_none(tmp_path: Path) -> None:
+    """The link is tied to the publication, not written into the template."""
+    completed = _run_render_step(
+        tmp_path, conclusion="success", evals_md=_fixture_evals_md(), feeds=()
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert not (tmp_path / "_site" / "feeds").exists()
+    page = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    assert "{{" not in page
+    assert BeautifulSoup(page, "html.parser").find("link", rel="alternate") is None
+
+
+def test_render_step_refuses_a_feeds_directory_holding_something_else(
+    tmp_path: Path,
+) -> None:
+    """Fail closed on an unrecognized entry rather than copying it to a public site."""
+    (tmp_path / "source" / "docs" / "pages" / "feeds").mkdir(parents=True)
+    (tmp_path / "source" / "docs" / "pages" / "feeds" / "results.jsonl").write_text(
+        '{"private": true}\n', encoding="utf-8"
+    )
+    completed = _run_render_step(
+        tmp_path, conclusion="success", evals_md=_fixture_evals_md(), feeds=()
+    )
+    assert completed.returncode != 0
+    assert "not a feed: results.jsonl" in completed.stderr
+    assert not (tmp_path / "_site").exists()
 
 
 def test_render_step_publishes_a_passing_run_labeled_as_passing(tmp_path: Path) -> None:

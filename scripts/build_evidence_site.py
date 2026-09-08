@@ -61,6 +61,7 @@ MAX_VERSION_RESPONSE_BYTES: Final = 256 * 1024
 MAX_HISTORY_SVG_BYTES: Final = 5 * 1024 * 1024
 MAX_CNAME_BYTES: Final = 1024
 MAX_OG_CARD_BYTES: Final = 1024 * 1024
+MAX_FEED_BYTES: Final = 4 * 1024 * 1024
 
 _READ_CHUNK_BYTES = 1024 * 1024
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -94,6 +95,22 @@ INDEXABLE_PAGES: tuple[str, ...] = ("index.html", "report.html")
 #: `_social_meta` for why a card naming a file that is not there is worse than
 #: no card at all.
 OG_CARD_NAME: Final = "og-card.png"
+#: Where the per-agency fare-change feeds are served, relative to the site root.
+#: `assistant.feeds` writes each feed's own address into it -- an Atom
+#: `<link rel="self">` and a JSON Feed `feed_url` -- so the generator and this
+#: renderer have to agree on this one path or every feed published here states an
+#: address that answers 404. `_validated_feeds` checks that agreement per file
+#: rather than trusting the two constants to have been kept in step.
+FEEDS_DIR_NAME: Final = "feeds"
+#: A published feed file name. Deliberately narrow: `assistant.feeds` derives
+#: these from agency slugs, so anything outside this shape in that directory is
+#: something nobody meant to publish and is refused rather than skipped.
+_FEED_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.(?:xml|json)$")
+#: The combined feed, which is the one the page advertises. Every agency feed is
+#: still served; a `<link rel="alternate">` per agency would put nineteen pairs in
+#: one document head, and the combined feed is what a general reader wants.
+COMBINED_FEED_ATOM: Final = "all.xml"
+COMBINED_FEED_JSON: Final = "all.json"
 OG_CARD_WIDTH: Final = 1200
 OG_CARD_HEIGHT: Final = 630
 OG_CARD_ALT: Final = (
@@ -105,6 +122,7 @@ _TEMPLATE_FIELDS = frozenset(
     {
         "CASE_COUNT",
         "EXPIRES_AT",
+        "FEED_LINKS",
         "FRESHNESS_SCRIPT",
         "FUNCTION_VERSION",
         "PROMOTED_AT",
@@ -891,6 +909,7 @@ def _template_html(
     *,
     trend: bool,
     card: bool,
+    feeds: Sequence[str] = (),
 ) -> bytes:
     try:
         source = template.decode("utf-8")
@@ -922,6 +941,7 @@ def _template_html(
     replacements = {
         "CASE_COUNT": str(total["total"]),
         "EXPIRES_AT": html.escape(_expiry_instant(evidence)),
+        "FEED_LINKS": "\n".join(_feed_links(feeds)),
         "FRESHNESS_SCRIPT": _FRESHNESS_SCRIPT,
         "FUNCTION_VERSION": html.escape(str(runtime["function_version"])),
         "PROMOTED_AT": html.escape(str(evidence["promoted_at"])),
@@ -1152,6 +1172,79 @@ def _social_image_meta(*, card: bool) -> tuple[str, ...]:
     )
 
 
+def _feed_links(names: Sequence[str]) -> tuple[str, ...]:
+    """Feed discovery links, emitted only for feeds this render actually publishes.
+
+    Same reasoning as `_social_image_meta`, and the same failure it avoids: a
+    `<link rel="alternate">` naming a file the site does not serve is followed
+    once, by a reader's feed client, somewhere this project never sees the
+    result. `assistant.feeds` had been writing 38 files whose own `<link
+    rel="self">` named `evals.chelseakr.com/feeds/...` while neither publication
+    path put a single one of them there, so every one of those addresses
+    answered 404 -- the page advertising them would have made that worse, not
+    better, which is why the advertisement is tied to the publication here
+    rather than written into the template as a constant.
+    """
+    available = frozenset(names)
+    links: list[str] = []
+    for name, media_type in (
+        (COMBINED_FEED_ATOM, "application/atom+xml"),
+        (COMBINED_FEED_JSON, "application/feed+json"),
+    ):
+        if name not in available:
+            continue
+        address = f"{SITE_ORIGIN}/{FEEDS_DIR_NAME}/{name}"
+        links.append(
+            f'<link rel="alternate" type="{media_type}" '
+            f'title="Fare-policy corpus changes across every agency" '
+            f'href="{html.escape(address)}">'
+        )
+    return tuple(links)
+
+
+def _validated_feeds(path: Path) -> dict[str, bytes]:
+    """Read every fare-change feed, refusing anything that is not one.
+
+    Fails closed on an unexpected entry rather than skipping it. This directory
+    is copied wholesale into a site whose whole design is a fixed, sanitized file
+    list -- the dispatch workflow asserts by name that `results.jsonl`,
+    `summary.json` and `promotion.json` are absent from the output -- so
+    "publish whatever is in there" would be the one place that discipline did not
+    hold. An unrecognized file is a finding.
+    """
+
+    try:
+        entry = path.lstat()
+    except OSError as exc:
+        raise EvidenceSiteError("feeds directory could not be read") from exc
+    if stat.S_ISLNK(entry.st_mode) or not stat.S_ISDIR(entry.st_mode):
+        _fail("feeds directory must be a regular directory")
+    try:
+        names = sorted(os.listdir(path))
+    except OSError as exc:
+        raise EvidenceSiteError("feeds directory could not be listed") from exc
+    unexpected = [name for name in names if not _FEED_NAME.fullmatch(name)]
+    if unexpected:
+        _fail(f"feeds directory holds something that is not a feed: {unexpected[0]}")
+    if not names:
+        # A floor, so a render cannot report success over a directory that has
+        # stopped being generated. An empty feeds directory means the generator
+        # did not run, not that there is nothing to say.
+        _fail("feeds directory is empty")
+    feeds: dict[str, bytes] = {}
+    for name in names:
+        payload = _read_regular(path / name, limit=MAX_FEED_BYTES, context=f"feed {name}")
+        address = f"{SITE_ORIGIN}/{FEEDS_DIR_NAME}/{name}"
+        if address.encode("utf-8") not in payload:
+            # The feed states where it lives; this render is what puts it there.
+            # Checked per file rather than once, because the generator derives
+            # the address from its own constants and a drift in either direction
+            # publishes a feed pointing somewhere nothing answers.
+            _fail(f"feed {name} does not name the address this site would serve it at")
+        feeds[name] = payload
+    return feeds
+
+
 def _social_meta(*, title: str, description: str, url: str, card: bool) -> str:
     """The OpenGraph and Twitter tags for one page."""
     return "\n".join(
@@ -1230,6 +1323,7 @@ class _SiteAttachments:
     history: bytes | None
     cname: bytes | None
     og_card: bytes | None
+    feeds: dict[str, bytes]
 
 
 def _validated_attachments(
@@ -1237,6 +1331,7 @@ def _validated_attachments(
     history_svg_path: Path | None,
     cname_path: Path | None,
     og_card_path: Path | None,
+    feeds_dir: Path | None,
 ) -> _SiteAttachments:
     """Read and check every optional attachment before a single byte is written.
 
@@ -1254,7 +1349,30 @@ def _validated_attachments(
         # site whose pages all claim to live at an address it does not answer on.
         _fail("CNAME hostname differs from the origin this site publishes")
     og_card = _validated_og_card(og_card_path) if og_card_path is not None else None
-    return _SiteAttachments(history=history, cname=cname, og_card=og_card)
+    feeds = _validated_feeds(feeds_dir) if feeds_dir is not None else {}
+    return _SiteAttachments(history=history, cname=cname, og_card=og_card, feeds=feeds)
+
+
+def _write_optional_files(root: Path, attachments: _SiteAttachments) -> None:
+    """The files a render publishes beside the two pages, when it has them.
+
+    Split out of `render_evidence_site` for CQ-05 (max-complexity 10), the same
+    reason `_validated_attachments` was: every one of these is conditional, and
+    the conditions are the whole point -- the site never publishes a reference to
+    a file it is not also writing in the same render.
+    """
+
+    if attachments.history is not None:
+        _write_site_file(root, "eval-history.svg", attachments.history)
+    if attachments.og_card is not None:
+        _write_site_file(root, OG_CARD_NAME, attachments.og_card)
+    if attachments.cname is not None:
+        _write_site_file(root, "CNAME", attachments.cname)
+    if attachments.feeds:
+        feeds_root = root / FEEDS_DIR_NAME
+        feeds_root.mkdir(mode=0o755)
+        for name, payload in attachments.feeds.items():
+            _write_site_file(feeds_root, name, payload)
 
 
 def render_evidence_site(
@@ -1265,6 +1383,7 @@ def render_evidence_site(
     history_svg_path: Path | None = None,
     cname_path: Path | None = None,
     og_card_path: Path | None = None,
+    feeds_dir: Path | None = None,
     expected_source_revision: str | None = None,
     clock: Callable[[], datetime] | None = None,
 ) -> Path:
@@ -1291,10 +1410,11 @@ def render_evidence_site(
         history_svg_path=history_svg_path,
         cname_path=cname_path,
         og_card_path=og_card_path,
+        feeds_dir=feeds_dir,
     )
     history = attachments.history
     og_card = attachments.og_card
-    cname = attachments.cname
+    feeds = attachments.feeds
     if output_dir.is_symlink() or output_dir.exists():
         _fail("output directory must not already exist")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -1311,6 +1431,7 @@ def render_evidence_site(
                 evidence,
                 trend=history is not None,
                 card=og_card is not None,
+                feeds=tuple(feeds),
             ),
         )
         _write_site_file(
@@ -1330,12 +1451,7 @@ def render_evidence_site(
         )
         _write_site_file(temporary, "robots.txt", _robots_txt())
         _write_site_file(temporary, "sitemap.xml", _sitemap_xml())
-        if history is not None:
-            _write_site_file(temporary, "eval-history.svg", history)
-        if og_card is not None:
-            _write_site_file(temporary, OG_CARD_NAME, og_card)
-        if cname is not None:
-            _write_site_file(temporary, "CNAME", cname)
+        _write_optional_files(temporary, attachments)
         directory = os.open(temporary, os.O_RDONLY)
         try:
             os.fsync(directory)
@@ -1420,6 +1536,7 @@ def _parser() -> argparse.ArgumentParser:
     render.add_argument("--history-svg", type=Path)
     render.add_argument("--cname", type=Path)
     render.add_argument("--og-card", type=Path)
+    render.add_argument("--feeds-dir", type=Path)
     render.add_argument("--expected-source-revision", required=True)
 
     compare = subparsers.add_parser(
@@ -1459,6 +1576,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 history_svg_path=args.history_svg,
                 cname_path=args.cname,
                 og_card_path=args.og_card,
+                feeds_dir=args.feeds_dir,
                 expected_source_revision=args.expected_source_revision,
             )
             result = {"output_dir": str(output)}

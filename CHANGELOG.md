@@ -9,6 +9,35 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Fixed
+- **Every fare-change feed published an address nothing served** (2026-09-08).
+  `assistant.feeds` writes 38 files under `docs/pages/feeds/`, each stating its
+  own location — an Atom `<link rel="self">` and a JSON Feed `feed_url` — as
+  `https://evals.chelseakr.com/feeds/<name>`. Neither publication path in
+  `pages.yml` copied a single one of them into `_site`: the dispatch renderer
+  writes a fixed file list that did not include them, and the nightly render
+  step copied only `CNAME`, `og-card.png` and `eval-history.svg`. So the
+  generator was gated by `make feeds-check` on every commit, the feeds were
+  correct, and all 38 of the addresses they published answered 404. Issue #219
+  asked for a subscribable feed; what existed was a subscribable feed nobody
+  could subscribe to.
+  - `render_evidence_site` takes `--feeds-dir` and publishes the directory as
+    `_site/feeds/`, and the nightly render step copies the same files. Both
+    paths refuse an entry that is not a feed rather than skipping it: this site
+    publishes a fixed, checked file list, and "copy whatever is in the
+    directory" would have been the one place that stopped being true.
+  - Each feed is checked against the address it would be served at, per file,
+    so the generator and the renderer cannot quietly disagree about the path.
+    An empty feeds directory is refused as well — a render must not report
+    success over a generator that stopped producing anything.
+  - The page advertises the combined feed with `<link rel="alternate">`, filled
+    by the renderer only when it is publishing that file in the same render.
+    Same rule the share card already followed: a link naming a file the site
+    does not serve is followed once, by a reader's feed client, somewhere this
+    project never sees the result.
+  - Nothing is published by this change on its own. Both paths remain gated as
+    they were — the dispatch path on an operator's manual promotion, the nightly
+    path on `vars.NIGHTLY_HUB_PUBLISH_ENABLED`, which is deliberately unset (ADR
+    0032). This fixes what those paths publish when they next run.
 - **The release pipeline called a reusable workflow it could never resolve**
   (2026-09-07). `release.yml`'s `authorize` job pointed at
   `ChelseaKR/portfolio-standards/.github/workflows/release-authorize.yml`, and
