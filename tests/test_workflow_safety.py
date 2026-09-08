@@ -324,3 +324,66 @@ def test_reusable_workflow_calls_are_pinned_to_a_full_commit_sha():
             f"{file_name}:{job_name} calls a reusable workflow at {ref!r}; pin it "
             "to a full 40-character commit SHA"
         )
+
+
+# ── the corpus-refresh drift report and its gate ─────────────────────────────
+
+
+def _refresh_step_names() -> list[str]:
+    steps = _corpus_freshness_workflow()["jobs"]["refresh"]["steps"]
+    return [step.get("name") or f"uses:{step.get('uses', '')}".split("@", 1)[0] for step in steps]
+
+
+def _refresh_step_index(predicate) -> int:
+    steps = _corpus_freshness_workflow()["jobs"]["refresh"]["steps"]
+    matches = [i for i, step in enumerate(steps) if predicate(step)]
+    assert len(matches) == 1, f"expected exactly one matching step, found {matches}"
+    return matches[0]
+
+
+def test_the_drift_report_is_written_before_the_refresh_pr_is_opened():
+    """The report is the PR's own body. Written after, it reaches nobody."""
+    report = _refresh_step_index(lambda s: "evals.drift" in str(s.get("run", "")))
+    pr = _refresh_step_index(lambda s: str(s.get("uses", "")).startswith("peter-evans/"))
+    assert report < pr, (
+        "the drift report is appended to /tmp/pr-body.md, which the PR step "
+        f"reads: {_refresh_step_names()}"
+    )
+
+
+def test_the_drift_gate_runs_after_the_pr_step_so_the_evidence_ships_first():
+    """Ordering, asserted because moving it would silently trade one for the other.
+
+    The drift step itself always exits 0 and appends its report to the PR body.
+    The *gate* is a separate step placed after the PR is opened, so a breached
+    ceiling turns the run red without preventing the PR that carries the
+    explanation. Hoisting the gate above the PR step would keep the verdict and
+    throw away the evidence; deleting it would leave a run concluding `success`
+    over a ceiling it breached, which removes a signal rather than adding one.
+    """
+    workflow = _corpus_freshness_workflow()
+    steps = workflow["jobs"]["refresh"]["steps"]
+    pr = _refresh_step_index(lambda s: str(s.get("uses", "")).startswith("peter-evans/"))
+    gate = _refresh_step_index(lambda s: "exit 1" in str(s.get("run", "")))
+    assert gate > pr, f"the drift gate must come last: {_refresh_step_names()}"
+    assert "steps.drift.outputs.gate" in str(steps[gate].get("if", "")), (
+        "the gate step must be conditioned on the drift step's recorded exit code"
+    )
+
+
+def test_the_drift_step_declares_bash_so_its_exit_code_is_its_own():
+    """Actions' default `run:` shell is `bash -e {0}` with no `pipefail`.
+
+    This step deliberately captures the drift command's exit status and keeps
+    going, so it must not run under `-e`, and it must not read that status
+    through a pipe.
+    """
+    steps = _corpus_freshness_workflow()["jobs"]["refresh"]["steps"]
+    step = steps[_refresh_step_index(lambda s: "evals.drift" in str(s.get("run", "")))]
+    assert step.get("shell") == "bash"
+    run = str(step["run"])
+    assert "code=$?" in run, "the drift step must capture the command's own exit status"
+    assert "> /tmp/drift.log" in run, (
+        "redirect rather than pipe: `$?` after a pipeline is the last command's, "
+        "not the one whose verdict is being read"
+    )

@@ -6,13 +6,17 @@
 # archived, so the audit could not be reproduced by anyone outside the project
 # and only by someone inside who still had the clone.
 
-.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fact-quality fares relabel spanish-quality
+.PHONY: fetch index ingest eval smoke report audit audit-record audit-restamp-license a11y offline guide history test lint typecheck check verify cov mutation eval-selftest coverage robustness i18n i18n-compile dep-scan deploy-reqs report-regression provenance template gtfs-fetch gtfs-check fact-quality fares relabel spanish-quality drift
 
 # The committed relabeling worksheet `make relabel` opens by default.
 WORKSHEET ?= evals/calibration/judge_relabel_worksheet_2026-08-05.jsonl
 
 # The committed native-Spanish rating census `make spanish-quality` opens.
 ES_SHEET ?= evals/spanish/native_es_rubric_2026-08-05.jsonl
+
+# `make drift` compares a retained corpus version against TO (the working
+# tree's corpus by default, which is what a refresh has just rewritten).
+TO ?= live
 
 # Package + its in-tree gettext catalogs (INTERNATIONALIZATION-STANDARD §3/§4).
 PACKAGE ?= assistant
@@ -202,6 +206,14 @@ feeds-check:  ## BLOCKING: the committed feeds must match the retained corpus ve
 
 fact-quality: ## BLOCKING: the committed fare-fact table holds no prose-labelled or unlabelled price, the refusal count stays under its pin, and the table is reproducible from the committed chunks
 	uv run python -m tools.check_fact_quality
+
+drift:        ## What a corpus change altered about the ANSWERS, not just the documents (offline, mock model): make drift FROM=<corpus version> [TO=<version|live>]
+	# Not part of `verify`: it compares two corpus versions, and `verify` has
+	# only one. Its home is the weekly corpus-refresh workflow, which already
+	# holds the pre-refresh snapshot; this target is the same comparison by
+	# hand. `make history` lists the retained versions.
+	@test -n "$(FROM)" || { echo "usage: make drift FROM=<corpus version> [TO=<version|live>]"; exit 2; }
+	uv run python -m evals.drift --from "$(FROM)" --to "$(TO)"
 
 controls:     ## BLOCKING: negative controls — no retrieval / wrong agency / stale corpus, scored by the same deterministic checks (offline, mock model, ~7s)
 	uv run python -m evals.controls
