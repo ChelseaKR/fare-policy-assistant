@@ -35,6 +35,7 @@ _RELEASE = build_release_identity(
 _ARTIFACT = base64.b64encode(bytes(range(32))).decode("ascii")
 _TEMPLATE = Path(__file__).resolve().parents[1] / "docs" / "pages" / "index.html"
 _OG_CARD = Path(__file__).resolve().parents[1] / "docs" / "pages" / "og-card.png"
+_FEEDS = Path(__file__).resolve().parents[1] / "docs" / "pages" / "feeds"
 _WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "pages.yml"
 _PRIVATE_SENTINEL = "PRIVATE-QUESTION-ANSWER-RATIONALE-PASSAGE"
 _PUBLISH_NOW = datetime(2026, 7, 30, 21, 15, 1, tzinfo=UTC)
@@ -799,6 +800,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         history_svg_path=svg,
         cname_path=cname,
         og_card_path=_OG_CARD,
+        feeds_dir=_FEEDS,
     )
     second = site.render_evidence_site(
         manifest_path=manifest,
@@ -807,6 +809,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         history_svg_path=svg,
         cname_path=cname,
         og_card_path=_OG_CARD,
+        feeds_dir=_FEEDS,
     )
 
     first_files = _site_files(first)
@@ -821,7 +824,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         "report.html",
         "robots.txt",
         "sitemap.xml",
-    }
+    } | {f"feeds/{path.name}" for path in _FEEDS.iterdir()}
     assert first_files["CNAME"] == b"evals.chelseakr.com\n"
     combined = b"\n".join(first_files.values())
     assert _PRIVATE_SENTINEL.encode() not in combined
@@ -1488,6 +1491,127 @@ def test_the_sitemap_lists_the_pages_and_only_the_pages(tmp_path: Path) -> None:
     for url in listed:
         name = url[len(site.SITE_ORIGIN) + 1 :] or "index.html"
         assert (output / name).is_file(), url
+
+
+def _feed_alternates(page: str) -> list[str]:
+    """Every feed-discovery address the rendered page advertises."""
+    soup = BeautifulSoup(page, "html.parser")
+    return [
+        str(link["href"])
+        for link in soup.find_all("link", rel="alternate")
+        if str(link.get("type", "")) in {"application/atom+xml", "application/feed+json"}
+    ]
+
+
+def _render_with_feeds(tmp_path: Path, feeds_dir: Path, name: str = "site") -> Path:
+    return site.render_evidence_site(
+        manifest_path=_write_manifest(tmp_path / f"{name}.json"),
+        template_path=_TEMPLATE,
+        output_dir=tmp_path / name,
+        feeds_dir=feeds_dir,
+    )
+
+
+def _feeds_copy(tmp_path: Path, *, names: tuple[str, ...] = ("all.xml", "all.json")) -> Path:
+    directory = tmp_path / "feeds-input"
+    directory.mkdir()
+    for name in names:
+        shutil.copy(_FEEDS / name, directory / name)
+    return directory
+
+
+def test_every_committed_feed_is_served_at_the_address_it_names(tmp_path: Path) -> None:
+    """The defect this closes, measured against the real committed feeds.
+
+    `assistant.feeds` writes 38 files whose own `<link rel="self">` / `feed_url`
+    is `SITE_ORIGIN/feeds/<name>`, and neither publication path put any of them
+    there, so every one of those addresses answered 404. Run against the
+    unmodified tree rather than a fixture: nothing about this is arranged.
+    """
+    output = _render_with_feeds(tmp_path, _FEEDS)
+    committed = sorted(path.name for path in _FEEDS.iterdir())
+    assert committed, "the committed feeds directory is empty; the generator did not run"
+    for name in committed:
+        served = output / site.FEEDS_DIR_NAME / name
+        assert served.is_file(), f"{name} is not served"
+        address = f"{site.SITE_ORIGIN}/{site.FEEDS_DIR_NAME}/{name}"
+        assert address in served.read_text(encoding="utf-8"), name
+
+
+def test_the_page_advertises_a_feed_only_when_it_publishes_one(tmp_path: Path) -> None:
+    """The `_social_image_meta` rule, applied to feeds.
+
+    A discovery link naming a file the site does not serve is followed once, by a
+    reader's feed client, somewhere this project never sees the result.
+    """
+    without = _rendered_index(tmp_path, "no-feeds")
+    assert _feed_alternates(without) == []
+
+    output = _render_with_feeds(tmp_path, _FEEDS, "with-feeds")
+    advertised = _feed_alternates((output / "index.html").read_text(encoding="utf-8"))
+    assert advertised == [
+        f"{site.SITE_ORIGIN}/{site.FEEDS_DIR_NAME}/all.xml",
+        f"{site.SITE_ORIGIN}/{site.FEEDS_DIR_NAME}/all.json",
+    ]
+    for url in advertised:
+        assert (output / url[len(site.SITE_ORIGIN) + 1 :]).is_file(), url
+
+
+def test_a_feeds_directory_holding_something_else_is_refused(tmp_path: Path) -> None:
+    """Fail closed on an unrecognized entry rather than skipping it.
+
+    The dispatch workflow asserts by name that `results.jsonl` is absent from the
+    output. A renderer that copied a directory would be the one place that
+    assertion could be outrun by a file nobody named.
+    """
+    directory = _feeds_copy(tmp_path)
+    (directory / "results.jsonl").write_text('{"private": true}\n', encoding="utf-8")
+    with pytest.raises(site.EvidenceSiteError, match="not a feed: results.jsonl"):
+        _render_with_feeds(tmp_path, directory)
+
+
+def test_an_empty_feeds_directory_is_refused(tmp_path: Path) -> None:
+    """A floor: a render must not report success over a generator that stopped."""
+    directory = tmp_path / "feeds-input"
+    directory.mkdir()
+    with pytest.raises(site.EvidenceSiteError, match="feeds directory is empty"):
+        _render_with_feeds(tmp_path, directory)
+
+
+def test_a_feed_naming_another_address_is_refused(tmp_path: Path) -> None:
+    """The generator and the renderer must agree on one path, per file."""
+    directory = _feeds_copy(tmp_path)
+    moved = (
+        (directory / "all.xml")
+        .read_text(encoding="utf-8")
+        .replace(
+            f"{site.SITE_ORIGIN}/{site.FEEDS_DIR_NAME}/all.xml",
+            f"{site.SITE_ORIGIN}/atom/all.xml",
+        )
+    )
+    (directory / "all.xml").write_text(moved, encoding="utf-8")
+    with pytest.raises(site.EvidenceSiteError, match="all.xml does not name the address"):
+        _render_with_feeds(tmp_path, directory)
+
+
+def test_a_symlinked_feed_is_refused(tmp_path: Path) -> None:
+    directory = _feeds_copy(tmp_path, names=("all.json",))
+    (directory / "all.xml").symlink_to(_FEEDS / "all.xml")
+    with pytest.raises(site.EvidenceSiteError, match="feed all.xml"):
+        _render_with_feeds(tmp_path, directory)
+
+
+def test_a_feeds_path_that_is_not_a_directory_is_refused(tmp_path: Path) -> None:
+    plain = tmp_path / "feeds-input"
+    plain.write_text("not a directory\n", encoding="utf-8")
+    with pytest.raises(site.EvidenceSiteError, match="must be a regular directory"):
+        _render_with_feeds(tmp_path, plain)
+
+
+def test_the_dispatch_workflow_publishes_the_feeds_it_commits() -> None:
+    """The renderer growing the argument is only half of it; the caller must pass it."""
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    assert "--feeds-dir docs/pages/feeds" in text
 
 
 def test_a_cname_naming_another_host_is_refused(tmp_path: Path) -> None:

@@ -171,6 +171,15 @@ jobs:
           if [[ -f docs/pages/og-card.png ]]; then
             render_args+=(--og-card docs/pages/og-card.png)
           fi
+          # `assistant.feeds` writes each feed's own address as
+          # https://evals.chelseakr.com/feeds/<name>. Until this argument existed
+          # neither publication path copied a single one of those 38 files into
+          # _site, so every address a feed published answered 404. The renderer
+          # refuses any entry in that directory that is not a feed, so this
+          # publishes a checked list rather than a directory.
+          if [[ -d docs/pages/feeds ]]; then
+            render_args+=(--feeds-dir docs/pages/feeds)
+          fi
           uv run --no-sync python scripts/build_evidence_site.py "${render_args[@]}"
           test ! -e ../_site/results.jsonl
           test ! -e ../_site/summary.json
@@ -494,6 +503,43 @@ jobs:
           template = Path("source/docs/pages/nightly-index.html").read_text(encoding="utf-8")
           placeholder = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 
+          # The per-agency fare-change feeds. Each file `assistant.feeds` writes
+          # states its own address as https://evals.chelseakr.com/feeds/<name>,
+          # and until this block existed neither publication path copied one into
+          # _site, so all 38 of those addresses answered 404. Refuse an entry that
+          # is not a feed rather than skipping it: this site publishes a fixed,
+          # checked file list, and "copy whatever is in the directory" would be the
+          # one place that stopped being true.
+          FEED_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.(?:xml|json)$")
+          feeds_src = Path("source/docs/pages/feeds")
+          feed_names: list[str] = []
+          if feeds_src.is_dir():
+              entries = sorted(p.name for p in feeds_src.iterdir())
+              unexpected = [n for n in entries if not FEED_NAME.fullmatch(n)]
+              if unexpected:
+                  sys.exit(f"feeds directory holds something that is not a feed: {unexpected[0]}")
+              if not entries:
+                  sys.exit("feeds directory is empty; the generator did not run")
+              for name in entries:
+                  path = feeds_src / name
+                  if path.is_symlink() or not path.is_file():
+                      sys.exit(f"feed {name} is not a regular file")
+                  address = f"https://evals.chelseakr.com/feeds/{name}"
+                  if address not in path.read_text(encoding="utf-8"):
+                      sys.exit(f"feed {name} does not name the address this site serves it at")
+              feed_names = entries
+
+          feed_links = "\n".join(
+              f'<link rel="alternate" type="{media_type}" '
+              f'title="Fare-policy corpus changes across every agency" '
+              f'href="https://evals.chelseakr.com/feeds/{name}">'
+              for name, media_type in (
+                  ("all.xml", "application/atom+xml"),
+                  ("all.json", "application/feed+json"),
+              )
+              if name in feed_names
+          )
+
           replacements = {
               "SCRIPT_SRC_HASH": script_hash,
               "RUN_DATE": run_at_raw[:10],
@@ -512,6 +558,7 @@ jobs:
               "EXPIRES_AT": html.escape(expires_at.strftime("%Y-%m-%dT%H:%M:%SZ")),
               "SUITE_ROWS": rows,
               "FRESHNESS_SCRIPT": FRESHNESS_SCRIPT,
+              "FEED_LINKS": feed_links,
           }
 
           found = set(placeholder.findall(template))
@@ -532,6 +579,12 @@ jobs:
               src = Path("source/docs/pages") / name
               if src.is_file():
                   (site_dir / name).write_bytes(src.read_bytes())
+
+          if feed_names:
+              feeds_out = site_dir / "feeds"
+              feeds_out.mkdir(parents=True, exist_ok=True)
+              for name in feed_names:
+                  (feeds_out / name).write_bytes((feeds_src / name).read_bytes())
 
           history = Path("source/docs/eval-history.svg")
           if history.is_file():
