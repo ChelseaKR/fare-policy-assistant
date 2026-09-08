@@ -106,6 +106,52 @@ jobs:
             cat /tmp/pr-body.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      # The step above says which documents changed. This says what the
+      # assistant would now tell a rider differently, which is the thing a
+      # fare-policy owner reviewing this PR actually has to judge. Offline
+      # (mock answer model, deterministic checks, no judge), so it costs
+      # nothing and cannot reach a provider.
+      #
+      # /tmp/old.json is the pre-refresh chunk set the snapshot step already
+      # wrote; the refreshed corpus is the working tree. The report is appended
+      # to the PR body so it arrives attached to the diff it explains.
+      #
+      # This step never fails. The gate is the separate step *after* the PR is
+      # opened: a report nobody reads is worthless, so the evidence ships first
+      # and the run goes red second. Swallowing the verdict entirely would be
+      # worse than not measuring — a job that concludes `success` over a
+      # breached ceiling has removed a signal rather than added one.
+      #
+      # The ceiling is `--max-unexpected 0`, the default, and it was measured
+      # rather than guessed: on the committed 35ec70d6359d → 74b05330cb39 pair
+      # (one Yolobus page, the shape of an ordinary weekly refresh) both changed
+      # answers cite that page and zero are unexplained. A pair that also added
+      # and removed documents reported 7, and all 7 were real re-rankings. If a
+      # weekly refresh turns out to sit above zero for honest reasons, raise
+      # this one number with the measurement, rather than dropping the step.
+      - name: Report answer drift
+        id: drift
+        if: steps.diff.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -uo pipefail
+          uv run python -m evals.drift \
+            --from-snapshot /tmp/old.json --to live \
+            --max-unexpected 0 \
+            --out /tmp/drift.md --json /tmp/drift.json > /tmp/drift.log 2>&1
+          code=$?
+          cat /tmp/drift.log
+          if [ -f /tmp/drift.md ]; then
+            printf '\n' >> /tmp/pr-body.md
+            cat /tmp/drift.md >> /tmp/pr-body.md
+            cat /tmp/drift.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "gate=${code}" >> "$GITHUB_OUTPUT"
+          if [ "${code}" -ne 0 ]; then
+            echo "::warning title=answer drift::an answer moved with no cited document moving; the refresh PR carries the report"
+          fi
+          exit 0
+
       - name: Open a refresh PR
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c  # v6
@@ -130,3 +176,17 @@ jobs:
           add-paths: |
             corpus/
             :!corpus/raw/fetch-failures.json
+
+      # Deliberately last. The reviewer gets the drift report attached to the PR
+      # either way; this is what stops the run from concluding `success` over a
+      # ceiling it breached. Ordering is asserted in tests/test_workflow_safety.py,
+      # because moving this above the PR step would silently trade the evidence
+      # for the verdict.
+      - name: Fail on answers that moved with no source behind them
+        if: steps.drift.outputs.gate != '' && steps.drift.outputs.gate != '0'
+        shell: bash
+        run: |
+          echo "answer drift exceeded its ceiling. The refresh PR carries the" >&2
+          echo "report: cases listed under 'Changed with no cited document" >&2
+          echo "moving' are the instrument drifting, not the policy." >&2
+          exit 1

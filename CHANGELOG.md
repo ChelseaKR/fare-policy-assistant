@@ -8,6 +8,36 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Added
+- **Answer drift across corpus versions** (2026-09-07, #216). `make drift
+  FROM=<corpus version> [TO=<version|live>]` runs the whole case set against
+  both versions through the ordinary answer pipeline and pairs the answers per
+  case: `unchanged`, `changed_expected` (a document either side cites is in the
+  corpus diff), `changed_unexpected` (no cited document moved, so the instrument
+  drifted rather than the policy). `corpus_refresh_report.py` already said which
+  documents changed; nothing said what the assistant would now tell a rider
+  differently, which is what a reviewer of a refresh PR has to judge.
+  - `newly_failing` is a flag on every row rather than a fourth bucket. An
+    answer can be byte-identical and newly failing, because a removed document
+    fails `citation_present_and_resolvable` on the new side over the same text,
+    and a four-way partition would have filed that as `unchanged`.
+  - Both sides share one model wrapper memoised on the rendered prompt, so the
+    cost is bounded to the cases a changed document reaches. Measured on the
+    committed corpus: the one-Yolobus-page pair costs 57 calls on the second
+    side against 191 on the first, and comparing a version to itself costs zero.
+    Both counters are in the report.
+  - Scoring is the deterministic half of the harness, run per side against that
+    side's own corpus and its own derived fact table. The committed
+    `facts.jsonl` describes the live corpus only, so scoring an old answer
+    against it would be two rulers.
+  - Wired into the weekly `corpus-freshness` workflow: the report is appended to
+    the refresh PR's body, and the ceiling is enforced by a separate step placed
+    *after* the PR opens, so the evidence ships even when the verdict is red.
+    `tests/test_workflow_safety.py` asserts that ordering.
+  - Run against the unmodified committed corpus, the `a68e77ff4673 →
+    63d6718126f1` pair reports 7 answers that moved with no cited document
+    moving. They are real re-rankings, not a planted defect.
+
 ### Fixed
 - **Every fare-change feed published an address nothing served** (2026-09-08).
   `assistant.feeds` writes 38 files under `docs/pages/feeds/`, each stating its
