@@ -1275,8 +1275,17 @@ def _robots_txt() -> bytes:
     """What a crawler is told at ``/robots.txt``.
 
     Nothing is disallowed. Everything this site publishes is published on purpose:
-    the renderer writes a fixed list of files and the workflow asserts the private
-    ones are absent, so there is no path here that wants hiding.
+    the renderer writes a fixed list of files, plus the feeds under
+    ``/feeds/`` -- a set rather than a list, but a checked one, since
+    `_validated_feeds` refuses any entry that is not a feed instead of skipping it
+    -- and the workflow asserts the private ones are absent. There is no path here
+    that wants hiding.
+
+    The feeds are not in ``sitemap.xml``, and that is not an oversight: a feed is
+    data a reader subscribes to, not a page they land on, which is the same reason
+    the evidence manifest and the release receipt are absent from it. They are
+    reachable through the ``<link rel="alternate">`` the page carries for the
+    combined feed.
     """
     return f"User-agent: *\nAllow: /\n\nSitemap: {SITE_ORIGIN}/sitemap.xml\n".encode()
 
