@@ -1,5 +1,6 @@
 """Static release-workflow invariants that must hold even when a job fails."""
 
+import re
 import subprocess
 
 import pytest
@@ -234,3 +235,92 @@ def test_the_corpus_refresh_pathspecs_are_ones_git_actually_accepts(tmp_path):
     assert "corpus/raw/fetch-failures.json" not in staged, (
         "the unreachable-sources report is a run artifact, not corpus content"
     )
+
+
+# ── reusable-workflow calls ──────────────────────────────────────────────────
+
+# A **public** repository cannot call a reusable workflow that lives in a
+# **private** one, whatever the private repository's Actions access level says.
+# GitHub reports the refusal as
+#
+#     failed to parse workflow: error parsing called workflow
+#     "OWNER/REPO/.github/workflows/x.yml@<sha>": workflow was not found
+#
+# which reads as a deleted file, so the real cause is easy to miss. It is the
+# reason `release.yml` had never executed once: it called
+# `ChelseaKR/portfolio-standards`, which is private, and the dispatch died before
+# any job started.
+#
+# Rather than pin one SHA (which would go stale on every legitimate bump), this
+# pins the *repositories* a reusable workflow may be called from. Add one here
+# only after confirming it is public.
+PUBLIC_REUSABLE_WORKFLOW_REPOS = frozenset({"ChelseaKR/.github"})
+
+# Known-private, and named so the failure message can say why rather than only
+# that the repository is not on the list.
+PRIVATE_REPOS = frozenset({"ChelseaKR/portfolio-standards"})
+
+
+def _reusable_workflow_calls() -> list[tuple[str, str, str, str]]:
+    """Every cross-repository reusable-workflow call, as (file, job, repo, ref).
+
+    A reusable-workflow `uses:` is a job-level key whose value is
+    `OWNER/REPO/.github/workflows/<file>@<ref>`; a step-level `uses:` names an
+    *action* and is a different thing with different rules, so only job values
+    are read. A `./`-prefixed local call has no repository and is skipped.
+    """
+    calls: list[tuple[str, str, str, str]] = []
+    for path in sorted((config.REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+        parsed = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        for job_name, job in (parsed.get("jobs") or {}).items():
+            uses = job.get("uses") if isinstance(job, dict) else None
+            if not isinstance(uses, str) or uses.startswith("./"):
+                continue
+            target, _, ref = uses.partition("@")
+            owner, repo, *_rest = target.split("/")
+            calls.append((path.name, job_name, f"{owner}/{repo}", ref))
+    return calls
+
+
+def test_reusable_workflows_are_called_from_a_public_repository():
+    """This repository is public, so every reusable workflow it calls must be too.
+
+    Regression guard for the whole reason `release.yml` had zero runs: the
+    `authorize` job called the private `portfolio-standards` copy, and GitHub
+    answered `workflow was not found` at parse time — before `release-tests`,
+    before `build`, before anything that could have reported a real error.
+    Nothing in the repository could see it, because a dispatch-only workflow is
+    exercised by nothing.
+    """
+    calls = _reusable_workflow_calls()
+    assert calls, (
+        "no cross-repository reusable-workflow call was found — if the release "
+        "pipeline stopped using one, delete this guard deliberately rather than "
+        "letting it pass over nothing"
+    )
+    for file_name, job_name, repo, _ref in calls:
+        assert repo not in PRIVATE_REPOS, (
+            f"{file_name}:{job_name} calls a reusable workflow in {repo}, which is "
+            "private. A public repository cannot call one, and GitHub reports it "
+            "as `workflow was not found` rather than as a permission error, so the "
+            "dispatch fails before any job runs."
+        )
+        assert repo in PUBLIC_REUSABLE_WORKFLOW_REPOS, (
+            f"{file_name}:{job_name} calls a reusable workflow in {repo}, which is "
+            "not on the confirmed-public list. Confirm the repository is public, "
+            "then add it to PUBLIC_REUSABLE_WORKFLOW_REPOS."
+        )
+
+
+def test_reusable_workflow_calls_are_pinned_to_a_full_commit_sha():
+    """A tag or branch ref on a reusable workflow is a mutable trust boundary.
+
+    `release-authorize.yml` is what decides whether a signed tag authorizes a
+    release; calling it at a moving ref would let the authorization itself be
+    rewritten out from under a release without a diff in this repository.
+    """
+    for file_name, job_name, _repo, ref in _reusable_workflow_calls():
+        assert re.fullmatch(r"[0-9a-f]{40}", ref), (
+            f"{file_name}:{job_name} calls a reusable workflow at {ref!r}; pin it "
+            "to a full 40-character commit SHA"
+        )
