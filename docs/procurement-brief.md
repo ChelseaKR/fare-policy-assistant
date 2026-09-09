@@ -92,9 +92,11 @@ carries and the Spanish one does not as a disagreement about the same fact.
 
 The audit also produced 76 hard failures that no floor hides, every one of them
 listed with a cause and an owner in
-`evals/plumbline/acknowledged_findings.json`. Two are now fixed defects rather
-than notes: the snapshot-date disclosure being scored as an invented number, and
-a phone number the corpus cleaner broke into "805. 963.3364". The point of
+`evals/plumbline/acknowledged_findings.json`. One is a fixed defect rather than
+a note: the snapshot-date disclosure being scored as an invented number. A
+second was recorded here as a defect of this project's ingest — a phone number
+"the corpus cleaner broke into 805. 963.3364" — and it is not one: SBMTD
+publishes the number with that space and the ingest reproduced it. The point of
 committing the low numbers and the finding list rather than hiding them is the
 project's whole thesis: show the method and its limits, do not cherry-pick.
 `evals/plumbline_guard.py`, not the harness's own exit code, is the merge gate,

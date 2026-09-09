@@ -31,13 +31,19 @@ _REDIRECT_RE = re.compile(
     re.I,
 )
 
-# A clock time: "8:00 AM", "8 a.m.", "4:30 p.m.", and the corpus cleaner's own
-# "1.a.m." — a period where the source had a space, the same class of artifact
-# as the "805. 963.3364" phone number recorded in evals/plumbline/target.toml.
-# Tolerated here rather than fixed here, because a check that reads a document
-# more strictly than the ingest wrote it reports the cleaner as an assistant
-# defect. The trailing \b before the optional final period is load-bearing: it
-# is what stops "$1.00 a month" from parsing as one o'clock in the morning.
+# A clock time: "8:00 AM", "8 a.m.", "4:30 p.m.", and "1.a.m." — a period where
+# a reader would write a space. This comment used to attribute that spelling to
+# the corpus cleaner, alongside the "805. 963.3364" phone number in
+# evals/plumbline/target.toml. Measured 2026-09-09: neither is ours.
+# corpus/raw/etran-fares.html publishes "until 1.a.m. the day after purchase",
+# and corpus/raw/sbmtd-fares-passes.html publishes "805. 963.3364"; the ingest
+# path reproduced both. So the tolerance below stays, for a better reason than
+# the one first written down: a check that demands the spelling a reader expects
+# reads the document more strictly than the *agency* wrote it, and reports an
+# assistant that normalised it as the defect. The trailing \b before the
+# optional final period is load-bearing: it is what stops "$1.00 a month" from
+# parsing as one o'clock in the morning.
+# tests/test_corpus_source_spelling.py holds both claims to the committed bytes.
 _CLOCK_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*\.?\s*([ap])\.?\s?m\b\.?", re.I)
 
 

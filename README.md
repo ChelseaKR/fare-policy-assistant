@@ -363,10 +363,13 @@ assistant's decline wording, so three correctly-refused jailbreak probes score
 zero; cross-language disagreements are mostly a phone number the English answer
 carries and the Spanish one does not.
 
-The audit also found **76 hard failures** the floors do not hide, and two of them
-are now fixed defects rather than notes: the snapshot-date disclosure scoring as
-an unsupported number, and a phone number the corpus cleaner broke into
-`805. 963.3364`. Each finding is listed with a reason and an owner in
+The audit also found **76 hard failures** the floors do not hide, and one of them
+is a fixed defect rather than a note: the snapshot-date disclosure scoring as an
+unsupported number. A second was written up here as a defect of this project's
+ingest — a phone number "the corpus cleaner broke into `805. 963.3364`" — and it
+is not one. SBMTD publishes it that way; the fetched page carries the space and
+the ingest path reproduced it faithfully. Each finding is listed with a reason
+and an owner in
 `evals/plumbline/acknowledged_findings.json`, and `evals/plumbline_guard.py` —
 not the harness's own exit code — is the merge gate: it fails on any suite below
 the committed baseline, any hard failure nobody acknowledged, and any
