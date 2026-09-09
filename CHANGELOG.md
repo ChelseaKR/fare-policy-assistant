@@ -39,6 +39,39 @@ rather than tied to a published tag.
     moving. They are real re-rankings, not a planted defect.
 
 ### Fixed
+- **A phone number this project told five audiences its own ingest had broken
+  is spelled that way by the agency** (2026-09-09). `README.md`,
+  `docs/procurement-brief.md`, `docs/audits/methodology.md`, the `_CLOCK_RE`
+  comment in `evals/checks.py`, `evals/plumbline/target.toml` and **23**
+  acknowledgements in `evals/plumbline/acknowledged_findings.json` (19 under
+  `groundedness`, 4 under `privacy`) all said the corpus cleaner "broke" the MTD
+  Business Office number into `805. 963.3364`. It did not.
+  `corpus/raw/sbmtd-fares-passes.html` — sha256 `741a774a...`, the hash its
+  committed `.meta.yaml` declares — carries `805. 963.3364<br>` and
+  `805. 963.3366</p>` in the address blocks as SBMTD published them, and
+  `805.963.3366` further down the same page. The ingest reproduced the source
+  faithfully; the agency's own page is inconsistent with itself. The same is
+  true of e-tran's `1.a.m.`, which `corpus/raw/etran-fares.html` publishes
+  verbatim.
+  - The consequence that mattered was not the wording. `target.toml` parked the
+    `privacy` floor below the measurement and named the remediation as "a
+    corpus reprocess and a re-recording" — a condition that **can never fire**,
+    because a reprocess reads the same bytes and writes the same bytes. A
+    waiver whose clearing condition is impossible is a permanent exemption
+    wearing a temporary one's clothes, and the guard that refuses a stale
+    acknowledgement cannot see the difference.
+  - The finding is an exact-substring number match against a source that spells
+    the number irregularly — the same owner as the other cause already recorded
+    on that suite, and the assistant is right to normalise a number it reads out
+    to a rider. It clears when the harness compares numbers modulo punctuation,
+    or if SBMTD republishes the page.
+  - `tests/test_corpus_source_spelling.py` makes the corrected claim a function
+    of committed bytes: the raw file must hash to what its manifest declares,
+    must publish the irregular spelling, must not carry the regular spelling
+    within 200 characters of it, and the processed corpus must reproduce the
+    same spelling — which is the half that makes it a statement about the
+    ingest rather than only about the agency.
+
 - **Every fare-change feed published an address nothing served** (2026-09-08).
   `assistant.feeds` writes 38 files under `docs/pages/feeds/`, each stating its
   own location — an Atom `<link rel="self">` and a JSON Feed `feed_url` — as

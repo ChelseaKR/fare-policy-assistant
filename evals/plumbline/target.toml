@@ -205,15 +205,30 @@ floor = 1.0
 
 # Measured 0.9795: four items state the MTD Business Office number
 # 805.963.3364, and the suite cannot find it in their sources. It is there —
-# `sbmtd-fares-passes#0` — but the corpus cleaner rendered it "805. 963.3364",
-# with a space after the area code, so an exact substring check misses it. The
-# other number on the same page, 805.963.3366, appears cleanly further down and
-# is not flagged.
+# `sbmtd-fares-passes#0` — spelled "805. 963.3364", with a space after the area
+# code, so an exact substring check misses it. The other number on the same
+# page, 805.963.3366, appears cleanly further down and is not flagged.
 #
-# That is a real defect and it belongs to the ingest cleaner, not to the
-# assistant: a phone number the rider is told to call should survive chunking
-# intact. Fixing it is a corpus reprocess and a re-recording. Floor below the
-# measurement until then.
+# This comment used to say the corpus cleaner introduced that space and that a
+# reprocess would clear the finding. Measured 2026-09-09: it did not, and a
+# reprocess cannot. The fetched document — corpus/raw/sbmtd-fares-passes.html,
+# sha256 741a774a781292930ee1ac0f69f945813088a3f86f6f2a49d439c73655f9c5b4,
+# which is the hash its committed .meta.yaml declares — carries
+# "805. 963.3364<br>" and "805. 963.3366</p>" in the address blocks as SBMTD
+# published them, and "805.963.3366" further down the same page. The ingest
+# path reproduced the source faithfully; the agency's own page is inconsistent
+# with itself. Re-running `make ingest` over these bytes produces the same
+# spacing forever, so the remediation this comment named could never fire and
+# the floor was parked below the measurement on a condition nothing could meet.
+#
+# What it actually is: an exact-substring number match against source text that
+# spells the number irregularly. That is the same owner as the other cause on
+# this suite — the audit harness's matching, upstream — and the assistant is
+# doing the right thing by normalising the number it reads out to a rider. It
+# clears when the harness compares numbers modulo punctuation and spacing, or if
+# SBMTD republishes the page without the space. Floor below the measurement
+# until one of those happens. tests/test_corpus_source_spelling.py holds the
+# claim above to the committed bytes.
 [suites.privacy]
 enabled = true
 floor = 0.97
