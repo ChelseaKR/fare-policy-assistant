@@ -1,0 +1,223 @@
+# Can the demo stack's alarms reach a person?
+#
+# infra/deploy.sh creates the SNS topic "$FN-alerts", points six alarms at it,
+# and when nothing is subscribed prints a warning on stderr:
+#
+#   WARNING: ... alarms are configured but cannot page an operator
+#
+# Measured against the live account on 2026-09-12: that topic has zero
+# subscriptions, confirmed or pending, and has had since it was created. The
+# warning has been correct and unread the whole time. infra/deploy-cutoff.sh
+# makes it sharper, because the spend breaker's "page a human" leg publishes to
+# the same topic, so the half of the cost control meant to tell somebody has
+# never worked. The six alarms were then deleted in the August cost triage
+# precisely because they notified nobody, which means the current state is
+# worse than it looks: the next deploy.sh recreates all six, aimed at the same
+# silent topic, and the warning scrolls past again.
+#
+# This is the channel that needs no address. It reads alarm state directly and
+# reports into a GitHub issue, the same place nightly-eval-alert.yml reports.
+# It does not replace an SNS subscriber; it fails independently of one, which
+# is the property that was missing.
+#
+# Like nightly-eval-alert.yml, it polls on its own cron rather than reacting to
+# another workflow: workflow_run is a pwn-request shape, and every sibling
+# watcher in this portfolio polls. Unlike that one, it never closes its issue --
+# "the condition cleared" and "a person knows the condition cleared" are
+# different facts, and only the second is worth having here.
+#
+# It creates and changes nothing in AWS: two read-only calls.
+#
+# A run that could not read is never a run that found nothing. Every failure
+# below exits non-zero with a reason.
+name: Alarm relay
+
+on:
+  schedule:
+    # Daily, an hour after the nightly eval alert, so a morning with two
+    # findings shows them in a stable order rather than interleaved.
+    - cron: "17 12 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # Never cancel. A cancelled run is neither a finding nor a clean read, and
+  # this is a check whose silence has to mean "looked, nothing new".
+  group: alarm-relay
+  cancel-in-progress: false
+
+jobs:
+  relay:
+    name: Alarm state, reported where it can be read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # OIDC into the CI role, for two read-only calls
+      issues: write # file and update the one relay issue
+    steps:
+      # Checked FIRST, and it fails rather than skipping. A notification path
+      # that quietly does nothing when its configuration is missing is the exact
+      # shape this workflow exists to remove, and `if: vars.X != ''` here would
+      # rebuild it.
+      - name: The relay must be wired, or say that it is not
+        env:
+          ROLE_ARN: ${{ vars.AWS_OIDC_ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ROLE_ARN}" ]; then
+            echo "::error::repository variable AWS_OIDC_ROLE_ARN is unset, so this relay cannot read alarm state and the demo stack's alarms currently reach nobody at all."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+
+      # Two read-only calls. The account id is resolved here rather than written
+      # down in this public repository, and it is used only to address the API
+      # call: the report builder takes the topic NAME and drops the ARN, because
+      # an ARN carries the account id.
+      #
+      # If the role cannot make these calls the step fails with AccessDenied,
+      # which is the correct outcome: run infra/grant-alarm-relay-read.sh once.
+      - name: Read alarm state and the alerts topic's subscriber count
+        env:
+          AWS_REGION_NAME: ${{ vars.AWS_REGION || 'us-west-2' }}
+        run: |
+          set -euo pipefail
+          aws cloudwatch describe-alarms --region "$AWS_REGION_NAME" \
+            --alarm-name-prefix fare- \
+            --output json > "${RUNNER_TEMP}/alarms.json"
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          aws sns get-topic-attributes --region "$AWS_REGION_NAME" \
+            --topic-arn "arn:aws:sns:${AWS_REGION_NAME}:${account_id}:fare-policy-assistant-demo-alerts" \
+            --output json > "${RUNNER_TEMP}/topic.json"
+
+      - name: Build the redacted report
+        id: report
+        run: |
+          set -uo pipefail
+          python3 tools/alarm_relay.py \
+            --alarms "${RUNNER_TEMP}/alarms.json" \
+            --topic "${RUNNER_TEMP}/topic.json" \
+            --out "${RUNNER_TEMP}/report.md"
+          echo "rc=$?" >> "${GITHUB_OUTPUT}"
+
+      # The exit code alone is not trusted. A crashed script also exits
+      # non-zero, and an issue opened from a crash would assert a finding on no
+      # evidence. The report has to carry the verdict, and the two have to
+      # agree.
+      - name: Decide what the exit code and the report actually say
+        id: verdict
+        env:
+          RC: ${{ steps.report.outputs.rc }}
+        run: |
+          set -euo pipefail
+          report="${RUNNER_TEMP}/report.md"
+          if [ ! -s "${report}" ]; then
+            echo "::error::the relay wrote no report, so this run is not evidence of anything"
+            exit 1
+          fi
+          cat "${report}" >> "${GITHUB_STEP_SUMMARY}"
+
+          if grep -q '<!-- alarm-relay-verdict: report -->' "${report}"; then
+            found=report
+          elif grep -q '<!-- alarm-relay-verdict: clear -->' "${report}"; then
+            found=clear
+          else
+            echo "::error::the report carries no verdict marker; treat this as the relay failing, not as a clean read"
+            exit 1
+          fi
+          echo "found=${found}" >> "${GITHUB_OUTPUT}"
+
+          case "${RC}:${found}" in
+            0:clear) echo "alarms are quiet and the alerts topic has a confirmed subscriber" ;;
+            1:report) echo "there is a finding; the issue step will record it" ;;
+            *)
+              echo "::error::the relay exited ${RC} and its report says '${found}': the two disagree, so this run is not evidence of anything"
+              exit 1 ;;
+          esac
+
+      - name: Open or update the one relay issue
+        if: steps.verdict.outputs.found == 'report'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # One issue, reused. A relay that files a duplicate every day trains
+          # its reader to close them unread, which has the same outcome as not
+          # having the relay at all.
+          title="The demo stack's alarms are not reaching a person"
+          {
+            cat "${RUNNER_TEMP}/report.md"
+            echo
+            echo "Read by [this run](${RUN_URL}) on $(date -u +%Y-%m-%d)."
+          } > "${RUNNER_TEMP}/issue.md"
+
+          existing="$(gh issue list --state open --label alarm-relay \
+            --json number,title \
+            --jq "[.[] | select(.title == \"${title}\")] | .[0].number // empty")"
+
+          if [ -n "${existing}" ]; then
+            # The body is rewritten every run, which notifies nobody. A comment
+            # is added only when the state actually changed, so a condition
+            # standing for a month does not produce a month of comments.
+            previous="$(gh issue view "${existing}" --json body --jq '.body' \
+              | sed -n 's/.*<!-- alarm-relay-state: \(.*\) -->.*/\1/p' | head -n 1)"
+            current="$(sed -n 's/.*<!-- alarm-relay-state: \(.*\) -->.*/\1/p' "${RUNNER_TEMP}/report.md" | head -n 1)"
+            gh issue edit "${existing}" --body-file "${RUNNER_TEMP}/issue.md"
+            if [ "${previous}" != "${current}" ]; then
+              {
+                echo "State changed."
+                echo
+                echo "Was: \`${previous:-(no previous state recorded)}\`"
+                echo "Now: \`${current}\`"
+                echo
+                echo "The issue body has been updated to match. Relay run: ${RUN_URL}"
+              } > "${RUNNER_TEMP}/comment.md"
+              gh issue comment "${existing}" --body-file "${RUNNER_TEMP}/comment.md"
+            fi
+            echo "updated issue #${existing}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            gh label create alarm-relay \
+              --description "CloudWatch alarm state for the demo stack, relayed here because its SNS topic reaches nobody" \
+              --color B60205 2>/dev/null || true
+            gh issue create --title "${title}" --label alarm-relay \
+              --body-file "${RUNNER_TEMP}/issue.md"
+          fi
+
+          # Read the result back rather than trusting the exit codes above. A
+          # report that silently failed to land is the defect this workflow
+          # removes.
+          open_now="$(gh issue list --state open --label alarm-relay --json number --jq 'length')"
+          if [ "${open_now}" -lt 1 ]; then
+            echo "::error::there is a finding and no open relay issue exists"
+            exit 1
+          fi
+
+      # A red run is the second, weaker signal (GitHub emails the repository
+      # owner when a scheduled workflow on the default branch fails) and the
+      # only one available when the steps above could not run at all. Keeping
+      # the conclusion consistent with the finding means there is never a green
+      # run with an open finding behind it.
+      - name: Fail the run while there is a finding
+        if: steps.verdict.outputs.found == 'report'
+        run: |
+          echo "::error::the alarm relay has a finding, see the open 'alarm-relay' issue"
+          exit 1

@@ -254,14 +254,53 @@ structured metrics plus one-release legacy rollback compatibility. Deployment
 re-reads every filter contract, then tests the relevant patterns against the
 numeric candidate's actual captured model/answer events before promotion.
 
-To actually be paged, subscribe an endpoint once:
+To actually be paged over SNS, subscribe an endpoint once:
 
 ```sh
 aws sns subscribe --topic-arn <printed by deploy.sh> \
   --protocol email --notification-endpoint you@example.com
 ```
 
-Deployment warns if the topic has no confirmed subscriber. It also creates (or
+Deployment warns if the topic has no confirmed subscriber. Measured against the
+live account on 2026-09-12, nothing was subscribed and nothing ever had been, so
+that warning had been correct and unread since the topic was created. It is a
+line on stderr during a deploy, which is not a channel. The spend breaker in
+`deploy-cutoff.sh` makes it sharper: its "page a human" leg publishes to this
+same topic, so the half of the cost control meant to tell somebody had never
+worked.
+
+`.github/workflows/alarm-relay.yml` is the second path, and it needs no address.
+Once a day it reads alarm state and this topic's confirmed-subscriber count
+directly, and reports into a GitHub issue: one issue, updated in place, never
+duplicated, and never closed by the workflow. It creates and changes nothing in
+AWS. `tools/alarm_relay.py` decides what may be said, and because this
+repository is public its report carries only counts, alarm names matching a
+strict `deploy.sh`-controlled shape, and a pointer to the log group. Never an
+alarm's `StateReason`, which quotes metric values, and never an ARN, which
+carries the account id.
+
+It reports three states rather than two. Finding no alarms at all is a finding,
+not quiet: it is the state this stack is in today, because the six alarms were
+deleted in the August cost triage on the grounds that they notified nobody, and
+the next `deploy.sh` recreates all six aimed at the same topic.
+
+The relay assumes the existing CI role (`AWS_OIDC_ROLE_ARN`), which today can
+invoke two Bedrock models and nothing else. One owner step grants it the two
+read actions it needs:
+
+```sh
+./infra/grant-alarm-relay-read.sh          # attach the read-only policy
+./infra/grant-alarm-relay-read.sh --check  # is it attached?
+```
+
+That attaches `cloudwatch:DescribeAlarms` and `sns:GetTopicAttributes` on this
+topic, and nothing else. Until it runs, the relay's AWS read fails with
+`AccessDenied` and the run goes red, which is the honest report of the state:
+the alarms currently reach nobody. No GitHub token permission needs granting;
+the workflow files its issue with the built-in `GITHUB_TOKEN`.
+
+Subscribing an endpoint is still worth doing. The two paths fail independently,
+and adding one does not make the other redundant. It also creates (or
 overwrites) the `fare-policy-assistant-demo` dashboard with application-
 estimated model cost and call counts, 5-minute traffic, request/model/Lambda
 duration, and alarm status. `deploy.sh` prints its console URL at the end.
