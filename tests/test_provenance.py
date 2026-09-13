@@ -344,3 +344,81 @@ def test_provenance_block_declares_the_pipeline_version():
     block = provenance.provenance_block("run-1")
     assert block["pipeline_version"] == provenance.head_pipeline_version()
     assert block["pipeline_version"]
+
+
+def test_the_summary_never_claims_the_artifacts_match_head_while_any_is_waived(monkeypatch, capsys):
+    """The line this whole module is about.
+
+    `main()` used to end with "EVALS.md, baseline.json, and golden.jsonl match
+    HEAD" whether or not a single field matched, printed directly beneath the
+    ACKNOWLEDGED lines saying they do not. On 2026-09-13 that line stood over
+    eleven live mismatches. A summary that contradicts the evidence above it is
+    the same defect as a gate that examines nothing.
+    """
+    monkeypatch.setattr(
+        provenance,
+        "check_all",
+        lambda: {
+            "failures": [],
+            "acknowledged": [
+                provenance.Mismatch("EVALS.md", "corpus_version", "old", "new"),
+                provenance.Mismatch("baseline.json", "corpus_version", "old", "new"),
+            ],
+            "unused_acknowledgements": [],
+            "compared": 16,
+            "matched": 14,
+        },
+    )
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv")
+
+    assert provenance.main() == 0
+    out = capsys.readouterr().out
+    assert "14 of 16 declared field(s) match HEAD" in out
+    assert "2 acknowledged stale" in out
+    assert "do NOT all describe HEAD" in out
+    assert "and golden.jsonl match HEAD" not in out, (
+        "the all-clear wording is reserved for a run in which every field matched"
+    )
+
+
+def test_the_summary_says_all_when_every_field_matched(monkeypatch, capsys):
+    """The other direction, so the assertion above is not satisfied by a gate
+    that has simply stopped being able to say anything reassuring."""
+    monkeypatch.setattr(
+        provenance,
+        "check_all",
+        lambda: {
+            "failures": [],
+            "acknowledged": [],
+            "unused_acknowledgements": [],
+            "compared": 16,
+            "matched": 16,
+        },
+    )
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv")
+
+    assert provenance.main() == 0
+    out = capsys.readouterr().out
+    assert "all 16 declared field(s)" in out
+    assert "match HEAD" in out
+    assert "do NOT" not in out
+
+
+def test_a_waiver_that_matches_nothing_makes_the_gate_exit_one(monkeypatch, capsys):
+    monkeypatch.setattr(
+        provenance,
+        "check_all",
+        lambda: {
+            "failures": [],
+            "acknowledged": [],
+            "unused_acknowledgements": [("EVALS.md", "corpus_version")],
+            "compared": 16,
+            "matched": 16,
+        },
+    )
+    assert provenance.main() == 1
+    err = capsys.readouterr().err
+    assert "STALE WAIVERS" in err
+    assert "EVALS.md:corpus_version matches HEAD; delete this entry" in err
