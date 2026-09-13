@@ -34,6 +34,15 @@ recording that no longer described the running system. A check that passes
 because it is not looking at the thing that moved is this repository's own
 recurring defect shape, and this is one instance of it.
 
+A waiver is self-limiting: an entry in `stale_acknowledged.json` that matches
+no live mismatch fails the gate, because a blanket over a field nothing is
+wrong with pre-accepts the next drift on it and nobody ever decides about it.
+
+And the gate says what it matched. It reports `matched of compared` declared
+fields and never claims the artifacts "match HEAD" while any of them is waived
+stale — a summary line that contradicts the ACKNOWLEDGED lines printed
+directly above it is the same defect one level up.
+
     python -m evals.provenance          # check; exit 1 on unacknowledged drift
 
 The artifacts declare their provenance in machine-readable form:
@@ -210,6 +219,14 @@ def _compare(
     return out
 
 
+#: The fields `_compare` puts a verdict on for one artifact: `corpus_version`,
+#: `pipeline_version`, and one per prompt the artifact pins. Named here so the
+#: denominator this gate prints is derived from the comparison it actually ran,
+#: not from a number somebody typed.
+def comparable_fields(expected_prompts: dict[str, str] | tuple[str, ...]) -> int:
+    return 2 + len(expected_prompts)
+
+
 def load_acknowledgements(path: Path | None = None) -> set[tuple[str, str]]:
     """(artifact, field) pairs whose staleness is explicitly, loudly accepted.
 
@@ -240,8 +257,11 @@ def check_all(
 ) -> dict:
     """Compare all three artifacts to HEAD.
 
-    Returns {"failures": [...], "acknowledged": [...]}; the gate is green iff
-    `failures` is empty. Acknowledged mismatches are downgraded to warnings.
+    Returns `failures`, `acknowledged`, `unused_acknowledgements`, and the
+    census `compared` / `matched`. The gate is green iff `failures` and
+    `unused_acknowledgements` are both empty. Acknowledged mismatches are
+    downgraded to warnings — and counted, so the caller can say how many of the
+    compared fields actually matched instead of implying all of them did.
     Inputs default to the committed files but can be injected for tests.
     """
     acknowledged = load_acknowledgements() if acknowledged is None else acknowledged
@@ -255,14 +275,43 @@ def check_all(
     cv = head_corpus_version()
     pv = head_pipeline_version()
 
-    mismatches = (
-        _compare("EVALS.md", read_evals_md(evals_md), all_prompts, cv, pv)
-        + _compare("baseline.json", read_baseline(baseline), all_prompts, cv, pv)
-        + _compare("golden.jsonl", read_golden(golden), answer_prompts, cv, pv)
+    specs = (
+        ("EVALS.md", read_evals_md(evals_md), all_prompts),
+        ("baseline.json", read_baseline(baseline), all_prompts),
+        ("golden.jsonl", read_golden(golden), answer_prompts),
     )
+
+    mismatches: list[Mismatch] = []
+    compared = 0
+    unmatched = 0
+    for artifact, declared, prompts in specs:
+        n = comparable_fields(prompts)
+        found = _compare(artifact, declared, prompts, cv, pv)
+        compared += n
+        # An artifact with no provenance block at all yields ONE aggregate
+        # mismatch, not one per field. Counting that as a single unmatched
+        # field would let the census report "5 of 6 matched" for an artifact
+        # this gate could not read a single version out of.
+        unmatched += n if declared is None else len(found)
+        mismatches += found
+
     failures = [m for m in mismatches if (m.artifact, m.field) not in acknowledged]
     warnings = [m for m in mismatches if (m.artifact, m.field) in acknowledged]
-    return {"failures": failures, "acknowledged": warnings}
+
+    # A waiver over a field that is NOT currently stale is a standing blanket:
+    # the day that field drifts, the drift is pre-accepted and nobody decides
+    # anything. Self-limiting, the way an exemption list has to be to mean
+    # something — an entry has to earn its place on every run.
+    live = {(m.artifact, m.field) for m in mismatches}
+    unused = sorted(acknowledged - live)
+
+    return {
+        "failures": failures,
+        "acknowledged": warnings,
+        "unused_acknowledgements": unused,
+        "compared": compared,
+        "matched": compared - unmatched,
+    }
 
 
 def _fmt(m: Mismatch) -> str:
@@ -283,10 +332,40 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print(
-        "provenance: EVALS.md, baseline.json, and golden.jsonl match HEAD "
-        f"(corpus {head_corpus_version()}, pipeline {head_pipeline_version()})."
-    )
+    if result["unused_acknowledgements"]:
+        print(
+            "STALE WAIVERS — evals/stale_acknowledged.json waives fields that are "
+            "not stale, so the waiver is a standing blanket over a field nothing "
+            "is wrong with:",
+            file=sys.stderr,
+        )
+        for artifact, field in result["unused_acknowledgements"]:
+            print(f"  {artifact}:{field} matches HEAD; delete this entry", file=sys.stderr)
+        return 1
+
+    # The summary states what it matched and what it did not. It used to read
+    # "EVALS.md, baseline.json, and golden.jsonl match HEAD" whether or not a
+    # single field had matched — printed directly beneath the ACKNOWLEDGED
+    # lines saying they do not. On 2026-09-13 that line was printed over
+    # eleven live mismatches, including EVALS.md declaring system prompt v10
+    # from July where HEAD ships v22: a reader of the published eval report,
+    # which is the evidence document for answers about eighteen named transit
+    # agencies, was told the report describes the running system.
+    matched, compared = result["matched"], result["compared"]
+    stale = len(result["acknowledged"])
+    if stale:
+        print(
+            f"provenance: {matched} of {compared} declared field(s) match HEAD "
+            f"(corpus {head_corpus_version()}, pipeline {head_pipeline_version()}); "
+            f"{stale} acknowledged stale, listed above. The published artifacts do "
+            f"NOT all describe HEAD."
+        )
+    else:
+        print(
+            f"provenance: all {compared} declared field(s) across EVALS.md, "
+            f"baseline.json and golden.jsonl match HEAD "
+            f"(corpus {head_corpus_version()}, pipeline {head_pipeline_version()})."
+        )
     return 0
 
 

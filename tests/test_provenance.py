@@ -157,7 +157,66 @@ def test_check_all_clean_when_all_three_artifacts_match_head(monkeypatch):
     result = provenance.check_all(
         acknowledged=set(), evals_md=evals_md, baseline=baseline, golden=golden
     )
-    assert result == {"failures": [], "acknowledged": []}
+    assert result["failures"] == []
+    assert result["acknowledged"] == []
+    assert result["unused_acknowledgements"] == []
+    # The census is the denominator the gate prints. 4 prompts + corpus +
+    # pipeline on EVALS.md and baseline.json, 2 prompts + corpus + pipeline on
+    # golden.jsonl.
+    assert (result["matched"], result["compared"]) == (16, 16)
+
+
+def test_the_census_counts_every_field_of_an_artifact_with_no_provenance_block(monkeypatch):
+    """An unreadable artifact is 0 of its fields matched, not 1 field mismatched.
+
+    `_compare` collapses "there is no provenance block here" into a single
+    aggregate Mismatch. Subtracting mismatches from the total would then report
+    5 of 6 fields matched for an artifact this gate could not read one version
+    out of — a coverage number that overstates itself by the whole artifact.
+    """
+    monkeypatch.setattr(provenance, "head_prompt_versions", _fixed_prompts("v1"))
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv1")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv1")
+    all_prompts = dict.fromkeys(provenance.ALL_PROMPTS, "v1")
+    answer_prompts = {k: "v1" for k in provenance.ANSWER_PROMPTS}
+    good = {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": all_prompts}
+    result = provenance.check_all(
+        acknowledged=set(),
+        evals_md="no provenance block here at all",
+        baseline={"provenance": good},
+        golden="# provenance: "
+        + json.dumps(
+            {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": answer_prompts}
+        ),
+    )
+    assert result["compared"] == 16
+    assert result["matched"] == 10, "EVALS.md's six fields are all unmatched, not one"
+
+
+def test_a_waiver_over_a_field_that_is_not_stale_is_itself_a_failure(monkeypatch):
+    """Self-limiting exemptions.
+
+    A waiver that matches no live mismatch pre-accepts the next drift on that
+    field, so nobody ever decides about it. It has to earn its place on every
+    run.
+    """
+    monkeypatch.setattr(provenance, "head_prompt_versions", _fixed_prompts("v1"))
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv1")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv1")
+    all_prompts = dict.fromkeys(provenance.ALL_PROMPTS, "v1")
+    answer_prompts = {k: "v1" for k in provenance.ANSWER_PROMPTS}
+    good = {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": all_prompts}
+    result = provenance.check_all(
+        acknowledged={("EVALS.md", "corpus_version")},
+        evals_md="x\n" + provenance.render_evals_md_block({"run_id": "r", **good}),
+        baseline={"provenance": good},
+        golden="# provenance: "
+        + json.dumps(
+            {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": answer_prompts}
+        ),
+    )
+    assert result["failures"] == []
+    assert result["unused_acknowledgements"] == [("EVALS.md", "corpus_version")]
 
 
 def test_check_all_reports_unacknowledged_drift_as_a_failure(monkeypatch):
@@ -285,3 +344,81 @@ def test_provenance_block_declares_the_pipeline_version():
     block = provenance.provenance_block("run-1")
     assert block["pipeline_version"] == provenance.head_pipeline_version()
     assert block["pipeline_version"]
+
+
+def test_the_summary_never_claims_the_artifacts_match_head_while_any_is_waived(monkeypatch, capsys):
+    """The line this whole module is about.
+
+    `main()` used to end with "EVALS.md, baseline.json, and golden.jsonl match
+    HEAD" whether or not a single field matched, printed directly beneath the
+    ACKNOWLEDGED lines saying they do not. On 2026-09-13 that line stood over
+    eleven live mismatches. A summary that contradicts the evidence above it is
+    the same defect as a gate that examines nothing.
+    """
+    monkeypatch.setattr(
+        provenance,
+        "check_all",
+        lambda: {
+            "failures": [],
+            "acknowledged": [
+                provenance.Mismatch("EVALS.md", "corpus_version", "old", "new"),
+                provenance.Mismatch("baseline.json", "corpus_version", "old", "new"),
+            ],
+            "unused_acknowledgements": [],
+            "compared": 16,
+            "matched": 14,
+        },
+    )
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv")
+
+    assert provenance.main() == 0
+    out = capsys.readouterr().out
+    assert "14 of 16 declared field(s) match HEAD" in out
+    assert "2 acknowledged stale" in out
+    assert "do NOT all describe HEAD" in out
+    assert "and golden.jsonl match HEAD" not in out, (
+        "the all-clear wording is reserved for a run in which every field matched"
+    )
+
+
+def test_the_summary_says_all_when_every_field_matched(monkeypatch, capsys):
+    """The other direction, so the assertion above is not satisfied by a gate
+    that has simply stopped being able to say anything reassuring."""
+    monkeypatch.setattr(
+        provenance,
+        "check_all",
+        lambda: {
+            "failures": [],
+            "acknowledged": [],
+            "unused_acknowledgements": [],
+            "compared": 16,
+            "matched": 16,
+        },
+    )
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv")
+
+    assert provenance.main() == 0
+    out = capsys.readouterr().out
+    assert "all 16 declared field(s)" in out
+    assert "match HEAD" in out
+    assert "do NOT" not in out
+
+
+def test_a_waiver_that_matches_nothing_makes_the_gate_exit_one(monkeypatch, capsys):
+    monkeypatch.setattr(
+        provenance,
+        "check_all",
+        lambda: {
+            "failures": [],
+            "acknowledged": [],
+            "unused_acknowledgements": [("EVALS.md", "corpus_version")],
+            "compared": 16,
+            "matched": 16,
+        },
+    )
+    assert provenance.main() == 1
+    err = capsys.readouterr().err
+    assert "STALE WAIVERS" in err
+    assert "EVALS.md:corpus_version matches HEAD; delete this entry" in err
