@@ -157,7 +157,66 @@ def test_check_all_clean_when_all_three_artifacts_match_head(monkeypatch):
     result = provenance.check_all(
         acknowledged=set(), evals_md=evals_md, baseline=baseline, golden=golden
     )
-    assert result == {"failures": [], "acknowledged": []}
+    assert result["failures"] == []
+    assert result["acknowledged"] == []
+    assert result["unused_acknowledgements"] == []
+    # The census is the denominator the gate prints. 4 prompts + corpus +
+    # pipeline on EVALS.md and baseline.json, 2 prompts + corpus + pipeline on
+    # golden.jsonl.
+    assert (result["matched"], result["compared"]) == (16, 16)
+
+
+def test_the_census_counts_every_field_of_an_artifact_with_no_provenance_block(monkeypatch):
+    """An unreadable artifact is 0 of its fields matched, not 1 field mismatched.
+
+    `_compare` collapses "there is no provenance block here" into a single
+    aggregate Mismatch. Subtracting mismatches from the total would then report
+    5 of 6 fields matched for an artifact this gate could not read one version
+    out of — a coverage number that overstates itself by the whole artifact.
+    """
+    monkeypatch.setattr(provenance, "head_prompt_versions", _fixed_prompts("v1"))
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv1")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv1")
+    all_prompts = dict.fromkeys(provenance.ALL_PROMPTS, "v1")
+    answer_prompts = {k: "v1" for k in provenance.ANSWER_PROMPTS}
+    good = {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": all_prompts}
+    result = provenance.check_all(
+        acknowledged=set(),
+        evals_md="no provenance block here at all",
+        baseline={"provenance": good},
+        golden="# provenance: "
+        + json.dumps(
+            {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": answer_prompts}
+        ),
+    )
+    assert result["compared"] == 16
+    assert result["matched"] == 10, "EVALS.md's six fields are all unmatched, not one"
+
+
+def test_a_waiver_over_a_field_that_is_not_stale_is_itself_a_failure(monkeypatch):
+    """Self-limiting exemptions.
+
+    A waiver that matches no live mismatch pre-accepts the next drift on that
+    field, so nobody ever decides about it. It has to earn its place on every
+    run.
+    """
+    monkeypatch.setattr(provenance, "head_prompt_versions", _fixed_prompts("v1"))
+    monkeypatch.setattr(provenance, "head_corpus_version", lambda: "cv1")
+    monkeypatch.setattr(provenance, "head_pipeline_version", lambda: "pv1")
+    all_prompts = dict.fromkeys(provenance.ALL_PROMPTS, "v1")
+    answer_prompts = {k: "v1" for k in provenance.ANSWER_PROMPTS}
+    good = {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": all_prompts}
+    result = provenance.check_all(
+        acknowledged={("EVALS.md", "corpus_version")},
+        evals_md="x\n" + provenance.render_evals_md_block({"run_id": "r", **good}),
+        baseline={"provenance": good},
+        golden="# provenance: "
+        + json.dumps(
+            {"corpus_version": "cv1", "pipeline_version": "pv1", "prompt_versions": answer_prompts}
+        ),
+    )
+    assert result["failures"] == []
+    assert result["unused_acknowledgements"] == [("EVALS.md", "corpus_version")]
 
 
 def test_check_all_reports_unacknowledged_drift_as_a_failure(monkeypatch):
