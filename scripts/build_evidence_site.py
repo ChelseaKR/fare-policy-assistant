@@ -25,7 +25,6 @@ import os
 import re
 import shutil
 import stat
-import struct
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
@@ -38,6 +37,11 @@ from urllib.parse import urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
+# `scripts.site_meta` holds what this site's pages say about their own address,
+# shared with the second publisher in `.github/workflows/pages.yml`. The repo root
+# goes on the path so the same import works whether this file is run as a script
+# (where sys.path[0] is `scripts/`) or imported as `scripts.build_evidence_site`.
+sys.path.insert(0, str(_REPO_ROOT))
 
 from assistant.promotion_evidence import (  # noqa: E402
     PromotionEvidenceError,
@@ -51,6 +55,7 @@ from assistant.release_identity import (  # noqa: E402
     ReleaseIdentityError,
     build_release_identity,
 )
+from scripts import site_meta  # noqa: E402
 
 PUBLIC_EVIDENCE_SCHEMA: Final = "fare-assistant.public-evidence.v1"
 PUBLIC_RELEASE_SCHEMA: Final = "fare-assistant.public-release.v1"
@@ -79,22 +84,23 @@ _HOSTNAME = re.compile(
     r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*"
     r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$"
 )
-#: The address this site answers on. A canonical link and a sitemap both publish
-#: absolute addresses, so this cannot be inferred from the output directory; it is
-#: written down, and `render_evidence_site` refuses to publish a CNAME naming a
-#: different host, so the two can never quietly disagree.
-SITE_ORIGIN = "https://evals.chelseakr.com"
+#: What this site's pages say about their own address, and the tags that say it.
+#: Defined in `scripts/site_meta.py` and bound here rather than duplicated,
+#: because the second publisher -- the nightly job in `.github/workflows/pages.yml`
+#: -- imports the same module. Two copies of these facts is how that publisher
+#: came to emit no `og:image` at all while this file's own tests stayed green.
+SITE_ORIGIN = site_meta.SITE_ORIGIN
+INDEXABLE_PAGES = site_meta.INDEXABLE_PAGES
+OG_CARD_NAME = site_meta.OG_CARD_NAME
+OG_CARD_WIDTH = site_meta.OG_CARD_WIDTH
+OG_CARD_HEIGHT = site_meta.OG_CARD_HEIGHT
+OG_CARD_ALT = site_meta.OG_CARD_ALT
+_page_url = site_meta.page_url
+_social_image_meta = site_meta.social_image_meta
+_social_meta = site_meta.social_meta
+_robots_txt = site_meta.robots_txt
+_sitemap_xml = site_meta.sitemap_xml
 
-#: The pages offered for indexing, in the order the sitemap lists them. The other
-#: published files -- the evidence manifest, the release receipt, the history SVG
-#: and the share card -- are data a reader reaches through these pages, not pages.
-INDEXABLE_PAGES: tuple[str, ...] = ("index.html", "report.html")
-
-#: The share-card image, when one is published. A link preview names an absolute
-#: address, so the card has to be a file this site actually serves; see
-#: `_social_meta` for why a card naming a file that is not there is worse than
-#: no card at all.
-OG_CARD_NAME: Final = "og-card.png"
 #: Where the per-agency fare-change feeds are served, relative to the site root.
 #: `assistant.feeds` writes each feed's own address into it -- an Atom
 #: `<link rel="self">` and a JSON Feed `feed_url` -- so the generator and this
@@ -111,11 +117,6 @@ _FEED_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.(?:xml|json)$")
 #: one document head, and the combined feed is what a general reader wants.
 COMBINED_FEED_ATOM: Final = "all.xml"
 COMBINED_FEED_JSON: Final = "all.json"
-OG_CARD_WIDTH: Final = 1200
-OG_CARD_HEIGHT: Final = 630
-OG_CARD_ALT: Final = (
-    "Evaluation evidence for the Transit Fare Policy Assistant, at evals.chelseakr.com."
-)
 
 _PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 _TEMPLATE_FIELDS = frozenset(
@@ -1107,10 +1108,10 @@ def _validated_og_card(path: Path) -> bytes:
     here rather than trusted from the filename.
     """
     payload = _read_regular(path, limit=MAX_OG_CARD_BYTES, context="share card")
-    signature = b"\x89PNG\r\n\x1a\n"
-    if not payload.startswith(signature) or payload[12:16] != b"IHDR":
-        _fail("share card must be a PNG whose first chunk is IHDR")
-    width, height = struct.unpack(">II", payload[16:24])
+    try:
+        width, height = site_meta.png_dimensions(payload)
+    except ValueError as exc:
+        _fail(str(exc))
     if (width, height) != (OG_CARD_WIDTH, OG_CARD_HEIGHT):
         _fail(f"share card must be {OG_CARD_WIDTH}x{OG_CARD_HEIGHT}, not {width}x{height}")
     return payload
@@ -1145,30 +1146,6 @@ def _report_description(run_date: str) -> str:
     return (
         f"Aggregate scores by evaluation suite and per-case outcomes for the run of "
         f"{run_date}. Contains no evaluation questions, model responses, or passages."
-    )
-
-
-def _social_image_meta(*, card: bool) -> tuple[str, ...]:
-    """The image half of a share card, and the card type that follows from it.
-
-    An ``og:image`` naming a file this site does not serve is worse than none at
-    all: the tag is read once, by a crawler, somewhere this project will never
-    see the result. So the image tags are emitted only when the card is actually
-    being published in the same render, and ``twitter:card`` says ``summary``
-    rather than ``summary_large_image`` when there is no large image to show.
-    """
-    if not card:
-        return ('<meta name="twitter:card" content="summary">',)
-    address = f"{SITE_ORIGIN}/{OG_CARD_NAME}"
-    return (
-        '<meta name="twitter:card" content="summary_large_image">',
-        f'<meta property="og:image" content="{html.escape(address)}">',
-        '<meta property="og:image:type" content="image/png">',
-        f'<meta property="og:image:width" content="{OG_CARD_WIDTH}">',
-        f'<meta property="og:image:height" content="{OG_CARD_HEIGHT}">',
-        f'<meta property="og:image:alt" content="{html.escape(OG_CARD_ALT)}">',
-        f'<meta name="twitter:image" content="{html.escape(address)}">',
-        f'<meta name="twitter:image:alt" content="{html.escape(OG_CARD_ALT)}">',
     )
 
 
@@ -1243,69 +1220,6 @@ def _validated_feeds(path: Path) -> dict[str, bytes]:
             _fail(f"feed {name} does not name the address this site would serve it at")
         feeds[name] = payload
     return feeds
-
-
-def _social_meta(*, title: str, description: str, url: str, card: bool) -> str:
-    """The OpenGraph and Twitter tags for one page."""
-    return "\n".join(
-        (
-            '<meta property="og:type" content="website">',
-            '<meta property="og:site_name" content="Transit Fare Policy Assistant">',
-            '<meta property="og:locale" content="en_US">',
-            f'<meta property="og:url" content="{html.escape(url)}">',
-            f'<meta property="og:title" content="{html.escape(title)}">',
-            f'<meta property="og:description" content="{html.escape(description)}">',
-            *_social_image_meta(card=card),
-            f'<meta name="twitter:title" content="{html.escape(title)}">',
-            f'<meta name="twitter:description" content="{html.escape(description)}">',
-        )
-    )
-
-
-def _page_url(name: str) -> str:
-    """The address a published page answers on. The root is the bare origin.
-
-    A canonical naming ``index.html`` would publish a second address for a page
-    that already has one, which is the thing a canonical exists to prevent.
-    """
-    return f"{SITE_ORIGIN}/" if name == "index.html" else f"{SITE_ORIGIN}/{name}"
-
-
-def _robots_txt() -> bytes:
-    """What a crawler is told at ``/robots.txt``.
-
-    Nothing is disallowed. Everything this site publishes is published on purpose:
-    the renderer writes a fixed list of files, plus the feeds under
-    ``/feeds/`` -- a set rather than a list, but a checked one, since
-    `_validated_feeds` refuses any entry that is not a feed instead of skipping it
-    -- and the workflow asserts the private ones are absent. There is no path here
-    that wants hiding.
-
-    The feeds are not in ``sitemap.xml``, and that is not an oversight: a feed is
-    data a reader subscribes to, not a page they land on, which is the same reason
-    the evidence manifest and the release receipt are absent from it. They are
-    reachable through the ``<link rel="alternate">`` the page carries for the
-    combined feed.
-    """
-    return f"User-agent: *\nAllow: /\n\nSitemap: {SITE_ORIGIN}/sitemap.xml\n".encode()
-
-
-def _sitemap_xml() -> bytes:
-    """The two pages, as a sitemap.
-
-    No ``lastmod``. The evidence carries its own dates -- the run, the promotion,
-    the runtime release -- and they are on the page; a build date stamped here
-    would be a third date, about the rendering rather than about the evidence,
-    and a sitemap date is worth publishing only while it is true.
-    """
-    locations = "".join(
-        f"<url><loc>{html.escape(_page_url(name))}</loc></url>" for name in INDEXABLE_PAGES
-    )
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        f"{locations}</urlset>\n"
-    ).encode()
 
 
 def _write_site_file(root: Path, name: str, payload: bytes) -> None:

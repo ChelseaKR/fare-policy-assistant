@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from assistant.promotion_evidence import PromotionEvidenceError
 from assistant.release_identity import build_release_identity
 from scripts import build_evidence_site as site
+from scripts.site_meta import check_site
 
 _SOURCE = "a" * 40
 _CONFIG = "b" * 64
@@ -1401,6 +1402,31 @@ def test_a_promised_share_image_is_a_file_this_site_publishes(tmp_path: Path) ->
         assert card["og:image:height"] == str(site.OG_CARD_HEIGHT), name
         assert card["og:image:alt"], name
         assert card["twitter:image:alt"] == card["og:image:alt"], name
+
+
+@pytest.mark.parametrize("card", [None, _OG_CARD])
+def test_every_published_page_says_what_it_is_and_where_it_lives(
+    tmp_path: Path,
+    card: Path | None,
+) -> None:
+    """The same sweep `test_pages_workflow.py` runs over the nightly job's output.
+
+    Both publishers write to one address, so what a page there says about itself
+    is one property of that address, not two. Running the one check over both
+    trees is what keeps them from drifting again -- the tests above assert the
+    tags this renderer emits, and asserted them green through the whole period
+    the other publisher was emitting none.
+
+    The page list comes from the rendered tree, not from `INDEXABLE_PAGES`: the
+    page published without a canonical is the page nobody remembered to add to a
+    list. The length assertion is there because a sweep that reached nothing
+    would report no problems and read exactly like a pass.
+    """
+    result = check_site(_rendered(tmp_path, og_card=card))
+
+    assert len(result.pages) >= 2, "the sweep collapsed; it would prove nothing"
+    assert result.pages == site.INDEXABLE_PAGES
+    assert result.problems == ()
 
 
 def test_the_committed_share_card_is_the_png_at_the_size_the_tags_promise() -> None:
