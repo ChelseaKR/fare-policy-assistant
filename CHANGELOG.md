@@ -9,6 +9,37 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Added
+- **Deploy staleness sentinel** (2026-09-13). `scripts/deploy_staleness.py` plus
+  a weekly `deploy-staleness.yml` answer one question nothing here was asking:
+  how far behind `main` is the commit the live site was built from. Pointed at
+  this repository it reports 63 days, 154 commits, 18 of them changing what a
+  visitor receives, from a published build dated 2026-07-12. An SEO audit that
+  day measured the live page, drew conclusions about `main`, and had to retract
+  them: the page was evidence that `main` had never been published, not evidence
+  about `main`. Every gate was green throughout, because none of them asked.
+  - It publishes nothing and holds nothing that could. No `pages: write`, no
+    `id-token: write`, no deploy credential, and it neither reads nor sets
+    `vars.NIGHTLY_HUB_PUBLISH_ENABLED`. Whether this site should publish at all
+    is an owner decision under ADR 0032 and this sentinel does not touch it.
+  - The measurement comes from the **deployment record**, not from `pages.yml`'s
+    run history, and the difference is not academic here. Both nightly jobs sit
+    behind that variable, so the scheduled run reaches a runner four times a day
+    and skips every job. A run-history sentinel would either count those as a
+    fresh deploy every six hours while the site stayed two months old, or find
+    no successful run at all and call that an answer. A `github-pages`
+    deployment exists only because bytes were published and names the commit
+    they came from; there is exactly one in this repository's history.
+  - Age alone is never the verdict. A site nobody has republished because
+    nothing it publishes changed is correct, not stale, so the report fires only
+    when a commit touching a publisher's own inputs has waited past the
+    threshold. `.github/workflows/pages.yml` is on that input list because the
+    nightly renderer *is* that file, so the asymmetry #247 fixed would otherwise
+    reappear as a clock blind to one of the two publishers.
+  - Every unmeasurable case refuses rather than returning zero: no deployment,
+    none reporting a successful status, a deployed commit a shallow clone does
+    not contain, a diverged history. Those exit 2 and turn the run red. A real
+    measurement, overdue or not, files or closes an issue instead, because a
+    scheduled check that is red for months is a check nobody reads.
 - **Answer drift across corpus versions** (2026-09-07, #216). `make drift
   FROM=<corpus version> [TO=<version|live>]` runs the whole case set against
   both versions through the ordinary answer pipeline and pairs the answers per

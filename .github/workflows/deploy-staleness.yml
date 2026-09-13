@@ -1,0 +1,131 @@
+# Is the site a visitor gets at evals.chelseakr.com the site this repository has?
+#
+# On 2026-09-13 it was not. The live build was from 2026-07-12 -- 63 days and 154 commits
+# behind main, 18 of those commits changing what a visitor receives -- and every gate in this
+# repository was green, because none of them was asking. An SEO audit measured the live page,
+# concluded things about main, and had to retract them: the page was evidence that main had
+# never been published, not evidence about main.
+#
+# This workflow publishes NOTHING. It cannot: it holds no `pages: write`, no `id-token: write`
+# and no deploy credential of any kind, and it does not read or set
+# `vars.NIGHTLY_HUB_PUBLISH_ENABLED`. Whether this site should publish at all is an owner
+# decision under ADR 0032 and this file does not touch it. It only reports the distance.
+#
+# The output is an issue, not a red run. A scheduled workflow that fails whenever a deploy is
+# overdue would be red for months here -- the site is deliberately unpublished -- and a check
+# that is permanently red is a check nobody reads. This run goes red only when the comparison
+# cannot be made at all: no github-pages deployment in the history, none that reports a
+# successful status, a deployed commit this clone does not contain, or a history that has
+# diverged. A detector that cannot tell must look broken rather than report a comfortable zero.
+#
+# Every action is pinned to a full 40-char commit SHA already in use elsewhere in this
+# repository, per SECURITY-AND-SUPPLY-CHAIN-STANDARD §6.
+name: deploy staleness sentinel
+
+on:
+  schedule:
+    # Mondays. The site is a promotion artefact on a manual cadence, so the useful question
+    # is asked weekly; asking hourly would only produce the same answer 168 times.
+    - cron: "37 15 * * 1"
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: "Days an unpublished visitor-visible commit may wait before this reports"
+        required: false
+        default: "14"
+        type: string
+
+# Least privilege at the workflow level; the one job grants itself what it needs (CICD-04).
+permissions: {}
+
+# This workflow writes (files or updates one issue): never cancel a run mid-write, and never
+# let a manual dispatch race the Monday schedule onto the same issue (CI-CD-STANDARD §8b).
+concurrency:
+  group: deploy-staleness
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: measure how far the live site is behind main
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read # the checkout, and the git history the comparison walks
+      deployments: read # which commit the published build was made from
+      issues: write # the report itself; nothing here writes anywhere else
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Required, not incidental. On a shallow clone the July commit is simply absent,
+          # `git log <deployed>..origin/main` prints nothing, and the site reads as up to
+          # date. scripts/deploy_staleness.py refuses that case rather than reporting it as
+          # zero -- this is what keeps it from having to.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Measure the distance
+        id: measure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_DAYS: ${{ inputs.max_age_days || '14' }}
+          REPOSITORY: ${{ github.repository }}
+        # Deliberately a bare `python3`: scripts/deploy_staleness.py imports only the standard
+        # library and nothing from this repository, so the sentinel needs no dependency
+        # resolution and cannot be broken by one. `|| true` so a refusal reaches the reporting
+        # step, which turns it into the red run, rather than ending the job here with no
+        # explanation attached.
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_staleness.py \
+            --repo "$REPOSITORY" \
+            --head origin/main \
+            --max-age-days "$MAX_AGE_DAYS" \
+            > "$RUNNER_TEMP/report.txt" 2> "$RUNNER_TEMP/error.txt" || true
+          cat "$RUNNER_TEMP/report.txt" "$RUNNER_TEMP/error.txt"
+
+      - name: File, update or close the report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MEASURED: ${{ steps.measure.outputs.measured }}
+          OVERDUE: ${{ steps.measure.outputs.overdue }}
+          TITLE: "The published site is behind main"
+        run: |
+          set -euo pipefail
+
+          existing=$(gh issue list --repo "$REPOSITORY" --state open \
+            --json number,title --jq "[.[] | select(.title == env.TITLE)] | .[0].number // empty")
+
+          if [ "$MEASURED" != "true" ]; then
+            echo "::error::the staleness comparison could not be made; see the report above"
+            exit 1
+          fi
+
+          if [ "$OVERDUE" != "true" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --repo "$REPOSITORY" --reason completed \
+                --comment "The published site is no longer overdue. ${RUN_URL}"
+              echo "closed #$existing"
+            else
+              echo "not overdue; no open report to close"
+            fi
+            exit 0
+          fi
+
+          {
+            echo '```'
+            cat "$RUNNER_TEMP/report.txt"
+            echo '```'
+            echo
+            echo "Publishing is an owner action under ADR 0032; this sentinel does not deploy."
+            echo "Measured by \`scripts/deploy_staleness.py\` in ${RUN_URL}."
+          } > "$RUNNER_TEMP/body.md"
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPOSITORY" --body-file "$RUNNER_TEMP/body.md"
+            echo "updated #$existing"
+          else
+            gh issue create --repo "$REPOSITORY" --title "$TITLE" \
+              --body-file "$RUNNER_TEMP/body.md"
+          fi
