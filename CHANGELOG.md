@@ -39,6 +39,47 @@ rather than tied to a published tag.
     moving. They are real re-rankings, not a planted defect.
 
 ### Fixed
+- **The nightly publisher put out pages that could not be shared or indexed**
+  (2026-09-13). `evals.chelseakr.com` has two publishers. The dispatch pipeline
+  in `scripts/build_evidence_site.py` emits a description, a self-referencing
+  canonical, a full Open Graph set with a 1200x630 card, a `robots.txt` and a
+  `sitemap.xml`, and has tests saying so (#174). The nightly job in `pages.yml`
+  -- the one that publishes on a schedule, and therefore the one that will
+  actually publish -- copied `og-card.png` into `_site` and then never named it,
+  so its index page promised no `og:image` at all; and it copied
+  `docs/eval-report.html` byte for byte, so `/report.html` went out with a title
+  and nothing else: no description, no canonical, no card. Every test the first
+  publisher has stayed green throughout, because they only ever read the first
+  publisher's output.
+  - The tags a page carries about its own address now live in one stdlib-only
+    module, `scripts/site_meta.py`, which both publishers import. The nightly
+    step runs on a bare `python3` with nothing installed, which is why that
+    module depends on nothing, inside or outside this repository.
+  - The nightly index gained a `{{SOCIAL_IMAGE}}` marker, filled only when the
+    build is publishing the card in the same run, and the card's own IHDR is read
+    to confirm it is the size the tags state. Same rule the dispatch page and the
+    feed links already followed: a tag naming a file this site does not serve is
+    read once, by a crawler, somewhere this project never sees the result.
+  - The nightly `report.html` is still the artifact's body, unaltered; the
+    publisher now inserts the head tags that state its published address after
+    the document's own `</title>`, and refuses the file outright if there is no
+    `</title>` to insert after rather than guessing where a head begins. Its
+    description carries the date of the run it reports and no score: the date is
+    read from the same provenance block the page's numbers come from, and a pass
+    rate written into a head tag would be served long after the number moved,
+    with nothing able to fail.
+  - `site_meta.check_site` is the gate. It reads a built tree offline, derives
+    the page list from the tree rather than from `INDEXABLE_PAGES` or any other
+    list, and reports every page missing a title, a description, a canonical
+    naming its own address, a matching `og:*` set, a card that is the file and
+    the size promised, or an entry in the sitemap. Both publishers' test files
+    run it over their own output, and both assert the sweep reached at least two
+    pages -- a sweep that reached nothing reports no problems and reads exactly
+    like a pass.
+  - Nothing is published by this change on its own. The nightly path stays gated
+    on `vars.NIGHTLY_HUB_PUBLISH_ENABLED`, which is deliberately unset (ADR
+    0032), and the dispatch path still needs a promotion. The live site remains
+    the July build it has been; this fixes what the next publish puts out.
 - **A phone number this project told five audiences its own ingest had broken
   is spelled that way by the agency** (2026-09-09). `README.md`,
   `docs/procurement-brief.md`, `docs/audits/methodology.md`, the `_CLOCK_RE`

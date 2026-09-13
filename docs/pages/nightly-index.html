@@ -24,6 +24,15 @@
   successful manual dispatch.
   Every build fills in the markers below; the render step fails loudly if the
   set of markers in this file and the set it knows how to fill ever disagree.
+  The share card repeats this page's own title and description rather than a
+  second set written for a card. Its image half is the SOCIAL_IMAGE marker
+  below, which the render step fills in only when it is publishing og-card.png
+  in the same build, and otherwise fills with a plain summary card: an image tag
+  naming a file this site does not serve is read once, by a crawler, somewhere
+  this project never sees the result. The card itself is the site's, shared with
+  the promotion page; its subtitle names that page's subject ("published
+  promotion evidence") rather than this one's, which is why the title and
+  description beside it say plainly that this snapshot is not a promoted release.
 -->
 <meta name="description" content="Nightly evaluation snapshot for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: {{TOTAL_SCORE}}, gate {{GATE_WORD}}. Not a promoted release.">
 <link rel="canonical" href="https://evals.chelseakr.com/">
@@ -34,7 +43,7 @@
 <meta property="og:url" content="https://evals.chelseakr.com/">
 <meta property="og:title" content="Nightly evaluation snapshot — Transit Fare Policy Assistant">
 <meta property="og:description" content="Nightly evaluation snapshot for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: {{TOTAL_SCORE}}, gate {{GATE_WORD}}. Not a promoted release.">
-<meta name="twitter:card" content="summary">
+{{SOCIAL_IMAGE}}
 <meta name="twitter:title" content="Nightly evaluation snapshot — Transit Fare Policy Assistant">
 <meta name="twitter:description" content="Nightly evaluation snapshot for the Transit Fare Policy Assistant, from the run of {{RUN_DATE}}: {{TOTAL_SCORE}}, gate {{GATE_WORD}}. Not a promoted release.">
 <style>
