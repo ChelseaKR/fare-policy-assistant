@@ -1,11 +1,11 @@
 # Regional Transfers — VTA
-Source: https://www.vta.org/go/fares/regional-transfers (fetched 2026-08-14)
+Source: https://www.vta.org/go/fares/regional-transfers (fetched 2026-09-14)
 
 ## Regional Transfers
 
 VTA works closely with other area transit operators to provide convenient transfers for regional trips, including regional transfer locations and inter-operator transfer or fare agreements.
 Highway 17 Express
-VTA Paper Day Pass holders (issued from farebox or TVM through Day Pass Token exchange) receive free Local fares on Hwy17 Express. HWY 17 Express Wesbite
+VTA accepts 1-Day & 31-Day Highway 17 passes on local routes. HWY 17 Express Wesbite
 Caltrain
 VTA Clipper Cash or Contactless Bank Card Riders will receive automatic discount up to $2.85 when transferring from one operator to another within two (2) hours of initial tag. Caltrain Website
 

@@ -1,5 +1,5 @@
 # Clipper on SamTrans (Next Generation Clipper FAQ) — SamTrans
-Source: https://www.samtrans.com/fares/clipper (fetched 2026-08-14)
+Source: https://www.samtrans.com/fares/clipper (fetched 2026-09-14)
 
 ## What’s New?
 

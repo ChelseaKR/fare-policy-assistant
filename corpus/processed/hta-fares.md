@@ -1,5 +1,5 @@
 # Fares — HTA
-Source: https://hta.org/fares/ (fetched 2026-08-10)
+Source: https://hta.org/fares/ (fetched 2026-09-14)
 
 ## Fares & Passes
 

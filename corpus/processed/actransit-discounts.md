@@ -1,5 +1,5 @@
 # Discounts (youth, senior, disabled, Clipper START, Student Transit Pass) — AC Transit
-Source: https://www.actransit.org/discounts (fetched 2026-08-14)
+Source: https://www.actransit.org/discounts (fetched 2026-09-14)
 
 ## AC Transit’s discounted fare programs make getting around even easier for eligible riders
 

@@ -1,5 +1,5 @@
 # Accessibility (discount fares and Discount Photo ID Card) — SCMTD
-Source: https://scmetro.org/rider-info/accessibility/ (fetched 2026-08-13)
+Source: https://scmetro.org/rider-info/accessibility/ (fetched 2026-09-14)
 
 ## Services & Features
 
@@ -96,14 +96,14 @@ $2.00 to process a new Photo ID Card
 $2.00 for the first replacement of a lost card
 $5.00 for the replacement of a lost card thereafter
 How to Obtain the Application Forms
-Read the Discount Fare Program and Policy .
-Print the application forms that are appended to the policy as Attachment A and Attachment B .
-If your application requires confirmation of legal blindness, print and submit Attachment C .
+Read the Discount Fare Program Rider Guide .
+Print the Discount Fare Program Application .
+Present your completed application at the Santa Cruz or Watsonville Customer Service Booth, or mail to the address provided in the application.
 You may also request the forms from Customer Service at our Transit Centers in downtown Santa Cruz and Watsonville.
 Attendants
-People with disabilities who require an attendant are only required to pay one discount rate fare when they travel with a METRO Discount Photo ID Card. To qualify, your application form must indicate that you need an attendant. A “green dot” will then be placed on your Discount Photo ID Card, which allows you to receive this benefit.
+If you have a disability, including legal blindness, and need help traveling, one Personal Care Attendant (PCA) can ride with you at no extra fare when the need is certified. If you need a PCA, ask your medical provider to indicate the need on your application. Your card will be marked with a green dot.
 Children
-Children (age 17 and under) may ride at the discount fare rate when accompanying a parent who travels with a METRO Discount Photo ID Card. To qualify, your application form must include a completed Request for Reduced Children’s Fare with Discount Fare Card Form ( Attachment B ). A “gold dot” will then be placed on your Discount Photo ID Card, which allows you to receive this benefit.
+K-12 students ride free on local routes through METRO’s Youth Cruz Free Program . On the Highway 17 Express, children under 46” tall may ride for free with a fare paying adult. When your card is issued, please notify the Customer Service Representative if you will be traveling with a dependent child.
 
 ## Accessibility Policies and Procedures
 

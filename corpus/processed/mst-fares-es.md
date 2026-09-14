@@ -1,5 +1,5 @@
 # Tarifas (Spanish fares page) — MST
-Source: https://mst.org/es/fares/ (fetched 2026-06-12)
+Source: https://mst.org/es/fares/ (fetched 2026-09-14)
 
 ## Tarifas Descripción general
 
@@ -81,7 +81,8 @@ Las tarjetas de cortesía están disponibles de forma gratuita para todas las pe
 
 ## Estudiantes universitarios
 
-Los estudiantes de Hartnell viajan GRATIS en todas las rutas con una identificación de estudiante con fotografía válida durante los semestres de otoño y primavera.
+Hartnell students can now sign up to Tap2Ride for FREE on all routes during the Fall and Spring semesters. Whether you’ve used your student ID to ride in the past or you’re just getting started, sign up now to register (or request) a debit or credit card with our transit discount partner, Jawnt. Please visit the Hartnell website for more information about eligibility and how to sign up.
+You may still ride for free with a valid photo student ID.
 Estudiantes del MPC viajan GRATIS en todas las rutas con una identificación de estudiante con fotografía válida durante los semestres de otoño y primavera.
 Los estudiantes de CSUMB viajan GRATIS en todas las rutas con una identificación de estudiante con fotografía válida durante los semestres de otoño y primavera.
 

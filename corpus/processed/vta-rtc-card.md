@@ -1,5 +1,5 @@
 # Regional Transit Connection Card — VTA
-Source: https://www.vta.org/fares/regional-transit-connection-card (fetched 2026-08-14)
+Source: https://www.vta.org/fares/regional-transit-connection-card (fetched 2026-09-14)
 
 ## Regional Transit Connection Card
 

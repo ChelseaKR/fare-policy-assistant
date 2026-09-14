@@ -1,5 +1,5 @@
 # VineGo Paratransit Service — VINE
-Source: https://vinetransit.com/vine-go/ (fetched 2026-08-14)
+Source: https://vinetransit.com/vine-go/ (fetched 2026-09-14)
 
 ## (page top)
 
@@ -16,6 +16,7 @@ Schedule a ride
 Track a ride (My Transit Manager)
 VineGo hours
 VineGo fares
+Americans with Disabilities Act
 Reasonable accommodation
 Comments & complaints
 ADA visitors to Napa Valley
@@ -77,6 +78,9 @@ X = If the city of your residence has public transportation that offers door-to-
 VineGo Discount Pass Eligible members of VineGo may purchase discount passes at the Soscol Gateway Transit Center or online. The purchase price of a discount pass is $20 for a $24 value.
 Reasonable accommodation
 Public transit passengers with disabilities may request reasonable modifications be made to accommodate their use of public transit. Requests should be made in written form and submitted to the Manager of Public Transit at 625 Burnell St., Napa, CA 94559.
+Americans with Disabilities Act (ADA)
+The Americans with Disabilities Act of 1990 (ADA) prohibits discrimination and ensures equal opportunity and access for persons with disabilities. Vine Transit provides accessible transportation options and VineGo for people with disabilities who cannot access or use the regular fixed route bus system.
+ADA Coordinator Rebecca Schenck 707-259-8636 [email protected]
 Comments and complaints
 Comments and complaints from the public may be received electronically through our customer service portal.
 Click here to submit a comment or complaint to NVTA staff. Additionally, prepaid comment cards are available in English and Spanish on Vine vehicles.

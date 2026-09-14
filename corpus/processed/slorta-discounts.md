@@ -1,5 +1,5 @@
 # Discounts (eligibility and verification) — SLORTA
-Source: https://www.slorta.org/fares/discounts/ (fetched 2026-08-14)
+Source: https://www.slorta.org/fares/discounts/ (fetched 2026-09-14)
 
 ## (page top)
 
@@ -8,12 +8,14 @@ Discounted Fares
 Half-Priced | Half the regular fare for Seniors (65-79), Disabled, Medicare Card Holders, and Students (K-12). Student discount applies to RTA and Paso Robles routes A & B only. The Student Discount does not apply on the South County routes 21,24,27 and 28 or Morro Bay Transit
 Free Fare | VIP Seniors who are 80+ years of age ride for free on all SLO County fixed routes. Children 44″ and smaller ride free when traveling with a regular-fare adult. (Not available on the South County routes) ADA eligible passengers : ADA passengers ride fixed route transit fare-free. Present your Certificate of Eligibility or your ADA Paratransit Service ID card. Care attendants and companions must pay full fare. Please be prepared to show your ID or other information to the driver if requested.
 
-## Eligibility Verification for Discounted Fares
+## Eligibility Verification for Discounted Fares: ID cards will be required starting January 17, 2027.
 
-Riders need to verify their eligibility to qualify for discounted fares.
-Riders can come into our offices where they will complete the Basic Eligibility form, verify eligibility, take a photo and we will issue the RTA Discount Eligibility Card. Riders show the card to bus operators and at pass outlets to be able to use the discounted fare. The form is found here and please note that there are two pages to the form. Previous versions of these cards are valid.
+Riders need to verify their eligibility to qualify for discounted fares. There are THREE ways to verify your eligibility:
+Riders can come into our offices where they will complete the Basic Eligibility form, verify eligibility, take a photo and we will issue the RTA Discount Eligibility Card. Riders show the card to bus operators and at pass outlets to be able to use the discounted fare. The form is found here and please note that there are two pages to the form. Please call ahead to ensure that staff will be here to help you: (805) 541-2228 ext. 4833 . Previous versions of these cards are valid.
+2. Complete the Basic Eligibility form and turn in your forms and photo online. A photo ID card will be mailed to you.
+Complete the verification process online by visiting the slorta.org/fares/basic eligibility-form here.
 
-## Contactless Fare Discounts: Tap2Ride
+## 3. Contactless Fare Discounts: Tap2Ride
 
-Riders can also link their contactless payment card with the California Integrated Travel Project (Cal ITP) to verify eligibility to pay discount fares. Once a payment card is registered , a rider can use that card to pay discount fares on the Tap2Ride payment system.
+Riders can also link their contactless payment card with the California Integrated Travel Project (Cal ITP) to verify eligibility to pay discount fares. Once a payment card is registered , a rider can use the verified card to pay discount fares on the Tap2Ride payment system.
 To start the card registration process, visit the Cal ITP benefits page here: https:// benefits.calitp.org / and select RTA for your agency.

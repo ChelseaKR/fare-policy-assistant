@@ -1,5 +1,5 @@
 # Tarifas (Spanish fares page) — AC Transit
-Source: https://www.actransit.org/es/fares (fetched 2026-08-14)
+Source: https://www.actransit.org/es/fares (fetched 2026-09-14)
 
 ## (page top)
 
@@ -37,7 +37,7 @@ Transbordos locales gratuitos e ilimitados durante las dos horas posteriores a s
 
 ## Transbordos entre agencias
 
-Cuando transborda a otro sistema regional usando Clipper de última generación o pagos sin contacto, los pasajeros reciben un crédito, hasta $3, por el valor de la última tarifa pagada.
+Cuando transborda a otro sistema regional usando Clipper de última generación o pagos sin contacto, los pasajeros reciben un crédito, hasta $2.85, por el valor de la última tarifa pagada.
 NOTA: los pasajeros deben utilizar la misma tarjeta/cuenta para todos los viajes.
 Obtenga más información en Transbordos .
 Viaje único local

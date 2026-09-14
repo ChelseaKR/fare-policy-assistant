@@ -1,5 +1,5 @@
 # Fare Types (passes, day passes, waived fares, Youth Unlimited) — SamTrans
-Source: https://www.samtrans.com/fares/fare-types (fetched 2026-08-14)
+Source: https://www.samtrans.com/fares/fare-types (fetched 2026-09-14)
 
 ## Fare Types
 

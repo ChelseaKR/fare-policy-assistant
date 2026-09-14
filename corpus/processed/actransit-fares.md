@@ -1,5 +1,5 @@
 # Fares — AC Transit
-Source: https://www.actransit.org/fares (fetched 2026-08-14)
+Source: https://www.actransit.org/fares (fetched 2026-09-14)
 
 ## (page top)
 
@@ -38,7 +38,7 @@ Unlimited free local transfers within two hours of your first ride when using Ne
 
 ## Interagency Transfers
 
-When transferring to another regional system using Next-Generation Clipper or contactless payments, riders receive a credit equal in value to the last fare paid, up to $3.
+When transferring to another regional system using Next-Generation Clipper or contactless payments, riders receive a credit equal in value to the last fare paid, up to $2.85.
 NOTE: Riders must use the same card/account for all trips.
 Learn more at Transfers .
 Local Single Ride

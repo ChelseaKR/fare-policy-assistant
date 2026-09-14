@@ -1,9 +1,9 @@
 # Fares — SLORTA
-Source: https://www.slorta.org/fares/ (fetched 2026-08-14)
+Source: https://www.slorta.org/fares/ (fetched 2026-09-14)
 
 ## New cash fares as of April 6, 2026
 
-RTA and South County routes offer cash fares as well as discount passes . Cash fares vary by route. Please see each route’s page for more information.
+RTA and South County routes offer cash fares as well as discount passes . Cash fares vary by route.
 Cash Fares | Rt. 9,10,12,15 | South County/A&B/Morro Bay Transit
 Regular | $2.00 | $1.50
 Senior (65–79) | $1.00 | $0.75

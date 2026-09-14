@@ -1,5 +1,5 @@
 # Clipper Card — SolTrans
-Source: https://www.soltrans.org/fares/clipper-card (fetched 2026-08-13)
+Source: https://www.soltrans.org/fares/clipper-card (fetched 2026-09-14)
 
 ## Clipper Card
 

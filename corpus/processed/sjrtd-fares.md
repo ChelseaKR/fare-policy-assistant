@@ -1,5 +1,5 @@
 # Fares — SJRTD
-Source: https://sanjoaquinrtd.com/fares/ (fetched 2026-08-14)
+Source: https://sanjoaquinrtd.com/fares/ (fetched 2026-09-14)
 
 ## Express, Local, and Hopper
 

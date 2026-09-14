@@ -1,5 +1,5 @@
 # Fares — MST
-Source: https://mst.org/fares/ (fetched 2026-06-12)
+Source: https://mst.org/fares/ (fetched 2026-09-14)
 
 ## Fares Overview
 
@@ -81,7 +81,8 @@ Courtesy Cards are available to all disabled individuals free of charge with a p
 
 ## College Students
 
-Hartnell students ride FREE on all routes with a valid photo student ID during the Fall and Spring semesters.
+Hartnell students can now sign up to Tap2Ride for FREE on all routes during the Fall and Spring semesters. Whether you’ve used your student ID to ride in the past or you’re just getting started, sign up now to register (or request) a debit or credit card with our transit discount partner, Jawnt. Please visit the Hartnell website for more information about eligibility and how to sign up.
+You may still ride for free with a valid photo student ID.
 MPC students ride FREE on all routes with a valid photo student ID during the Fall and Spring semesters.
 CSUMB students ride FREE on all routes with a valid photo student ID during the Fall and Spring semesters.
 

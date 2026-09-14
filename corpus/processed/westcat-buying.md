@@ -1,5 +1,5 @@
 # Buying & Ordering Passes — WestCAT
-Source: https://www.westcat.org/home/FaresBuying (fetched 2026-08-14)
+Source: https://www.westcat.org/home/FaresBuying (fetched 2026-09-14)
 
 ## THREE WAYS TO BUY WESTCAT PASSES
 

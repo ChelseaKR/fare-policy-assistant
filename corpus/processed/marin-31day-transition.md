@@ -1,5 +1,5 @@
 # Marin Transit Local 31-Day Passes on Clipper (paper-pass transition) — Marin Transit
-Source: https://marintransit.gov/marin-local-31-day-pass (fetched 2026-08-14)
+Source: https://marintransit.gov/marin-local-31-day-pass (fetched 2026-09-14)
 
 ## Marin Transit Local 31-Day Passes are now available on Clipper!
 

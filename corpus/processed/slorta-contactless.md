@@ -1,5 +1,5 @@
 # Contactless Fares (Tap2Ride and fare capping) — SLORTA
-Source: https://www.slorta.org/fares/contactless/ (fetched 2026-08-14)
+Source: https://www.slorta.org/fares/contactless/ (fetched 2026-09-14)
 
 ## Token Transit Mobile Ticketing is your Bus Pass on your Smartphone.
 

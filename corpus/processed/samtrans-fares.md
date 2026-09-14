@@ -1,5 +1,5 @@
 # Fares — SamTrans
-Source: https://www.samtrans.com/fares (fetched 2026-08-14)
+Source: https://www.samtrans.com/fares (fetched 2026-09-14)
 
 ## Welcome aboard SamTrans!
 

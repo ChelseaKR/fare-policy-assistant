@@ -1,5 +1,5 @@
 # Service Alert: Paper Pass Elimination — SolTrans
-Source: https://www.soltrans.org/news/service-alert-paper-pass-elimination (fetched 2026-08-13)
+Source: https://www.soltrans.org/news/service-alert-paper-pass-elimination (fetched 2026-09-14)
 
 ## Service Alert: Paper Pass Elimination
 

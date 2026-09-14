@@ -1,5 +1,5 @@
 # Clipper (discounts, transfers, frequent-rider maximums) — Marin Transit
-Source: https://marintransit.gov/future-fares-clipper (fetched 2026-08-14)
+Source: https://marintransit.gov/future-fares-clipper (fetched 2026-09-14)
 
 ## Clipper is the Bay Area’s transit fare payment system—and the best choice when you ride Marin Transit.
 
@@ -10,9 +10,9 @@ Note: Clipper is not currently accepted on Marin Access Paratransit or Marin Acc
 
 Clipper offers a variety of discounts to save you money on Marin Transit —making it easy to get around for less. ( Learn more about Clipper benefits on transit agencies all around the Bay Area.)
 Reduced Adult Fares: Clipper riders receive a discount on standard adult cash fares. Local fixed-route service on Marin Transit costs $1.80 with Clipper—a 10% savings on the standard $2.00 cash fare.
-Free and Discounted Transfers: Clipper offers free and discounted transfers within the Marin Transit system and between Marin Transit and other agencies. Just tap your plastic or mobile Clipper card and the discounts are calculated automatically. Free transfers between Marin Transit buses: Unlimited free rides within 2 hours of first boarding a Marin Transit bus. Free transfers to a Marin Transit bus from any other transit agency will be free within 2 hours of the first tap on the Marin Transit bus. Discounted transfers from Marin Transit to other agencies: Riders who transfer from a Marin Transit bus to another transit agency (e.g., Golden Gate Ferry, SMART Train) will get a discount of $2.85 off the total adult fare. Youth, Senior, Clipper Access and Clipper START cardholders receive half that discount.
+Free and Discounted Transfers: Clipper offers free and discounted transfers within the Marin Transit system and between Marin Transit and other agencies. Just tap your plastic or mobile Clipper card and the discounts are calculated automatically. Free transfers between Marin Transit buses: Unlimited free rides within 2 hours of first boarding a Marin Transit bus. Free transfers to Marin Transit buses : Transfers from other transit agencies to a Marin Transit bus are free within 2 hours of your first tap. Discounted transfers from Marin Transit to other agencies: Riders who transfer from a Marin Transit bus to another transit agency (e.g., Golden Gate Ferry, SMART Train) will get a discount of $2.85 off the total adult fare. Youth, Senior, Clipper Access and Clipper START cardholders receive half that discount.
 Free transfers between Marin Transit buses: Unlimited free rides within 2 hours of first boarding a Marin Transit bus.
-Free transfers to a Marin Transit bus from any other transit agency will be free within 2 hours of the first tap on the Marin Transit bus.
+Free transfers to Marin Transit buses : Transfers from other transit agencies to a Marin Transit bus are free within 2 hours of your first tap.
 Discounted transfers from Marin Transit to other agencies: Riders who transfer from a Marin Transit bus to another transit agency (e.g., Golden Gate Ferry, SMART Train) will get a discount of $2.85 off the total adult fare. Youth, Senior, Clipper Access and Clipper START cardholders receive half that discount.
 Frequent-Rider Maximums: Marin Transit offers daily and monthly maximums. Never pay more than $5 per day or $40 per month no matter how many times you ride! Frequent-rider maximums are only available on Clipper. Unlike the 31-day pass that riders purchase upfront and that is valid for local trips on Marin Transit and Golden Gate Transit, only trips on Marin Transit count towards the Marin Transit fare maximum.
 31-Day Passes: Paper 31-day passes are no longer available on Marin Transit ( learn more here ). Marin Transit Local 31-Day passes are only available on Clipper and are good for unlimited local rides on both Marin Transit and Golden Gate Transit in Marin County. The Marin Local 31-Day pass is activated on the day it is first used and is valid for 31 days after activation.
@@ -56,5 +56,8 @@ Tap your card at a station Clipper machine
 For general information about Clipper: Call the Clipper Customer Service team at 877.878.8883 | TDD/TTY: 711 or 800.735.2929 . Agents are available Monday – Friday, 8am – 5pm and Saturday, 9am - 1pm. Visit clippercard.com/help .
 Call the Clipper Customer Service team at 877.878.8883 | TDD/TTY: 711 or 800.735.2929 . Agents are available Monday – Friday, 8am – 5pm and Saturday, 9am - 1pm.
 Visit clippercard.com/help .
+Meet our team at the San Rafael Transit Center and other transit stops across Marin: Visit our events page to get event info! See "Community Events."
+Visit our events page to get event info! See "Community Events."
+Join a virtual info session to get assistance with your questions about Clipper: Visit our events page to get event info! See "Community Events."
 Get a Clipper Card in Person!
 Visit the San Rafael Transit Center Customer Service window to get a Clipper card in person.

@@ -1,11 +1,14 @@
 # Tap2Cruz (contactless payment and fare capping) — SCMTD
-Source: https://scmetro.org/tap2cruz/ (fetched 2026-08-13)
+Source: https://scmetro.org/tap2cruz/ (fetched 2026-09-14)
 
 ## onboard credit card payments are almost here!
 
 Santa Cruz METRO will launch Tap2Cruz, a contactless fare payment technology for riders, in Summer 2026 .
-Contactless-enabled bank cards (Visa, Mastercard, Discover, and American Express) and mobile wallets (Apple Pay, Google Pay, Samsung Pay, and Fitbit Pay) are accepted.
-Cash and Splash Pass are still accepted, as well.
+
+## Program Information
+
+Santa Cruz METRO received $1.726M from the State of California’s Integrated Travel Project (Cal-ITP) to usher in a new era of contactless fare payments. This grant allowed METRO to purchase credit/debit card acceptance equipment for its entire fixed-route bus fleet and the back-end software intelligence to accurately calculate and process fares.
+Contactless-enabled bank cards (Visa, Mastercard, Discover, and American Express) and mobile wallets (Apple Pay, Google Pay, Samsung Pay, and Fitbit Pay) are accepted. Cash and Splash Pass are still accepted, as well.
 To use Tap2Cruz, use the same method of contactless payment on each trip and tap the payment reader as you board the bus. If traveling in a group, each rider must pay separately. Don’t use the same contactless payment for multiple riders.
 Contactless payments are safe and secure by using a one-time code for every transaction.
 

@@ -1,5 +1,5 @@
 # Fares — Marin Transit
-Source: https://marintransit.gov/fares (fetched 2026-08-14)
+Source: https://marintransit.gov/fares (fetched 2026-09-14)
 
 ## Local Fixed Route Fares
 
@@ -77,7 +77,6 @@ With Next Generation Clipper, all riders who use Clipper will get a free local M
 
 ## Where to Buy Passes
 
-Day passes can be purchased through the farebox on the bus.
 31-day passes can be purchased:
 Online: Through the Clipper website and/or app, by registering your Clipper card online and purchasing using a credit or debit card.
 In person: Mon-Fri, 7am-6pm at San Rafael Transit Center, Customer Service Center, 850 Tamalpais Ave, San Rafael

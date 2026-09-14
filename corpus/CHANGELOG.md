@@ -19,6 +19,48 @@ entries: on a re-fetch that changes any document, it can call
 `assistant.corpus.diff_corpus` against the prior snapshot and append the added,
 removed, and changed documents below.
 
+## 420e788fa2f1 (2026-09-14)
+
+Changed:
+- actransit-discounts
+- actransit-fares
+- actransit-fares-es
+- hta-fares
+- marin-31day-transition
+- marin-clipper
+- marin-fares
+- mst-fares
+- mst-fares-benefits
+- mst-fares-es
+- mst-veterans-resource
+- samtrans-clipper
+- samtrans-fare-types
+- samtrans-fares
+- sbmtd-farechange
+- sbmtd-fares-passes
+- scmtd-accessibility
+- scmtd-fares-passes
+- scmtd-tap2cruz
+- sjrtd-dfc
+- sjrtd-fares
+- slorta-contactless
+- slorta-discounts
+- slorta-fares
+- slorta-passes
+- soltrans-clipper-card
+- soltrans-fare-table
+- soltrans-paperless-fares
+- soltrans-ways-to-pay
+- vine-fares
+- vine-go
+- vta-fares
+- vta-regional-transfers
+- vta-rtc-card
+- westcat-buying
+- westcat-clipper
+- westcat-fares-all
+- westcat-transfers
+
 ## 0938fff0539a (2026-06-17)
 
 Initial recorded version. Five agencies, 11 documents, 90 chunks: Monterey-Salinas

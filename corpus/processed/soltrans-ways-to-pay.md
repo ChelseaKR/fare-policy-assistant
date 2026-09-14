@@ -1,5 +1,5 @@
 # Ways to Pay — SolTrans
-Source: https://www.soltrans.org/fares/ways-to-pay (fetched 2026-08-13)
+Source: https://www.soltrans.org/fares/ways-to-pay (fetched 2026-09-14)
 
 ## Cash
 

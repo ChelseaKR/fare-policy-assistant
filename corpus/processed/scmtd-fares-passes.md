@@ -1,5 +1,5 @@
 # Fares & Passes — SCMTD
-Source: https://scmetro.org/rider-info/fares-passes/ (fetched 2026-08-13)
+Source: https://scmetro.org/rider-info/fares-passes/ (fetched 2026-09-14)
 
 ## CASH FARES
 

@@ -1,5 +1,5 @@
 # Veterans Resource — MST
-Source: https://mst.org/mobility/veterans-resource/ (fetched 2026-06-12)
+Source: https://mst.org/mobility/veterans-resource/ (fetched 2026-09-14)
 
 ## Taxi Voucher Program
 
@@ -21,9 +21,6 @@ https://nationsfinest.org/locations/monterey/
 
 To end Veteran homelessness in Monterey County. Each Veteran is paired with a dedicated VTC Case Manager who designs and supervises their recovery program while addressing medical, psychological, occupational, financial, educational, and social issues. They offer several housing programs, including emergency, transitional, and permanent supportive housing.
 https://www.vtcofcalifornia.org/programsandservices
-Vocational Rehabilitation Specialist Inc
-To assist veterans in need of housing, job placement, job skill training, and more.
-https://vrspecialists.com/
 
 ## Monterey County Military & Veterans Affairs Office
 
