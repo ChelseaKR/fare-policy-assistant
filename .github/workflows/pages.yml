@@ -364,7 +364,7 @@ jobs:
         run: |
           set -euo pipefail
           run_json="$(
-            gh api "repos/$REPO/actions/workflows/ci.yml/runs" \
+            gh api --method GET "repos/$REPO/actions/workflows/ci.yml/runs" \
               -f event=schedule -f status=completed -f per_page=1 \
               --jq '.workflow_runs[0] // empty'
           )"
