@@ -68,7 +68,7 @@ ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 # spend at all. There is no CDK/Terraform layer here (ADR 0004) -- this script is
 # the whole deployment -- so tagging is applied by the script itself: on create
 # where the API supports it, and re-applied idempotently at the end of every
-# deploy so resources created before this existed get labelled on the next run
+# deploy so resources created before this existed get labeled on the next run
 # rather than staying invisible forever.
 #
 # The value is the portfolio project name, which is deliberately NOT the repo
@@ -1530,7 +1530,7 @@ fi
 # The immutable live version is the reviewed baseline for every setting that
 # this script does not own. Abort before bundle/IAM/Lambda mutation if mutable
 # $LATEST differs in layers, networking, DLQ, tracing, KMS, EFS, ephemeral
-# storage, SnapStart, logging, or any future unrecognised configuration field.
+# storage, SnapStart, logging, or any future unrecognized configuration field.
 LIVE_REVIEWED_CONFIG=""
 if [[ "$FUNCTION_EXISTS" == "true" && "$HAS_LIVE_ALIAS" == "true" ]]; then
   LIVE_REVIEWED_CONFIG="$(
@@ -2968,7 +2968,7 @@ aws cloudwatch put-dashboard --region "$REGION" --dashboard-name "$FN" \
 # The `--tags` arguments further up only fire the first time a resource is
 # created. This sweep re-applies `project` on EVERY deploy, so resources that
 # predate the tagging (or that a half-finished run created before reaching this
-# point) get labelled on the next run instead of sitting in the account's
+# point) get labeled on the next run instead of sitting in the account's
 # untagged bucket indefinitely. Tagging an already-correctly-tagged resource is
 # a no-op, so re-running costs nothing.
 #

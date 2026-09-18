@@ -94,7 +94,7 @@ Until 2026-08-29 there was a fourth problem, and it was the worst of them: the
 freshness budget was checked when a page was built and never again, so the
 page the renderer produced had exactly one reachable state and it was
 "Verified", for as long as it stayed up. The manifest schema and the template
-both modelled a `warning` status ("Verified with freshness warning"), and
+both modeled a `warning` status ("Verified with freshness warning"), and
 `require_current_public_evidence` rejected it before `_template_html` could
 ever render it. A page that can only return one verdict is not reporting one.
 
@@ -373,7 +373,7 @@ and an owner in
 `evals/plumbline/acknowledged_findings.json`, and `evals/plumbline_guard.py` —
 not the harness's own exit code — is the merge gate: it fails on any suite below
 the committed baseline, any hard failure nobody acknowledged, and any
-acknowledgement that has stopped firing. The method, the suite mapping, the two
+acknowledgment that has stopped firing. The method, the suite mapping, the two
 deliberately disabled suites, and the adapter's shape decisions are in
 [`docs/audits/methodology.md`](docs/audits/methodology.md).
 

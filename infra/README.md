@@ -103,7 +103,7 @@ the comparison and the sources for every figure above (verified against the
 AWS Price List API for us-west-2, August 2026).
 
 Deleting the table or the breaker stack does not break the service. The
-limiter fails open and the rider returns to its previous behaviour.
+limiter fails open and the rider returns to its previous behavior.
 
 ## Immutable release and rollback
 

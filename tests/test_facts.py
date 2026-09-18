@@ -247,7 +247,7 @@ class TestAnswerClaimParsing:
 
 class TestSpanishDecimalComma:
     """MST's Spanish page writes "$ 35,00", and until 2026-09-07 the money
-    pattern stopped at the comma: it read `$ 35`, then labelled the *next*
+    pattern stopped at the comma: it read `$ 35`, then labeled the *next*
     row with the orphan `,00`. On mst-fares-es that published a regular
     monthly fare of $35 when the regular monthly fare is $70 — the discount
     price presented as the regular one."""
@@ -269,7 +269,7 @@ class TestSpanishDecimalComma:
         assert monthly["Regular Ruta fija"] == 70.00
         assert monthly["Descuento Ruta fija"] == 35.00
 
-    def test_no_row_is_labelled_with_the_orphaned_decimal_tail(self):
+    def test_no_row_is_labeled_with_the_orphaned_decimal_tail(self):
         # Prose, deliberately: in the grid above every amount is claimed by a
         # structured pass, so the fallback never sees one and this assertion
         # cannot fail there however the money pattern is written. Here the
@@ -304,7 +304,7 @@ class TestPublicationContract:
     """A price must arrive attached to a label that is a label."""
 
     def test_prose_fragment_program_is_refused_not_published(self):
-        # SBMTD's fare-capping paragraph: the fallback labelled $1.00 with the
+        # SBMTD's fare-capping paragraph: the fallback labeled $1.00 with the
         # sentence that followed it.
         text = (
             "$1.00 over the dollar value of pass activations needed to be fare "
@@ -388,7 +388,7 @@ class TestAxisOrientation:
         assert adult["31-Day Pass"] == 55.00
 
     def test_every_row_of_one_table_reads_the_same_way(self):
-        # "Half" is not a word this module recognises as a rider class.
+        # "Half" is not a word this module recognizes as a rider class.
         # Deciding orientation per row left it transposed relative to the row
         # directly above it, in the same table.
         rows = extract_chunk_facts("VINE", "vine-fares", "vine-fares#1", self.TEXT)

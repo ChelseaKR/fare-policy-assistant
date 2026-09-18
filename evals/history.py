@@ -26,7 +26,7 @@ from pathlib import Path
 
 from assistant import config
 
-# Distinct, print-safe colours for the per-series polylines. "overall" is drawn
+# Distinct, print-safe colors for the per-series polylines. "overall" is drawn
 # last and heaviest so the headline trajectory reads first.
 _SERIES_COLORS = [
     "#1d4ed8",

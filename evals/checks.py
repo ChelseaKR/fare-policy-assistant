@@ -16,7 +16,7 @@ from dataclasses import dataclass
 # checker when something else already in the build graph imported the
 # submodule, so the same line passed or failed depending on which directories
 # mypy happened to be pointed at (it started failing the moment `tools/` was
-# added to the checked set on 2026-08-28). Runtime behaviour is identical.
+# added to the checked set on 2026-08-28). Runtime behavior is identical.
 import assistant.fare_table as fare_table
 from assistant import answer as answer_module
 from assistant import facts as facts_module
@@ -40,7 +40,7 @@ _REDIRECT_RE = re.compile(
 # path reproduced both. So the tolerance below stays, for a better reason than
 # the one first written down: a check that demands the spelling a reader expects
 # reads the document more strictly than the *agency* wrote it, and reports an
-# assistant that normalised it as the defect. The trailing \b before the
+# assistant that normalized it as the defect. The trailing \b before the
 # optional final period is load-bearing: it is what stops "$1.00 a month" from
 # parsing as one o'clock in the morning.
 # tests/test_corpus_source_spelling.py holds both claims to the committed bytes.
@@ -301,9 +301,9 @@ def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[
 
 
 def clock_times(text: str) -> set[tuple[int, int, str]]:
-    """Every clock time in `text`, normalised to (hour mod 12, minute, am/pm).
+    """Every clock time in `text`, normalized to (hour mod 12, minute, am/pm).
 
-    Normalising is the whole job. "8:00 AM", "8 a.m." and "8am" are the same
+    Normalizing is the whole job. "8:00 AM", "8 a.m." and "8am" are the same
     time written three ways, and an office hour that survives a document's
     formatting must not be reported as absent because the answer punctuated it
     differently. Hours outside 1-12 are not clock times; dropping them is what
@@ -593,7 +593,7 @@ def run_checks(
         # `assistant.answer._align_as_of_prose` now pulls the sentence onto the
         # structured date in the pipeline, so this check is the backstop for the
         # case that fix cannot cover: a phrasing the normalizer does not
-        # recognise, in a language it does not know. It reads the sentence with
+        # recognize, in a language it does not know. It reads the sentence with
         # the same pattern the normalizer rewrites, and stays silent when the
         # answer renders no freshness date at all — that absence is what the
         # freshness suite's own expected-behavior cases are for.

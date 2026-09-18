@@ -76,7 +76,7 @@ The nightly scoreboard is unchanged on an unchanged tree, which is the correct
 result and now the cheap one.
 
 **What is given up is provider-drift detection on six nights out of seven.**
-If Bedrock's serving of a pinned model changes behaviour on a Tuesday, a
+If Bedrock's serving of a pinned model changes behavior on a Tuesday, a
 cached nightly will not see it; Monday's cold run will, within a week. Case
 coverage, suite composition, the regression gate, the parity gate, and the
 deterministic checks are all unchanged — the deterministic checks and both

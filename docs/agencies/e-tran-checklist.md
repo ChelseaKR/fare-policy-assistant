@@ -12,7 +12,7 @@ worked through. The bar is the same eval coverage the existing agencies have.
       HTML path with a Cloudflare 403 to this project's user agent, which is the
       Unitrans wall from ADR 0002; and www.e-tran.org, whose robots.txt is fully
       permissive but which turns out to be a third-party Wayback-Machine scrape
-      of sacrt.com rather than the agency. The pages catalogued are SacRT's,
+      of sacrt.com rather than the agency. The pages cataloged are SacRT's,
       published on sacrt.com, whose robots reading was already on file.
 - [x] Manifest stanza filled: real `url`, `agency_full`, and a `license_note`.
       Two documents, `etran-fares` and `etran-senior-pass`, both HTML. No PDF
@@ -20,7 +20,7 @@ worked through. The bar is the same eval coverage the existing agencies have.
 - [x] A Spanish (`language: es`) fares page added if the agency publishes one;
       it does not. sacrt.com serves Spanish through a Google Translate widget,
       with no published `/es/` URLs and `lang="en-US"` on the pages themselves,
-      so there is no Spanish source document to catalogue. The multilingual gap
+      so there is no Spanish source document to catalog. The multilingual gap
       is deliberate and is stated in the manifest and the PR.
 - [x] `make fetch && make ingest` run; snapshots committed under `corpus/raw/`.
       8 chunks (5 from the fare page, 3 from the senior-pass page).

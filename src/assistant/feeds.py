@@ -8,7 +8,7 @@ mechanism for the people who most want the signal: an agency's communications
 staff, a 511 operator, a downstream assistant. A static feed is a good one.
 
 What this is not: an interpretation. An entry says which documents changed in a
-corpus version and when, and links to the snapshot; it does not summarise the
+corpus version and when, and links to the snapshot; it does not summarize the
 policy change in prose, because that would be this project asserting something
 about an agency's fares that no citation stands behind.
 

@@ -56,10 +56,10 @@ from pathlib import Path
 # Spanish fare pages are laid out identically to their English originals —
 # MST's is the same grid of program labels, a rider-class header, then one
 # price per label — but the header reads "Descuento Ruta fija", not "Discount
-# Fixed Route". With only English keywords the grid pass recognised the
+# Fixed Route". With only English keywords the grid pass recognized the
 # `Regular` header (a word both languages share) and nothing else, so the
 # discount half of every Spanish fare table fell through to the prose
-# fallback. Recognising the header is what lets a Spanish price attach to the
+# fallback. Recognizing the header is what lets a Spanish price attach to the
 # program it belongs to instead of to the run of text after it.
 _RIDER_CLASS_KEYWORDS = re.compile(
     r"\b(seniors?|discounts?|regular|basic|adults?|youths?|students?|disab\w*|"
@@ -241,7 +241,7 @@ _SENTENCE_BOUNDARY_RE = re.compile(r"[.!?]\s+\S")
 _SENTENCE_SCAN_MIN_CHARS = 24
 #: The fallback's placeholder for "a price with no label at all". It is the
 #: literal shape of absence rendered as a value, and it is never publishable.
-_UNLABELLED = "(unspecified)"
+_UNLABELED = "(unspecified)"
 #: One character is a table sentinel, not a name. VineGo's fare matrix marks
 #: unavailable city pairs with a bare "X"; read as a program label that is a
 #: $4.00 fare for a program called X.
@@ -251,7 +251,8 @@ _LABEL_MIN_CHARS = 2
 #: Ordered (reason, predicate) rules. First match wins, so the more specific
 #: shapes come before the general ones.
 _LABEL_RULES: tuple[tuple[str, object], ...] = (
-    ("unlabelled_price", lambda s: s == _UNLABELLED),
+    # British reason code kept: it is persisted in corpus/processed/facts_refused.jsonl.
+    ("unlabelled_price", lambda s: s == _UNLABELED),
     ("decimal_fragment", lambda s: bool(_DECIMAL_FRAGMENT_RE.match(s))),
     ("fragment_start", lambda s: not _LABEL_START_RE.match(s)),
     ("too_short", lambda s: len(s) < _LABEL_MIN_CHARS),
@@ -372,7 +373,7 @@ def _header_axis_is_the_program(header_cols: list[str] | None) -> bool:
     The decision is made from the header alone, so every row of one table is
     read the same way. Deciding it per row instead left VINE's "Half" row
     transposed relative to the two rows directly above it, because "Half" is
-    not a word this module recognises as a rider class — one table published
+    not a word this module recognizes as a rider class — one table published
     with its axes disagreeing between adjacent rows.
     """
     if not header_cols:
@@ -732,7 +733,7 @@ def _normalize_axes(fact: FareFact) -> FareFact:
     name of a fare product that does not exist.
 
     When the rider-class column is empty the label moves into it. When that
-    column already holds the normalised keyword the same label produced
+    column already holds the normalized keyword the same label produced
     ("seniors" out of "Seniors (age 65+) Persons with Disabilities"), the
     keyword is kept — it is the comparable form — and only the duplicate in
     the program column is cleared. A row that genuinely names both a program

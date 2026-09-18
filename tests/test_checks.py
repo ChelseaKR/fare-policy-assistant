@@ -656,7 +656,7 @@ class TestOfficeHoursInCitedSource:
 
     def test_the_check_is_dormant_when_no_document_text_is_available(self):
         """Same shape as `fare_facts_consistent`: a run that cannot supply the
-        corpus falls back to previous behaviour rather than failing every case
+        corpus falls back to previous behavior rather than failing every case
         against an empty source."""
         case = {"id": "edge-052", "question": "q", "expected_behavior": "answer"}
         assert "office_hours_in_cited_source" not in _by_name(
@@ -812,7 +812,7 @@ class TestMoneyAmountParsing:
         ) == ["$72.50"]
 
 
-class TestClockTimeNormalisation:
+class TestClockTimeNormalization:
     @pytest.mark.parametrize(
         ("text", "expected"),
         [

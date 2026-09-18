@@ -375,7 +375,7 @@ class TestEnumerationRetrieval:
     def test_augmentation_targets_pick_the_right_agencies(self, corpus_retriever):
         """The shared fallback the three append-one-passage helpers now use.
 
-        Four behaviours, and the third is #169: an enumeration question has no
+        Four behaviors, and the third is #169: an enumeration question has no
         agency it is "about", so `results[0].chunk.agency` is not a stand-in for
         one, it is a tie-break winner.
         """

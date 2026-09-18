@@ -585,6 +585,7 @@ _ENUMERATION_SCAFFOLD_TOKENS = frozenset(
         "has",
         "honor",
         "honors",
+        # British spellings kept on purpose: a rider may type either form.
         "honour",
         "honours",
         "use",

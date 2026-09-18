@@ -48,7 +48,7 @@ An entry may declare **which gate it waives**, with a new optional `scope` key:
   exist in `evals/suites/`) rather than against tonight's outcomes, because
   tonight's run is not the run it is describing.
 
-An unrecognised scope is reported by `runner.invalid_annotation_scopes` and
+An unrecognized scope is reported by `runner.invalid_annotation_scopes` and
 waives nothing. Reading a typo as `"run"` would turn it into the widest
 possible waiver, which is the one direction this file must never fail in.
 

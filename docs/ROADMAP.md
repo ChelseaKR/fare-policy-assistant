@@ -89,7 +89,7 @@ bug for this repo specifically.
 4. **EXP-02 — Counterfactual sensitivity suite.** *(Done, 2026-07-02.)*
    Aggregate pass rate can hide a model that answers every eligibility question
    with the same boilerplate. Add ~15 minimal-pair (or triple) cases that differ
-   by exactly one salient feature sitting on a real boundary already catalogued
+   by exactly one salient feature sitting on a real boundary already cataloged
    in `edge_cases.yaml`, and score them jointly. `evals/suites/sensitivity.yaml`
    holds them as `pairs:` of `variants:`; the runner flattens each variant into
    an ordinary case (carrying a `pair_id`) so existing deterministic checks and

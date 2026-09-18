@@ -44,7 +44,7 @@ name: Nightly eval alert
 #     problem. Labeled `quality-regression`.
 #   - INFRASTRUCTURE FAILURE: no scoreboard was produced at all — the nightly
 #     never ran, the AWS OIDC step failed, the eval process died before it
-#     could write a report, or the runner was cancelled or timed out. There
+#     could write a report, or the runner was canceled or timed out. There
 #     is nothing to regress against; the harness itself didn't run or didn't
 #     finish. Labeled `infra-failure`.
 #

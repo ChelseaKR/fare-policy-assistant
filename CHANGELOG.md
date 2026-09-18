@@ -68,7 +68,7 @@ rather than tied to a published tag.
     answer can be byte-identical and newly failing, because a removed document
     fails `citation_present_and_resolvable` on the new side over the same text,
     and a four-way partition would have filed that as `unchanged`.
-  - Both sides share one model wrapper memoised on the rendered prompt, so the
+  - Both sides share one model wrapper memoized on the rendered prompt, so the
     cost is bounded to the cases a changed document reaches. Measured on the
     committed corpus: the one-Yolobus-page pair costs 57 calls on the second
     side against 191 on the first, and comparing a version to itself costs zero.
@@ -131,7 +131,7 @@ rather than tied to a published tag.
   is spelled that way by the agency** (2026-09-09). `README.md`,
   `docs/procurement-brief.md`, `docs/audits/methodology.md`, the `_CLOCK_RE`
   comment in `evals/checks.py`, `evals/plumbline/target.toml` and **23**
-  acknowledgements in `evals/plumbline/acknowledged_findings.json` (19 under
+  acknowledgments in `evals/plumbline/acknowledged_findings.json` (19 under
   `groundedness`, 4 under `privacy`) all said the corpus cleaner "broke" the MTD
   Business Office number into `805. 963.3364`. It did not.
   `corpus/raw/sbmtd-fares-passes.html` — sha256 `741a774a...`, the hash its
@@ -147,10 +147,10 @@ rather than tied to a published tag.
     because a reprocess reads the same bytes and writes the same bytes. A
     waiver whose clearing condition is impossible is a permanent exemption
     wearing a temporary one's clothes, and the guard that refuses a stale
-    acknowledgement cannot see the difference.
+    acknowledgment cannot see the difference.
   - The finding is an exact-substring number match against a source that spells
     the number irregularly — the same owner as the other cause already recorded
-    on that suite, and the assistant is right to normalise a number it reads out
+    on that suite, and the assistant is right to normalize a number it reads out
     to a rider. It clears when the harness compares numbers modulo punctuation,
     or if SBMTD republishes the page.
   - `tests/test_corpus_source_spelling.py` makes the corrected claim a function
@@ -222,7 +222,7 @@ rather than tied to a published tag.
     to be picked up as the *label* of the following row. The pattern now reads
     both conventions and distinguishes a decimal comma from a thousands
     separator, so E-tran's "$100,000 program fund" is no longer a $100 fare.
-  - **The Spanish fare grids are now recognised as grids.** The rider-class and
+  - **The Spanish fare grids are now recognized as grids.** The rider-class and
     program keyword vocabularies were English-only, so MST's Spanish table
     matched `Regular` (a word both languages share) and nothing else, and its
     entire discount half fell through to the prose fallback. `mst-fares-es` now
@@ -340,7 +340,7 @@ rather than tied to a published tag.
   helpfulness judge caught that. The groundedness judge — the one whose whole job
   is an unsupported claim — passed it, reporting the launch as "explicitly stated
   in the passages". It had read the *topic* being present as the *claim* being
-  supported, and tense fell through the gap. It generalises past this case: any
+  supported, and tense fell through the gap. It generalizes past this case: any
   passage describing a planned change (a fare increase taking effect, a program
   opening, a pass being discontinued) could be restated in the past tense and
   scored as grounded, and every one of those puts a rider in front of a farebox
@@ -490,7 +490,7 @@ rather than tied to a published tag.
     Each entry carries the corpus version, the archive timestamp, the `as_of`
     date, the documents added / changed / removed for that agency, and a link
     to the retained snapshot. 38 files on the current corpus.
-  - It says what changed, never what the change *means*. Summarising a fare
+  - It says what changed, never what the change *means*. Summarizing a fare
     change in prose would be this project asserting something about an agency's
     policy that no citation stands behind.
   - Nothing reads the clock. A feed's `updated` is its newest entry's archive
@@ -527,7 +527,7 @@ rather than tied to a published tag.
     with the feed row's — EXP-06's actual claim), `fact_row` (a parsed fare row
     carries the price, class not comparable), or `prose_amount` (the coarse
     form, kept as the fallback for agencies whose fact extraction is thin, and
-    now labelled instead of reading like the strong claim). Measured on the
+    now labeled instead of reading like the strong claim). Measured on the
     committed corpus: of 143 feed fare rows, 35 / 82 / 9 respectively, and 17
     match nothing.
   - `feed_agrees` is deliberately unmoved. Every fact price is extracted from
@@ -576,7 +576,7 @@ rather than tied to a published tag.
     smuggling attempts directly: body keys named `question`, `answer`,
     `history`, `citations`, and the record's own field names all fail to reach
     the log or add to it, and a client-supplied `corpus_version` is ignored in
-    favour of the served one.
+    favor of the served one.
   - `infra/README.md` gains "Reading the feedback signal" with the Logs
     Insights query that produces helpfulness by corpus version, kind, and
     language. ADR 0019's event table now lists the field, and records why a
@@ -772,12 +772,12 @@ rather than tied to a published tag.
   not a looser gate: refusing to publish stale evidence is correct and
   `require_current_public_evidence` is untouched. The build is simply no longer
   the last moment freshness is judged. The renderer now emits `data-expires-at`
-  (`run_at` plus `max_age_seconds`, an operator judgement that until now no
+  (`run_at` plus `max_age_seconds`, an operator judgment that until now no
   reader could see) and one inline script that compares it to the reader's own
-  clock, relabelling the page "Verified with freshness warning" with its age in
+  clock, relabeling the page "Verified with freshness warning" with its age in
   days once it is past. `_template_html`'s dead build-time warning branch is
   gone; those strings now live where a reader reaches them, and rendering
-  anything but `verified` is refused outright rather than silently labelled.
+  anything but `verified` is refused outright rather than silently labeled.
   Nothing is fetched at read time and `default-src 'none'` stands: rather than
   `'unsafe-inline'`, `_script_csp_hash` computes the SHA-256 of the exact bytes
   inlined, so the policy admits that one script and cannot drift from it.
@@ -849,7 +849,7 @@ rather than tied to a published tag.
   original text in the trace; other dates in an answer (the corpus snapshot
   date, per-document fetch dates) are deliberately untouched. A new
   deterministic check, `as_of_prose_matches_structured`, is the backstop for a
-  phrasing the normalizer does not recognise, and reads the sentence with the
+  phrasing the normalizer does not recognize, and reads the sentence with the
   same pattern the normalizer rewrites. #165 attributes two of the four Spanish
   parity failures on that run to this defect.
 - **`fare_facts_consistent` rendered an upper-bound-only age claim as

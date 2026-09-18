@@ -130,7 +130,7 @@ def test_svg_has_polyline_per_instrument(tmp_path: Path) -> None:
     assert svg.startswith("<svg")
     assert svg.rstrip().endswith("</svg>")
     # The two-run offline instrument yields polylines; the single live run
-    # yields at least plotted points. Both instruments are labelled.
+    # yields at least plotted points. Both instruments are labeled.
     assert "full · offline (mock)" in svg
     assert "full · live" in svg
     assert "<polyline" in svg

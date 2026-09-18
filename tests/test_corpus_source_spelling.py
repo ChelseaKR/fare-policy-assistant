@@ -132,7 +132,7 @@ def test_the_irregular_spelling_is_the_agencys_and_not_this_repositorys(
     assert spelling.published in processed, (
         f"corpus/processed/{spelling.doc_id}.md no longer carries {spelling.published!r} "
         f"while corpus/raw/{spelling.doc_id}.html still does. The ingest has started "
-        f"normalising the source, which is a change of posture: it makes the processed "
+        f"normalizing the source, which is a change of posture: it makes the processed "
         f"corpus disagree with the document it cites. That may be right, and it makes "
         f"{spelling.claimed_in} wrong."
     )
@@ -157,7 +157,7 @@ def test_the_reader_spelling_is_not_also_there_in_the_same_place(
     assert spelling.expected_by_a_reader not in window, (
         f"corpus/raw/{spelling.doc_id}.html now carries {spelling.expected_by_a_reader!r} "
         f"within 200 characters of {spelling.published!r}. An exact-substring check would "
-        f"find it there, so the acknowledgement built on 'the suite cannot find it in the "
+        f"find it there, so the acknowledgment built on 'the suite cannot find it in the "
         f"source' needs re-reading."
     )
 

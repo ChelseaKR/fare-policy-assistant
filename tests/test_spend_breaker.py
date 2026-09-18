@@ -80,7 +80,7 @@ class TestTripping:
         result = spend_breaker.handler(_alarm(name="x" * 500))
         assert len(result["reason"]) == 200
 
-    def test_an_alarm_without_a_name_is_labelled(self, store):
+    def test_an_alarm_without_a_name_is_labeled(self, store):
         assert (
             spend_breaker.handler(_sns(json.dumps({"NewStateValue": "ALARM"})))["reason"]
             == "unknown-alarm"

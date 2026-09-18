@@ -48,7 +48,7 @@ post-flatten mapping. The v2 whole-case key hashes that value, the stable
 context, judge mode, and replicate count. A legacy record lacks those inputs
 and is never reusable.
 
-The GTFS component is initially labelled
+The GTFS component is initially labeled
 `fare-assistant.gtfs-legacy-eval-input.v1` and
 `legacy_extracted_only`. It hashes the manifest configuration and every regular
 file actually available to the evaluator. It never claims a ZIP digest.

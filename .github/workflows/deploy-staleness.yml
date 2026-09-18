@@ -24,7 +24,7 @@ name: deploy staleness sentinel
 
 on:
   schedule:
-    # Mondays. The site is a promotion artefact on a manual cadence, so the useful question
+    # Mondays. The site is a promotion artifact on a manual cadence, so the useful question
     # is asked weekly; asking hourly would only produce the same answer 168 times.
     - cron: "37 15 * * 1"
   workflow_dispatch:

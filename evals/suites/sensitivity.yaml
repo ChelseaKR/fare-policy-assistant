@@ -1,7 +1,7 @@
 # Counterfactual sensitivity suite (EXP-02).
 #
 # Minimal-pair cases: two (or more) variants that differ by exactly one salient
-# feature that sits on a real eligibility boundary catalogued in edge_cases.yaml
+# feature that sits on a real eligibility boundary cataloged in edge_cases.yaml
 # (senior ages that differ by agency, Medicare vs. Medi-Cal, super-senior vs.
 # senior, youth-free vs. youth-discount, stored-value vs. monthly, and so on).
 #

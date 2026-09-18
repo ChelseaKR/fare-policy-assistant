@@ -110,7 +110,7 @@ explicitly observed, numeric legacy baseline as the retained rollback target.
 That exception is scoped to that exact version and an explicit legacy health
 mode. Once rollback points to an identity-capable version, the exception is
 removed; it is not a general “fields optional” path. Historical releases are
-labelled legacy rather than assigned identities they never carried.
+labeled legacy rather than assigned identities they never carried.
 
 Evaluation artifacts and the operator console migrate in the following slice.
 A committed evaluation report cannot truthfully include the final commit's

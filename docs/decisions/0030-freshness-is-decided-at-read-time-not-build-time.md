@@ -46,7 +46,7 @@ built. Concretely:
    same lie in fewer lines.
 3. The renderer emits `data-expires-at`, which is `run_at + max_age_seconds`,
    printed on the page as a `<time>` element. `max_age_seconds` is an operator
-   judgement chosen at export time with `--freshness-seconds`, and until now no
+   judgment chosen at export time with `--freshness-seconds`, and until now no
    reader could see it. A budget widened to make an old run publishable is now
    a claim made in public.
 4. The page carries one inline script. It reads the two instants already

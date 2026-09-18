@@ -149,7 +149,7 @@ class ArmResult:
 
 
 class _ControlRetriever:
-    """A retrieval substitution that leaves every other behaviour alone.
+    """A retrieval substitution that leaves every other behavior alone.
 
     Confidence banding and the decline threshold delegate to the real
     retriever, so a control never accidentally changes the assistant's

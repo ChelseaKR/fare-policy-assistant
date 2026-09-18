@@ -6,7 +6,7 @@ catches the regressions a static analysis can catch — a missing page language,
 an unlabeled control, a skipped heading level, a link with no text, a disabled
 zoom, a control with no minimum target size in the stylesheet. It does NOT
 replace a manual screen-reader pass or the merge-blocking browser gate in CI;
-colour contrast and live-region behaviour need those. What it asserts, it
+color contrast and live-region behavior need those. What it asserts, it
 asserts honestly; what it cannot, it leaves to the human pass recorded in the
 model card.
 

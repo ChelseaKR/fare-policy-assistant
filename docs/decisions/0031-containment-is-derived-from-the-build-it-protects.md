@@ -91,7 +91,7 @@ that stops parsing fails in CI rather than during an incident.
 ## Consequences
 
 **Every unresolvable case requires containment.** A corpus not archived in this
-checkout, a fare period the parser does not recognise, a pin that is not a corpus
+checkout, a fare period the parser does not recognize, a pin that is not a corpus
 identity: none of those are evidence that a build is safe, and the derivation
 never reports "not required" except from a period it actually read and found
 unexpired. That direction is deliberate and it has a cost — an unreadable target
@@ -106,13 +106,13 @@ required. That is the conservative reading and it is the wrong one in that
 specific case; the fix then is to teach the parser the new shape, not to widen it
 to accept anything it fails to read.
 
-**This does not change rider-facing behaviour on its own.** Production is behind
+**This does not change rider-facing behavior on its own.** Production is behind
 `main` (issue #140), and lifting the default only affects what the *next* deploy
 ships. The live function keeps its inherited containment until someone deploys
 with `FPA_DISABLED_DOC_IDS=""`, which is the point at which the refreshed Yolobus
 corpus reaches riders anyway.
 
-**Generalisation is deliberately not attempted.** The derivation is named for the
+**Generalization is deliberately not attempted.** The derivation is named for the
 document it protects and knows one document's fare-period wording. A second
 contained document would want the same treatment, not this function widened by
 guesswork about a page nobody has read yet.

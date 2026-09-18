@@ -136,7 +136,7 @@ human" row to pass without an actual screen-reader session.
 - Verified by code: the page is rem/em-based with `html.tsize-large` (112.5%)
   and `html.tsize-xlarge` (125%), toggled with `aria-pressed` and persisted in
   `localStorage`; high contrast toggles `body.contrast` (which only deepens
-  colours), also `aria-pressed` and persisted. Viewport allows zoom
+  colors), also `aria-pressed` and persisted. Viewport allows zoom
   (no `user-scalable=no`). Target sizes: primary controls `min-height: 2.5rem`
   (40px), secondary `1.75rem` (28px) — both ≥ the 24px 2.5.8 minimum. Static
   contrast is covered by the blocking axe/pa11y gate.
