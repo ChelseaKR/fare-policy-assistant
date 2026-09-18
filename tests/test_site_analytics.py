@@ -149,7 +149,7 @@ def test_every_page_the_dispatch_publisher_writes_carries_ga_and_the_control(
         assert site_meta.script_source(script) in policy["script-src"], name
         assert "'unsafe-inline'" not in policy["script-src"], name
         # gtag.js is only ever appended by the guarded loader, never a static tag.
-        assert not re.search(r"<script[^>]+src=", page), name
+        assert BeautifulSoup(page, "html.parser").find_all("script", src=True) == [], name
 
 
 def test_the_data_files_carry_no_ga(rendered: Path) -> None:
@@ -408,6 +408,6 @@ def test_negative_control_a_digest_for_other_bytes_is_caught() -> None:
     script = site_meta.analytics_script()
     broken = page.replace(f"<script>{script}</script>", f"<script>{script} </script>", 1)
     assert broken != page  # the sabotage landed
-    inline = re.search(r"<script>(.*?)</script>", broken, re.DOTALL)
-    assert inline is not None
-    assert site_meta.script_source(inline.group(1)) not in _policy(broken)["script-src"]
+    inline = BeautifulSoup(broken, "html.parser").find("script")
+    assert inline is not None and inline.string is not None
+    assert site_meta.script_source(inline.string) not in _policy(broken)["script-src"]
