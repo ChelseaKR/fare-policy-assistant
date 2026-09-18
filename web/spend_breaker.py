@@ -14,7 +14,7 @@ therefore a CloudWatch alarm on the rider's own token-derived cost metric, which
 lands within minutes. The tag-scoped budget still points here as the
 billing-authoritative second opinion.
 
-Two deliberate non-behaviours:
+Two deliberate non-behaviors:
 
 *It never resets itself.* Subscribing to alarm-OK transitions would let spend
 resume the moment a five-minute window looked quiet, which is not a cutoff. An

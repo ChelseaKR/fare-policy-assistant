@@ -283,7 +283,7 @@ gh workflow run pages.yml \
   -f expected_public_manifest_sha256="$(sha256sum public-evidence.json | cut -d' ' -f1)"
 ```
 
-`--freshness-seconds` is the one number here that is a judgement rather than a
+`--freshness-seconds` is the one number here that is a judgment rather than a
 measurement. It becomes `max_age_seconds` in the manifest, and it is what both
 `require_current_public_evidence` and the published page's own check measure
 against. Until 2026-08-29 it was invisible to readers, so widening it to make an

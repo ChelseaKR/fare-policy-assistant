@@ -227,10 +227,10 @@ def comparable_fields(expected_prompts: dict[str, str] | tuple[str, ...]) -> int
     return 2 + len(expected_prompts)
 
 
-def load_acknowledgements(path: Path | None = None) -> set[tuple[str, str]]:
+def load_acknowledgments(path: Path | None = None) -> set[tuple[str, str]]:
     """(artifact, field) pairs whose staleness is explicitly, loudly accepted.
 
-    Each entry must carry a non-empty `reason`; an acknowledgement without a
+    Each entry must carry a non-empty `reason`; an acknowledgment without a
     reason is rejected so the escape can never be a quiet one.
     """
     path = path or ACK_PATH
@@ -241,8 +241,8 @@ def load_acknowledgements(path: Path | None = None) -> set[tuple[str, str]]:
     for entry in data.get("acknowledged", []):
         if not entry.get("reason", "").strip():
             raise SystemExit(
-                f"stale acknowledgement for {entry.get('artifact')}/{entry.get('field')} "
-                "has no reason; acknowledgements must be documented"
+                f"stale acknowledgment for {entry.get('artifact')}/{entry.get('field')} "
+                "has no reason; acknowledgments must be documented"
             )
         acked.add((entry["artifact"], entry["field"]))
     return acked
@@ -257,14 +257,14 @@ def check_all(
 ) -> dict:
     """Compare all three artifacts to HEAD.
 
-    Returns `failures`, `acknowledged`, `unused_acknowledgements`, and the
+    Returns `failures`, `acknowledged`, `unused_acknowledgments`, and the
     census `compared` / `matched`. The gate is green iff `failures` and
-    `unused_acknowledgements` are both empty. Acknowledged mismatches are
+    `unused_acknowledgments` are both empty. Acknowledged mismatches are
     downgraded to warnings — and counted, so the caller can say how many of the
     compared fields actually matched instead of implying all of them did.
     Inputs default to the committed files but can be injected for tests.
     """
-    acknowledged = load_acknowledgements() if acknowledged is None else acknowledged
+    acknowledged = load_acknowledgments() if acknowledged is None else acknowledged
     evals_md = EVALS_MD_PATH.read_text(encoding="utf-8") if evals_md is None else evals_md
     if baseline is None:
         baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
@@ -308,7 +308,7 @@ def check_all(
     return {
         "failures": failures,
         "acknowledged": warnings,
-        "unused_acknowledgements": unused,
+        "unused_acknowledgments": unused,
         "compared": compared,
         "matched": compared - unmatched,
     }
@@ -332,14 +332,14 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    if result["unused_acknowledgements"]:
+    if result["unused_acknowledgments"]:
         print(
             "STALE WAIVERS — evals/stale_acknowledged.json waives fields that are "
             "not stale, so the waiver is a standing blanket over a field nothing "
             "is wrong with:",
             file=sys.stderr,
         )
-        for artifact, field in result["unused_acknowledgements"]:
+        for artifact, field in result["unused_acknowledgments"]:
             print(f"  {artifact}:{field} matches HEAD; delete this entry", file=sys.stderr)
         return 1
 

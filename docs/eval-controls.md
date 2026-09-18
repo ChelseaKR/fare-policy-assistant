@@ -127,7 +127,7 @@ decided by answer text and citations.
 
 ## Cost
 
-Both sides share one model wrapper memoised on the **rendered prompt**
+Both sides share one model wrapper memoized on the **rendered prompt**
 (`evals.cache.completion_key`), which already encodes the corpus version, the
 prompt version and the question. So "the passages did not move" and "the key is
 the same" are one statement, and reuse costs nothing in fidelity.

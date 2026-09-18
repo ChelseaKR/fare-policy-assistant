@@ -183,7 +183,7 @@ def _transcripts_html(rows: list[dict]) -> str:
     Hashed with the rest of the bundle but NOT declared as `files.interface`.
     Plumbline's accessibility suite checks the interface a conversation
     happened in — labels on controls, a live region announcing replies, a
-    declared colour palette — and a page of transcripts has no controls and
+    declared color palette — and a page of transcripts has no controls and
     announces nothing. Scoring it there would have produced three structural
     failures that say something true about a transcript and nothing at all
     about the rider-facing page. `web/index.html` is the artifact that answers

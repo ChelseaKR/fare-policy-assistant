@@ -26,7 +26,7 @@ unchecked ones say what is left and why.
       one; if it does not, say so in the PR so the multilingual gap is on
       purpose. It does not: samtrans.com serves Spanish through a Google
       Translate widget (checked 2026-08-13), so there is no Spanish source
-      document to catalogue. ml-samtrans-001 is an honest cross-lingual
+      document to catalog. ml-samtrans-001 is an honest cross-lingual
       case.
 - [x] `make fetch && make ingest` run; snapshots committed under
       `corpus/raw/`. Fetched through `assistant.ingest fetch` with the

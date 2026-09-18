@@ -50,10 +50,10 @@ seconds, as often as you like:
 
 * **evidence** — what fraction of the *documents* the English mirror
   retrieved did the Spanish retrieval also reach? Recall against the mirror
-  rather than against a hand-labelled gold set, which is the point: the
+  rather than against a hand-labeled gold set, which is the point: the
   English mirror is the parity gate's own definition of what this question
   should have found, so it is the right yardstick and it needs no new
-  labelling to stay current as the corpus grows.
+  labeling to stay current as the corpus grows.
 
 The reported top-score ratio (Spanish top BM25 score over English) is context,
 not a verdict. It is expected to exceed 1.0 for the two agencies that publish

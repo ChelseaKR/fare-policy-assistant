@@ -56,7 +56,7 @@ baiting: no adversary, just the boundary.
 triple) of questions with per-variant `required_facts` /
 `forbidden_content`; runner support for pair-cases is small (they are
 independent single-turn calls scored jointly); author ~15 pairs from the
-published boundaries already catalogued in `evals/suites/edge_cases.yaml`
+published boundaries already cataloged in `evals/suites/edge_cases.yaml`
 rationales. The deterministic half validates offline; judge half is
 live-gated.
 

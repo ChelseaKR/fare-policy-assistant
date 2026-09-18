@@ -87,7 +87,7 @@ Three steps, and the third is the merge gate.
    gate**; see "Floors, findings, and the guard" below.
 3. `python -m evals.plumbline_guard` — the gate. It fails on any suite below the
    committed baseline, any hard failure nobody has acknowledged, and any
-   acknowledgement that has stopped firing.
+   acknowledgment that has stopped firing.
 
 Nothing in that calls a model. The evidence is the recording already committed at
 `evals/govchat/golden.jsonl` — 195 questions and the answers the deployed
@@ -212,7 +212,7 @@ in the committed report:
   repo's own freshness suite.
 - **Accessibility** scores 0.8000: four of five structural checks pass on
   `web/index.html`, and `contrast_declarations` fails because the page ships no
-  `<script type="application/json" id="plumbline-contrast">` declaring its colour
+  `<script type="application/json" id="plumbline-contrast">` declaring its color
   pairs. Plumbline computes contrast rather than believing a claim. Adding that
   block is the named next step; `make a11y` covers the same page meanwhile.
 - **Accuracy overlap.** Plumbline's accuracy suite is lexical fact-containment,

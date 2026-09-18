@@ -267,7 +267,7 @@ def test_the_gate_does_not_fire_on_a_msgid_with_nothing_to_translate(tmp_path, m
 def test_an_ordinary_word_is_not_exempt_just_for_being_short(msgid):
     """The mechanical exemptions are about a msgid having no prose in it, not
     about a word happening to be spelled the same. A product name (`Clipper`)
-    is a real judgement call and belongs in the reasoned list, not in a regex.
+    is a real judgment call and belongs in the reasoned list, not in a regex.
     """
     from tools import check_catalog_parity as gate
 

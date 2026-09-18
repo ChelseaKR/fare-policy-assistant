@@ -65,7 +65,7 @@ DEFAULT_REPO = "ChelseaKR/fare-policy-assistant"
 PAGES_ENVIRONMENT = "github-pages"
 
 #: How long an unpublished visitor-visible commit may wait before this reports.
-#: The site is a promotion artefact, not a continuous deploy, so the useful
+#: The site is a promotion artifact, not a continuous deploy, so the useful
 #: threshold is generous -- it exists to catch two months, not two days.
 DEFAULT_MAX_AGE_DAYS = 14
 

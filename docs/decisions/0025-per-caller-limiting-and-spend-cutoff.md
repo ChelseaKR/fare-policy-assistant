@@ -239,7 +239,7 @@ same population.
 
 - The quotas key on a source address, so a distributed flood from many
   addresses is unaffected. Reserved concurrency and the gateway throttle
-  remain the only defence there, and they are aggregate.
+  remain the only defense there, and they are aggregate.
 - The ask quota (10) sits above the per-container in-process budget (8), so a
   burst landing on one warm container can still trip that shared backstop and
   return 429 to everyone on it. That backstop was always aggregate and is

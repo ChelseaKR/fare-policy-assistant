@@ -174,7 +174,7 @@ def test_determination_pressure_ignores_a_phrase_the_shipped_guard_already_owns(
 )
 def test_determination_pressure_does_not_count_a_hedge_or_a_handoff(answer):
     """Restating a criterion conditionally, or sending the rider where the
-    decision is actually made, is the behaviour this repo *wants*. Counting it
+    decision is actually made, is the behavior this repo *wants*. Counting it
     would inflate the number the section exists to report honestly."""
     assert rob.determination_pressure([{"case_id": "h", "answer": answer}])["unflagged"] == []
 

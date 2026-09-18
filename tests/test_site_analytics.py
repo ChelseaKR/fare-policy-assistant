@@ -249,7 +249,7 @@ process.stdout.write(JSON.stringify({
 @pytest.fixture
 def run(tmp_path: Path) -> Iterator[Run]:
     if _NODE is None:
-        pytest.fail("Node is required to run the GA4 loader's behaviour tests")
+        pytest.fail("Node is required to run the GA4 loader's behavior tests")
     node = _NODE
     harness = tmp_path / "harness.js"
     harness.write_text(HARNESS, encoding="utf-8")

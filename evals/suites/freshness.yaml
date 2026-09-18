@@ -298,7 +298,7 @@ cases:
     # that may not exist. This is the suite's core liability, caught live.
     #
     # It is also a judge-only failure, so the rationale above is the only lever
-    # on it: keep that text a behavioural spec and keep this diagnosis in a
+    # on it: keep that text a behavioral spec and keep this diagnosis in a
     # comment, because evals/judges.py feeds `rationale` to the helpfulness judge
     # verbatim and text arguing either verdict is a thumb on the scale.
     #

@@ -34,7 +34,7 @@ started and pass it here, so a report that predates this run is refused instead
 of graded.
 
 Exit 0 clean, 1 on any of: a suite below baseline, an unacknowledged hard
-failure, a stale acknowledgement, a missing or unreadable report, or a report
+failure, a stale acknowledgment, a missing or unreadable report, or a report
 older than the run that was supposed to produce it.
 """
 

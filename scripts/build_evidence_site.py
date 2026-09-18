@@ -936,7 +936,7 @@ def _template_html(
     if evidence["status"] != "verified":
         # Unreachable through the publication path, which runs
         # `require_current_public_evidence` first. It is here so that a caller who
-        # skipped that gate cannot get a page labelled "Verified" out of a receipt
+        # skipped that gate cannot get a page labeled "Verified" out of a receipt
         # that is not, which is what a single hardcoded label would otherwise do.
         _fail("only verified evidence can be rendered into a page")
     replacements = {

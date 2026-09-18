@@ -33,7 +33,7 @@ This quantifies two things a careful reader asks:
 All four are pure arithmetic over a finished run — no model calls. The
 paraphrase-sensitivity experiment (does the score move when a question is
 reworded?) needs live generation and is specified in docs/eval-robustness.md as
-the next step, not run here; the minimal-pair section below is its labelled,
+the next step, not run here; the minimal-pair section below is its labeled,
 already-paid-for special case, not a substitute for it.
 """
 

@@ -60,7 +60,7 @@ def _rated(**kw):
 
 def test_committed_sheet_is_a_census_of_every_spanish_answer_and_entirely_unrated():
     """Queued human work, not evidence. If a row ever reads as rated, something
-    filled in a judgement nobody made."""
+    filled in a judgment nobody made."""
     rows = [
         json.loads(line)
         for line in spanish_quality.SHEET_PATH.read_text(encoding="utf-8").splitlines()

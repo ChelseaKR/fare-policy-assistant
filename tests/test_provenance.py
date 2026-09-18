@@ -1,6 +1,6 @@
 """evals/provenance.py: the published-artifact-vs-HEAD drift check.
 
-Covers the pure read/render/compare functions and the acknowledgement escape
+Covers the pure read/render/compare functions and the acknowledgment escape
 hatch. `check_all()`'s file-reading defaults are exercised implicitly by the
 tests below (all inputs are injected), so no test depends on the actual
 committed EVALS.md / baseline.json / golden.jsonl contents.
@@ -100,14 +100,14 @@ def test_compare_none_declared_is_a_single_mismatch():
     assert mismatches[0].field == "provenance"
 
 
-def test_load_acknowledgements_requires_a_reason(tmp_path):
+def test_load_acknowledgments_requires_a_reason(tmp_path):
     ack_path = tmp_path / "stale_acknowledged.json"
     ack_path.write_text(json.dumps({"acknowledged": [{"artifact": "EVALS.md", "field": "x"}]}))
     with pytest.raises(SystemExit):
-        provenance.load_acknowledgements(ack_path)
+        provenance.load_acknowledgments(ack_path)
 
 
-def test_load_acknowledgements_accepts_a_documented_reason(tmp_path):
+def test_load_acknowledgments_accepts_a_documented_reason(tmp_path):
     ack_path = tmp_path / "stale_acknowledged.json"
     ack_path.write_text(
         json.dumps(
@@ -118,12 +118,12 @@ def test_load_acknowledgements_accepts_a_documented_reason(tmp_path):
             }
         )
     )
-    acked = provenance.load_acknowledgements(ack_path)
+    acked = provenance.load_acknowledgments(ack_path)
     assert acked == {("EVALS.md", "corpus_version")}
 
 
-def test_load_acknowledgements_missing_file_is_empty(tmp_path):
-    assert provenance.load_acknowledgements(tmp_path / "does-not-exist.json") == set()
+def test_load_acknowledgments_missing_file_is_empty(tmp_path):
+    assert provenance.load_acknowledgments(tmp_path / "does-not-exist.json") == set()
 
 
 def _fixed_prompts(version: str):
@@ -159,7 +159,7 @@ def test_check_all_clean_when_all_three_artifacts_match_head(monkeypatch):
     )
     assert result["failures"] == []
     assert result["acknowledged"] == []
-    assert result["unused_acknowledgements"] == []
+    assert result["unused_acknowledgments"] == []
     # The census is the denominator the gate prints. 4 prompts + corpus +
     # pipeline on EVALS.md and baseline.json, 2 prompts + corpus + pipeline on
     # golden.jsonl.
@@ -216,7 +216,7 @@ def test_a_waiver_over_a_field_that_is_not_stale_is_itself_a_failure(monkeypatch
         ),
     )
     assert result["failures"] == []
-    assert result["unused_acknowledgements"] == [("EVALS.md", "corpus_version")]
+    assert result["unused_acknowledgments"] == [("EVALS.md", "corpus_version")]
 
 
 def test_check_all_reports_unacknowledged_drift_as_a_failure(monkeypatch):
@@ -364,7 +364,7 @@ def test_the_summary_never_claims_the_artifacts_match_head_while_any_is_waived(m
                 provenance.Mismatch("EVALS.md", "corpus_version", "old", "new"),
                 provenance.Mismatch("baseline.json", "corpus_version", "old", "new"),
             ],
-            "unused_acknowledgements": [],
+            "unused_acknowledgments": [],
             "compared": 16,
             "matched": 14,
         },
@@ -391,7 +391,7 @@ def test_the_summary_says_all_when_every_field_matched(monkeypatch, capsys):
         lambda: {
             "failures": [],
             "acknowledged": [],
-            "unused_acknowledgements": [],
+            "unused_acknowledgments": [],
             "compared": 16,
             "matched": 16,
         },
@@ -413,7 +413,7 @@ def test_a_waiver_that_matches_nothing_makes_the_gate_exit_one(monkeypatch, caps
         lambda: {
             "failures": [],
             "acknowledged": [],
-            "unused_acknowledgements": [("EVALS.md", "corpus_version")],
+            "unused_acknowledgments": [("EVALS.md", "corpus_version")],
             "compared": 16,
             "matched": 16,
         },

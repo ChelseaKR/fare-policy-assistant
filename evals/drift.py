@@ -23,7 +23,7 @@ classifies each pair:
 byte-identical and newly failing — if a document it cites was *removed*,
 `citation_present_and_resolvable` fails on the new side over the same text — so
 folding it into the partition would have hidden exactly the case a reviewer most
-needs. It is reported as a flag on every row and summarised separately.
+needs. It is reported as a flag on every row and summarized separately.
 
 It is eval-only. EXP-05 forbids rider-facing time travel and this proposes none:
 nothing here serves an old corpus to anybody, and no artifact it writes is read
@@ -31,7 +31,7 @@ by the answer path.
 
 ## Cost
 
-Both sides share one memoising model wrapper keyed on the **rendered prompt**
+Both sides share one memoizing model wrapper keyed on the **rendered prompt**
 (`evals.cache.completion_key`), so a case whose retrieved passages did not move
 is answered once and reused. On two identical versions the second side therefore
 makes **zero** model calls, and on a one-document refresh the cost is bounded to
@@ -171,7 +171,7 @@ def side_from_snapshot(path: Path, cfg: config.Config) -> Side:
 
 
 class SharedAnswerModel:
-    """One model, memoised on the rendered prompt, shared by both sides.
+    """One model, memoized on the rendered prompt, shared by both sides.
 
     The key is `evals.cache.completion_key` over the exact `(system, user,
     max_tokens, temperature)` the pipeline rendered, which already encodes the

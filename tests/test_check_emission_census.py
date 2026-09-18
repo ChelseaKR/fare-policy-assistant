@@ -170,7 +170,7 @@ def test_every_case_carries_at_least_the_three_unconditional_checks(census) -> N
     `evals.runner` scores a case with `all(c.passed for c in checks)`, and
     `all([])` is `True` — the same fold, one level up from the one this module
     exists for. Three checks apply to every case regardless of expected
-    behaviour: determination language, structured-contract validity, and
+    behavior: determination language, structured-contract validity, and
     response language.
     """
     cases, emitted = census
