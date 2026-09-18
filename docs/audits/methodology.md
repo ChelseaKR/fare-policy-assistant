@@ -57,11 +57,21 @@ sources, and declared ground truth, and applies its own suites and judge with no
 knowledge of how the assistant works. A system graded only by the harness tuned
 against it is a weaker claim than one a second, blind harness also grades.
 
-It earned that on day one. Two of its findings are in this repo's own defect
-list now: the snapshot-date disclosure scoring as an unsupported number (the same
-defect fixed in `evals/judges._passages_block` the same day), and a phone number
-the corpus cleaner broke into `805. 963.3364`, which no in-repo check was
-looking for.
+It earned that on day one: the snapshot-date disclosure scoring as an
+unsupported number went straight into this repo's own defect list and was fixed
+in `evals/judges._passages_block` the same day.
+
+A second finding was written up beside it as a defect of this project's ingest —
+a phone number "the corpus cleaner broke into `805. 963.3364`" — and re-reading
+it against the fetched bytes on 2026-09-09 says otherwise. `corpus/raw/`
+`sbmtd-fares-passes.html` publishes the space; the cleaner reproduced it. It is
+an exact-substring number match against a source that spells the number
+irregularly, and it belongs to the harness's matching rather than to this
+repository. That correction is worth leaving in the methodology rather than
+quietly deleting: an outside harness naming a finding is not the same as the
+finding's cause being where the first reader assumed, and the cheapest check on
+that assumption — read the raw document the corpus was built from — was
+available from the first day and was not run for eight weeks.
 
 ## How the audit runs
 
@@ -77,7 +87,7 @@ Three steps, and the third is the merge gate.
    gate**; see "Floors, findings, and the guard" below.
 3. `python -m evals.plumbline_guard` — the gate. It fails on any suite below the
    committed baseline, any hard failure nobody has acknowledged, and any
-   acknowledgement that has stopped firing.
+   acknowledgment that has stopped firing.
 
 Nothing in that calls a model. The evidence is the recording already committed at
 `evals/govchat/golden.jsonl` — 379 questions and the answers the deployed
@@ -206,7 +216,7 @@ in the committed report:
   repo's own freshness suite.
 - **Accessibility** scores 0.8000: four of five structural checks pass on
   `web/index.html`, and `contrast_declarations` fails because the page ships no
-  `<script type="application/json" id="plumbline-contrast">` declaring its colour
+  `<script type="application/json" id="plumbline-contrast">` declaring its color
   pairs. Plumbline computes contrast rather than believing a claim. Adding that
   block is the named next step; `make a11y` covers the same page meanwhile.
 - **Accuracy overlap.** Plumbline's accuracy suite is lexical fact-containment,

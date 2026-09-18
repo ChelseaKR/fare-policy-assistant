@@ -50,6 +50,7 @@ generic:
   - src/assistant/i18n.py
   - src/assistant/corpus.py
   - evals/controls.py
+  - evals/drift.py
   - src/assistant/ingest.py
   - src/assistant/cli.py
   - src/assistant/contract.py

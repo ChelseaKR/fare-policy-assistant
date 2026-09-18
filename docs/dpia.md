@@ -47,6 +47,22 @@ model-call logs add provider/model, token counts, and estimated cost — never
 question or answer text (ADR 0004). CloudWatch log retention is 14 days. There
 are no accounts or user profiles.
 
+**Evidence hub visitor analytics (added 2026-09-17, decision 0033).** The
+evaluation evidence hub at `evals.chelseakr.com` is a separate static site, and
+its pages now load Google Analytics 4. That is a separate processing activity
+from the rider assistant described above: the hub has no question box, and no
+rider question, answer or eligibility detail ever reaches it. Google LLC
+receives a page view with the page address (cut to its path and any `utm_`
+campaign tags), the referring site's origin, browser and device data and an
+approximate location derived from the IP address, and outside the EEA, the UK
+and Switzerland the `_ga` cookies. The loader runs only on that host and not at
+all under Global Privacy Control, Do Not Track or the hub's own opt-out
+control; Google signals and ad personalization are off, the advertising consent
+settings are denied everywhere, analytics storage is denied by default in the
+EEA, the UK and Switzerland (cookieless pings there), and event data is kept 14
+months. The hub's `privacy.html` states this to a reader. The rider assistant
+loads no analytics.
+
 ## 2. Necessity and proportionality
 
 The proportionate design is to avoid identification and minimize rider text.

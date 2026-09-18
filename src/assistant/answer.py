@@ -120,7 +120,7 @@ def prose_as_of_dates(text: str) -> list[str]:
 
     Public because `evals.checks.as_of_prose_matches_structured` has to read the
     sentence with the *same* pattern `_align_as_of_prose` rewrites it with. A
-    check that recognised a different set of phrasings than the normalizer would
+    check that recognized a different set of phrasings than the normalizer would
     be green precisely where the normalizer had already missed something.
     """
 

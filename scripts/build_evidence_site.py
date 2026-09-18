@@ -25,7 +25,6 @@ import os
 import re
 import shutil
 import stat
-import struct
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
@@ -38,6 +37,11 @@ from urllib.parse import urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
+# `scripts.site_meta` holds what this site's pages say about their own address,
+# shared with the second publisher in `.github/workflows/pages.yml`. The repo root
+# goes on the path so the same import works whether this file is run as a script
+# (where sys.path[0] is `scripts/`) or imported as `scripts.build_evidence_site`.
+sys.path.insert(0, str(_REPO_ROOT))
 
 from assistant.promotion_evidence import (  # noqa: E402
     PromotionEvidenceError,
@@ -51,6 +55,7 @@ from assistant.release_identity import (  # noqa: E402
     ReleaseIdentityError,
     build_release_identity,
 )
+from scripts import site_meta  # noqa: E402
 
 PUBLIC_EVIDENCE_SCHEMA: Final = "fare-assistant.public-evidence.v1"
 PUBLIC_RELEASE_SCHEMA: Final = "fare-assistant.public-release.v1"
@@ -61,6 +66,7 @@ MAX_VERSION_RESPONSE_BYTES: Final = 256 * 1024
 MAX_HISTORY_SVG_BYTES: Final = 5 * 1024 * 1024
 MAX_CNAME_BYTES: Final = 1024
 MAX_OG_CARD_BYTES: Final = 1024 * 1024
+MAX_FEED_BYTES: Final = 4 * 1024 * 1024
 
 _READ_CHUNK_BYTES = 1024 * 1024
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -78,33 +84,46 @@ _HOSTNAME = re.compile(
     r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*"
     r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$"
 )
-#: The address this site answers on. A canonical link and a sitemap both publish
-#: absolute addresses, so this cannot be inferred from the output directory; it is
-#: written down, and `render_evidence_site` refuses to publish a CNAME naming a
-#: different host, so the two can never quietly disagree.
-SITE_ORIGIN = "https://evals.chelseakr.com"
+#: What this site's pages say about their own address, and the tags that say it.
+#: Defined in `scripts/site_meta.py` and bound here rather than duplicated,
+#: because the second publisher -- the nightly job in `.github/workflows/pages.yml`
+#: -- imports the same module. Two copies of these facts is how that publisher
+#: came to emit no `og:image` at all while this file's own tests stayed green.
+SITE_ORIGIN = site_meta.SITE_ORIGIN
+INDEXABLE_PAGES = site_meta.INDEXABLE_PAGES
+OG_CARD_NAME = site_meta.OG_CARD_NAME
+OG_CARD_WIDTH = site_meta.OG_CARD_WIDTH
+OG_CARD_HEIGHT = site_meta.OG_CARD_HEIGHT
+OG_CARD_ALT = site_meta.OG_CARD_ALT
+_page_url = site_meta.page_url
+_social_image_meta = site_meta.social_image_meta
+_social_meta = site_meta.social_meta
+_robots_txt = site_meta.robots_txt
+_sitemap_xml = site_meta.sitemap_xml
 
-#: The pages offered for indexing, in the order the sitemap lists them. The other
-#: published files -- the evidence manifest, the release receipt, the history SVG
-#: and the share card -- are data a reader reaches through these pages, not pages.
-INDEXABLE_PAGES: tuple[str, ...] = ("index.html", "report.html")
-
-#: The share-card image, when one is published. A link preview names an absolute
-#: address, so the card has to be a file this site actually serves; see
-#: `_social_meta` for why a card naming a file that is not there is worse than
-#: no card at all.
-OG_CARD_NAME: Final = "og-card.png"
-OG_CARD_WIDTH: Final = 1200
-OG_CARD_HEIGHT: Final = 630
-OG_CARD_ALT: Final = (
-    "Evaluation evidence for the Transit Fare Policy Assistant, at evals.chelseakr.com."
-)
+#: Where the per-agency fare-change feeds are served, relative to the site root.
+#: `assistant.feeds` writes each feed's own address into it -- an Atom
+#: `<link rel="self">` and a JSON Feed `feed_url` -- so the generator and this
+#: renderer have to agree on this one path or every feed published here states an
+#: address that answers 404. `_validated_feeds` checks that agreement per file
+#: rather than trusting the two constants to have been kept in step.
+FEEDS_DIR_NAME: Final = "feeds"
+#: A published feed file name. Deliberately narrow: `assistant.feeds` derives
+#: these from agency slugs, so anything outside this shape in that directory is
+#: something nobody meant to publish and is refused rather than skipped.
+_FEED_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.(?:xml|json)$")
+#: The combined feed, which is the one the page advertises. Every agency feed is
+#: still served; a `<link rel="alternate">` per agency would put nineteen pairs in
+#: one document head, and the combined feed is what a general reader wants.
+COMBINED_FEED_ATOM: Final = "all.xml"
+COMBINED_FEED_JSON: Final = "all.json"
 
 _PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 _TEMPLATE_FIELDS = frozenset(
     {
         "CASE_COUNT",
         "EXPIRES_AT",
+        "FEED_LINKS",
         "FRESHNESS_SCRIPT",
         "FUNCTION_VERSION",
         "PROMOTED_AT",
@@ -891,6 +910,7 @@ def _template_html(
     *,
     trend: bool,
     card: bool,
+    feeds: Sequence[str] = (),
 ) -> bytes:
     try:
         source = template.decode("utf-8")
@@ -916,12 +936,13 @@ def _template_html(
     if evidence["status"] != "verified":
         # Unreachable through the publication path, which runs
         # `require_current_public_evidence` first. It is here so that a caller who
-        # skipped that gate cannot get a page labelled "Verified" out of a receipt
+        # skipped that gate cannot get a page labeled "Verified" out of a receipt
         # that is not, which is what a single hardcoded label would otherwise do.
         _fail("only verified evidence can be rendered into a page")
     replacements = {
         "CASE_COUNT": str(total["total"]),
         "EXPIRES_AT": html.escape(_expiry_instant(evidence)),
+        "FEED_LINKS": "\n".join(_feed_links(feeds)),
         "FRESHNESS_SCRIPT": _FRESHNESS_SCRIPT,
         "FUNCTION_VERSION": html.escape(str(runtime["function_version"])),
         "PROMOTED_AT": html.escape(str(evidence["promoted_at"])),
@@ -1027,6 +1048,14 @@ Lambda version <strong>{html.escape(str(runtime["function_version"]))}</strong>.
     return page.encode("utf-8")
 
 
+def _with_analytics(page: bytes) -> bytes:
+    """A rendered page with GA4, its footer opt-out and the policy that admits them."""
+    try:
+        return site_meta.with_analytics(page.decode("utf-8")).encode("utf-8")
+    except ValueError as exc:
+        raise EvidenceSiteError(str(exc)) from exc
+
+
 def _release_receipt(
     manifest: Mapping[str, object],
     evidence: Mapping[str, object],
@@ -1087,10 +1116,10 @@ def _validated_og_card(path: Path) -> bytes:
     here rather than trusted from the filename.
     """
     payload = _read_regular(path, limit=MAX_OG_CARD_BYTES, context="share card")
-    signature = b"\x89PNG\r\n\x1a\n"
-    if not payload.startswith(signature) or payload[12:16] != b"IHDR":
-        _fail("share card must be a PNG whose first chunk is IHDR")
-    width, height = struct.unpack(">II", payload[16:24])
+    try:
+        width, height = site_meta.png_dimensions(payload)
+    except ValueError as exc:
+        _fail(str(exc))
     if (width, height) != (OG_CARD_WIDTH, OG_CARD_HEIGHT):
         _fail(f"share card must be {OG_CARD_WIDTH}x{OG_CARD_HEIGHT}, not {width}x{height}")
     return payload
@@ -1128,82 +1157,77 @@ def _report_description(run_date: str) -> str:
     )
 
 
-def _social_image_meta(*, card: bool) -> tuple[str, ...]:
-    """The image half of a share card, and the card type that follows from it.
+def _feed_links(names: Sequence[str]) -> tuple[str, ...]:
+    """Feed discovery links, emitted only for feeds this render actually publishes.
 
-    An ``og:image`` naming a file this site does not serve is worse than none at
-    all: the tag is read once, by a crawler, somewhere this project will never
-    see the result. So the image tags are emitted only when the card is actually
-    being published in the same render, and ``twitter:card`` says ``summary``
-    rather than ``summary_large_image`` when there is no large image to show.
+    Same reasoning as `_social_image_meta`, and the same failure it avoids: a
+    `<link rel="alternate">` naming a file the site does not serve is followed
+    once, by a reader's feed client, somewhere this project never sees the
+    result. `assistant.feeds` had been writing 38 files whose own `<link
+    rel="self">` named `evals.chelseakr.com/feeds/...` while neither publication
+    path put a single one of them there, so every one of those addresses
+    answered 404 -- the page advertising them would have made that worse, not
+    better, which is why the advertisement is tied to the publication here
+    rather than written into the template as a constant.
     """
-    if not card:
-        return ('<meta name="twitter:card" content="summary">',)
-    address = f"{SITE_ORIGIN}/{OG_CARD_NAME}"
-    return (
-        '<meta name="twitter:card" content="summary_large_image">',
-        f'<meta property="og:image" content="{html.escape(address)}">',
-        '<meta property="og:image:type" content="image/png">',
-        f'<meta property="og:image:width" content="{OG_CARD_WIDTH}">',
-        f'<meta property="og:image:height" content="{OG_CARD_HEIGHT}">',
-        f'<meta property="og:image:alt" content="{html.escape(OG_CARD_ALT)}">',
-        f'<meta name="twitter:image" content="{html.escape(address)}">',
-        f'<meta name="twitter:image:alt" content="{html.escape(OG_CARD_ALT)}">',
-    )
-
-
-def _social_meta(*, title: str, description: str, url: str, card: bool) -> str:
-    """The OpenGraph and Twitter tags for one page."""
-    return "\n".join(
-        (
-            '<meta property="og:type" content="website">',
-            '<meta property="og:site_name" content="Transit Fare Policy Assistant">',
-            '<meta property="og:locale" content="en_US">',
-            f'<meta property="og:url" content="{html.escape(url)}">',
-            f'<meta property="og:title" content="{html.escape(title)}">',
-            f'<meta property="og:description" content="{html.escape(description)}">',
-            *_social_image_meta(card=card),
-            f'<meta name="twitter:title" content="{html.escape(title)}">',
-            f'<meta name="twitter:description" content="{html.escape(description)}">',
+    available = frozenset(names)
+    links: list[str] = []
+    for name, media_type in (
+        (COMBINED_FEED_ATOM, "application/atom+xml"),
+        (COMBINED_FEED_JSON, "application/feed+json"),
+    ):
+        if name not in available:
+            continue
+        address = f"{SITE_ORIGIN}/{FEEDS_DIR_NAME}/{name}"
+        links.append(
+            f'<link rel="alternate" type="{media_type}" '
+            f'title="Fare-policy corpus changes across every agency" '
+            f'href="{html.escape(address)}">'
         )
-    )
+    return tuple(links)
 
 
-def _page_url(name: str) -> str:
-    """The address a published page answers on. The root is the bare origin.
+def _validated_feeds(path: Path) -> dict[str, bytes]:
+    """Read every fare-change feed, refusing anything that is not one.
 
-    A canonical naming ``index.html`` would publish a second address for a page
-    that already has one, which is the thing a canonical exists to prevent.
+    Fails closed on an unexpected entry rather than skipping it. This directory
+    is copied wholesale into a site whose whole design is a fixed, sanitized file
+    list -- the dispatch workflow asserts by name that `results.jsonl`,
+    `summary.json` and `promotion.json` are absent from the output -- so
+    "publish whatever is in there" would be the one place that discipline did not
+    hold. An unrecognized file is a finding.
     """
-    return f"{SITE_ORIGIN}/" if name == "index.html" else f"{SITE_ORIGIN}/{name}"
 
-
-def _robots_txt() -> bytes:
-    """What a crawler is told at ``/robots.txt``.
-
-    Nothing is disallowed. Everything this site publishes is published on purpose:
-    the renderer writes a fixed list of files and the workflow asserts the private
-    ones are absent, so there is no path here that wants hiding.
-    """
-    return f"User-agent: *\nAllow: /\n\nSitemap: {SITE_ORIGIN}/sitemap.xml\n".encode()
-
-
-def _sitemap_xml() -> bytes:
-    """The two pages, as a sitemap.
-
-    No ``lastmod``. The evidence carries its own dates -- the run, the promotion,
-    the runtime release -- and they are on the page; a build date stamped here
-    would be a third date, about the rendering rather than about the evidence,
-    and a sitemap date is worth publishing only while it is true.
-    """
-    locations = "".join(
-        f"<url><loc>{html.escape(_page_url(name))}</loc></url>" for name in INDEXABLE_PAGES
-    )
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        f"{locations}</urlset>\n"
-    ).encode()
+    try:
+        entry = path.lstat()
+    except OSError as exc:
+        raise EvidenceSiteError("feeds directory could not be read") from exc
+    if stat.S_ISLNK(entry.st_mode) or not stat.S_ISDIR(entry.st_mode):
+        _fail("feeds directory must be a regular directory")
+    try:
+        names = sorted(os.listdir(path))
+    except OSError as exc:
+        raise EvidenceSiteError("feeds directory could not be listed") from exc
+    unexpected = [name for name in names if not _FEED_NAME.fullmatch(name)]
+    if unexpected:
+        _fail(f"feeds directory holds something that is not a feed: {unexpected[0]}")
+    if not names:
+        # A floor, so a render cannot report success over a directory that has
+        # stopped being generated. An empty feeds directory means the generator
+        # did not run, not that there is nothing to say.
+        _fail("feeds directory is empty")
+    feeds: dict[str, bytes] = {}
+    for name in names:
+        payload = _read_regular(path / name, limit=MAX_FEED_BYTES, context=f"feed {name}")
+        address = f"{SITE_ORIGIN}/{FEEDS_DIR_NAME}/{name}"
+        if address.encode("utf-8") not in payload:
+            # The feed states where it lives; this render is what puts it there.
+            # Checked per file rather than once, because the generator derives
+            # the address from its own constants and a drift in either direction
+            # publishes a feed pointing somewhere nothing answers.
+            _fail(f"feed {name} does not name the address this site would serve it at")
+        feeds[name] = payload
+    return feeds
 
 
 def _write_site_file(root: Path, name: str, payload: bytes) -> None:
@@ -1230,6 +1254,7 @@ class _SiteAttachments:
     history: bytes | None
     cname: bytes | None
     og_card: bytes | None
+    feeds: dict[str, bytes]
 
 
 def _validated_attachments(
@@ -1237,6 +1262,7 @@ def _validated_attachments(
     history_svg_path: Path | None,
     cname_path: Path | None,
     og_card_path: Path | None,
+    feeds_dir: Path | None,
 ) -> _SiteAttachments:
     """Read and check every optional attachment before a single byte is written.
 
@@ -1254,7 +1280,30 @@ def _validated_attachments(
         # site whose pages all claim to live at an address it does not answer on.
         _fail("CNAME hostname differs from the origin this site publishes")
     og_card = _validated_og_card(og_card_path) if og_card_path is not None else None
-    return _SiteAttachments(history=history, cname=cname, og_card=og_card)
+    feeds = _validated_feeds(feeds_dir) if feeds_dir is not None else {}
+    return _SiteAttachments(history=history, cname=cname, og_card=og_card, feeds=feeds)
+
+
+def _write_optional_files(root: Path, attachments: _SiteAttachments) -> None:
+    """The files a render publishes beside the two pages, when it has them.
+
+    Split out of `render_evidence_site` for CQ-05 (max-complexity 10), the same
+    reason `_validated_attachments` was: every one of these is conditional, and
+    the conditions are the whole point -- the site never publishes a reference to
+    a file it is not also writing in the same render.
+    """
+
+    if attachments.history is not None:
+        _write_site_file(root, "eval-history.svg", attachments.history)
+    if attachments.og_card is not None:
+        _write_site_file(root, OG_CARD_NAME, attachments.og_card)
+    if attachments.cname is not None:
+        _write_site_file(root, "CNAME", attachments.cname)
+    if attachments.feeds:
+        feeds_root = root / FEEDS_DIR_NAME
+        feeds_root.mkdir(mode=0o755)
+        for name, payload in attachments.feeds.items():
+            _write_site_file(feeds_root, name, payload)
 
 
 def render_evidence_site(
@@ -1265,6 +1314,7 @@ def render_evidence_site(
     history_svg_path: Path | None = None,
     cname_path: Path | None = None,
     og_card_path: Path | None = None,
+    feeds_dir: Path | None = None,
     expected_source_revision: str | None = None,
     clock: Callable[[], datetime] | None = None,
 ) -> Path:
@@ -1291,10 +1341,11 @@ def render_evidence_site(
         history_svg_path=history_svg_path,
         cname_path=cname_path,
         og_card_path=og_card_path,
+        feeds_dir=feeds_dir,
     )
     history = attachments.history
     og_card = attachments.og_card
-    cname = attachments.cname
+    feeds = attachments.feeds
     if output_dir.is_symlink() or output_dir.exists():
         _fail("output directory must not already exist")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -1303,20 +1354,31 @@ def render_evidence_site(
     temporary = Path(tempfile.mkdtemp(prefix=f".{output_dir.name}.", dir=output_dir.parent))
     os.chmod(temporary, 0o755)
     try:
+        # Every HTML page goes through `site_meta.with_analytics` (ADR 0033), the
+        # same call the nightly publisher makes, so GA4, its footer opt-out and the
+        # policy changes that admit them cannot differ between the two.
         _write_site_file(
             temporary,
             "index.html",
-            _template_html(
-                template,
-                evidence,
-                trend=history is not None,
-                card=og_card is not None,
+            _with_analytics(
+                _template_html(
+                    template,
+                    evidence,
+                    trend=history is not None,
+                    card=og_card is not None,
+                    feeds=tuple(feeds),
+                )
             ),
         )
         _write_site_file(
             temporary,
             "report.html",
-            _report_html(evidence, card=og_card is not None),
+            _with_analytics(_report_html(evidence, card=og_card is not None)),
+        )
+        _write_site_file(
+            temporary,
+            "privacy.html",
+            site_meta.privacy_html(card=og_card is not None).encode("utf-8"),
         )
         _write_site_file(
             temporary,
@@ -1330,12 +1392,7 @@ def render_evidence_site(
         )
         _write_site_file(temporary, "robots.txt", _robots_txt())
         _write_site_file(temporary, "sitemap.xml", _sitemap_xml())
-        if history is not None:
-            _write_site_file(temporary, "eval-history.svg", history)
-        if og_card is not None:
-            _write_site_file(temporary, OG_CARD_NAME, og_card)
-        if cname is not None:
-            _write_site_file(temporary, "CNAME", cname)
+        _write_optional_files(temporary, attachments)
         directory = os.open(temporary, os.O_RDONLY)
         try:
             os.fsync(directory)
@@ -1420,6 +1477,7 @@ def _parser() -> argparse.ArgumentParser:
     render.add_argument("--history-svg", type=Path)
     render.add_argument("--cname", type=Path)
     render.add_argument("--og-card", type=Path)
+    render.add_argument("--feeds-dir", type=Path)
     render.add_argument("--expected-source-revision", required=True)
 
     compare = subparsers.add_parser(
@@ -1459,6 +1517,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 history_svg_path=args.history_svg,
                 cname_path=args.cname,
                 og_card_path=args.og_card,
+                feeds_dir=args.feeds_dir,
                 expected_source_revision=args.expected_source_revision,
             )
             result = {"output_dir": str(output)}

@@ -30,7 +30,7 @@ permissions:
 
 # Cancel superseded in-flight runs for the same PR to save Actions minutes.
 # Scoped to pull_request only, so pushes to main and the nightly schedule are
-# never cancelled mid-run. That alone was not enough: an uncancellable run still
+# never canceled mid-run. That alone was not enough: an uncancelable run still
 # shared a group with the next push, and a group evicts its *pending* run —
 # see the group key below.
 concurrency:
@@ -277,7 +277,7 @@ jobs:
         # the retrieved corpus passages, the model IDs, and the question are
         # all identical to a previous run. Any change to any of them misses and
         # re-pays. Without this step every CI run starts cold and buys the same
-        # 26 answers and ~48 judgements again, including the push-to-main run
+        # 26 answers and ~48 judgments again, including the push-to-main run
         # that re-scores the identical tree its own PR scored minutes earlier.
         #
         # This job is the first *real*, non-mocked receipt for the merged code
@@ -397,7 +397,7 @@ jobs:
     # hard failures are listed in evals/plumbline/acknowledged_findings.json.
     # evals/plumbline_guard.py is what fails the build: any suite below the
     # committed baseline, any hard failure nobody acknowledged, any
-    # acknowledgement that has stopped firing.
+    # acknowledgment that has stopped firing.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -435,7 +435,7 @@ jobs:
             exit "$status"
           fi
       - name: Gate the audit report
-        # --not-before is the second defence: it refuses a report last written
+        # --not-before is the second defense: it refuses a report last written
         # before this run started, so even an unforeseen way of producing no
         # report fails here rather than being graded from the committed one.
         run: uv run python -m evals.plumbline_guard --not-before "$AUDIT_STARTED_AT"

@@ -11,7 +11,7 @@
 # stretch-language parity table (evals/report.py::_stretch_parity) makes the
 # gap a counted number instead of a vibe. No corpus document is published in
 # Tagalog, so every case is an honest cross-lingual retrieval test — there is
-# no Tagalog analogue of the mst-fares-es page that lets the Spanish suite
+# no Tagalog analog of the mst-fares-es page that lets the Spanish suite
 # claim genuine parity on MST.
 #
 # Two deliberate constraints remain tracked rather than hidden:

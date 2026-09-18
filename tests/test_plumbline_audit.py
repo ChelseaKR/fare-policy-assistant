@@ -213,7 +213,7 @@ class TestTheGuardIsTheGate:
                 "guard does not see all of them"
             )
 
-    def test_an_acknowledgement_that_stopped_firing_fails(self) -> None:
+    def test_an_acknowledgment_that_stopped_firing_fails(self) -> None:
         acknowledged = self._acknowledged()
         acknowledged["privacy"] = dict(acknowledged["privacy"], **{"already-fixed": "reason"})
         problems = guard.check(self._report(), self._baseline(), acknowledged)
@@ -228,7 +228,7 @@ class TestTheGuardIsTheGate:
         problems = guard.check(report, self._baseline(), self._acknowledged())
         assert any("not comparable" in p for p in problems)
 
-    def test_every_acknowledgement_carries_a_reason(self) -> None:
+    def test_every_acknowledgment_carries_a_reason(self) -> None:
         for suite, entries in self._acknowledged().items():
             for item, reason in entries.items():
                 assert len(reason.strip()) > 40, f"{suite}/{item} has no real reason"
@@ -259,7 +259,7 @@ class TestTheTargetConfigExplainsItself:
         instrument is independently shown to be reporting the wrong number,
         as opposed to a blunt-but-real one. Every other low floor in this file
         (accuracy, cross_language, groundedness, ...) sits below a score that
-        is a *noisy* signal of real behaviour — recall against the wrong
+        is a *noisy* signal of real behavior — recall against the wrong
         shape of reference, mostly — and for those, "floor below measurement"
         is correct: raising the floor to what a human wishes were true is the
         anti-pattern. `adversarial` on 2026-09-04 was the first case where the
@@ -417,7 +417,7 @@ class TestAGateThatCouldNotRunIsNotAGateThatPassed:
     def test_a_report_older_than_the_run_is_refused_rather_than_graded(
         self, tmp_path: Path
     ) -> None:
-        """The second defence, exercised directly: an unforeseen way of writing
+        """The second defense, exercised directly: an unforeseen way of writing
         no report still cannot be graded from a leftover."""
         import os
 

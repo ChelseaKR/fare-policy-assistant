@@ -427,7 +427,7 @@ def _scenarios() -> list[Scenario]:
             check="as_of_prose_matches_structured",
             case={"expected_behavior": "answer", "language": "en"},
             clean=replace(_clean(doc_id, base_answer), passages=_mixed_freshness_passages(doc_id)),
-            # The mutation is the pre-fix behaviour of issue #163, verbatim: the
+            # The mutation is the pre-fix behavior of issue #163, verbatim: the
             # prompt is handed max(fetch_date) over the retrieved set and told to
             # render it in "based on policies published as of <date>", while the
             # structured as_of stays on the oldest cited passage. The structured

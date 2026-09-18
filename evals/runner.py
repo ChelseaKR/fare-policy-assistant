@@ -2682,7 +2682,7 @@ def annotation_scopes(path: Path | None = None) -> dict[str, str]:
 def invalid_annotation_scopes(scopes: Mapping[str, str]) -> list[str]:
     """Annotations whose declared scope is not one this gate understands.
 
-    Reported rather than defaulted. Silently reading an unrecognised scope as
+    Reported rather than defaulted. Silently reading an unrecognized scope as
     `run` would turn a typo into the widest possible waiver, which is the one
     direction this file must never fail in.
     """

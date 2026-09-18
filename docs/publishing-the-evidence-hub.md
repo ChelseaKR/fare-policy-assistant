@@ -4,6 +4,9 @@ How <https://evals.chelseakr.com/> is published, why it currently cannot be,
 and what an operator would have to do first. Everything below was checked
 against the repository, the GitHub Actions history, and the two live
 endpoints on 2026-08-28; nothing is inferred from the workflow file alone.
+Re-checked the same way on 2026-09-13, when the domain had been serving the
+same bytes for 63 days: all three blockers still stand, and two of them are
+narrower than this document said. The corrections are in place below, marked.
 
 ## Update, 2026-09-04: a second publication path exists now (issue #140)
 
@@ -76,6 +79,21 @@ Three independent blockers, in the order the workflow would hit them.
    target, no workflow, no script. The export step has never been run, so
    there is nothing to point the second key at.
 
+   *Correction, 2026-09-13.* Adding that missing entry point would not clear
+   this blocker, and it is worth being exact about why, because "no command
+   exists" invites the wrong fix. `export` consumes three private receipts —
+   `summary.json`, `results.jsonl`, `promotion.json` — and the third is the
+   binding one. `promotion.json` is written in exactly one place in this
+   repository: `infra/deploy.sh`, from `scripts/build_promotion_attestation.py`,
+   against a runtime projection whose `function_version` is the Lambda version
+   that same deploy just published. No eval run produces it and no run
+   directory has ever contained one: of the eleven run directories on this
+   machine and the one inside the most recent nightly's `eval-report`
+   artifact, twelve hold `summary.json` and `results.jsonl` and none holds
+   `promotion.json`. So this blocker is downstream of blocker 3 rather than
+   independent of it: the receipts come from a deploy, and there is no deploy
+   to take them from.
+
 2. **The evidence would be refused as stale.** The only promoted run is
    `2026-07-12T05:01:17+00:00` (`EVALS.md`, `evals/baseline.json`,
    `docs/eval-report.html`). `require_current_public_evidence` fails with
@@ -83,6 +101,15 @@ Three independent blockers, in the order the workflow would hit them.
    exceeds the manifest's `max_age_seconds`. That budget is operator-chosen
    at export time via `--freshness-seconds`, so this blocker alone could be
    argued past by declaring a wide budget.
+
+   *Correction, 2026-09-13.* The measurement is not what is wrong here, and it
+   is worth saying so plainly so nobody goes looking for an off-by-one to
+   repair. `require_current_public_evidence` recomputes `now - run_at` from
+   the manifest's own `run_at` rather than trusting its recorded
+   `age_seconds`, which is the correct reading, and it returns 63 days against
+   a budget an operator would have to declare at 63 days or wider. The gate is
+   measuring accurately and the evidence is genuinely that old. Nothing in the
+   repository can make this blocker go away; only a newer run can.
 
 3. **The runtime tuple does not match, whatever the budget.** The July run
    attests corpus_version `0938fff0539a`. The live Lambda reports
@@ -93,10 +120,49 @@ Three independent blockers, in the order the workflow would hit them.
    the honest one: the promoted scores were computed against a corpus the
    deployed assistant no longer serves.
 
+   *Correction, 2026-09-13.* There are three corpora in play, not two, and the
+   third is what decides the shape of the fix. `0938fff0539a` is what the
+   promoted July scores were computed against; `35ec70d6359d` is what the
+   deployed Lambda serves (`as_of` 2026-08-10, eleven documents, five
+   agencies); and `assistant.corpus.corpus_version()` at `origin/main` returns
+   `10deac978967` — eighteen agencies — which is also what every full run in
+   this repository since 2026-08-21 attests, today's nightly included. So
+   re-running the evaluation at `main` and exporting the result does not
+   satisfy `compare-runtime` either: it swaps one mismatched corpus for a
+   different mismatched corpus. What `compare_runtime_version` requires is
+   that the evaluated release identity equal the *deployed* one, and
+   `scripts/build_promotion_attestation.py::_evaluated_release` enforces the
+   same equality a step earlier, over `source_revision`, `config_version`,
+   `content_version`, `snapshot_version`, `release_version` and
+   `corpus_version` together. Two of the eight fields `compare-runtime`
+   checks — `artifact_code_sha256` and `function_version` — are facts about a
+   published Lambda version that no local run can attest at all. The only
+   procedure that produces all eight consistently is a deploy.
+
 Blocker 3 also means the useful `source_revision` is constrained. The live
 runtime attests `180aa043f740c076ec7ec9443f2067b56009c985`, which is an
 ancestor of `origin/main` and does contain the renderer, so it is the only
 value that could satisfy `compare-runtime` against today's deployment.
+
+*Correction, 2026-09-13.* "Contains the renderer" is true and is not the whole
+story, because the build job runs the renderer **out of the `source_revision`
+checkout**, not out of `main`. `180aa043` is dated 2026-08-12, so the renderer
+it carries predates both improvements this page has had since: ADR 0030's
+read-time freshness script (2026-08-29) and the head tags every published page
+now states its own address with (2026-09-13). Checked at that commit,
+`scripts/build_evidence_site.py` has no `_FRESHNESS_SCRIPT` and
+`docs/pages/index.html` has no `<link rel="canonical">`, no
+`<meta name="description">` and no `og:`/`twitter:` tags; the renderer there
+also predates `--og-card` and `--feeds-dir`, and emits no `robots.txt` or
+`sitemap.xml`. `pages.yml` guards that skew correctly — its `--og-card` and
+`--feeds-dir` arguments are added only when those paths exist in the `source`
+checkout, and neither exists at `180aa043`, so a dispatch would run rather
+than fail on an unknown flag. It would simply publish an older page. That is
+the real cost of the constraint: satisfying blocker 3 by pinning to the
+deployed commit publishes a page that cannot report its own age and cannot be
+shared or indexed, which is strictly less than what the repository can render
+today. Redeploying the Lambda from a current `main` is what relaxes it, and it
+is the same action blocker 3 already requires.
 
 ## The decision this exposed, and what was done about it
 
@@ -158,14 +224,49 @@ blockers below still stand between it and a replacement.
 
 The prerequisite is a promoted live run whose runtime tuple matches the
 deployed Lambda. Then export the manifest, commit it alone on an
-evidence-only ref, and dispatch:
+evidence-only ref, and dispatch.
+
+**What produces those receipts, and what they cost.** Step 1 below reads three
+receipts, and the paragraph that used to introduce it left the impression they
+are lying around in `evals/runs/`. They are not, and no amount of re-running
+`make eval` puts them there. `evals.runner` writes `summary.json` and
+`results.jsonl` and never writes `promotion.json` at all; it only records
+`attestation.promotion.eligible: true` on a run invoked as
+`--full --promotion --no-cache` against a verified release descriptor.
+`promotion.json` itself is composed afterwards by
+`scripts/build_promotion_attestation.py` from that summary plus a runtime
+projection of the just-published Lambda version, and the only caller that does
+either is `infra/deploy.sh`. Today's nightly is instructive about how far an
+ordinary run is from qualifying: its attestation records
+`"eligible": false, "reasons": ["cache_enabled", "descriptor_unverified",
+"gates_failed", "not_promotion_run"]`, four independent disqualifications.
+
+`--no-cache` is where the money goes. The promotion run re-measures every case
+against the live provider with nothing served from the content-keyed cache.
+The repository's one committed measurement of a cold full run at this scale is
+[the 2026-08-22 audit](audits/eval-full-live-2026-08-22.md): 385 cases, 369
+answer calls and 730 judge calls all going to Bedrock, **$8.5006** at list
+price for 3,898,166 tokens, 813 seconds at four workers. A promotion run is
+that run plus the gates, so budget the same order and expect it to fail closed
+if the gates do not pass — the most recent nightly scored 272/385, and
+`verify_promotion_evidence` refuses anything whose `gate_status` is not
+`passed`. Paying for the run does not buy a publication; it buys a verdict.
+
+So step 0 is a deploy, not an export:
 
 ```sh
-# 1. Export the canonical manifest from the promoted run's private receipts.
+# 0. Deploy. This is what publishes a numbered Lambda version, runs the
+#    full/live/uncached promotion evaluation against it, and writes the three
+#    receipts to infra/build/promotion/. Needs AWS credentials and Bedrock access,
+#    costs real money (see above), and changes what fare.chelseakr.com serves.
+./infra/deploy.sh
+
+# 1. Export the canonical manifest from the promoted run's private receipts
+#    (infra/build/promotion/ from step 0 — not an evals/runs/ directory).
 uv run python scripts/build_evidence_site.py export \
-  --summary  <run_dir>/summary.json \
-  --results  <run_dir>/results.jsonl \
-  --promotion <run_dir>/promotion.json \
+  --summary  infra/build/promotion/summary.json \
+  --results  infra/build/promotion/results.jsonl \
+  --promotion infra/build/promotion/promotion.json \
   --output   public-evidence.json \
   --as-of    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --freshness-seconds 604800
@@ -182,7 +283,7 @@ gh workflow run pages.yml \
   -f expected_public_manifest_sha256="$(sha256sum public-evidence.json | cut -d' ' -f1)"
 ```
 
-`--freshness-seconds` is the one number here that is a judgement rather than a
+`--freshness-seconds` is the one number here that is a judgment rather than a
 measurement. It becomes `max_age_seconds` in the manifest, and it is what both
 `require_current_public_evidence` and the published page's own check measure
 against. Until 2026-08-29 it was invisible to readers, so widening it to make an

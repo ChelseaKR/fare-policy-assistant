@@ -6,7 +6,7 @@ from assistant.models import Completion, MockModel
 
 
 def test_safe_url_drops_non_http_schemes():
-    # Defence in depth: a citation link href only ever carries http(s).
+    # Defense in depth: a citation link href only ever carries http(s).
     assert _safe_url("https://mst.org/fares/") == "https://mst.org/fares/"
     assert _safe_url("http://example.org") == "http://example.org"
     assert _safe_url("javascript:alert(1)") == ""
@@ -394,7 +394,7 @@ class TestAsOfProseAlignment:
         assert flags == ["as_of_prose_realigned:2026-08-10->2026-06-12"]
 
     def test_the_check_reads_the_sentence_with_the_pattern_the_fix_rewrites(self):
-        # One definition, deliberately: a backstop check that recognised fewer
+        # One definition, deliberately: a backstop check that recognized fewer
         # phrasings than the normalizer would be green exactly where the
         # normalizer had already missed something.
         from assistant.answer import _AS_OF_PROSE, prose_as_of_dates

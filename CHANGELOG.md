@@ -8,7 +8,207 @@ rather than tied to a published tag.
 
 ## [Unreleased]
 
+### Added
+- **Google Analytics 4 on the evidence hub, and a `privacy.html` that says what it
+  records** (2026-09-17, decision 0033). Per the owner's decision to run GA4 on every
+  public site in the portfolio. `scripts/site_meta.py` holds the measurement ID
+  (`G-Y359BGWN12`) and `with_analytics`, which both publishers now pass every page
+  through: an inline loader admitted by its own `sha256` digest (never
+  `'unsafe-inline'`), `https://www.googletagmanager.com` in `script-src`, the two
+  collection hosts in `connect-src` and `img-src`, and a footer with the disclosure,
+  the privacy link and an "Opt out of analytics" control
+  (`localStorage` `fare-policy-evals:analytics-opt-out`). The loader runs only on
+  `evals.chelseakr.com` and never under Global Privacy Control or Do Not Track;
+  Google signals and ad personalization are off, the three advertising consent
+  settings are denied everywhere, and `analytics_storage` is denied by default in the
+  EEA, the UK and Switzerland. `privacy.html` is written by both publishers and is the
+  third page in the sitemap; the run-date check now reads `EVIDENCE_PAGES`. The rider
+  assistant is unchanged and loads no analytics. Nothing reaches the live hub until a
+  publisher runs (ADR 0032). README and `docs/dpia.md` were changed to match.
+- **Deploy staleness sentinel** (2026-09-13). `scripts/deploy_staleness.py` plus
+  a weekly `deploy-staleness.yml` answer one question nothing here was asking:
+  how far behind `main` is the commit the live site was built from. Pointed at
+  this repository it reports 63 days, 154 commits, 18 of them changing what a
+  visitor receives, from a published build dated 2026-07-12. An SEO audit that
+  day measured the live page, drew conclusions about `main`, and had to retract
+  them: the page was evidence that `main` had never been published, not evidence
+  about `main`. Every gate was green throughout, because none of them asked.
+  - It publishes nothing and holds nothing that could. No `pages: write`, no
+    `id-token: write`, no deploy credential, and it neither reads nor sets
+    `vars.NIGHTLY_HUB_PUBLISH_ENABLED`. Whether this site should publish at all
+    is an owner decision under ADR 0032 and this sentinel does not touch it.
+  - The measurement comes from the **deployment record**, not from `pages.yml`'s
+    run history, and the difference is not academic here. Both nightly jobs sit
+    behind that variable, so the scheduled run reaches a runner four times a day
+    and skips every job. A run-history sentinel would either count those as a
+    fresh deploy every six hours while the site stayed two months old, or find
+    no successful run at all and call that an answer. A `github-pages`
+    deployment exists only because bytes were published and names the commit
+    they came from; there is exactly one in this repository's history.
+  - Age alone is never the verdict. A site nobody has republished because
+    nothing it publishes changed is correct, not stale, so the report fires only
+    when a commit touching a publisher's own inputs has waited past the
+    threshold. `.github/workflows/pages.yml` is on that input list because the
+    nightly renderer *is* that file, so the asymmetry #247 fixed would otherwise
+    reappear as a clock blind to one of the two publishers.
+  - Every unmeasurable case refuses rather than returning zero: no deployment,
+    none reporting a successful status, a deployed commit a shallow clone does
+    not contain, a diverged history. Those exit 2 and turn the run red. A real
+    measurement, overdue or not, files or closes an issue instead, because a
+    scheduled check that is red for months is a check nobody reads.
+- **Answer drift across corpus versions** (2026-09-07, #216). `make drift
+  FROM=<corpus version> [TO=<version|live>]` runs the whole case set against
+  both versions through the ordinary answer pipeline and pairs the answers per
+  case: `unchanged`, `changed_expected` (a document either side cites is in the
+  corpus diff), `changed_unexpected` (no cited document moved, so the instrument
+  drifted rather than the policy). `corpus_refresh_report.py` already said which
+  documents changed; nothing said what the assistant would now tell a rider
+  differently, which is what a reviewer of a refresh PR has to judge.
+  - `newly_failing` is a flag on every row rather than a fourth bucket. An
+    answer can be byte-identical and newly failing, because a removed document
+    fails `citation_present_and_resolvable` on the new side over the same text,
+    and a four-way partition would have filed that as `unchanged`.
+  - Both sides share one model wrapper memoized on the rendered prompt, so the
+    cost is bounded to the cases a changed document reaches. Measured on the
+    committed corpus: the one-Yolobus-page pair costs 57 calls on the second
+    side against 191 on the first, and comparing a version to itself costs zero.
+    Both counters are in the report.
+  - Scoring is the deterministic half of the harness, run per side against that
+    side's own corpus and its own derived fact table. The committed
+    `facts.jsonl` describes the live corpus only, so scoring an old answer
+    against it would be two rulers.
+  - Wired into the weekly `corpus-freshness` workflow: the report is appended to
+    the refresh PR's body, and the ceiling is enforced by a separate step placed
+    *after* the PR opens, so the evidence ships even when the verdict is red.
+    `tests/test_workflow_safety.py` asserts that ordering.
+  - Run against the unmodified committed corpus, the `a68e77ff4673 →
+    63d6718126f1` pair reports 7 answers that moved with no cited document
+    moving. They are real re-rankings, not a planted defect.
+
 ### Fixed
+- **The nightly publisher put out pages that could not be shared or indexed**
+  (2026-09-13). `evals.chelseakr.com` has two publishers. The dispatch pipeline
+  in `scripts/build_evidence_site.py` emits a description, a self-referencing
+  canonical, a full Open Graph set with a 1200x630 card, a `robots.txt` and a
+  `sitemap.xml`, and has tests saying so (#174). The nightly job in `pages.yml`
+  -- the one that publishes on a schedule, and therefore the one that will
+  actually publish -- copied `og-card.png` into `_site` and then never named it,
+  so its index page promised no `og:image` at all; and it copied
+  `docs/eval-report.html` byte for byte, so `/report.html` went out with a title
+  and nothing else: no description, no canonical, no card. Every test the first
+  publisher has stayed green throughout, because they only ever read the first
+  publisher's output.
+  - The tags a page carries about its own address now live in one stdlib-only
+    module, `scripts/site_meta.py`, which both publishers import. The nightly
+    step runs on a bare `python3` with nothing installed, which is why that
+    module depends on nothing, inside or outside this repository.
+  - The nightly index gained a `{{SOCIAL_IMAGE}}` marker, filled only when the
+    build is publishing the card in the same run, and the card's own IHDR is read
+    to confirm it is the size the tags state. Same rule the dispatch page and the
+    feed links already followed: a tag naming a file this site does not serve is
+    read once, by a crawler, somewhere this project never sees the result.
+  - The nightly `report.html` is still the artifact's body, unaltered; the
+    publisher now inserts the head tags that state its published address after
+    the document's own `</title>`, and refuses the file outright if there is no
+    `</title>` to insert after rather than guessing where a head begins. Its
+    description carries the date of the run it reports and no score: the date is
+    read from the same provenance block the page's numbers come from, and a pass
+    rate written into a head tag would be served long after the number moved,
+    with nothing able to fail.
+  - `site_meta.check_site` is the gate. It reads a built tree offline, derives
+    the page list from the tree rather than from `INDEXABLE_PAGES` or any other
+    list, and reports every page missing a title, a description, a canonical
+    naming its own address, a matching `og:*` set, a card that is the file and
+    the size promised, or an entry in the sitemap. Both publishers' test files
+    run it over their own output, and both assert the sweep reached at least two
+    pages -- a sweep that reached nothing reports no problems and reads exactly
+    like a pass.
+  - Nothing is published by this change on its own. The nightly path stays gated
+    on `vars.NIGHTLY_HUB_PUBLISH_ENABLED`, which is deliberately unset (ADR
+    0032), and the dispatch path still needs a promotion. The live site remains
+    the July build it has been; this fixes what the next publish puts out.
+- **A phone number this project told five audiences its own ingest had broken
+  is spelled that way by the agency** (2026-09-09). `README.md`,
+  `docs/procurement-brief.md`, `docs/audits/methodology.md`, the `_CLOCK_RE`
+  comment in `evals/checks.py`, `evals/plumbline/target.toml` and **23**
+  acknowledgments in `evals/plumbline/acknowledged_findings.json` (19 under
+  `groundedness`, 4 under `privacy`) all said the corpus cleaner "broke" the MTD
+  Business Office number into `805. 963.3364`. It did not.
+  `corpus/raw/sbmtd-fares-passes.html` — sha256 `741a774a...`, the hash its
+  committed `.meta.yaml` declares — carries `805. 963.3364<br>` and
+  `805. 963.3366</p>` in the address blocks as SBMTD published them, and
+  `805.963.3366` further down the same page. The ingest reproduced the source
+  faithfully; the agency's own page is inconsistent with itself. The same is
+  true of e-tran's `1.a.m.`, which `corpus/raw/etran-fares.html` publishes
+  verbatim.
+  - The consequence that mattered was not the wording. `target.toml` parked the
+    `privacy` floor below the measurement and named the remediation as "a
+    corpus reprocess and a re-recording" — a condition that **can never fire**,
+    because a reprocess reads the same bytes and writes the same bytes. A
+    waiver whose clearing condition is impossible is a permanent exemption
+    wearing a temporary one's clothes, and the guard that refuses a stale
+    acknowledgment cannot see the difference.
+  - The finding is an exact-substring number match against a source that spells
+    the number irregularly — the same owner as the other cause already recorded
+    on that suite, and the assistant is right to normalize a number it reads out
+    to a rider. It clears when the harness compares numbers modulo punctuation,
+    or if SBMTD republishes the page.
+  - `tests/test_corpus_source_spelling.py` makes the corrected claim a function
+    of committed bytes: the raw file must hash to what its manifest declares,
+    must publish the irregular spelling, must not carry the regular spelling
+    within 200 characters of it, and the processed corpus must reproduce the
+    same spelling — which is the half that makes it a statement about the
+    ingest rather than only about the agency.
+
+- **Every fare-change feed published an address nothing served** (2026-09-08).
+  `assistant.feeds` writes 38 files under `docs/pages/feeds/`, each stating its
+  own location — an Atom `<link rel="self">` and a JSON Feed `feed_url` — as
+  `https://evals.chelseakr.com/feeds/<name>`. Neither publication path in
+  `pages.yml` copied a single one of them into `_site`: the dispatch renderer
+  writes a fixed file list that did not include them, and the nightly render
+  step copied only `CNAME`, `og-card.png` and `eval-history.svg`. So the
+  generator was gated by `make feeds-check` on every commit, the feeds were
+  correct, and all 38 of the addresses they published answered 404. Issue #219
+  asked for a subscribable feed; what existed was a subscribable feed nobody
+  could subscribe to.
+  - `render_evidence_site` takes `--feeds-dir` and publishes the directory as
+    `_site/feeds/`, and the nightly render step copies the same files. Both
+    paths refuse an entry that is not a feed rather than skipping it: this site
+    publishes a fixed, checked file list, and "copy whatever is in the
+    directory" would have been the one place that stopped being true.
+  - Each feed is checked against the address it would be served at, per file,
+    so the generator and the renderer cannot quietly disagree about the path.
+    An empty feeds directory is refused as well — a render must not report
+    success over a generator that stopped producing anything.
+  - The page advertises the combined feed with `<link rel="alternate">`, filled
+    by the renderer only when it is publishing that file in the same render.
+    Same rule the share card already followed: a link naming a file the site
+    does not serve is followed once, by a reader's feed client, somewhere this
+    project never sees the result.
+  - Nothing is published by this change on its own. Both paths remain gated as
+    they were — the dispatch path on an operator's manual promotion, the nightly
+    path on `vars.NIGHTLY_HUB_PUBLISH_ENABLED`, which is deliberately unset (ADR
+    0032). This fixes what those paths publish when they next run.
+- **The release pipeline called a reusable workflow it could never resolve**
+  (2026-09-07). `release.yml`'s `authorize` job pointed at
+  `ChelseaKR/portfolio-standards/.github/workflows/release-authorize.yml`, and
+  that repository is private. A public repository cannot call a reusable
+  workflow living in a private one, whatever the private repository's Actions
+  access level says, and GitHub reports the refusal as `failed to parse
+  workflow: error parsing called workflow "...": workflow was not found`. That
+  reads as a deleted file and is not one: the commit exists, the file exists at
+  it, and the access level is already `user`. Every dispatch would have died at
+  parse time, before `release-tests`, before `build`, before anything capable of
+  reporting a useful error. `release.yml` has zero runs in this repository's
+  history and this is the reason.
+  - Re-pinned at the public copy in `ChelseaKR/.github`. Diffed against the pin
+    it replaces, the public file differs by exactly one line, `timeout-minutes:
+    30` on the `authorize` job, so the move tightens the trust boundary rather
+    than substituting a different one.
+  - `tests/test_workflow_safety.py` now refuses a reusable-workflow call to a
+    repository not on a confirmed-public list, and refuses a moving ref on one.
+    A dispatch-only workflow is exercised by nothing, so a static guard is the
+    only thing that could have caught this, and there was none.
 - **The fare-fact table published prices under labels that named nothing**
   (2026-09-07). `corpus/processed/facts.jsonl` is the table a numeric claim in
   an answer is checked against, and 630 of its rows included a price attached
@@ -22,7 +222,7 @@ rather than tied to a published tag.
     to be picked up as the *label* of the following row. The pattern now reads
     both conventions and distinguishes a decimal comma from a thousands
     separator, so E-tran's "$100,000 program fund" is no longer a $100 fare.
-  - **The Spanish fare grids are now recognised as grids.** The rider-class and
+  - **The Spanish fare grids are now recognized as grids.** The rider-class and
     program keyword vocabularies were English-only, so MST's Spanish table
     matched `Regular` (a word both languages share) and nothing else, and its
     entire discount half fell through to the prose fallback. `mst-fares-es` now
@@ -140,7 +340,7 @@ rather than tied to a published tag.
   helpfulness judge caught that. The groundedness judge — the one whose whole job
   is an unsupported claim — passed it, reporting the launch as "explicitly stated
   in the passages". It had read the *topic* being present as the *claim* being
-  supported, and tense fell through the gap. It generalises past this case: any
+  supported, and tense fell through the gap. It generalizes past this case: any
   passage describing a planned change (a fare increase taking effect, a program
   opening, a pass being discontinued) could be restated in the past tense and
   scored as grounded, and every one of those puts a rider in front of a farebox
@@ -290,7 +490,7 @@ rather than tied to a published tag.
     Each entry carries the corpus version, the archive timestamp, the `as_of`
     date, the documents added / changed / removed for that agency, and a link
     to the retained snapshot. 38 files on the current corpus.
-  - It says what changed, never what the change *means*. Summarising a fare
+  - It says what changed, never what the change *means*. Summarizing a fare
     change in prose would be this project asserting something about an agency's
     policy that no citation stands behind.
   - Nothing reads the clock. A feed's `updated` is its newest entry's archive
@@ -327,7 +527,7 @@ rather than tied to a published tag.
     with the feed row's — EXP-06's actual claim), `fact_row` (a parsed fare row
     carries the price, class not comparable), or `prose_amount` (the coarse
     form, kept as the fallback for agencies whose fact extraction is thin, and
-    now labelled instead of reading like the strong claim). Measured on the
+    now labeled instead of reading like the strong claim). Measured on the
     committed corpus: of 143 feed fare rows, 35 / 82 / 9 respectively, and 17
     match nothing.
   - `feed_agrees` is deliberately unmoved. Every fact price is extracted from
@@ -376,7 +576,7 @@ rather than tied to a published tag.
     smuggling attempts directly: body keys named `question`, `answer`,
     `history`, `citations`, and the record's own field names all fail to reach
     the log or add to it, and a client-supplied `corpus_version` is ignored in
-    favour of the served one.
+    favor of the served one.
   - `infra/README.md` gains "Reading the feedback signal" with the Logs
     Insights query that produces helpfulness by corpus version, kind, and
     language. ADR 0019's event table now lists the field, and records why a
@@ -572,12 +772,12 @@ rather than tied to a published tag.
   not a looser gate: refusing to publish stale evidence is correct and
   `require_current_public_evidence` is untouched. The build is simply no longer
   the last moment freshness is judged. The renderer now emits `data-expires-at`
-  (`run_at` plus `max_age_seconds`, an operator judgement that until now no
+  (`run_at` plus `max_age_seconds`, an operator judgment that until now no
   reader could see) and one inline script that compares it to the reader's own
-  clock, relabelling the page "Verified with freshness warning" with its age in
+  clock, relabeling the page "Verified with freshness warning" with its age in
   days once it is past. `_template_html`'s dead build-time warning branch is
   gone; those strings now live where a reader reaches them, and rendering
-  anything but `verified` is refused outright rather than silently labelled.
+  anything but `verified` is refused outright rather than silently labeled.
   Nothing is fetched at read time and `default-src 'none'` stands: rather than
   `'unsafe-inline'`, `_script_csp_hash` computes the SHA-256 of the exact bytes
   inlined, so the policy admits that one script and cannot drift from it.
@@ -649,7 +849,7 @@ rather than tied to a published tag.
   original text in the trace; other dates in an answer (the corpus snapshot
   date, per-document fetch dates) are deliberately untouched. A new
   deterministic check, `as_of_prose_matches_structured`, is the backstop for a
-  phrasing the normalizer does not recognise, and reads the sentence with the
+  phrasing the normalizer does not recognize, and reads the sentence with the
   same pattern the normalizer rewrites. #165 attributes two of the four Spanish
   parity failures on that run to this defect.
 - **`fare_facts_consistent` rendered an upper-bound-only age claim as

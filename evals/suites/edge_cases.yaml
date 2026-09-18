@@ -501,7 +501,7 @@ cases:
     language: en
     expected_behavior: answer
     required_facts: ["re:discount fare rate|discount rate", "re:gold dot"]
-    rationale: "scmtd-accessibility, 'Discount Photo ID Cards': children age 17 and under 'may ride at the discount fare rate when accompanying a parent who travels with a METRO Discount Photo ID Card', and only once Attachment B has been filed and a 'gold dot' added to the card. Discounted is not free, and the benefit is not automatic — both are easy to overstate, especially next to the neighbouring passage where a Personal Care Attendant genuinely does ride free (green dot). The corpus also gives this child a second, better route the answer may mention: a K-12 student rides free on local service under Youth Cruz Free regardless of the parent's card."
+    rationale: "scmtd-accessibility, 'Discount Photo ID Cards': children age 17 and under 'may ride at the discount fare rate when accompanying a parent who travels with a METRO Discount Photo ID Card', and only once Attachment B has been filed and a 'gold dot' added to the card. Discounted is not free, and the benefit is not automatic — both are easy to overstate, especially next to the neighboring passage where a Personal Care Attendant genuinely does ride free (green dot). The corpus also gives this child a second, better route the answer may mention: a K-12 student rides free on local service under Youth Cruz Free regardless of the parent's card."
 
   # ── SolTrans eligibility boundaries (added 2026-08-12) ─────────────────────
   - id: edge-058

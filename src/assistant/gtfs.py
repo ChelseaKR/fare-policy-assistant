@@ -29,7 +29,7 @@ Best first:
     rider class the other can be compared to.
   - `prose_amount` — the amount appears in the agency's prose and in no parsed
     fare row: the coarse form, kept as the fallback for agencies whose fact
-    extraction is thin, and now labelled as such instead of reading like the
+    extraction is thin, and now labeled as such instead of reading like the
     strong claim.
 
 A `fact_row` match is stronger than a prose match and no stronger than the
@@ -1311,7 +1311,7 @@ def _compare_agency(
 def _load_facts_or_empty() -> list[FareFact]:
     """The parsed fare-fact table, or an empty one when it has not been
     generated. An absent table degrades the report to the coarse prose match
-    it always did, labelled `prose_amount`; it never silently reports an
+    it always did, labeled `prose_amount`; it never silently reports an
     agreement as stronger than it is."""
     try:
         return load_facts(config.FACTS_PATH)

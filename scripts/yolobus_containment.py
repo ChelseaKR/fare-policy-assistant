@@ -100,7 +100,7 @@ def fare_period_end(chunks: list[dict[str, object]]) -> date | None:
 
     `None` means the corpus has `yolobus-fares` chunks but none of them state a
     closed period — an open-ended "effective July 1, 2026" with no end, or a
-    wording this parser does not recognise. Callers must treat that as
+    wording this parser does not recognize. Callers must treat that as
     unresolved, not as unexpired: the two are indistinguishable from here.
     """
 

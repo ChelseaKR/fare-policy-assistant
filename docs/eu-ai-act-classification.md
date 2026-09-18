@@ -18,7 +18,7 @@ deliberately.
 ## Walking the tiers
 
 **Prohibited (Article 5).** None apply. No social scoring, no biometric
-categorisation, no manipulation, no emotion inference.
+categorization, no manipulation, no emotion inference.
 
 **High-risk (Article 6 + Annex III).** The relevant entry is Annex III(5)(a):
 AI systems intended to be used *by public authorities to evaluate the
@@ -57,7 +57,7 @@ implementation" banner stating it is an AI demonstration and not an official
 agency service, the "will not do" list is shown before the input, and every
 answer is dated and cited.
 
-**Minimal risk.** The remainder of the system's behaviour (information retrieval
+**Minimal risk.** The remainder of the system's behavior (information retrieval
 over public documents) falls here, with no additional obligations.
 
 ## GPAI note

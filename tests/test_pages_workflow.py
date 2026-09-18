@@ -20,6 +20,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 from pathlib import Path
 
@@ -27,10 +28,33 @@ import pytest
 import yaml
 from bs4 import BeautifulSoup
 
+from scripts.site_meta import check_site, png_dimensions
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "pages.yml"
 _NIGHTLY_TEMPLATE = _REPO_ROOT / "docs" / "pages" / "nightly-index.html"
+_FEEDS = _REPO_ROOT / "docs" / "pages" / "feeds"
+_OG_CARD = _REPO_ROOT / "docs" / "pages" / "og-card.png"
+#: The real report `evals/report.py` writes. The render step gives this file its
+#: published head, so the shape it assumes -- a `</title>` to insert after -- is
+#: checked against the generator's actual output, not only against a fixture
+#: written to satisfy it.
+_COMMITTED_REPORT = _REPO_ROOT / "docs" / "eval-report.html"
 _NODE = shutil.which("node")
+
+#: A stand-in for the artifact's report: the same head shape `evals/report.py`
+#: emits, with a body short enough to assert on.
+_REPORT_FIXTURE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fare Policy Assistant — Evaluation Report</title>
+</head>
+<body>
+<pre>sanitized report</pre>
+</body>
+</html>
+"""
 
 #: The exact set the render step (extracted below) knows how to fill. Kept as
 #: an explicit list here, rather than derived from the template, so a marker
@@ -52,6 +76,8 @@ _EXPECTED_PLACEHOLDERS = {
     "EXPIRES_AT",
     "SUITE_ROWS",
     "FRESHNESS_SCRIPT",
+    "FEED_LINKS",
+    "SOCIAL_IMAGE",
 }
 
 
@@ -213,17 +239,33 @@ def _run_render_step(
     conclusion: str,
     evals_md: str,
     run_url: str = "https://github.com/ChelseaKR/fare-policy-assistant/actions/runs/1",
+    feeds: tuple[str, ...] = ("all.xml", "all.json", "yolobus.xml", "yolobus.json"),
+    report: str | None = None,
+    card: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     (tmp_path / "nightly-report" / "docs").mkdir(parents=True)
     (tmp_path / "nightly-report" / "EVALS.md").write_text(evals_md, encoding="utf-8")
     (tmp_path / "nightly-report" / "docs" / "eval-report.html").write_text(
-        "<html><body>sanitized report</body></html>", encoding="utf-8"
+        _REPORT_FIXTURE if report is None else report, encoding="utf-8"
     )
-    (tmp_path / "source" / "docs" / "pages").mkdir(parents=True)
+    (tmp_path / "source" / "docs" / "pages").mkdir(parents=True, exist_ok=True)
     shutil.copy(_NIGHTLY_TEMPLATE, tmp_path / "source" / "docs" / "pages" / "nightly-index.html")
     (tmp_path / "source" / "docs" / "pages" / "CNAME").write_text(
         "evals.chelseakr.com\n", encoding="ascii"
     )
+    if card:
+        shutil.copy(_OG_CARD, tmp_path / "source" / "docs" / "pages" / "og-card.png")
+    # The step imports `scripts.site_meta` out of the checkout for the tags every
+    # published page carries; copying it here is what proves that import resolves
+    # from the directory layout the job actually has.
+    (tmp_path / "source" / "scripts").mkdir(parents=True, exist_ok=True)
+    for module in ("__init__.py", "site_meta.py"):
+        shutil.copy(_REPO_ROOT / "scripts" / module, tmp_path / "source" / "scripts" / module)
+    if feeds:
+        feeds_dir = tmp_path / "source" / "docs" / "pages" / "feeds"
+        feeds_dir.mkdir()
+        for name in feeds:
+            shutil.copy(_FEEDS / name, feeds_dir / name)
     script = tmp_path / "render.sh"
     script.write_text(_extract_render_step(), encoding="utf-8")
     env = dict(os.environ, RUN_CONCLUSION=conclusion, RUN_URL=run_url)
@@ -274,6 +316,68 @@ def test_render_step_publishes_a_failing_run_labeled_as_failing(tmp_path: Path) 
     assert "sanitized report" in report
 
 
+def test_render_step_serves_the_feeds_and_advertises_only_what_it_serves(
+    tmp_path: Path,
+) -> None:
+    """The second publication path had the same hole as the first.
+
+    Every file `assistant.feeds` writes states its own address as
+    `evals.chelseakr.com/feeds/<name>`; neither this job nor the dispatch
+    renderer copied one into `_site`, so all 38 of those addresses answered 404.
+    """
+    completed = _run_render_step(tmp_path, conclusion="success", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+
+    served = tmp_path / "_site" / "feeds"
+    assert sorted(path.name for path in served.iterdir()) == [
+        "all.json",
+        "all.xml",
+        "yolobus.json",
+        "yolobus.xml",
+    ]
+    for path in served.iterdir():
+        address = f"https://evals.chelseakr.com/feeds/{path.name}"
+        assert address in path.read_text(encoding="utf-8"), path.name
+
+    page = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    advertised = [
+        str(link["href"])
+        for link in BeautifulSoup(page, "html.parser").find_all("link", rel="alternate")
+    ]
+    assert advertised == [
+        "https://evals.chelseakr.com/feeds/all.xml",
+        "https://evals.chelseakr.com/feeds/all.json",
+    ]
+
+
+def test_render_step_advertises_no_feed_when_it_publishes_none(tmp_path: Path) -> None:
+    """The link is tied to the publication, not written into the template."""
+    completed = _run_render_step(
+        tmp_path, conclusion="success", evals_md=_fixture_evals_md(), feeds=()
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert not (tmp_path / "_site" / "feeds").exists()
+    page = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
+    assert "{{" not in page
+    assert BeautifulSoup(page, "html.parser").find("link", rel="alternate") is None
+
+
+def test_render_step_refuses_a_feeds_directory_holding_something_else(
+    tmp_path: Path,
+) -> None:
+    """Fail closed on an unrecognized entry rather than copying it to a public site."""
+    (tmp_path / "source" / "docs" / "pages" / "feeds").mkdir(parents=True)
+    (tmp_path / "source" / "docs" / "pages" / "feeds" / "results.jsonl").write_text(
+        '{"private": true}\n', encoding="utf-8"
+    )
+    completed = _run_render_step(
+        tmp_path, conclusion="success", evals_md=_fixture_evals_md(), feeds=()
+    )
+    assert completed.returncode != 0
+    assert "not a feed: results.jsonl" in completed.stderr
+    assert not (tmp_path / "_site").exists()
+
+
 def test_render_step_publishes_a_passing_run_labeled_as_passing(tmp_path: Path) -> None:
     completed = _run_render_step(tmp_path, conclusion="success", evals_md=_fixture_evals_md())
     assert completed.returncode == 0, completed.stderr
@@ -310,8 +414,170 @@ def test_render_step_writes_robots_and_sitemap_naming_the_real_origin(tmp_path: 
     locations = re.findall(r"<loc>(.*?)</loc>", sitemap)
     assert locations == [
         "https://evals.chelseakr.com/",
+        "https://evals.chelseakr.com/privacy.html",
         "https://evals.chelseakr.com/report.html",
     ]
+
+
+# --- what every page this job publishes says about itself ------------------
+
+
+def test_every_page_this_job_publishes_says_what_it_is_and_where_it_lives(
+    tmp_path: Path,
+) -> None:
+    """The sweep, over the tree this job actually renders.
+
+    The page list comes from `_site`, not from a list written down in this file
+    or in `site_meta`: the page that goes out with no canonical is the page
+    nobody remembered to add to a list, so a list-driven check would be blind to
+    it. The length assertion is there because a sweep that reached nothing would
+    report no problems and look exactly like a pass.
+    """
+    completed = _run_render_step(tmp_path, conclusion="failure", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+
+    result = check_site(tmp_path / "_site")
+
+    assert len(result.pages) >= 2, "the sweep collapsed; it would prove nothing"
+    assert result.pages == ("index.html", "privacy.html", "report.html")
+    assert result.problems == ()
+
+
+def test_every_page_this_job_publishes_carries_ga_and_the_footer_control(
+    tmp_path: Path,
+) -> None:
+    """The nightly publisher adds GA4 through the same `with_analytics` the dispatch
+    renderer uses (ADR 0033), so the two cannot differ; this holds it on the real step."""
+    from scripts import site_meta
+
+    completed = _run_render_step(tmp_path, conclusion="failure", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+    script = site_meta.analytics_script()
+    pages = sorted(path.name for path in (tmp_path / "_site").glob("*.html"))
+    assert pages == ["index.html", "privacy.html", "report.html"]
+    for name in pages:
+        page = (tmp_path / "_site" / name).read_text(encoding="utf-8")
+        head, _, body = page.partition("</head>")
+        assert head.count(f"<script>{script}</script>") == 1, name
+        assert body.count("data-analytics-choice") == 1, name
+        assert 'href="privacy.html"' in body, name
+
+
+def test_the_published_report_is_the_artifact_body_with_its_address_added(
+    tmp_path: Path,
+) -> None:
+    """`evals/report.py` writes a file for the repository, which does not know
+
+    what address it will be served at. Publishing it is what gives it one, so the
+    publisher adds the head tags and touches nothing else. Before this, the
+    report page went out with a title and no description, no canonical and no
+    card, while the index page beside it carried all three.
+    """
+    completed = _run_render_step(tmp_path, conclusion="failure", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+
+    published = (tmp_path / "_site" / "report.html").read_text(encoding="utf-8")
+    soup = BeautifulSoup(published, "html.parser")
+
+    assert soup.find("pre").get_text(strip=True) == "sanitized report"
+    assert soup.find("link", rel="canonical")["href"] == "https://evals.chelseakr.com/report.html"
+    description = soup.find("meta", attrs={"name": "description"})["content"]
+    assert "2026-09-03" in description, "the description names the run it is about"
+    assert "Not a promoted release." in description
+    assert len(description) <= 160, len(description)
+    # Derived from the artifact's own provenance block, never hand-copied: the
+    # only number here is the date of the run this page reports.
+    assert "11/31" not in description and "%" not in description
+
+    card = {
+        tag.get("property") or tag.get("name"): tag.get("content")
+        for tag in soup.find_all("meta")
+        if (tag.get("property") or "").startswith("og:")
+        or (tag.get("name") or "").startswith("twitter:")
+    }
+    assert card["og:title"] == soup.title.get_text(strip=True)
+    assert card["og:description"] == description
+    assert card["og:url"] == "https://evals.chelseakr.com/report.html"
+    assert card["og:image"] == "https://evals.chelseakr.com/og-card.png"
+
+
+def test_the_real_generated_report_has_the_head_this_step_appends_to(
+    tmp_path: Path,
+) -> None:
+    """The fixture above is a stand-in; this runs the step against the report
+
+    `evals/report.py` actually wrote, so a change to that generator's head shape
+    fails here rather than at publish time on a live site.
+    """
+    completed = _run_render_step(
+        tmp_path,
+        conclusion="failure",
+        evals_md=_fixture_evals_md(),
+        report=_COMMITTED_REPORT.read_text(encoding="utf-8"),
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    result = check_site(tmp_path / "_site")
+    assert len(result.pages) >= 2, "the sweep collapsed; it would prove nothing"
+    assert result.problems == ()
+
+
+def test_the_render_step_refuses_a_report_it_cannot_place_a_head_in(tmp_path: Path) -> None:
+    """Fail closed. Guessing where a head starts is how a publisher corrupts a page."""
+    completed = _run_render_step(
+        tmp_path,
+        conclusion="failure",
+        evals_md=_fixture_evals_md(),
+        report="<html><body>no title here</body></html>",
+    )
+    assert completed.returncode != 0
+    assert "refusing to guess where its head is" in completed.stderr
+
+
+def test_the_render_step_promises_no_card_when_it_publishes_none(tmp_path: Path) -> None:
+    """An og:image naming a file this site does not serve is worse than none.
+
+    It is read once, by a crawler, somewhere this project never sees the result.
+    So the tag and the file are one decision, in both directions.
+    """
+    completed = _run_render_step(
+        tmp_path, conclusion="failure", evals_md=_fixture_evals_md(), card=False
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert not (tmp_path / "_site" / "og-card.png").exists()
+
+    result = check_site(tmp_path / "_site")
+    assert len(result.pages) >= 2, "the sweep collapsed; it would prove nothing"
+    assert result.problems == ()
+    for name in result.pages:
+        page = (tmp_path / "_site" / name).read_text(encoding="utf-8")
+        assert "og:image" not in page, name
+        assert 'name="twitter:card" content="summary"' in page, name
+
+
+def test_the_share_card_this_job_publishes_is_the_size_its_tags_promise(
+    tmp_path: Path,
+) -> None:
+    """Both pages state 1200x630. The file has to actually be that."""
+    completed = _run_render_step(tmp_path, conclusion="success", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+    published = tmp_path / "_site" / "og-card.png"
+    assert published.read_bytes() == _OG_CARD.read_bytes()
+    assert png_dimensions(published.read_bytes()) == (1200, 630)
+
+
+def test_the_render_step_refuses_a_share_card_that_is_not_the_promised_image(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "source" / "docs" / "pages").mkdir(parents=True)
+    (tmp_path / "source" / "docs" / "pages" / "og-card.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dIHDR" + struct.pack(">II", 600, 315)
+    )
+    completed = _run_render_step(
+        tmp_path, conclusion="success", evals_md=_fixture_evals_md(), card=False
+    )
+    assert completed.returncode != 0
+    assert "600x315" in completed.stderr
 
 
 # --- the published page's own read-time freshness check --------------------
@@ -373,8 +639,12 @@ def _read_nightly_page_as_of(page: str, now: str, workdir: Path) -> dict[str, di
     workdir.mkdir(parents=True, exist_ok=True)
     driver = workdir / "driver.js"
     driver.write_text(_FRESHNESS_DRIVER, encoding="utf-8")
-    script_element = soup.find("script")
-    assert script_element is not None
+    # The freshness check, not the GA4 loader the page also carries (ADR 0033).
+    (script_element,) = [
+        element
+        for element in soup.find_all("script")
+        if element.string and "evidence-status" in element.string
+    ]
     script = workdir / "published.js"
     script.write_text(str(script_element.string), encoding="utf-8")
     state = workdir / "state.json"
@@ -422,8 +692,15 @@ def test_the_nightly_page_csp_hash_matches_the_script_it_actually_inlines(
     completed = _run_render_step(tmp_path, conclusion="failure", evals_md=_fixture_evals_md())
     assert completed.returncode == 0, completed.stderr
     page = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
-    script = BeautifulSoup(page, "html.parser").find("script").string
-    digest = "sha256-" + base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode(
-        "ascii"
-    )
-    assert f"script-src '{digest}'" in page
+    policy = re.search(r"script-src ([^;\"]*)", page)
+    assert policy is not None
+    admitted = policy.group(1).split()
+    scripts = [element.string for element in BeautifulSoup(page, "html.parser").find_all("script")]
+    assert len(scripts) == 2  # the freshness check and the GA4 loader (ADR 0033)
+    for script in scripts:
+        assert script is not None
+        digest = "sha256-" + base64.b64encode(
+            hashlib.sha256(script.encode("utf-8")).digest()
+        ).decode("ascii")
+        assert f"'{digest}'" in admitted
+    assert "unsafe-inline" not in policy.group(1)

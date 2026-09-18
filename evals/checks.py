@@ -16,7 +16,7 @@ from dataclasses import dataclass
 # checker when something else already in the build graph imported the
 # submodule, so the same line passed or failed depending on which directories
 # mypy happened to be pointed at (it started failing the moment `tools/` was
-# added to the checked set on 2026-08-28). Runtime behaviour is identical.
+# added to the checked set on 2026-08-28). Runtime behavior is identical.
 import assistant.fare_table as fare_table
 from assistant import answer as answer_module
 from assistant import facts as facts_module
@@ -31,13 +31,19 @@ _REDIRECT_RE = re.compile(
     re.I,
 )
 
-# A clock time: "8:00 AM", "8 a.m.", "4:30 p.m.", and the corpus cleaner's own
-# "1.a.m." — a period where the source had a space, the same class of artifact
-# as the "805. 963.3364" phone number recorded in evals/plumbline/target.toml.
-# Tolerated here rather than fixed here, because a check that reads a document
-# more strictly than the ingest wrote it reports the cleaner as an assistant
-# defect. The trailing \b before the optional final period is load-bearing: it
-# is what stops "$1.00 a month" from parsing as one o'clock in the morning.
+# A clock time: "8:00 AM", "8 a.m.", "4:30 p.m.", and "1.a.m." — a period where
+# a reader would write a space. This comment used to attribute that spelling to
+# the corpus cleaner, alongside the "805. 963.3364" phone number in
+# evals/plumbline/target.toml. Measured 2026-09-09: neither is ours.
+# corpus/raw/etran-fares.html publishes "until 1.a.m. the day after purchase",
+# and corpus/raw/sbmtd-fares-passes.html publishes "805. 963.3364"; the ingest
+# path reproduced both. So the tolerance below stays, for a better reason than
+# the one first written down: a check that demands the spelling a reader expects
+# reads the document more strictly than the *agency* wrote it, and reports an
+# assistant that normalized it as the defect. The trailing \b before the
+# optional final period is load-bearing: it is what stops "$1.00 a month" from
+# parsing as one o'clock in the morning.
+# tests/test_corpus_source_spelling.py holds both claims to the committed bytes.
 _CLOCK_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*\.?\s*([ap])\.?\s?m\b\.?", re.I)
 
 
@@ -295,9 +301,9 @@ def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[
 
 
 def clock_times(text: str) -> set[tuple[int, int, str]]:
-    """Every clock time in `text`, normalised to (hour mod 12, minute, am/pm).
+    """Every clock time in `text`, normalized to (hour mod 12, minute, am/pm).
 
-    Normalising is the whole job. "8:00 AM", "8 a.m." and "8am" are the same
+    Normalizing is the whole job. "8:00 AM", "8 a.m." and "8am" are the same
     time written three ways, and an office hour that survives a document's
     formatting must not be reported as absent because the answer punctuated it
     differently. Hours outside 1-12 are not clock times; dropping them is what
@@ -490,10 +496,23 @@ def run_checks(
     # phrase_present) so an answer that correctly *denies* or quotes-to-reject a
     # forbidden claim is not miscounted as asserting it (class A of
     # docs/audits/eval-remediation-2026-07-11.md).
-    forbidden = [
-        phrase for phrase in case.get("forbidden_content", []) if phrase_asserted(phrase, answer)
-    ]
-    out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
+    #
+    # Emitted only for a case that declares `forbidden_content`, which is the
+    # convention `required_facts_present` below already follows. Until
+    # 2026-09-08 this check was appended unconditionally, and `not []` is True,
+    # so every case declaring no forbidden content carried a recorded pass over
+    # a list nothing had read. Measured 2026-09-08: 327 of the 385 cases a run
+    # assembles (307 of the 355 `cases:` blocks committed under evals/suites,
+    # before the 15 sensitivity pairs flatten into 30 variants) were that pass.
+    # A check that examines nothing is omitted, so its absence from a case's
+    # check list is the legible record that there was nothing to examine. The
+    # counts above are an observation with a date on it; the property is pinned
+    # by tests/test_check_emission_census.py, which re-derives it from the
+    # committed suites on every run.
+    declared_forbidden = case.get("forbidden_content") or []
+    if declared_forbidden:
+        forbidden = [phrase for phrase in declared_forbidden if phrase_asserted(phrase, answer)]
+        out.append(CheckResult("forbidden_content_absent", not forbidden, "; ".join(forbidden)))
 
     # 3. Response language matches the question language.
     expected_lang = case.get("language", "en")
@@ -574,7 +593,7 @@ def run_checks(
         # `assistant.answer._align_as_of_prose` now pulls the sentence onto the
         # structured date in the pipeline, so this check is the backstop for the
         # case that fix cannot cover: a phrasing the normalizer does not
-        # recognise, in a language it does not know. It reads the sentence with
+        # recognize, in a language it does not know. It reads the sentence with
         # the same pattern the normalizer rewrites, and stays silent when the
         # answer renders no freshness date at all — that absence is what the
         # freshness suite's own expected-behavior cases are for.

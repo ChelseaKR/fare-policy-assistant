@@ -89,7 +89,7 @@ from evals.calibration import (
 SHEET_PATH = config.REPO_ROOT / "evals" / "spanish" / "native_es_rubric_2026-08-05.jsonl"
 
 #: The rated dimensions, with the question a rater is actually answering. These
-#: are published rather than left to the rater's judgement of what "quality"
+#: are published rather than left to the rater's judgment of what "quality"
 #: means, so two raters are answering the same question and a disagreement is
 #: about the answer rather than about the rubric.
 RUBRIC: dict[str, str] = {

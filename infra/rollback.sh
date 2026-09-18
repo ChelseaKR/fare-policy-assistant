@@ -278,7 +278,7 @@ TARGET_RUNTIME_MODE="$(
 if [[ "$REQUIRED_DISABLED_DOC_IDS_SOURCE" == "derived" ]]; then
   # Read the fare period out of the archived corpus this exact target serves.
   # Anything the derivation cannot read reports the containment as still
-  # required, so a missing archive or an unrecognised fare period refuses the
+  # required, so a missing archive or an unrecognized fare period refuses the
   # rollback rather than waving it through; the operator's escape hatch is
   # FPA_REQUIRED_DISABLED_DOC_IDS, which is a decision on the record.
   command -v python3 >/dev/null 2>&1 \

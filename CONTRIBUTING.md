@@ -131,3 +131,12 @@ Prose in the README, model card, UI copy, and report follows the writing notes i
 `CLAUDE.md`: plain and concrete, almost no em dashes, no hype, no rule-of-three.
 Code matches the surrounding file: type hints, small functions, comments that
 explain why rather than what.
+
+## Commercial solicitation
+
+Issues here are not open to bids. They are design records — written so a decision is
+reconstructable later — not scope documents for outside quoting, and unsolicited offers to
+implement one for a fee will be declined.
+
+Contributions through the normal fork-and-PR process are welcome, and `good first issue` is the
+place to start.

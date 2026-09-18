@@ -171,6 +171,15 @@ jobs:
           if [[ -f docs/pages/og-card.png ]]; then
             render_args+=(--og-card docs/pages/og-card.png)
           fi
+          # `assistant.feeds` writes each feed's own address as
+          # https://evals.chelseakr.com/feeds/<name>. Until this argument existed
+          # neither publication path copied a single one of those 38 files into
+          # _site, so every address a feed published answered 404. The renderer
+          # refuses any entry in that directory that is not a feed, so this
+          # publishes a checked list rather than a directory.
+          if [[ -d docs/pages/feeds ]]; then
+            render_args+=(--feeds-dir docs/pages/feeds)
+          fi
           uv run --no-sync python scripts/build_evidence_site.py "${render_args[@]}"
           test ! -e ../_site/results.jsonl
           test ! -e ../_site/summary.json
@@ -314,8 +323,9 @@ jobs:
   # whichever run the query names, and republishes only the two files that
   # are already public by established convention: EVALS.md's machine-readable
   # `<!-- provenance {...} -->` block (the same format evals/provenance.py and
-  # evals/report.py read and write) and a byte-for-byte copy of
-  # docs/eval-report.html. Nothing under evals/runs/ is read or copied.
+  # evals/report.py read and write) and the body of docs/eval-report.html,
+  # unaltered, with the head tags that state its published address added to it
+  # (see the render step). Nothing under evals/runs/ is read or copied.
   #
   # No write credential is used anywhere in this path -- there is no
   # evidence-only commit to bind, only files a past run already produced.
@@ -354,7 +364,7 @@ jobs:
         run: |
           set -euo pipefail
           run_json="$(
-            gh api "repos/$REPO/actions/workflows/ci.yml/runs" \
+            gh api --method GET "repos/$REPO/actions/workflows/ci.yml/runs" \
               -f event=schedule -f status=completed -f per_page=1 \
               --jq '.workflow_runs[0] // empty'
           )"
@@ -392,6 +402,29 @@ jobs:
           import base64, hashlib, html, json, os, re, sys
           from datetime import UTC, datetime, timedelta
           from pathlib import Path
+
+          # What a published page says about its own address -- description,
+          # canonical, share card -- and the two files a crawler reads, come from
+          # the renderer's own module rather than being written a second time
+          # here. One more private copy of these strings is exactly what bought
+          # this job an index page with no og:image and a report page with no head
+          # at all, while the other publisher's tests stayed green. The module is
+          # stdlib-only on purpose: this step runs on a bare python3 with nothing
+          # installed.
+          sys.path.insert(0, "source")
+          from scripts.site_meta import (
+              OG_CARD_HEIGHT,
+              OG_CARD_NAME,
+              OG_CARD_WIDTH,
+              head_meta,
+              page_url,
+              png_dimensions,
+              privacy_html,
+              robots_txt,
+              sitemap_xml,
+              social_image_meta,
+              with_analytics,
+          )
 
           # One full missed night plus slack for a slow live run, not a round number
           # chosen for looks: the nightly cron fires daily, so any gap wider than this
@@ -494,6 +527,70 @@ jobs:
           template = Path("source/docs/pages/nightly-index.html").read_text(encoding="utf-8")
           placeholder = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
 
+          # The per-agency fare-change feeds. Each file `assistant.feeds` writes
+          # states its own address as https://evals.chelseakr.com/feeds/<name>,
+          # and until this block existed neither publication path copied one into
+          # _site, so all 38 of those addresses answered 404. Refuse an entry that
+          # is not a feed rather than skipping it: this site publishes a fixed,
+          # checked file list, and "copy whatever is in the directory" would be the
+          # one place that stopped being true.
+          FEED_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.(?:xml|json)$")
+          feeds_src = Path("source/docs/pages/feeds")
+          feed_names: list[str] = []
+          if feeds_src.is_dir():
+              entries = sorted(p.name for p in feeds_src.iterdir())
+              unexpected = [n for n in entries if not FEED_NAME.fullmatch(n)]
+              if unexpected:
+                  sys.exit(f"feeds directory holds something that is not a feed: {unexpected[0]}")
+              if not entries:
+                  sys.exit("feeds directory is empty; the generator did not run")
+              for name in entries:
+                  path = feeds_src / name
+                  if path.is_symlink() or not path.is_file():
+                      sys.exit(f"feed {name} is not a regular file")
+                  address = f"https://evals.chelseakr.com/feeds/{name}"
+                  if address not in path.read_text(encoding="utf-8"):
+                      sys.exit(f"feed {name} does not name the address this site serves it at")
+              feed_names = entries
+
+          feed_links = "\n".join(
+              f'<link rel="alternate" type="{media_type}" '
+              f'title="Fare-policy corpus changes across every agency" '
+              f'href="https://evals.chelseakr.com/feeds/{name}">'
+              for name, media_type in (
+                  ("all.xml", "application/atom+xml"),
+                  ("all.json", "application/feed+json"),
+              )
+              if name in feed_names
+          )
+
+          # The share card is copied before either page is rendered, because a
+          # page may only promise an image this build actually publishes: an
+          # og:image is fetched once, by somebody else's crawler, and nothing
+          # reports back that it 404'd. The size the tags will state is read out
+          # of the file's own IHDR rather than trusted from the name.
+          site_dir = Path("_site")
+          site_dir.mkdir(parents=True, exist_ok=True)
+
+          card_published = False
+          for name in ("CNAME", OG_CARD_NAME):
+              src = Path("source/docs/pages") / name
+              if not src.is_file():
+                  continue
+              payload = src.read_bytes()
+              if name == OG_CARD_NAME:
+                  try:
+                      width, height = png_dimensions(payload)
+                  except ValueError as exc:
+                      sys.exit(str(exc))
+                  if (width, height) != (OG_CARD_WIDTH, OG_CARD_HEIGHT):
+                      sys.exit(
+                          f"share card is {width}x{height}, not "
+                          f"{OG_CARD_WIDTH}x{OG_CARD_HEIGHT}"
+                      )
+                  card_published = True
+              (site_dir / name).write_bytes(payload)
+
           replacements = {
               "SCRIPT_SRC_HASH": script_hash,
               "RUN_DATE": run_at_raw[:10],
@@ -512,6 +609,8 @@ jobs:
               "EXPIRES_AT": html.escape(expires_at.strftime("%Y-%m-%dT%H:%M:%SZ")),
               "SUITE_ROWS": rows,
               "FRESHNESS_SCRIPT": FRESHNESS_SCRIPT,
+              "FEED_LINKS": feed_links,
+              "SOCIAL_IMAGE": "\n".join(social_image_meta(card=card_published)),
           }
 
           found = set(placeholder.findall(template))
@@ -522,33 +621,58 @@ jobs:
               )
 
           rendered = placeholder.sub(lambda m: replacements[m.group(1)], template)
+          # Every HTML page this job writes goes through the same `with_analytics`
+          # the dispatch renderer uses (ADR 0033): GA4, the footer opt-out, and the
+          # policy changes that admit them, defined once in scripts/site_meta.py.
+          (site_dir / "index.html").write_text(with_analytics(rendered), encoding="utf-8")
+          (site_dir / "privacy.html").write_text(
+              privacy_html(card=card_published), encoding="utf-8"
+          )
 
-          site_dir = Path("_site")
-          site_dir.mkdir(parents=True, exist_ok=True)
-          (site_dir / "index.html").write_text(rendered, encoding="utf-8")
-          (site_dir / "report.html").write_bytes(report_html_path.read_bytes())
+          # The report page arrives from the artifact as a finished document
+          # carrying a <title> and nothing else in its head: `evals/report.py`
+          # writes a file for the repository, which does not know what address it
+          # will be served at. Publishing it is what gives it one, so the head
+          # tags are added here, by the publisher, and nowhere else. The body is
+          # untouched. Fail closed if there is no </title> to insert after --
+          # guessing where a head starts is how a publisher corrupts a page.
+          #
+          # The description carries the run date and no score. The date is read
+          # from the same provenance block this page's numbers come from, so it
+          # cannot describe a different run than the one published; a pass rate
+          # written into a head tag would be served long after the number moved,
+          # and nothing would fail.
+          report = report_html_path.read_text(encoding="utf-8")
+          title_match = re.search(r"<title>(.*?)</title>", report, re.S)
+          if title_match is None:
+              sys.exit("nightly report carries no <title>; refusing to guess where its head is")
+          report_head = head_meta(
+              title=html.unescape(title_match.group(1)).strip(),
+              description=(
+                  "The evaluation report behind the nightly snapshot of "
+                  f"{run_at_raw[:10]}: scores by suite, parity, calibration, and "
+                  "representative failures. Not a promoted release."
+              ),
+              url=page_url("report.html"),
+              card=card_published,
+          )
+          cut = title_match.end()
+          (site_dir / "report.html").write_text(
+              with_analytics(f"{report[:cut]}\n{report_head}{report[cut:]}"), encoding="utf-8"
+          )
 
-          for name in ("CNAME", "og-card.png"):
-              src = Path("source/docs/pages") / name
-              if src.is_file():
-                  (site_dir / name).write_bytes(src.read_bytes())
+          if feed_names:
+              feeds_out = site_dir / "feeds"
+              feeds_out.mkdir(parents=True, exist_ok=True)
+              for name in feed_names:
+                  (feeds_out / name).write_bytes((feeds_src / name).read_bytes())
 
           history = Path("source/docs/eval-history.svg")
           if history.is_file():
               (site_dir / "eval-history.svg").write_bytes(history.read_bytes())
 
-          (site_dir / "robots.txt").write_text(
-              "User-agent: *\nAllow: /\n\nSitemap: https://evals.chelseakr.com/sitemap.xml\n",
-              encoding="utf-8",
-          )
-          (site_dir / "sitemap.xml").write_text(
-              '<?xml version="1.0" encoding="UTF-8"?>'
-              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-              "<url><loc>https://evals.chelseakr.com/</loc></url>"
-              "<url><loc>https://evals.chelseakr.com/report.html</loc></url>"
-              "</urlset>\n",
-              encoding="utf-8",
-          )
+          (site_dir / "robots.txt").write_bytes(robots_txt())
+          (site_dir / "sitemap.xml").write_bytes(sitemap_xml())
 
           print(
               f"nightly snapshot published: {total_passed}/{total_cases} ({pass_rate}%), "

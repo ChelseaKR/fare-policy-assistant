@@ -330,7 +330,7 @@ def test_a_committed_report_annotation_still_has_to_name_a_real_case():
     assert any("conv-retired-009" in problem for problem in flagged), flagged
 
 
-def test_an_unrecognised_scope_waives_nothing_and_is_reported():
+def test_an_unrecognized_scope_waives_nothing_and_is_reported():
     """Fail loud, not wide: reading a typo as `run` would make it the widest
     possible waiver, which is the one direction this file must never fail in."""
     records = _records(es_pass=[True], en_pass=[True])

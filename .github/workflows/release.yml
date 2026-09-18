@@ -29,8 +29,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The shared trust-boundary primitive: it resolves the dispatched tag, checks
+  # the signature and the allowed signers, and hands the rest of this pipeline
+  # the commit to build.
+  #
+  # It is called from `ChelseaKR/.github`, which is public, and it has to be.
+  # This repository is public, and **a public repository cannot call a reusable
+  # workflow that lives in a private one.** Until 2026-09-07 this line pointed at
+  # `ChelseaKR/portfolio-standards`, which is private, so every dispatch failed
+  # before any job started with
+  #
+  #     HTTP 422: failed to parse workflow: error parsing called workflow
+  #     "ChelseaKR/portfolio-standards/.github/workflows/release-authorize.yml@…":
+  #     workflow was not found
+  #
+  # — which reads as a deleted file and is not one: the commit exists, the file
+  # exists at it, and the standards repository's Actions access level is already
+  # `user`. `release.yml` has never executed a single time, and this is why.
+  #
+  # The public copy at the pin below is the private one brought to byte parity,
+  # plus `timeout-minutes: 30` on its `authorize` job. Diffed against
+  # portfolio-standards@3692aa52 (the pin this replaced): that one line is the
+  # only difference, so the move is a tightening, not a substitution.
   authorize:
-    uses: ChelseaKR/portfolio-standards/.github/workflows/release-authorize.yml@3692aa5270d673f91f8571b4fc0ce1c622bf67e5
+    uses: ChelseaKR/.github/.github/workflows/release-authorize.yml@7be4c3e44e2acf20e8a98eeea4351c1e5d2789bc
     permissions:
       contents: read
     with:

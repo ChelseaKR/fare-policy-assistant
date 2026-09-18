@@ -276,7 +276,7 @@ def test_a_fully_cached_live_run_says_so_in_its_header():
     )
 
 
-def test_a_partly_cached_run_is_still_labelled_live():
+def test_a_partly_cached_run_is_still_labeled_live():
     # One real call is enough for "live" to mean what a reader expects; the
     # cost line carries the hit count for the rest.
     summary = {

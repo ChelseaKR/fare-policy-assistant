@@ -18,7 +18,7 @@ and fast, so it runs on every PR (`ci.yml`, `make verify`), not just nightly.
 
     python -m evals.check_report_regression   # exit 1 if EVALS.md regresses
 
-There is deliberately no waiver/acknowledgement escape hatch here (contrast
+There is deliberately no waiver/acknowledgment escape hatch here (contrast
 `evals/provenance.py`'s `stale_acknowledged.json`): the only legitimate ways to
 turn this gate green are (1) fix the regression and regenerate `EVALS.md` from
 a passing live run, or (2) a maintainer deliberately runs

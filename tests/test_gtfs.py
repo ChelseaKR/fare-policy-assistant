@@ -626,8 +626,8 @@ class TestMatchStrength:
     def test_an_amount_in_the_prose_and_no_fare_row_is_the_coarse_fallback(
         self, tmp_path, monkeypatch
     ):
-        """The pre-#141 behaviour, kept for agencies whose fact extraction is
-        thin — and now labelled, so it stops reading like the strong claim."""
+        """The pre-#141 behavior, kept for agencies whose fact extraction is
+        thin — and now labeled, so it stops reading like the strong claim."""
         _one_fare_agency(tmp_path, monkeypatch)
         (record,) = gtfs.cross_check([_chunk("MST", "A replacement card costs $2.00.", "mst#1")])
         assert record.feed_agrees == "yes"
@@ -713,7 +713,7 @@ class TestRiderClassKey:
         assert gtfs.rider_class_key(label) == expected
 
     def test_the_specific_class_wins_over_the_generic_bucket(self):
-        """ "Senior/Disabled Discount" is a senior fare, not an unlabelled
+        """ "Senior/Disabled Discount" is a senior fare, not an unlabeled
         discount, so the specific patterns are tested first."""
         assert gtfs.rider_class_key("Senior/Disabled Discount") == "senior"
 
@@ -751,7 +751,7 @@ def test_an_amount_repeated_inside_one_chunk_counts_once(tmp_path, monkeypatch):
 def test_an_agreement_names_the_chunks_it_matched(tmp_path, monkeypatch):
     """Issue #141: a count still hides which chunk agreed.
 
-    The live case this is modelled on is SCMTD's 3-Day Pass at $15.00, which the
+    The live case this is modeled on is SCMTD's 3-Day Pass at $15.00, which the
     coarse check reported as "yes, 1 prose chunk" — a clean-looking single
     match. The one chunk is the sentence about a $15.00 returned-check service
     charge, and the 3-Day Pass is a product SCMTD's prose says it stopped

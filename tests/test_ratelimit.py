@@ -406,7 +406,7 @@ class TestHandlerWiring:
             web_handler.handler(_event(body={"question": f"MST fare question {i}?"}))
         # Clear the pre-existing per-container budget, which is shared by every
         # caller and would otherwise mask the property under test. That backstop
-        # starving a second rider is exactly the behaviour this limiter exists
+        # starving a second rider is exactly the behavior this limiter exists
         # to sit in front of.
         web_handler._RECENT.clear()
         other = _event(ip="198.51.100.9", body={"question": "A Unitrans fare question?"})
