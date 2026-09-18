@@ -91,7 +91,7 @@ Three steps, and the third is the merge gate.
 
 Nothing in that calls a model. The evidence is the recording already committed at
 `evals/govchat/golden.jsonl` — 379 questions and the answers the deployed
-pipeline produced for them on 2026-09-04. Two harnesses, one recording, one bill.
+pipeline produced for them on 2026-09-18. Two harnesses, one recording, one bill.
 
 ## The bundle, and the one shape difference
 
@@ -102,8 +102,8 @@ recorded turns as `transcripts.html`).
 
 Passages are attributed to their documents against the corpus **as it stood at
 recording time** — the recording names its `corpus_version` and
-`corpus/versions/<version>/chunks.jsonl` is committed. The 2026-09-04 recording
-names `10deac978967`, which is also the corpus at HEAD, so all 1,746 recorded
+`corpus/versions/<version>/chunks.jsonl` is committed. The 2026-09-18 recording
+names `10deac978967`, which is also the corpus at HEAD, so all 1,752 recorded
 passages match today's text and the two readings coincide. They have diverged
 before and will again: the recording this one replaced was made on 2026-06-16
 against a five-agency corpus, and 108 of its 756 passages no longer appeared
@@ -223,8 +223,9 @@ in the committed report:
   close in spirit to this repo's `required_facts` check, so it is not a strongly
   independent signal. The independence lives in the grounding, cross-language,
   privacy and conduct suites.
-- **The recording is from 2026-09-04**, against corpus `10deac978967` and the
-  answer prompts HEAD ships (`system` v22, `answer_user` v7). It describes the
+- **The recording is from 2026-09-18**, against corpus `10deac978967` and the
+  answer prompts HEAD ships (`system` v22, `answer_user` v7), with retrieval
+  and answer code at `pipeline_version` `f5a61ac85ce5`. It describes the
   assistant as it was that day and nothing later: a prompt or retrieval change
   landing after it invalidates it, and re-recording is a live step and a real
   bill. `EVALS.md` and `evals/baseline.json` still describe 2026-06-16 and carry

@@ -13,7 +13,7 @@ successor harness, and this module is the adapter between the two shapes.
 ## Where the evidence comes from
 
 Nowhere new. `evals/govchat/golden.jsonl` is the recording — 379 questions and
-the answers the deployed pipeline produced for them on 2026-09-04, with the
+the answers the deployed pipeline produced for them on 2026-09-18, with the
 retrieved passages beside each one. This module reshapes exactly that file and
 calls no model. Two harnesses, one recording, no second live run and no second
 bill.
@@ -26,8 +26,8 @@ matters whenever the corpus moves under a recording, which it has before: the
 2026-06-16 recording declared a five-agency corpus, and 108 of its 756 passages
 no longer appeared verbatim in the corpus that had replaced it by August.
 Matching against today's corpus rather than the declared one would have silently
-dropped or misattributed them. The 2026-09-04 recording declares `10deac978967`,
-which is also the corpus at HEAD, so its 1,746 passages match either way today.
+dropped or misattributed them. The 2026-09-18 recording declares `10deac978967`,
+which is also the corpus at HEAD, so its 1,752 passages match either way today.
 
 ## The one shape difference worth knowing about
 
