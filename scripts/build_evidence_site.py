@@ -1048,6 +1048,14 @@ Lambda version <strong>{html.escape(str(runtime["function_version"]))}</strong>.
     return page.encode("utf-8")
 
 
+def _with_analytics(page: bytes) -> bytes:
+    """A rendered page with GA4, its footer opt-out and the policy that admits them."""
+    try:
+        return site_meta.with_analytics(page.decode("utf-8")).encode("utf-8")
+    except ValueError as exc:
+        raise EvidenceSiteError(str(exc)) from exc
+
+
 def _release_receipt(
     manifest: Mapping[str, object],
     evidence: Mapping[str, object],
@@ -1346,21 +1354,31 @@ def render_evidence_site(
     temporary = Path(tempfile.mkdtemp(prefix=f".{output_dir.name}.", dir=output_dir.parent))
     os.chmod(temporary, 0o755)
     try:
+        # Every HTML page goes through `site_meta.with_analytics` (ADR 0033), the
+        # same call the nightly publisher makes, so GA4, its footer opt-out and the
+        # policy changes that admit them cannot differ between the two.
         _write_site_file(
             temporary,
             "index.html",
-            _template_html(
-                template,
-                evidence,
-                trend=history is not None,
-                card=og_card is not None,
-                feeds=tuple(feeds),
+            _with_analytics(
+                _template_html(
+                    template,
+                    evidence,
+                    trend=history is not None,
+                    card=og_card is not None,
+                    feeds=tuple(feeds),
+                )
             ),
         )
         _write_site_file(
             temporary,
             "report.html",
-            _report_html(evidence, card=og_card is not None),
+            _with_analytics(_report_html(evidence, card=og_card is not None)),
+        )
+        _write_site_file(
+            temporary,
+            "privacy.html",
+            site_meta.privacy_html(card=og_card is not None).encode("utf-8"),
         )
         _write_site_file(
             temporary,

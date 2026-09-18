@@ -419,9 +419,11 @@ jobs:
               head_meta,
               page_url,
               png_dimensions,
+              privacy_html,
               robots_txt,
               sitemap_xml,
               social_image_meta,
+              with_analytics,
           )
 
           # One full missed night plus slack for a slow live run, not a round number
@@ -619,7 +621,13 @@ jobs:
               )
 
           rendered = placeholder.sub(lambda m: replacements[m.group(1)], template)
-          (site_dir / "index.html").write_text(rendered, encoding="utf-8")
+          # Every HTML page this job writes goes through the same `with_analytics`
+          # the dispatch renderer uses (ADR 0033): GA4, the footer opt-out, and the
+          # policy changes that admit them, defined once in scripts/site_meta.py.
+          (site_dir / "index.html").write_text(with_analytics(rendered), encoding="utf-8")
+          (site_dir / "privacy.html").write_text(
+              privacy_html(card=card_published), encoding="utf-8"
+          )
 
           # The report page arrives from the artifact as a finished document
           # carrying a <title> and nothing else in its head: `evals/report.py`
@@ -650,7 +658,7 @@ jobs:
           )
           cut = title_match.end()
           (site_dir / "report.html").write_text(
-              f"{report[:cut]}\n{report_head}{report[cut:]}", encoding="utf-8"
+              with_analytics(f"{report[:cut]}\n{report_head}{report[cut:]}"), encoding="utf-8"
           )
 
           if feed_names:

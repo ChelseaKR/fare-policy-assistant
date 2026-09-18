@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from assistant.promotion_evidence import PromotionEvidenceError
 from assistant.release_identity import build_release_identity
 from scripts import build_evidence_site as site
+from scripts import site_meta
 from scripts.site_meta import check_site
 
 _SOURCE = "a" * 40
@@ -89,9 +90,16 @@ def _rendered_index(tmp_path: Path, name: str = "site") -> str:
 
 
 def _page_script(page: str) -> str:
-    element = BeautifulSoup(page, "html.parser").find("script")
-    assert element is not None, "the published page carries no freshness check at all"
-    return str(element.string)
+    """The page's freshness check. The page also carries the GA4 loader (ADR 0033),
+    which is not this script and is exercised in tests/test_site_analytics.py."""
+    scripts = [
+        str(element.string)
+        for element in BeautifulSoup(page, "html.parser").find_all("script")
+        if element.string and "evidence-status" in element.string
+    ]
+    assert scripts, "the published page carries no freshness check at all"
+    assert len(scripts) == 1, "the published page carries more than one freshness check"
+    return scripts[0]
 
 
 def _read_as_of(page: str, now: str, workdir: Path) -> dict[str, dict[str, str]]:
@@ -702,8 +710,18 @@ def test_the_page_policy_admits_the_one_script_it_carries_and_nothing_else(
     assert directives["default-src"] == "'none'"
     assert "unsafe-inline" not in directives["script-src"]
 
-    digest = base64.b64encode(hashlib.sha256(_page_script(page).encode("utf-8")).digest())
-    assert directives["script-src"] == f"'sha256-{digest.decode('ascii')}'"
+    # Exactly the inline scripts the page carries -- the freshness check and the GA4
+    # loader (ADR 0033) -- each by its own digest, plus the one host gtag.js is
+    # fetched from. Nothing else.
+    inline = [
+        str(element.string) for element in BeautifulSoup(page, "html.parser").find_all("script")
+    ]
+    assert _page_script(page) in inline and len(inline) == 2
+    digests = [
+        f"'sha256-{base64.b64encode(hashlib.sha256(text.encode('utf-8')).digest()).decode()}'"
+        for text in inline
+    ]
+    assert sorted(directives["script-src"].split()) == sorted([*digests, site_meta.GTAG_ORIGIN])
 
 
 def test_the_page_says_when_it_expires_even_with_scripting_switched_off(
@@ -820,6 +838,7 @@ def test_render_is_deterministic_atomic_and_contains_no_private_trace_fields(
         "eval-history.svg",
         "index.html",
         "og-card.png",
+        "privacy.html",
         "public-evidence.json",
         "release.json",
         "report.html",
@@ -1491,7 +1510,9 @@ def test_every_published_description_carries_the_date_of_the_run(tmp_path: Path)
     """
     output = _rendered(tmp_path)
     run_date = "2026-07-30"
-    for name in site.INDEXABLE_PAGES:
+    # The evidence pages. The privacy page (ADR 0033) describes the site, not a run.
+    assert set(site_meta.INDEXABLE_PAGES) - set(site_meta.EVIDENCE_PAGES) == {"privacy.html"}
+    for name in site_meta.EVIDENCE_PAGES:
         soup = BeautifulSoup((output / name).read_text(encoding="utf-8"), "html.parser")
         description = soup.find("meta", attrs={"name": "description"})
         assert description is not None
@@ -1513,7 +1534,11 @@ def test_the_sitemap_lists_the_pages_and_only_the_pages(tmp_path: Path) -> None:
     """The manifest, the receipt and the history SVG are data, not pages."""
     output = _rendered(tmp_path)
     listed = re.findall(r"<loc>(.*?)</loc>", (output / "sitemap.xml").read_text(encoding="utf-8"))
-    assert listed == [f"{site.SITE_ORIGIN}/", f"{site.SITE_ORIGIN}/report.html"]
+    assert listed == [
+        f"{site.SITE_ORIGIN}/",
+        f"{site.SITE_ORIGIN}/privacy.html",
+        f"{site.SITE_ORIGIN}/report.html",
+    ]
     for url in listed:
         name = url[len(site.SITE_ORIGIN) + 1 :] or "index.html"
         assert (output / name).is_file(), url

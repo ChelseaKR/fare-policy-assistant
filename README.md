@@ -396,6 +396,12 @@ These are two distinct public surfaces:
 
 - **[Evaluation evidence hub](https://evals.chelseakr.com/):** generated
   scoreboards, representative failures, trend history, and governance evidence.
+  Its pages use Google Analytics 4 to count visits
+  ([decision 0033](docs/decisions/0033-google-analytics-4-on-the-evidence-hub.md)):
+  only on that host, not at all under Global Privacy Control, Do Not Track or the
+  footer's "Opt out of analytics", with Google signals and ad personalization off
+  and analytics storage denied by default in the EEA, the UK and Switzerland. The
+  hub's `privacy.html` says what it records. The rider assistant loads no analytics.
 - **[Live AWS assistant](https://yahp6ddfo1.execute-api.us-west-2.amazonaws.com/):**
   the rider-facing system those evaluations exercise.
 
