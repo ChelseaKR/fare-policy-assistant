@@ -9,6 +9,22 @@ rather than tied to a published tag.
 ## [Unreleased]
 
 ### Added
+- **Google Analytics 4 on the evidence hub, and a `privacy.html` that says what it
+  records** (2026-09-17, decision 0033). Per the owner's decision to run GA4 on every
+  public site in the portfolio. `scripts/site_meta.py` holds the measurement ID
+  (`G-Y359BGWN12`) and `with_analytics`, which both publishers now pass every page
+  through: an inline loader admitted by its own `sha256` digest (never
+  `'unsafe-inline'`), `https://www.googletagmanager.com` in `script-src`, the two
+  collection hosts in `connect-src` and `img-src`, and a footer with the disclosure,
+  the privacy link and an "Opt out of analytics" control
+  (`localStorage` `fare-policy-evals:analytics-opt-out`). The loader runs only on
+  `evals.chelseakr.com` and never under Global Privacy Control or Do Not Track;
+  Google signals and ad personalization are off, the three advertising consent
+  settings are denied everywhere, and `analytics_storage` is denied by default in the
+  EEA, the UK and Switzerland. `privacy.html` is written by both publishers and is the
+  third page in the sitemap; the run-date check now reads `EVIDENCE_PAGES`. The rider
+  assistant is unchanged and loads no analytics. Nothing reaches the live hub until a
+  publisher runs (ADR 0032). README and `docs/dpia.md` were changed to match.
 - **Deploy staleness sentinel** (2026-09-13). `scripts/deploy_staleness.py` plus
   a weekly `deploy-staleness.yml` answer one question nothing here was asking:
   how far behind `main` is the commit the live site was built from. Pointed at

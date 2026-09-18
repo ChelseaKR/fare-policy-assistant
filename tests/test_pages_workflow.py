@@ -414,6 +414,7 @@ def test_render_step_writes_robots_and_sitemap_naming_the_real_origin(tmp_path: 
     locations = re.findall(r"<loc>(.*?)</loc>", sitemap)
     assert locations == [
         "https://evals.chelseakr.com/",
+        "https://evals.chelseakr.com/privacy.html",
         "https://evals.chelseakr.com/report.html",
     ]
 
@@ -438,8 +439,28 @@ def test_every_page_this_job_publishes_says_what_it_is_and_where_it_lives(
     result = check_site(tmp_path / "_site")
 
     assert len(result.pages) >= 2, "the sweep collapsed; it would prove nothing"
-    assert result.pages == ("index.html", "report.html")
+    assert result.pages == ("index.html", "privacy.html", "report.html")
     assert result.problems == ()
+
+
+def test_every_page_this_job_publishes_carries_ga_and_the_footer_control(
+    tmp_path: Path,
+) -> None:
+    """The nightly publisher adds GA4 through the same `with_analytics` the dispatch
+    renderer uses (ADR 0033), so the two cannot differ; this holds it on the real step."""
+    from scripts import site_meta
+
+    completed = _run_render_step(tmp_path, conclusion="failure", evals_md=_fixture_evals_md())
+    assert completed.returncode == 0, completed.stderr
+    script = site_meta.analytics_script()
+    pages = sorted(path.name for path in (tmp_path / "_site").glob("*.html"))
+    assert pages == ["index.html", "privacy.html", "report.html"]
+    for name in pages:
+        page = (tmp_path / "_site" / name).read_text(encoding="utf-8")
+        head, _, body = page.partition("</head>")
+        assert head.count(f"<script>{script}</script>") == 1, name
+        assert body.count("data-analytics-choice") == 1, name
+        assert 'href="privacy.html"' in body, name
 
 
 def test_the_published_report_is_the_artifact_body_with_its_address_added(
@@ -618,8 +639,12 @@ def _read_nightly_page_as_of(page: str, now: str, workdir: Path) -> dict[str, di
     workdir.mkdir(parents=True, exist_ok=True)
     driver = workdir / "driver.js"
     driver.write_text(_FRESHNESS_DRIVER, encoding="utf-8")
-    script_element = soup.find("script")
-    assert script_element is not None
+    # The freshness check, not the GA4 loader the page also carries (ADR 0033).
+    (script_element,) = [
+        element
+        for element in soup.find_all("script")
+        if element.string and "evidence-status" in element.string
+    ]
     script = workdir / "published.js"
     script.write_text(str(script_element.string), encoding="utf-8")
     state = workdir / "state.json"
@@ -667,8 +692,15 @@ def test_the_nightly_page_csp_hash_matches_the_script_it_actually_inlines(
     completed = _run_render_step(tmp_path, conclusion="failure", evals_md=_fixture_evals_md())
     assert completed.returncode == 0, completed.stderr
     page = (tmp_path / "_site" / "index.html").read_text(encoding="utf-8")
-    script = BeautifulSoup(page, "html.parser").find("script").string
-    digest = "sha256-" + base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode(
-        "ascii"
-    )
-    assert f"script-src '{digest}'" in page
+    policy = re.search(r"script-src ([^;\"]*)", page)
+    assert policy is not None
+    admitted = policy.group(1).split()
+    scripts = [element.string for element in BeautifulSoup(page, "html.parser").find_all("script")]
+    assert len(scripts) == 2  # the freshness check and the GA4 loader (ADR 0033)
+    for script in scripts:
+        assert script is not None
+        digest = "sha256-" + base64.b64encode(
+            hashlib.sha256(script.encode("utf-8")).digest()
+        ).decode("ascii")
+        assert f"'{digest}'" in admitted
+    assert "unsafe-inline" not in policy.group(1)
