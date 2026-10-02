@@ -93,6 +93,10 @@ rather than tied to a published tag.
   re-verified them and released v3.0.0, under which all 16 standards are within
   cadence. `.standards-version` and the `ref` in `standards.yml` move together.
   Nothing from the standards is committed here; CI still fetches the pinned tag.
+- **Standards pin moved from portfolio-standards v3.0.0 to v3.0.1** (2026-10-02).
+  v3.0.1 is a patch release (re-verified stamps, text corrections, tooling fixes)
+  with no control, threshold, or gate change. `.standards-version` and the `ref`
+  in `standards.yml` move together.
 
 ### Removed
 - **`date-released` from `CITATION.cff`** (2026-10-02). It recorded 2026-06-30
