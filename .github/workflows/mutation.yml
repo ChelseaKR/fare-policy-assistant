@@ -2,9 +2,12 @@ name: Mutation (advisory)
 
 # ADVISORY mutation testing on the core scoring logic (backlog #15). This is a
 # diagnostic signal about test strength, not a merge gate: it never runs on
-# pull_request or push, only weekly and on demand, and the mutmut step is
-# continue-on-error so a low score can never fail the build. The per-PR merge
-# gate remains the coverage-gated suite in ci.yml. Scope, baseline, and how to
+# pull_request or push, only weekly and on demand, and no score threshold is
+# enforced. It is still allowed to go red. A step-level continue-on-error hid a
+# crash that scored zero mutants behind a green run for five weeks (issue
+# #246), so the job now fails when mutmut crashes or scores nothing, and that
+# red cannot block a merge because nothing here runs on a pull request. The
+# per-PR merge gate remains the coverage-gated suite in ci.yml. Scope and how to
 # read survivors live in docs/mutation-testing.md.
 
 on:
@@ -32,7 +35,6 @@ jobs:
         with:
           enable-cache: true
       - name: Run mutmut on the core scoring modules (offline; advisory)
-        continue-on-error: true
         run: make mutation
       - name: Upload mutant results
         if: always()

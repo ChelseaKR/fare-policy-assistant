@@ -28,9 +28,18 @@ people toward assertion-padding instead of meaningful tests. So:
 
 - It is not part of `make check` / `make verify`.
 - It never runs on `pull_request` or `push`.
-- The `.github/workflows/mutation.yml` job runs weekly and on demand only, and
-  its mutmut step is `continue-on-error`. The per-PR merge gate stays the
-  coverage-gated suite in `ci.yml`.
+- The `.github/workflows/mutation.yml` job runs weekly and on demand only. No
+  score threshold is enforced, so a low score never fails it. The per-PR merge
+  gate stays the coverage-gated suite in `ci.yml`.
+
+Advisory does not mean it cannot fail. The job goes red when mutmut crashes or
+when no mutant was scored. Until issue #246 the mutmut step carried
+`continue-on-error`, and from 2026-08-10 to at least 2026-09-07 every weekly run
+crashed before checking a single mutant (the `mutants/` sandbox lacked
+`docs/answer-contract.schema.json`) while reporting success.
+`scripts/mutation_summary.py`, the last step of `make mutation`, now reads
+mutmut's results, refuses a run that scored nothing, and prints a dated table
+that also goes to the job summary on GitHub.
 
 ## Running it
 
@@ -40,8 +49,12 @@ make mutation
 
 This runs mutmut (installed via the isolated `mutation` dependency group, so the
 default dev install stays lean) against the two fast, offline unit suites named
-in `[tool.mutmut]` — no network, no model calls, no coverage gate. The scoped
-run finishes in well under a minute.
+in `[tool.mutmut]` — no network, no model calls, no coverage gate.
+
+The sandbox only holds what `[tool.mutmut]` copies into it. If a test in those
+two suites starts reading a new data file through the assistant package, add
+its directory to `also_copy`; `tests/test_mutation_job.py` pins the ones known
+today.
 
 Useful follow-ups:
 
@@ -54,10 +67,15 @@ uv run --group mutation mutmut browse            # interactive TUI
 mutmut copies the sources into a `mutants/` sandbox and caches results in
 `.mutmut-cache`; both are regenerated each run and are gitignored.
 
-## Baseline (2026-06-30)
+## Baseline (measured once, 2026-06-30)
+
+This table was written by hand from a single local run on 2026-06-30. Nothing
+regenerates it, and it is not the current score. For a current number, run
+`make mutation` or read the summary of the latest weekly job, both of which
+print a table dated with the day and commit they measured.
 
 Scoped to `evals/checks.py` + `evals/judges.py`, run against
-`tests/test_checks.py` + `tests/test_judges.py`:
+`tests/test_checks.py` + `tests/test_judges.py`, on 2026-06-30:
 
 | Metric | Value |
 | --- | --- |
@@ -65,7 +83,7 @@ Scoped to `evals/checks.py` + `evals/judges.py`, run against
 | Killed | 249 |
 | Survived | 85 (checks.py 33, judges.py 52) |
 | Timeout / suspicious | 0 |
-| Mutation score | ~75% (249/334) |
+| Mutation score | ~75% (249/334), as of 2026-06-30 |
 
 The survivors cluster in two low-risk categories, which is the useful finding:
 

@@ -221,10 +221,12 @@ controls:     ## BLOCKING: negative controls — no retrieval / wrong agency / s
 mutation:     ## ADVISORY mutation testing on the core scoring logic (offline; never a merge gate)
 	# Scoped in [tool.mutmut] to evals/checks.py + evals/judges.py, run against
 	# the two fast offline unit suites. Not part of `check`/`verify` and never a
-	# per-PR gate; run it deliberately. See docs/mutation-testing.md for the
-	# baseline (~75% killed) and how to read survivors.
+	# per-PR gate; run it deliberately. The last step prints a dated score and
+	# fails when no mutant was scored, so a crash cannot pass as a result
+	# (issue #246). See docs/mutation-testing.md for how to read survivors.
 	uv run --group mutation mutmut run
 	uv run --group mutation mutmut results
+	uv run python scripts/mutation_summary.py
 
 eval-selftest:  ## Plant known defects into clean answers and prove the deterministic gate catches each (offline; also enforced by tests/test_selftest.py in CI)
 	uv run python -m evals.selftest
