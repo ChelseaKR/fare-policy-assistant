@@ -85,6 +85,15 @@ rather than tied to a published tag.
     63d6718126f1` pair reports 7 answers that moved with no cited document
     moving. They are real re-rankings, not a planted defect.
 
+### Changed
+- **Standards pin moved from portfolio-standards v1.0.1 to v3.0.0** (2026-10-02).
+  The `standards` check failed on `main` and on every pull request: at v1.0.1,
+  CI/CD, Code Quality, Quality & Metrics and the Responsible-Tech Framework were
+  last verified 2026-06-21, 103 days ago against a 92-day cadence. Upstream
+  re-verified them and released v3.0.0, under which all 16 standards are within
+  cadence. `.standards-version` and the `ref` in `standards.yml` move together.
+  Nothing from the standards is committed here; CI still fetches the pinned tag.
+
 ### Fixed
 - **The nightly publisher put out pages that could not be shared or indexed**
   (2026-09-13). `evals.chelseakr.com` has two publishers. The dispatch pipeline
