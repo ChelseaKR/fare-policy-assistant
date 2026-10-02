@@ -85,6 +85,21 @@ rather than tied to a published tag.
     63d6718126f1` pair reports 7 answers that moved with no cited document
     moving. They are real re-rankings, not a planted defect.
 
+### Changed
+- **Standards pin moved from portfolio-standards v1.0.1 to v3.0.0** (2026-10-02).
+  The `standards` check failed on `main` and on every pull request: at v1.0.1,
+  CI/CD, Code Quality, Quality & Metrics and the Responsible-Tech Framework were
+  last verified 2026-06-21, 103 days ago against a 92-day cadence. Upstream
+  re-verified them and released v3.0.0, under which all 16 standards are within
+  cadence. `.standards-version` and the `ref` in `standards.yml` move together.
+  Nothing from the standards is committed here; CI still fetches the pinned tag.
+
+### Removed
+- **`date-released` from `CITATION.cff`** (2026-10-02). It recorded 2026-06-30
+  for version 0.1.0, which no tag names. Standards v3.0.0's DOC-08 check fails a
+  release date on a version that has not been released, and its migration notes
+  say to set the date at the moment of tagging instead.
+
 ### Fixed
 - **The weekly mutation job reported success over a crash for five weeks**
   (2026-10-02, #246). mutmut's `mutants/` sandbox did not carry
