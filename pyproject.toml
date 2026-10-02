@@ -127,10 +127,20 @@ source_paths = [
 # the evals package, so both must be copied into the sandbox too, or the tests
 # fail to import at all. evals/__init__.py makes mutants/evals an importable
 # package; src carries the unmutated assistant code the targets depend on.
+# Data files the tests open through the assistant package belong here too:
+# checks.run_checks validates every structured answer against
+# docs/answer-contract.schema.json, and its absence crashed every weekly run
+# from 2026-08-10 before a single mutant was scored (issue #246). The fare
+# consistency check reads the pinned GTFS-Fares snapshots under
+# corpus/raw/gtfs. tests/test_mutation_job.py keeps both listed. Directories are
+# listed rather than single files because mutmut copies a single file without
+# creating its parent directory, and nothing else creates mutants/docs/.
 also_copy = [
     "src",
     "evals/__init__.py",
     "prompts",
+    "docs",
+    "corpus/raw/gtfs",
 ]
 # Only the two fast, offline unit suites that exercise the target modules. No
 # network, no model calls, no coverage gate — this keeps each mutant cheap so the

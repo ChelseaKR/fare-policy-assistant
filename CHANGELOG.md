@@ -86,6 +86,17 @@ rather than tied to a published tag.
     moving. They are real re-rankings, not a planted defect.
 
 ### Fixed
+- **The weekly mutation job reported success over a crash for five weeks**
+  (2026-10-02, #246). mutmut's `mutants/` sandbox did not carry
+  `docs/answer-contract.schema.json` or the pinned GTFS snapshots the
+  fare-consistency tests read, so every run from 2026-08-10 died before scoring
+  a mutant. `continue-on-error` on the step meant no view showed it red, while
+  `docs/mutation-testing.md` kept publishing a ~75% score. `[tool.mutmut]
+  also_copy` now carries `docs` and `corpus/raw/gtfs`; the step can fail again;
+  and `scripts/mutation_summary.py` ends `make mutation` by refusing a run that
+  scored no mutants and printing a dated table to the job summary. The old
+  table is now labelled as a one-off hand measurement from 2026-06-30.
+  `tests/test_mutation_job.py` covers all three.
 - **The nightly publisher put out pages that could not be shared or indexed**
   (2026-09-13). `evals.chelseakr.com` has two publishers. The dispatch pipeline
   in `scripts/build_evidence_site.py` emits a description, a self-referencing
