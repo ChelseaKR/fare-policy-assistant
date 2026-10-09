@@ -256,6 +256,42 @@ def test_facts_identity_is_exact_byte_sensitive_and_rejects_symlinks(
         facts_identity(link)
 
 
+def test_facts_identity_covers_the_refusal_record_beside_the_table(
+    tmp_path: Path,
+) -> None:
+    """#242: the refusal record is read when a price claim is scored, so the
+    identity has to change when it changes, and has to say when there is none."""
+    facts = tmp_path / "facts.jsonl"
+    facts.write_bytes(b'{"price":"2.00"}\n')
+    without = facts_identity(facts)
+    assert without["refused_receipt"] is None
+    assert without["schema"].endswith(".v2")
+
+    refused = tmp_path / "facts_refused.jsonl"
+    refused.write_bytes(b'{"price":"20.00"}\n')
+    with_record = facts_identity(facts)
+    assert with_record["refused_receipt"] is not None
+    assert with_record["facts_version"] != without["facts_version"]
+    assert with_record["receipt"] == without["receipt"]
+
+    refused.write_bytes(b'{"price":"20.00"}\r\n')
+    changed = facts_identity(facts)
+    assert changed["facts_version"] != with_record["facts_version"]
+    assert changed["refused_receipt"]["bytes"] == with_record["refused_receipt"]["bytes"] + 1
+
+    elsewhere = tmp_path / "elsewhere.jsonl"
+    elsewhere.write_bytes(b'{"price":"20.00"}\n')
+    assert (
+        facts_identity(facts, refused_path=elsewhere)["facts_version"]
+        == with_record["facts_version"]
+    )
+
+    refused.unlink()
+    refused.symlink_to(elsewhere)
+    with pytest.raises(EvalAttestationError, match="regular file"):
+        facts_identity(facts)
+
+
 def test_gtfs_identity_is_canonical_explicit_and_content_sensitive(
     tmp_path: Path,
 ) -> None:

@@ -1,7 +1,7 @@
 import pytest
 
 from assistant.answer import AnswerResult, Citation
-from assistant.facts import FareFact
+from assistant.facts import FareFact, RefusedRow
 from evals.checks import (
     clock_times,
     money_amounts,
@@ -464,6 +464,113 @@ class TestFareFactsConsistent:
         # to check; the fact table just needs to be non-empty for this doc.
         checks = _by_name(run_checks(case, result, DOC_IDS, FACTS_BY_DOC))
         assert checks["fare_facts_consistent"].passed
+
+
+def _refused(doc_id: str, price: float | None, reason: str = "program_dangling_word") -> RefusedRow:
+    return RefusedRow(
+        agency="MST",
+        doc_id=doc_id,
+        chunk_id=f"{doc_id}#0",
+        reason=reason,
+        program="per week, or",
+        rider_class="",
+        price=price,
+    )
+
+
+class TestFareFactsConsistentWithheldRows:
+    """Issue #242: a price the parser read in the cited document and declined to
+    publish (`facts_refused.jsonl`, #231) is not a price the assistant invented.
+
+    Until 2026-10-09 the check scored both the same way. Measured on the
+    2026-10-09 nightly: 73 cases failed it, and 89 of the 95 price items it
+    reported were exact amounts in the refusal file for a document the answer
+    cited. The table cannot verify a row it withheld and cannot contradict it,
+    so such an amount is set aside, named in the detail, and left to the
+    groundedness judge, the same fallback a document with no rows already gets.
+    """
+
+    CASE = {"expected_behavior": "answer", "language": "en"}
+
+    def test_a_price_the_parser_withheld_for_the_cited_doc_is_set_aside(self):
+        refused = {"mst-fares": [_refused("mst-fares", 20.0)]}
+        result = _answered("A weekly pass is $20.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(
+            run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC, refused_by_doc=refused)
+        )
+        verdict = checks["fare_facts_consistent"]
+        assert verdict.passed
+        # Set aside is not the same as verified: the record says what happened.
+        assert "withheld by the parser" in verdict.detail
+        assert "$20.00" in verdict.detail
+
+    def test_without_the_refusal_record_the_same_claim_is_still_unverified(self):
+        # Backward compatible: a caller that passes no refusal record gets the
+        # pre-2026-10-09 verdict, so nothing is set aside on its say-so alone.
+        result = _answered("A weekly pass is $20.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC))
+        assert not checks["fare_facts_consistent"].passed
+        assert "$20.00" in checks["fare_facts_consistent"].detail
+
+    def test_a_refusal_recorded_for_another_document_does_not_excuse_the_claim(self):
+        # The refusal has to belong to a document the answer cites. An amount
+        # the parser withheld elsewhere in the corpus says nothing about whether
+        # this answer's number came from its source.
+        refused = {"yolobus-fares": [_refused("yolobus-fares", 20.0)]}
+        result = _answered("A weekly pass is $20.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(
+            run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC, refused_by_doc=refused)
+        )
+        assert not checks["fare_facts_consistent"].passed
+        assert "$20.00" in checks["fare_facts_consistent"].detail
+        assert "withheld" not in checks["fare_facts_consistent"].detail
+
+    def test_a_withheld_price_does_not_mask_an_invented_one_beside_it(self):
+        refused = {"mst-fares": [_refused("mst-fares", 20.0)]}
+        result = _answered(
+            "A weekly pass is $20.00 and a day pass is $9.99 [doc:mst-fares], as of 2026."
+        )
+        checks = _by_name(
+            run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC, refused_by_doc=refused)
+        )
+        verdict = checks["fare_facts_consistent"]
+        assert not verdict.passed
+        assert "$9.99" in verdict.detail
+        # The invented amount is reported first; the withheld one is annotated.
+        assert verdict.detail.startswith("$9.99")
+        assert "withheld by the parser, not examinable: $20.00" in verdict.detail
+
+    def test_age_claims_are_still_examined_when_a_price_was_withheld(self):
+        # The refusal record carries prices only; an unsupported age is not
+        # something the parser withheld, so it still fails.
+        refused = {"mst-fares": [_refused("mst-fares", 20.0)]}
+        result = _answered(
+            "A weekly pass is $20.00 and seniors (age 70+) qualify [doc:mst-fares], as of 2026."
+        )
+        checks = _by_name(
+            run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC, refused_by_doc=refused)
+        )
+        assert not checks["fare_facts_consistent"].passed
+        assert "age 70+" in checks["fare_facts_consistent"].detail
+
+    def test_a_refused_row_without_a_price_sets_nothing_aside(self):
+        refused = {"mst-fares": [_refused("mst-fares", None, reason="label_is_column_header")]}
+        result = _answered("A weekly pass is $20.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(
+            run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC, refused_by_doc=refused)
+        )
+        assert not checks["fare_facts_consistent"].passed
+
+    def test_a_published_row_still_wins_over_a_refused_one(self):
+        # $2.00 is in the fact table; a refusal at the same amount changes nothing
+        # and the detail carries no note, because nothing was set aside.
+        refused = {"mst-fares": [_refused("mst-fares", 2.0)]}
+        result = _answered("The single ride fare is $2.00 [doc:mst-fares], as of 2026.")
+        checks = _by_name(
+            run_checks(self.CASE, result, DOC_IDS, FACTS_BY_DOC, refused_by_doc=refused)
+        )
+        assert checks["fare_facts_consistent"].passed
+        assert checks["fare_facts_consistent"].detail == ""
 
 
 class TestVerificationHandoffCheck:

@@ -71,7 +71,7 @@ import yaml
 
 from assistant import config, corpus, fare_table
 from assistant.answer import AnswerResult, answer_question
-from assistant.facts import FareFact
+from assistant.facts import FareFact, RefusedRow
 from assistant.identity import SnapshotIdentity
 from assistant.ingest import Chunk
 from assistant.models import Model, get_model
@@ -138,6 +138,11 @@ class _CapturedFile:
 class _CapturedEvaluationInputs:
     chunks: tuple[Chunk, ...]
     facts: tuple[FareFact, ...]
+    # The rows the parser declined to publish (corpus/processed/facts_refused.jsonl).
+    # A scoring input since 2026-10-09: evals.checks step 8 sets a refused price
+    # aside instead of reporting it as unverified (#242), so the exact bytes it
+    # read are captured and attested beside facts.jsonl.
+    refused_facts: tuple[RefusedRow, ...]
     manifest: Mapping[str, object]
     prompts: Mapping[str, str]
     config_identity: ConfigIdentity
@@ -344,6 +349,25 @@ def _parse_facts(captured: _CapturedFile) -> tuple[FareFact, ...]:
     return tuple(rows)
 
 
+def _parse_refusals(captured: _CapturedFile | None) -> tuple[RefusedRow, ...]:
+    """The refusal record, or nothing when the corpus has not written one.
+
+    `facts_refused.jsonl` is optional on purpose: a corpus ingested before the
+    refusal contract existed (#231), or a template deployment that has not run
+    `make ingest`, has no record to read, and an absent record means no price
+    is set aside. The absence is attested as such (`refused_receipt: null`).
+    """
+    if captured is None:
+        return ()
+    rows: list[RefusedRow] = []
+    try:
+        for line in _jsonl_lines(captured.raw, "captured refused facts"):
+            rows.append(RefusedRow(**json.loads(line)))
+    except (json.JSONDecodeError, TypeError, KeyError) as exc:
+        raise eval_attestation.EvalAttestationError("captured refused facts are malformed") from exc
+    return tuple(rows)
+
+
 def _parse_manifest(captured: _CapturedFile) -> Mapping[str, object]:
     try:
         value = yaml.safe_load(captured.raw)
@@ -354,15 +378,23 @@ def _parse_manifest(captured: _CapturedFile) -> Mapping[str, object]:
     return value
 
 
-def _facts_identity(captured: _CapturedFile) -> dict[str, object]:
+def _facts_identity(
+    captured: _CapturedFile,
+    refused_captured: _CapturedFile | None,
+) -> dict[str, object]:
+    # Same framing as evals.attestation.facts_identity, from captured bytes
+    # rather than a path. The two must stay in step: both cover the published
+    # table and the refusal record, because both are read when a case is scored.
     receipt = captured.receipt
+    refused_receipt = refused_captured.receipt if refused_captured is not None else None
     return {
         "schema": eval_attestation.FACTS_SCHEMA,
         "facts_version": eval_attestation.canonical_digest(
             eval_attestation.FACTS_SCHEMA,
-            {"receipt": receipt},
+            {"receipt": receipt, "refused_receipt": refused_receipt},
         ),
         "receipt": receipt,
+        "refused_receipt": refused_receipt,
     }
 
 
@@ -520,6 +552,11 @@ def _capture_evaluation_inputs(
 ) -> _CapturedEvaluationInputs:
     chunks_capture = _capture_regular_file(config.CHUNKS_PATH, "chunks")
     facts_capture = _capture_regular_file(config.FACTS_PATH, "facts")
+    refused_capture = _capture_regular_file(
+        config.facts_refused_path(),
+        "refused facts",
+        optional=True,
+    )
     manifest_capture = _capture_regular_file(config.MANIFEST_PATH, "manifest")
     answer_schema_capture = _capture_regular_file(
         config.ANSWER_SCHEMA_PATH,
@@ -545,6 +582,7 @@ def _capture_evaluation_inputs(
     }
     chunks = _parse_chunks(chunks_capture)
     facts = _parse_facts(facts_capture)
+    refused_facts = _parse_refusals(refused_capture)
     manifest = _parse_manifest(manifest_capture)
     config_identity = build_config_identity(
         environment,
@@ -560,11 +598,12 @@ def _capture_evaluation_inputs(
     return _CapturedEvaluationInputs(
         chunks=chunks,
         facts=facts,
+        refused_facts=refused_facts,
         manifest=manifest,
         prompts=prompts,
         config_identity=config_identity,
         snapshot_identity=snapshot_identity,
-        facts_identity=_facts_identity(facts_capture),
+        facts_identity=_facts_identity(facts_capture, refused_capture),
         gtfs_identity=gtfs_identity,
         structured_fares_by_agency=structured_fares_by_agency,
     )
@@ -1388,6 +1427,7 @@ def _run_case(
     cfg: config.Config,
     corpus_doc_ids: set[str],
     facts_by_doc: dict[str, list] | None,
+    refused_by_doc: Mapping[str, Sequence[RefusedRow]] | None = None,
     doc_texts: Mapping[str, str],
     structured_fares_by_agency: Mapping[
         str,
@@ -1467,6 +1507,7 @@ def _run_case(
         facts_by_doc,
         structured_fares_by_agency,
         doc_texts=doc_texts,
+        refused_by_doc=refused_by_doc,
     )
     # A case whose supporting document the operator has disabled was never
     # given the evidence it was written against: `answer.answer_question`
@@ -1795,6 +1836,9 @@ def _run_resolved(
     facts_by_doc: dict[str, list] = collections.defaultdict(list)
     for fact in captured_inputs.facts:
         facts_by_doc[fact.doc_id].append(fact)
+    refused_by_doc: dict[str, list[RefusedRow]] = collections.defaultdict(list)
+    for refused in captured_inputs.refused_facts:
+        refused_by_doc[refused.doc_id].append(refused)
     # The full text of each corpus document, for the checks that ask "does this
     # document actually say that" rather than "does the fact table agree".
     # Built from the same captured chunks the retriever is given, so a check
@@ -2026,6 +2070,7 @@ def _run_resolved(
                 cfg=cfg,
                 corpus_doc_ids=corpus_doc_ids,
                 facts_by_doc=facts_by_doc,
+                refused_by_doc=refused_by_doc,
                 doc_texts=doc_texts,
                 structured_fares_by_agency=(captured_inputs.structured_fares_by_agency),
                 answer_system_prompt=captured_inputs.prompts["system"],

@@ -217,6 +217,9 @@ class Harness:
     corpus_doc_ids: set[str]
     facts_by_doc: dict[str, list[facts_module.FareFact]]
     doc_texts: dict[str, str]
+    # The committed refusal record beside the committed fact table, so the
+    # arms are scored by the same ruler as the nightly (evals.checks step 8).
+    refused_by_doc: dict[str, list[facts_module.RefusedRow]] = field(default_factory=dict)
 
     @property
     def agencies(self) -> list[str]:
@@ -229,6 +232,9 @@ def build_harness(cfg: config.Config | None = None) -> Harness:
     facts_by_doc: dict[str, list[facts_module.FareFact]] = {}
     for fact in facts_module.load_facts(config.FACTS_PATH):
         facts_by_doc.setdefault(fact.doc_id, []).append(fact)
+    refused_by_doc: dict[str, list[facts_module.RefusedRow]] = {}
+    for refused in facts_module.load_refusals(config.facts_refused_path()):
+        refused_by_doc.setdefault(refused.doc_id, []).append(refused)
     texts: dict[str, list[str]] = {}
     for chunk in chunks:
         texts.setdefault(chunk.doc_id, []).append(chunk.text)
@@ -239,6 +245,7 @@ def build_harness(cfg: config.Config | None = None) -> Harness:
         corpus_doc_ids={c.doc_id for c in chunks},
         facts_by_doc=facts_by_doc,
         doc_texts={doc_id: "\n".join(parts) for doc_id, parts in texts.items()},
+        refused_by_doc=refused_by_doc,
     )
 
 
@@ -278,6 +285,7 @@ def run_arm(name: str, retriever: object, cases: list[dict], harness: Harness) -
             harness.corpus_doc_ids,
             harness.facts_by_doc,
             doc_texts=harness.doc_texts,
+            refused_by_doc=harness.refused_by_doc,
         )
         result.record([(c.name, c.passed) for c in checks])
     return result
