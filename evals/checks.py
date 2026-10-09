@@ -21,9 +21,9 @@ import assistant.fare_table as fare_table
 from assistant import answer as answer_module
 from assistant import facts as facts_module
 from assistant import guards
-from assistant.answer import AnswerResult
+from assistant.answer import AnswerResult, Citation
 from assistant.contract import build_structured_answer
-from assistant.facts import FareFact
+from assistant.facts import FareFact, RefusedRow
 
 _REDIRECT_RE = re.compile(
     r"(511|contact|customer service|agency('s)? (website|office)|call|visit|"
@@ -300,6 +300,26 @@ def _age_claim_supported(claim: tuple[int | None, int | None], candidates: list[
     return False
 
 
+def _refused_prices_for(
+    citations: Sequence[Citation],
+    refused_by_doc: Mapping[str, Sequence[RefusedRow]] | None,
+) -> list[float]:
+    """Every price the parser declined to publish for a document the answer cites.
+
+    Scoped to the cited documents on purpose: a refused amount elsewhere in the
+    corpus says nothing about whether this answer's number came from its source.
+    Rows without a price (a refused label with no amount) contribute nothing.
+    """
+    if not refused_by_doc:
+        return []
+    return [
+        row.price
+        for citation in citations
+        for row in refused_by_doc.get(citation.doc_id, ())
+        if row.price is not None
+    ]
+
+
 def clock_times(text: str) -> set[tuple[int, int, str]]:
     """Every clock time in `text`, normalized to (hour mod 12, minute, am/pm).
 
@@ -460,6 +480,7 @@ def run_checks(
     ]
     | None = None,
     doc_texts: Mapping[str, str] | None = None,
+    refused_by_doc: Mapping[str, Sequence[RefusedRow]] | None = None,
 ) -> list[CheckResult]:
     out: list[CheckResult] = []
     expected = case["expected_behavior"]  # answer | partial | refuse_redirect
@@ -624,24 +645,46 @@ def run_checks(
         # doc the extractor found no facts in (e.g. a narrative or contact
         # page) falls back to today's judge-only behavior rather than
         # failing every numeric claim against an empty candidate set.
+        #
+        # A price the parser read in a cited document and then declined to
+        # publish (`corpus/processed/facts_refused.jsonl`, #231) is a third
+        # state, not a failure: the table cannot verify a row it withheld, and
+        # cannot contradict it either. Until 2026-10-09 such an amount was
+        # reported as unverified, which scored a parser refusal as a number the
+        # assistant invented. Measured on the 2026-10-09 nightly (#242): 73
+        # cases failed this check, and 89 of the 95 price items it reported
+        # were exact amounts in the refusal file for a document the answer
+        # cited. Those amounts are set aside here, named in the detail so the
+        # record stays legible, and left to the groundedness judge, the same
+        # fallback a document with no fact rows already gets. The refusal count
+        # itself stays loud where it belongs: tools/check_fact_quality.py holds
+        # it under a pinned ceiling. Age claims are unaffected; the refusal
+        # record carries prices only.
         if facts_by_doc is not None and result.kind == "answered":
             candidates = [f for c in result.citations for f in facts_by_doc.get(c.doc_id, [])]
             if candidates:
-                unverified = [
-                    f"${amount:.2f}"
-                    for amount in facts_module.parse_price_claims(answer)
-                    if not any(
+                refused_prices = _refused_prices_for(result.citations, refused_by_doc)
+                unverified: list[str] = []
+                withheld: list[str] = []
+                for amount in facts_module.parse_price_claims(answer):
+                    if any(
                         f.price is not None and abs(f.price - amount) < 0.005 for f in candidates
-                    )
-                ]
+                    ):
+                        continue
+                    if any(abs(price - amount) < 0.005 for price in refused_prices):
+                        withheld.append(f"${amount:.2f}")
+                        continue
+                    unverified.append(f"${amount:.2f}")
                 unverified += [
                     _format_age_claim(claim)
                     for claim in facts_module.parse_age_claims(answer)
                     if not _age_claim_supported(claim, candidates)
                 ]
-                out.append(
-                    CheckResult("fare_facts_consistent", not unverified, "; ".join(unverified))
-                )
+                detail = "; ".join(unverified)
+                if withheld:
+                    note = "withheld by the parser, not examinable: " + ", ".join(withheld)
+                    detail = f"{detail}; {note}" if detail else note
+                out.append(CheckResult("fare_facts_consistent", not unverified, detail))
 
         # 8b. Structured fare consistency against the agency's GTFS-Fares feed
         # (ADR 0017). Where the cited agency publishes a machine-readable feed,

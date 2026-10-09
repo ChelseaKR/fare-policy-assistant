@@ -62,6 +62,16 @@ def _facts_by_doc() -> dict[str, list[facts_module.FareFact]]:
     return by_doc
 
 
+def _refused_by_doc() -> dict[str, list[facts_module.RefusedRow]]:
+    # Scored with the refusal record in play, as the nightly is, so the
+    # wrong-fare mutant below proves the gate still catches an invented price
+    # when a withheld one would be set aside (evals.checks step 8).
+    by_doc: dict[str, list[facts_module.RefusedRow]] = {}
+    for refused in facts_module.load_refusals(config.facts_refused_path()):
+        by_doc.setdefault(refused.doc_id, []).append(refused)
+    return by_doc
+
+
 def _priced_fact(by_doc: dict[str, list[facts_module.FareFact]]) -> facts_module.FareFact:
     """A real corpus fare fact with a numeric price, so the clean answer quotes a
     value the corpus actually supports rather than a hard-coded constant that
@@ -189,9 +199,13 @@ def _scenarios() -> list[Scenario]:
     fact = _priced_fact(by_doc)
     doc_id = fact.doc_id
     good_price = f"${fact.price:.2f}"
-    # A price guaranteed absent from every doc's fact table, so the wrong-fare
-    # mutant cannot accidentally match some other row.
+    # A price guaranteed absent from every doc's fact table and from the refusal
+    # record, so the wrong-fare mutant can neither match some other row nor be
+    # set aside as a price the parser withheld.
     all_prices = {f.price for fs in by_doc.values() for f in fs if f.price is not None}
+    all_prices |= {
+        row.price for rows in _refused_by_doc().values() for row in rows if row.price is not None
+    }
     bad = max(all_prices) + 1000.0
     bad_price = f"${bad:.2f}"
 
@@ -461,12 +475,24 @@ def _named(checks: list[CheckResult]) -> dict[str, CheckResult]:
 def run_selftest() -> list[Outcome]:
     doc_ids = _corpus_doc_ids()
     by_doc = _facts_by_doc()
+    refused = _refused_by_doc()
     doc_texts = _doc_texts()
     outcomes: list[Outcome] = []
     for sc in _scenarios():
-        clean = _named(run_checks(sc.case, sc.clean, doc_ids, by_doc, doc_texts=doc_texts))
+        clean = _named(
+            run_checks(
+                sc.case, sc.clean, doc_ids, by_doc, doc_texts=doc_texts, refused_by_doc=refused
+            )
+        )
         mutated = _named(
-            run_checks(sc.case, sc.mutate(sc.clean), doc_ids, by_doc, doc_texts=doc_texts)
+            run_checks(
+                sc.case,
+                sc.mutate(sc.clean),
+                doc_ids,
+                by_doc,
+                doc_texts=doc_texts,
+                refused_by_doc=refused,
+            )
         )
         # A check absent on the clean run (e.g. the case did not opt into it)
         # counts as not-passing, which would surface a mis-built scenario.

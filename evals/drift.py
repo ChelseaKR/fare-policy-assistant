@@ -110,14 +110,21 @@ class Side:
     doc_ids: frozenset[str]
     facts_by_doc: dict[str, list[facts_module.FareFact]]
     doc_texts: dict[str, str]
+    # The rows the same extraction pass declined, so a price this side's parser
+    # could not place is set aside rather than scored as invented (checks step 8).
+    refused_by_doc: dict[str, list[facts_module.RefusedRow]] = field(default_factory=dict)
 
 
 def build_side(version: str, chunks: list[Chunk], cfg: config.Config) -> Side:
     if not chunks:
         raise DriftError(f"corpus version {version!r} holds no chunks; nothing to compare")
+    facts, refusals = facts_module.build_facts_with_refusals(chunks)
     facts_by_doc: dict[str, list[facts_module.FareFact]] = {}
-    for fact in facts_module.build_facts(chunks):
+    for fact in facts:
         facts_by_doc.setdefault(fact.doc_id, []).append(fact)
+    refused_by_doc: dict[str, list[facts_module.RefusedRow]] = {}
+    for refused in refusals:
+        refused_by_doc.setdefault(refused.doc_id, []).append(refused)
     texts: dict[str, list[str]] = {}
     for chunk in chunks:
         texts.setdefault(chunk.doc_id, []).append(chunk.text)
@@ -128,6 +135,7 @@ def build_side(version: str, chunks: list[Chunk], cfg: config.Config) -> Side:
         doc_ids=frozenset(c.doc_id for c in chunks),
         facts_by_doc=facts_by_doc,
         doc_texts={doc_id: "\n".join(parts) for doc_id, parts in texts.items()},
+        refused_by_doc=refused_by_doc,
     )
 
 
@@ -290,6 +298,7 @@ def compare_case(
             set(side.doc_ids),
             side.facts_by_doc,
             doc_texts=side.doc_texts,
+            refused_by_doc=side.refused_by_doc,
         )
 
     cited_from = sorted(c.doc_id for c in answers["from"].citations)

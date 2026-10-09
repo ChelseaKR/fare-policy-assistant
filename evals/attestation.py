@@ -39,7 +39,9 @@ from assistant.release_identity import (
 
 CASE_SEMANTICS_SCHEMA = "fare-assistant.eval-case-semantics.v1"
 SUITE_SCHEMA = "fare-assistant.eval-suite.v1"
-FACTS_SCHEMA = "fare-assistant.facts-eval-input.v1"
+# v2 (2026-10-09): the digest also covers the refusal record's receipt, or null
+# when the corpus has written none. See facts_identity.
+FACTS_SCHEMA = "fare-assistant.facts-eval-input.v2"
 GTFS_LEGACY_INPUT_SCHEMA = "fare-assistant.gtfs-legacy-eval-input.v1"
 EVALUATOR_SCHEMA = "fare-assistant.eval-evaluator.v1"
 PROTOCOL_SCHEMA = "fare-assistant.eval-protocol.v1"
@@ -408,16 +410,41 @@ def suite_version(cases: Sequence[Mapping[str, object]]) -> str:
     return _suite_version_from_manifest(case_manifest(cases))
 
 
-def facts_identity(path: Path | str) -> dict[str, object]:
-    """Return a schema-framed identity over the exact ``facts.jsonl`` bytes."""
+def facts_identity(
+    path: Path | str,
+    refused_path: Path | str | None = None,
+) -> dict[str, object]:
+    """Return a schema-framed identity over the exact ``facts.jsonl`` bytes.
+
+    Since 2026-10-09 the identity also covers ``facts_refused.jsonl``, the rows
+    the parser declined to publish: ``evals.checks`` reads it when scoring a
+    price claim (#242), so a run's evidence has to say which bytes of it were
+    read. ``refused_path`` defaults to the sibling of ``path``; a record that
+    does not exist is attested as ``None`` rather than skipped silently, and a
+    symlink in its place is rejected like any other input.
+    """
 
     selected = Path(path)
     receipt = file_receipt(selected, root=selected.parent)
-    version = canonical_digest(FACTS_SCHEMA, {"receipt": receipt})
+    refused = (
+        Path(refused_path)
+        if refused_path is not None
+        else selected.with_name("facts_refused.jsonl")
+    )
+    refused_receipt = (
+        file_receipt(refused, root=refused.parent)
+        if refused.is_symlink() or refused.exists()
+        else None
+    )
+    version = canonical_digest(
+        FACTS_SCHEMA,
+        {"receipt": receipt, "refused_receipt": refused_receipt},
+    )
     return {
         "schema": FACTS_SCHEMA,
         "facts_version": version,
         "receipt": receipt,
+        "refused_receipt": refused_receipt,
     }
 
 
