@@ -1,0 +1,8 @@
+doc_id: soltrans-ways-to-pay
+url: https://www.soltrans.org/fares/ways-to-pay
+final_url: https://www.soltrans.org/fares/ways-to-pay
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: f34dcc22e5b6121501034692208ce6bfc60c59efac709a45973b0711e737736d
+bytes: 38394

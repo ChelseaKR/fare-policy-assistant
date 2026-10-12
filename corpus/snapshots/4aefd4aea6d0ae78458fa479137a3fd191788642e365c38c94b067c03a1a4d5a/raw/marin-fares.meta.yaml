@@ -1,0 +1,8 @@
+doc_id: marin-fares
+url: https://marintransit.gov/fares
+final_url: https://marintransit.gov/fares
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: f9878556fa23f92bbdf9d8d7371e057c2884247b70518e0c2d95f5b3277a1cf0
+bytes: 41311

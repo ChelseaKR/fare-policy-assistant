@@ -1,9 +1,9 @@
 # Clipper on SamTrans (Next Generation Clipper FAQ) — SamTrans
-Source: https://www.samtrans.com/fares/clipper (fetched 2026-08-14)
+Source: https://www.samtrans.com/fares/clipper (fetched 2026-10-12)
 
-## What’s New?
+## What’s New with Clipper®?
 
-A faster, smarter Clipper has arrived. Next Generation Clipper has rolled out across Bay Area transit systems, bringing upgraded technology and new ways to pay your SamTrans bus fare.
+A faster, smarter Clipper® has arrived. Next Generation Clipper has rolled out across Bay Area transit systems, bringing upgraded technology and new ways to pay your SamTrans bus fare.
 With the new system, riders can:
 Use any contactless payment card or mobile wallet (Apple Pay, Google Pay, etc.) directly onboard — no need for a separate Clipper card.
 Manage everything online or in the Clipper app, including balance, payment methods, and autoload settings.
@@ -23,7 +23,7 @@ Go contactless. Tap your physical card or phone with the digital Clipper card (a
 Simplify your commute. Load a Monthly Pass or add cash value to pay-as-you-go.
 How to Get a Clipper Card
 Online: clippercard.com
-In person: At major retailers like Walgreens or at the SamTrans office in San Carlos.
+In person: At major retailers like Walgreens or at the SamTrans office in Millbrae.
 On your phone: Download the Clipper mobile app and add your card to your digital wallet.
 Discounts
 Youth and senior discount cards are free — simply complete a quick application online at clippercard.com.

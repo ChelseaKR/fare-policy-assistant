@@ -1,8 +1,8 @@
 doc_id: westcat-transfers
 url: https://www.westcat.org/home/FaresTransfers
 final_url: https://www.westcat.org/home/FaresTransfers
-fetch_date: '2026-08-14'
+fetch_date: '2026-10-12'
 http_status: 200
 format: html
-sha256: 851187f3c6c037c98acbaf4e54097c5d99496127ae817521058598577bc0c3cc
-bytes: 28020
+sha256: 95ec6afb2e872baa68214519fc30b1e890172ddd394c01e70884971f0f63d8ff
+bytes: 27908

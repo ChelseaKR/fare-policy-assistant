@@ -1,8 +1,8 @@
 doc_id: westcat-fares-all
 url: https://www.westcat.org/home/FaresAll
 final_url: https://www.westcat.org/home/FaresAll
-fetch_date: '2026-08-14'
+fetch_date: '2026-10-12'
 http_status: 200
 format: html
-sha256: c3262ced1eb836547e4216e9f2a7c0f1aed53d21d32cb351d606bb55816f6a3c
-bytes: 37032
+sha256: e3f57bf2f5f4ee52c140475ea8226f446f1807201314e0008e991b4a1e4012b2
+bytes: 36920

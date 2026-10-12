@@ -1,0 +1,8 @@
+doc_id: vta-regional-transfers
+url: https://www.vta.org/go/fares/regional-transfers
+final_url: https://www.vta.org/go/fares/regional-transfers
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: f4a576f588fc4fc6b659c4a1d89676842b2fce84a2754337ac19bd4e3baff3fe
+bytes: 72883

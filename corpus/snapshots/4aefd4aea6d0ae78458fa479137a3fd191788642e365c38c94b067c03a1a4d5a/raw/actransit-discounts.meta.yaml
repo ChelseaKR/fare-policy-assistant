@@ -1,0 +1,8 @@
+doc_id: actransit-discounts
+url: https://www.actransit.org/discounts
+final_url: https://www.actransit.org/discounts
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: 252c52c77863a105e6c4618ece36138581ade2840097c25ae65373af076c3640
+bytes: 45901

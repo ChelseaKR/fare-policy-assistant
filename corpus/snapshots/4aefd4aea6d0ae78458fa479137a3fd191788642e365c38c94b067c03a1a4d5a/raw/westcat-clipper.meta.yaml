@@ -1,0 +1,8 @@
+doc_id: westcat-clipper
+url: https://www.westcat.org/home/FaresClipper
+final_url: https://www.westcat.org/home/FaresClipper
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: 48d9a9cca5d4c835670335346e32a9a77bf6b14c4d07fdac9d70db20ac0b752a
+bytes: 30842

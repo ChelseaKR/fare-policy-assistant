@@ -1,0 +1,8 @@
+doc_id: slorta-discounts
+url: https://www.slorta.org/fares/discounts/
+final_url: https://www.slorta.org/fares/discounts/
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: bb2897b2995e153af2e9dcffe7a451501027cc3e0cbc3d0b0e8bb2519e11e4a3
+bytes: 105231

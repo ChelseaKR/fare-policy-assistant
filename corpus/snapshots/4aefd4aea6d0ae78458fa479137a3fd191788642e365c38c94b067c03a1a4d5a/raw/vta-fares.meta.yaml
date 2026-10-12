@@ -1,0 +1,8 @@
+doc_id: vta-fares
+url: https://www.vta.org/go/fares
+final_url: https://www.vta.org/go/fares
+fetch_date: '2026-10-12'
+http_status: 200
+format: html
+sha256: 879096cd0ac042e5e706c77fda25bbc3c0aa595dacbcebdec470f10c6ce05ed2
+bytes: 109129
