@@ -1,5 +1,5 @@
 # Fare Table — SolTrans
-Source: https://www.soltrans.org/fares/fare-table (fetched 2026-08-13)
+Source: https://www.soltrans.org/fares/fare-table (fetched 2026-10-19)
 
 ## Fare Table
 

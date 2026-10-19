@@ -1,5 +1,5 @@
 # Fares — Yolobus
-Source: https://yolobus.com/fares/ (fetched 2026-08-21)
+Source: https://yolobus.com/fares/ (fetched 2026-10-19)
 
 ## Yolobus Fixed Route Bus Fares
 
@@ -7,6 +7,7 @@ Yolobus fixed route bus fares vary depending on which type of service you ride. 
 
 ## Youth ages 18 and under ride free!
 
+2026 FREE TRANSFER PROMOTION: To celebrate the launch of our new Tap-to-Pay options, Yolobus is offering free transfers through the end of 2026! When you board the bus, simply ask the driver for a paper transfer slip.
 Regular Adult (19-61) | Senior/Disabled Senior/Disabled (62+/Disabled*)
 Single Ride Tickets
 Local Fare | $2.00 | $1.00
@@ -46,17 +47,18 @@ More information on how to purchase a ticket or a pass is available below.
 
 ## How to Pay
 
-Riders have many choices when paying their fares. Fares may be paid on board the bus with cash, but contactless payment is more efficient and reduces bus boarding times—getting riders to their destinations faster. Contactless fare payment options include Connect Card and the Transit Connect mobile app.
+Riders have many choices when paying their fares. Fares may be paid on board the bus with cash, but contactless payment is more efficient and reduces bus boarding times—getting riders to their destinations faster. Contactless fare payment options include Connect Card, the Transit Connect mobile app, and onboard tap-to-pay methods.
 
 ## Connect Card
 
-Connect Card is the Sacramento region’s electronic transit fare payment system and is accepted by most transit agencies in the Sacramento region. Connect Card readers are installed on all Yolobus vehicles. To pay, tag the Connect Card reader with your card upon boarding the bus.
+Connect Card is the Sacramento region’s electronic transit fare payment system and is accepted by most transit agencies in the Sacramento region. Connect Card readers are installed on all Yolobus vehicles. To pay, tag the Connect Card reader with your card upon boarding the bus. Passes on Connect Card can be purchased with cash at the Yolobus Customer Service Center .
 Transit Connect
 The Transit Connect mobile fare app allows you to pre-purchase, store and activate tickets and passes instantly on your smartphone. Accepted on Yolobus and SacRT, with Unitrans joining in 2026.
 
-## Cash
+## Onboard Options
 
-All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required as our bus operators don’t carry change or provide refunds. Passes on Connect Card can be purchased with cash at the Yolobus Customer Service Center .
+All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required as our bus operators don’t carry change or provide refunds.
+New convenient payment options available on Yolobus fixed route buses include contactless-enabled credit card or debit card, Google Pay, and Apple Pay, and wearable devices such as smartwatches.
 In-Person Ticket and Pass Sales
 The Yolobus Customer Service Center in Woodland offers transit fare sales and Connect Card services:
 Business Hours

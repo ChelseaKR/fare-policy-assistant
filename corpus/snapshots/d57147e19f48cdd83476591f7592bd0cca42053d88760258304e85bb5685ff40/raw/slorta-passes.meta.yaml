@@ -1,0 +1,8 @@
+doc_id: slorta-passes
+url: https://www.slorta.org/fares/passes/
+final_url: https://www.slorta.org/fares/passes/
+fetch_date: '2026-08-14'
+http_status: 200
+format: html
+sha256: ed16b07566d942431c8c4128215e715a55caf3c5a2b26cd27871ea7399112d6e
+bytes: 106774

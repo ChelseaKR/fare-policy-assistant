@@ -1,5 +1,5 @@
 # Discount Fare Card (Access San Joaquin) — SJRTD
-Source: https://sanjoaquinrtd.com/access-sj/dfc/ (fetched 2026-08-14)
+Source: https://sanjoaquinrtd.com/access-sj/dfc/ (fetched 2026-10-19)
 
 ## Who is Eligible?
 

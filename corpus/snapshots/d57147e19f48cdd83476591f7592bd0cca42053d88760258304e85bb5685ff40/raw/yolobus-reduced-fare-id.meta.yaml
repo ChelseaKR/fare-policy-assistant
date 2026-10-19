@@ -1,0 +1,8 @@
+doc_id: yolobus-reduced-fare-id
+url: https://yolobus.com/reducedfareid/
+final_url: https://yolobus.com/reducedfareid/
+fetch_date: '2026-10-19'
+http_status: 200
+format: html
+sha256: 71e9e58b16c22ee5f4ee0bf5d1eb753d8941cc7b2c57d65e4a1a250452ba2c9f
+bytes: 74721

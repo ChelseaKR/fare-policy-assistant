@@ -1,8 +1,8 @@
 doc_id: mst-veterans-resource
 url: https://mst.org/mobility/veterans-resource/
 final_url: https://mst.org/mobility/veterans-resource/
-fetch_date: '2026-06-12'
+fetch_date: '2026-10-19'
 http_status: 200
 format: html
-sha256: 69144906e9e5ce4cfb5761b37ec20cb0bbf3dab61f1ba09d6208dcbbf7a3857a
-bytes: 115584
+sha256: 3c687d1581feb9aa5410fcc6f680f7be1a4691b13da8293d76dabe389cf22241
+bytes: 121339

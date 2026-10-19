@@ -1,5 +1,5 @@
 # Programa de Tarifas Reducidas (Spanish reduced-fare instructions) — FAX
-Source: https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf (fetched 2026-08-13)
+Source: https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf (fetched 2026-10-19)
 
 ## Un programa para personas con discapacidades que viajan en
 

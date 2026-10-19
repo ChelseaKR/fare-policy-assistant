@@ -1,8 +1,8 @@
 doc_id: cccta-transfers
 url: https://countyconnection.com/fares/transfers/
 final_url: https://countyconnection.com/fares/transfers/
-fetch_date: '2026-08-14'
+fetch_date: '2026-10-19'
 http_status: 200
 format: html
-sha256: b50e238b407329ad5c64c2d0539d697f718076c60bb5ebea02fb08bae0bc6092
-bytes: 46699
+sha256: fc327189e582db4814391c25fe1c4b8a2beb6e9cb4677849ede015acf956d518
+bytes: 47478

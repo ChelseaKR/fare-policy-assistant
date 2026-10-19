@@ -1,5 +1,5 @@
 # Fare Types & Prices — CCCTA
-Source: https://countyconnection.com/fares/fare-types-prices/ (fetched 2026-08-14)
+Source: https://countyconnection.com/fares/fare-types-prices/ (fetched 2026-10-19)
 
 ## (page top)
 

@@ -1,0 +1,8 @@
+doc_id: cccta-fare-types-prices
+url: https://countyconnection.com/fares/fare-types-prices/
+final_url: https://countyconnection.com/fares/fare-types-prices/
+fetch_date: '2026-10-19'
+http_status: 200
+format: html
+sha256: 76dd5c1371246e6796debe83e2e4428ee289d1d054d4ef6e6841a343716f8b7c
+bytes: 60992

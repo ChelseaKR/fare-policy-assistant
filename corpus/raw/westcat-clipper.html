@@ -75,7 +75,7 @@
         .promo {
             min-height: 125px;
             border-radius: 5px 5px;
-            background-image: url("/Content/Images/2026-Top-banner-pass2class-lg.png");
+            background-image: url("/Content/Images/2026-Top-banner-financial-lg.png");
             background-position-x: center;
             background-repeat: no-repeat;
             background-size: cover;
@@ -87,7 +87,7 @@
         .promoB {
             min-height: 125px;
             border-radius: 5px 5px;
-            background-image: url("/Content/Images/2026-Top-banner-pass2class-lg.png");
+            background-image: url("/Content/Images/2026-Top-banner-financial-lg.png");
             background-position-x: center;
             background-repeat: no-repeat;
             background-size: cover;
@@ -98,13 +98,13 @@
 
         @media only screen and (max-width:1300px) {
             .promo {
-                background-image: url("/Content/Images/2026-Top-banner-pass2class-md.png");
+                background-image: url("/Content/Images/2026-Top-banner-financial-md.png");
             }
         }
 
         @media only screen and (max-width:700px) {
             .promo {
-                background-image: url("/Content/Images/2026-Top-banner-pass2class-sm.png");
+                background-image: url("/Content/Images/2026-Top-banner-financial-sm.png");
             }
 
             .logo {
@@ -210,7 +210,7 @@
                                             <p><a href="/home/SchedSysMap"><span class="schedDropItemHead">SYSTEM MAP with ALL ROUTES</span></a></p>
                                             <p><a href="/home/SchedHoliday"><span class="schedDropItemHead">HOLIDAY SCHEDULE</span></a></p>
 
-                                            <p><a href="/Content/Pdf/Feb-2026-schedule.pdf" target="_blank"><span class="schedDropItemHead">PRINTABLE SCHEDULE (PDF)</span></a></p>
+                                            <p><a href="/Content/Pdf/09122026-Schedule.pdf" target="_blank"><span class="schedDropItemHead">PRINTABLE SCHEDULE (PDF)</span></a></p>
                                         </div>
                                         <div class="col-sm-3 navColumnLine">
                                             <p class="schedDropItemHead">WEEKDAY ROUTES</p>
@@ -358,11 +358,11 @@
             </p>
             <p>
                 <h2>Boarding Requirements</h2>
-               <ul>
-                   <li>Adult / Youth Cards: Must hold at least $1.75 in cash value, or have a valid pass loaded.</li>
-                   <li>Senior / Access (formerly RTC) Cards: Must hold at least $0.75 in cash value, or have a valid pass loaded.</li>
-                   <li>Tagging: Always tap your card on the reader near the front door when boarding and wait for the green light and beep.</li>
-                   </ul>
+                <ul>
+                    <li>Adult / Youth Cards: Must hold at least $1.75 in cash value, or have a valid pass loaded.</li>
+                    <li>Senior / Access (formerly RTC) Cards: Must hold at least $0.75 in cash value, or have a valid pass loaded.</li>
+                    <li>Tagging: Always tap your card on the reader near the front door when boarding and wait for the green light and beep.</li>
+                </ul>
             </p>
             <p>For more information on how to use Clipper, see the guide at <a href="https://www.clippercard.com/westcat" target="_blank" class="linkBU">ClipperCard.com/westcat</a> or call WestCAT at (510) 724-7993.</p>
             <p>
@@ -373,7 +373,8 @@
                     <li>Download the Clipper mobile app from the App Store or Google Play to get a virtual card.</li>
                     <li>Order a physical card at <a href="https://www.clippercard.com/" target="_blank" class="linkBU">clippercard.com </a></li>
                     <li>Purchase Adult Clipper cards at BART Ticket Vending Machines (TVMs) or at participating Walgreens locations.</li>
-                    <li>Obtain a card in-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.).</li>
+                    <li>Obtain an Adult, Senior, or Youth Clipper card in-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.).</li>
+                    <li>You will need to verify your birth date with an accepted form of identification for a Youth or Senior Clipper card.</li>
                 </ul>
             </p>
             <p>
@@ -390,7 +391,7 @@
             </p>
             <p>
                 <h2>Adding Value and Passes</h2>
-                Add value through the Clipper app, Clipper website, BART Ticket Vending Machines, in-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.) or at participating Walgreens locations.<br />
+                Add value through the Clipper app, Clipper website, BART Ticket Vending Machines, in-person at the WestCAT Administrative Office in Pinole (Monday - Thursday, 9 a.m. to 4 p.m.), or at participating Walgreens locations.<br />
                 Products loaded online or by phone may take up to three to five days to appear. </br>
                 Autoload can automatically reload your card when your balance is low.
             </p>
@@ -400,7 +401,17 @@
                 Riders must apply for and use the START card. Apply online at <a href="https://www.clipperstartcard.com/s/" target="_blank" class="linkBU"> www.clipperstartcard.com </a>
             </p>
             <p>
-                <h2> Checking Balances</h2>
+                <h2>Clipper Access (Formerly RTC)</h2>
+                Formerly known as RTC, Clipper Access is a Bay Area transit discount card that riders under age 65 with qualifying disabilities can apply for. <br />To apply for a Clipper Access card, you'll need to visit a participating transit agency location. <br />
+                Qualified applicants are then mailed their Clipper Access card. <br />
+                For more information about eligibility, how to apply, how to renew and how attendant cards work, visit <a href="https://www.511.org/travel/transit/clipper-access/" target="_blank" class="linkBU"> www.511.org/travel/transit/clipper-access</a>
+
+                </p>
+            <p>
+            The nearest location processing Clipper Access cards is County Connection located at 2477 Arnold Industrial Way, Concord, CA 94520.<br /> Applications accepted Mon–Fri, 8am–3pm; Phone: (925) 676-7500
+                
+            </p>
+                <h2> Checking Clipper Card Balances</h2>
                 Balances no longer display on validators but can be checked anytime:
                 <ul>
                     <li>In real-time via the Clipper app or website (for registered cards).</li>
@@ -522,9 +533,11 @@
             var rindex = 1;
             var timer = setInterval(switchBanner, 5000);
             var items = [
+
+                { image: "2026-Top-banner-financial", link: "https://westcat.org/Home/FinancialFuture" },
                 { image: "2023-take-10", link: "https://511contracosta.org/transit/lynx-take-10" },
                 { image: "2026-Top-banner-Travel-Trainer", link: "/home/TravelTraining" },
-                { image: "2026-Top-banner-pass2class", link: "/home/PromoPass2Class" },             
+                          
                 { image: "2025-Top-banner-transit", link: "https://westcat.org/Home/TransitApp" },
                 { image: "2024-top-clipper", link: "https://www.clipperstartcard.com/s/" }
 

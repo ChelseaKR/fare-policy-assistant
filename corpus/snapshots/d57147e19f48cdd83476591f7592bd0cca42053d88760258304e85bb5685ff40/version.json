@@ -1,0 +1,468 @@
+{
+  "agencies": [
+    "AC Transit",
+    "CCCTA",
+    "E-tran",
+    "FAX",
+    "HTA",
+    "MST",
+    "Marin Transit",
+    "SBMTD",
+    "SCMTD",
+    "SJRTD",
+    "SLORTA",
+    "SacRT",
+    "SamTrans",
+    "SolTrans",
+    "VINE",
+    "VTA",
+    "WestCAT",
+    "Yolobus"
+  ],
+  "archive_schema": 2,
+  "archived_at": "2026-10-19T08:32:06+00:00",
+  "artifacts": {
+    "chunks.jsonl": {
+      "bytes": 363297,
+      "sha256": "af80c3edc53f87328a16ae15e358d01270dfe7899810b1c644d633eea1628915"
+    },
+    "manifest.snapshot.yaml": {
+      "bytes": 11192,
+      "sha256": "7ff7b117a6d01cdd22d90f9e6ac8b0025777124c8d05cbe2d3cd1cedab139cac"
+    },
+    "raw/actransit-discounts.html": {
+      "bytes": 46116,
+      "sha256": "db714ef99a71b0e58fcc9f9b495b1b750991b6c73b62434b470a0a8c08470d2b"
+    },
+    "raw/actransit-discounts.meta.yaml": {
+      "bytes": 257,
+      "sha256": "05c70df634451fd2e3d02f9de4c7ca149ccfebf10a7de9ae4ef83e6cda4c2ef2"
+    },
+    "raw/actransit-fares-es.html": {
+      "bytes": 59445,
+      "sha256": "7b8514a308562ca5e407c5935c7fd549640028cd2b0b06a118aecee860257218"
+    },
+    "raw/actransit-fares-es.meta.yaml": {
+      "bytes": 254,
+      "sha256": "ea181c58dbb401c1a0422bc70e7db10b3ab05bd731cdbd1e3f3bcca7065bc821"
+    },
+    "raw/actransit-fares.html": {
+      "bytes": 58638,
+      "sha256": "63b1b9a292cc906e9a14626917a404bc2acdb4885b0dd4017495b458fefaf2a6"
+    },
+    "raw/actransit-fares.meta.yaml": {
+      "bytes": 245,
+      "sha256": "0dde9ed95ea2da1ad569033223900992dccaffbd252ef6042f96fdad751b5ac8"
+    },
+    "raw/cccta-clipper-card.html": {
+      "bytes": 69443,
+      "sha256": "3a142982a004a4aeb0b046fa0b2b6c3f69f18ef437a59cb546cfcce0b9810bfb"
+    },
+    "raw/cccta-clipper-card.meta.yaml": {
+      "bytes": 282,
+      "sha256": "fda870a4389fcfd93cb23c031cf02b5efe50b5070fbd7aedf4c6316765801d09"
+    },
+    "raw/cccta-fare-types-prices.html": {
+      "bytes": 60992,
+      "sha256": "76dd5c1371246e6796debe83e2e4428ee289d1d054d4ef6e6841a343716f8b7c"
+    },
+    "raw/cccta-fare-types-prices.meta.yaml": {
+      "bytes": 297,
+      "sha256": "b544ed1608e25c109fde197615ce9ecd5e6097c628401aec070c6e8e0a1fade0"
+    },
+    "raw/cccta-link-fares.html": {
+      "bytes": 50737,
+      "sha256": "dbaa19b33f1d2bcd31cb8688586fba0e3ecca7ebf25e052a6c37959f85211b72"
+    },
+    "raw/cccta-link-fares.meta.yaml": {
+      "bytes": 278,
+      "sha256": "b3a59b732693c9e511298a630425fcae13505e653497271d571f11e4f671ae6f"
+    },
+    "raw/cccta-rtc-discount-card.html": {
+      "bytes": 60025,
+      "sha256": "a5c54227933b0437d3a08ee20ee7351883ee2dc2fe67d155f1456095b677abe4"
+    },
+    "raw/cccta-rtc-discount-card.meta.yaml": {
+      "bytes": 313,
+      "sha256": "8b5410c29edb784ac0342d9dc1e1f5f2b7901df60148e58ef748a90505fb0d53"
+    },
+    "raw/cccta-transfers.html": {
+      "bytes": 47478,
+      "sha256": "fc327189e582db4814391c25fe1c4b8a2beb6e9cb4677849ede015acf956d518"
+    },
+    "raw/cccta-transfers.meta.yaml": {
+      "bytes": 273,
+      "sha256": "15103c1d703f0bacb225c8572b1b4a4c4ddb850c8f8ee509939209cd591b55e8"
+    },
+    "raw/etran-fares.html": {
+      "bytes": 156782,
+      "sha256": "bae3c0c0304f440d98a8527432125887d44c47f71a3a313e3a2fec93d335d526"
+    },
+    "raw/etran-fares.meta.yaml": {
+      "bytes": 272,
+      "sha256": "c54dbbc393a2a016be99f3e9fbea7b4f49b399f32e677ff7bd10ea8860c55473"
+    },
+    "raw/etran-senior-pass.html": {
+      "bytes": 162387,
+      "sha256": "30991f5d7ea09c33a3250dd8ba15e250394426e565120663cf4f1b1bfe82c6b5"
+    },
+    "raw/etran-senior-pass.meta.yaml": {
+      "bytes": 248,
+      "sha256": "9353942f0387287e2bd1f53b28646afd40da83964ae928f8e89ae69c5a5c396e"
+    },
+    "raw/fax-fares.html": {
+      "bytes": 93302,
+      "sha256": "ca7fbc33a50a899576667d51efbcf7d6ba86e13c2438ccedc03d9285f4052abe"
+    },
+    "raw/fax-fares.meta.yaml": {
+      "bytes": 279,
+      "sha256": "283346a283cfc938e027841f14c8a25727f8f126357bea46b4c2564d377692b4"
+    },
+    "raw/fax-reduced-fare-program-es.meta.yaml": {
+      "bytes": 423,
+      "sha256": "c13661fd4e2066e702efb6a2ac96981059cd0231b8d0e614c385b28e6179cbe8"
+    },
+    "raw/fax-reduced-fare-program-es.pdf": {
+      "bytes": 427991,
+      "sha256": "5f22de21d7a7d1dffabd3bc434ec3631fbe34ea47595e7d0afc4b6351f952573"
+    },
+    "raw/fax-reduced-fare-program.meta.yaml": {
+      "bytes": 424,
+      "sha256": "b777b8070001e204c6768f7f38f3d19ff0787aad7ba06d4cf436742a381335cb"
+    },
+    "raw/fax-reduced-fare-program.pdf": {
+      "bytes": 413028,
+      "sha256": "0fc1a59a8db4a46415ffb1f63435326b0698c1004286049fda7db096a17699e5"
+    },
+    "raw/hta-fares.html": {
+      "bytes": 139076,
+      "sha256": "3e6308e78efb127ee699e560283996f885bed3b42b35f6795dcab86c03fed080"
+    },
+    "raw/hta-fares.meta.yaml": {
+      "bytes": 222,
+      "sha256": "e43939fac80600c64412cce7b2eb1365df4d6d6731784310b85b091994f6b0ac"
+    },
+    "raw/marin-31day-transition.html": {
+      "bytes": 35551,
+      "sha256": "b127d4c8be1c480e5bb01dc6568a825682deacb3aa9d9bd114659791e8eca3b5"
+    },
+    "raw/marin-31day-transition.meta.yaml": {
+      "bytes": 286,
+      "sha256": "6388d1c1e94c0db84f669b9dbc471c2b8e3bca4c54f8790452cd96b417e6d30c"
+    },
+    "raw/marin-clipper.html": {
+      "bytes": 45056,
+      "sha256": "06255d6664554cc484ea5889234cc69ff8cb87f05e399800c9a8821e804320e7"
+    },
+    "raw/marin-clipper.meta.yaml": {
+      "bytes": 271,
+      "sha256": "e72deb5104893f49b0a8d3f25031d472beb715070cb85f72e5bd7e4bad0329fe"
+    },
+    "raw/marin-fares.html": {
+      "bytes": 41311,
+      "sha256": "e39cd384ee3f1bb85edb7c5ff7f055a19061d3959867aa6f43e33af515e7087d"
+    },
+    "raw/marin-fares.meta.yaml": {
+      "bytes": 239,
+      "sha256": "fcc4ff1cdf85022e2e173d24d7dce7e81e1613366204955c222117f989b621e1"
+    },
+    "raw/mst-fares-benefits.html": {
+      "bytes": 117124,
+      "sha256": "4714c534af185e65ec6dc9e2ec271a5d815cf3cfdd88445b24d47ba9ab84990f"
+    },
+    "raw/mst-fares-benefits.meta.yaml": {
+      "bytes": 249,
+      "sha256": "537a8a6ecc1aec0c1bd1e02700b80f9a4797d76c1dfe9be66c25e6c4eada998f"
+    },
+    "raw/mst-fares-es.html": {
+      "bytes": 146422,
+      "sha256": "ff012f8c7986ed517d3fa7ae0a97f7c61e2fd2710b7e0d118893514b0f7b333d"
+    },
+    "raw/mst-fares-es.meta.yaml": {
+      "bytes": 231,
+      "sha256": "c76812487842e985b8ca5253cf2affcc28eedde084ea41f3ba75deed9fde67cd"
+    },
+    "raw/mst-fares.html": {
+      "bytes": 146944,
+      "sha256": "06225abd57632ac05dd3c8d4b8ce19e1db0a845ae890bc68fd1c14b339ad8008"
+    },
+    "raw/mst-fares.meta.yaml": {
+      "bytes": 222,
+      "sha256": "0cc5fddbcdd2018bdb779f19ea809f33e3f4f5251829dc7c7bd5c776af41d45b"
+    },
+    "raw/mst-veterans-resource.html": {
+      "bytes": 121339,
+      "sha256": "3c687d1581feb9aa5410fcc6f680f7be1a4691b13da8293d76dabe389cf22241"
+    },
+    "raw/mst-veterans-resource.meta.yaml": {
+      "bytes": 276,
+      "sha256": "9bc183c982d834d439eb1a9aba1ce66be568aba33e673570dbcf9e2353204175"
+    },
+    "raw/sacrt-fares.html": {
+      "bytes": 284132,
+      "sha256": "ba1bcdd2c411ec70ad9445e0383128c613e3ec21012be466be6ff5e286d4b63c"
+    },
+    "raw/sacrt-fares.meta.yaml": {
+      "bytes": 236,
+      "sha256": "0f23a5bff87d61327bbb470237c8d40454ad6ce5a695cc22b38593806940cfc0"
+    },
+    "raw/samtrans-clipper.html": {
+      "bytes": 130206,
+      "sha256": "1f7099e985222bec4bbfc419fb77f70ed3ac4b0969286451233f771d05aed2f0"
+    },
+    "raw/samtrans-clipper.meta.yaml": {
+      "bytes": 261,
+      "sha256": "078d91114cd5b77c37da1837e472914bd9bf0306ade0e2abee07b4750e00f4a2"
+    },
+    "raw/samtrans-fare-types.html": {
+      "bytes": 106323,
+      "sha256": "abd55978fb57603bd9acfaf961b047370a2177f80f4310ec42e8fd3f7de9a5a4"
+    },
+    "raw/samtrans-fare-types.meta.yaml": {
+      "bytes": 270,
+      "sha256": "b499f1878cf8be3516fcf7c9f65c4719a158316475e45ccb7b835d95a97aeed0"
+    },
+    "raw/samtrans-fares.html": {
+      "bytes": 101277,
+      "sha256": "948f8e4ccb5576f10b84880719554af509ef0c9191d3c4dc86abb41ce239c4d5"
+    },
+    "raw/samtrans-fares.meta.yaml": {
+      "bytes": 243,
+      "sha256": "3000d300c18fe7f4380f44d22065a81661aa519b9e073d9493457787c9a0e61e"
+    },
+    "raw/sbmtd-farechange.html": {
+      "bytes": 185014,
+      "sha256": "95d34fbbe4fa18f8d4d0413a3ef5eb398b00707f9e9ae220936ebfc03926b321"
+    },
+    "raw/sbmtd-farechange.meta.yaml": {
+      "bytes": 243,
+      "sha256": "40503aefa99cdf004cc9f0b0555bab417398995fb642aece96be5d23b57986ff"
+    },
+    "raw/sbmtd-fares-passes.html": {
+      "bytes": 124200,
+      "sha256": "325e33a3224ca7e7ac6fe4710630344942a988bbcecf2db61da1573f0cadb297"
+    },
+    "raw/sbmtd-fares-passes.meta.yaml": {
+      "bytes": 249,
+      "sha256": "598ddec66932c2f24414101c2608f517e8187bff2a263796aaf2c9020a11fd97"
+    },
+    "raw/scmtd-accessibility.html": {
+      "bytes": 126712,
+      "sha256": "c830bf8628d486cd50e64e2d9b74d08e3f45bfa61c691541f9c08a2482f42c5e"
+    },
+    "raw/scmtd-accessibility.meta.yaml": {
+      "bytes": 278,
+      "sha256": "e72ab5aecdaf7cd53e1b4ac62a3c26ee8145df9393276a5a41a32531ee29a502"
+    },
+    "raw/scmtd-fares-passes.html": {
+      "bytes": 139572,
+      "sha256": "cf1f4ceccb5451082a9c283376609fd7c378ba3494af3a89b71c3e81501208f8"
+    },
+    "raw/scmtd-fares-passes.meta.yaml": {
+      "bytes": 275,
+      "sha256": "46b1d20a77b2ba6a605f1d000b4edd4b53e82cd904ab31ab27411678742284bb"
+    },
+    "raw/scmtd-tap2cruz.html": {
+      "bytes": 87522,
+      "sha256": "f8c9b4150de063fb485812ba20a82c7065319ebcbad44483a3b7cfe58bac8dc8"
+    },
+    "raw/scmtd-tap2cruz.meta.yaml": {
+      "bytes": 240,
+      "sha256": "79ad89c5567f87680e09a9673e10d797b7190f289aaec74ca136dcc8ba8c5589"
+    },
+    "raw/sjrtd-dfc.html": {
+      "bytes": 112403,
+      "sha256": "2e21d590338f50c22210f857af877f5bfe0703d56899d312fd8cde7927c5ef15"
+    },
+    "raw/sjrtd-dfc.meta.yaml": {
+      "bytes": 258,
+      "sha256": "5923ddefb944d3961a280a4220c86f798221c85da8864719b76e54bc2aceaa2c"
+    },
+    "raw/sjrtd-fares.html": {
+      "bytes": 146439,
+      "sha256": "839c902687705191467ce6bdb4291d69437c2a9fbcefce025b2d38fa58035630"
+    },
+    "raw/sjrtd-fares.meta.yaml": {
+      "bytes": 244,
+      "sha256": "201a06ab8aa3665305146795ffdc3eeefb76236a6cc3b89445a4507f8de086eb"
+    },
+    "raw/slorta-contactless.html": {
+      "bytes": 111480,
+      "sha256": "1ddc8c353361d27246fd0bf3ada4cb6edc57c40e516262f1bc5d79686869a4f6"
+    },
+    "raw/slorta-contactless.meta.yaml": {
+      "bytes": 269,
+      "sha256": "1108881919f28fc8abafd1a714b212e474b2b5592d5e07b879b449f624a85488"
+    },
+    "raw/slorta-discounts.html": {
+      "bytes": 103394,
+      "sha256": "a4b6f18a4935549cd73ac0883d7de58ac93c357a122e34af6d8bcdbab7faa2c7"
+    },
+    "raw/slorta-discounts.meta.yaml": {
+      "bytes": 263,
+      "sha256": "fe985e84bc94bb930a2b6cdb1f6f06a25ce65cf6688004f581c335b58c3b5002"
+    },
+    "raw/slorta-fares.html": {
+      "bytes": 99099,
+      "sha256": "b92e3be48819deebce6d9ececb1056903c4614f4f256b80255cef2bdf810c24a"
+    },
+    "raw/slorta-fares.meta.yaml": {
+      "bytes": 238,
+      "sha256": "ebca1cabb5ef427a08bedc34a404bd94246b5834b7c04805fc7e7a6f3f0d56b8"
+    },
+    "raw/slorta-passes.html": {
+      "bytes": 106774,
+      "sha256": "ed16b07566d942431c8c4128215e715a55caf3c5a2b26cd27871ea7399112d6e"
+    },
+    "raw/slorta-passes.meta.yaml": {
+      "bytes": 254,
+      "sha256": "5989de69f24e639d04a273bcf51cf9897dca2e62e6a96e9e73c64cccc340504a"
+    },
+    "raw/soltrans-clipper-card.html": {
+      "bytes": 40389,
+      "sha256": "02a08dd4b40afc21aa1f66593e7bd048e1f0a4570af7984db3517b1501c6dffc"
+    },
+    "raw/soltrans-clipper-card.meta.yaml": {
+      "bytes": 275,
+      "sha256": "cf6b5f3687e485f7c857d5f49abc425dd21c18b70172fdd6b3fe8c3f0225d603"
+    },
+    "raw/soltrans-fare-table.html": {
+      "bytes": 57026,
+      "sha256": "a6846ffc0f1266b8546954e5df17f0368b2ad9c9cb1750e54af59c9b1f06de9d"
+    },
+    "raw/soltrans-fare-table.meta.yaml": {
+      "bytes": 269,
+      "sha256": "5a54b7180e1681a5e845cb4d4a9107ea859a910e99336dab247df71957252720"
+    },
+    "raw/soltrans-paperless-fares.html": {
+      "bytes": 38510,
+      "sha256": "57410d10ad3f85b1863cddd308f7f1aa96cc835b68b0be6dc78fc7b1b74a7540"
+    },
+    "raw/soltrans-paperless-fares.meta.yaml": {
+      "bytes": 324,
+      "sha256": "d638f56beca1eb1694c489f5abb9ae44bcd37a31fb950b494576dbf9d62db132"
+    },
+    "raw/soltrans-ways-to-pay.html": {
+      "bytes": 38394,
+      "sha256": "f34dcc22e5b6121501034692208ce6bfc60c59efac709a45973b0711e737736d"
+    },
+    "raw/soltrans-ways-to-pay.meta.yaml": {
+      "bytes": 272,
+      "sha256": "5aa11f415e5e340e51c911b4779dfc6289c56ac3a22c3c0a8ba41838547a9949"
+    },
+    "raw/vine-fares.html": {
+      "bytes": 48310,
+      "sha256": "b5995a7323d3c63528a8f98616c00afbeba9a771f85abe95a983492d9d6fc0d8"
+    },
+    "raw/vine-fares.meta.yaml": {
+      "bytes": 238,
+      "sha256": "a2bc62a8c38ba37701558322b59c7dca2fb3cdc5864a150871e9258095fd9495"
+    },
+    "raw/vine-go.html": {
+      "bytes": 58562,
+      "sha256": "5963365531f1ce76ec13394c8a6b89aa9c6ee4c9c6141922c4e381b4b86c3dfc"
+    },
+    "raw/vine-go.meta.yaml": {
+      "bytes": 239,
+      "sha256": "3d48f9272a5fa072ba22d47c461368bad99e093a155fd29784ec1d72c5896d9d"
+    },
+    "raw/vta-fares.html": {
+      "bytes": 108991,
+      "sha256": "8da07f24a0a59c75a009f9ffb3ab5a34ca2b4b4359a01bdd986271f8be142358"
+    },
+    "raw/vta-fares.meta.yaml": {
+      "bytes": 234,
+      "sha256": "d0fd8ee736fd13719a7828e973847b46ac8e831e2092cc78c8b85ecc3896e8f2"
+    },
+    "raw/vta-regional-transfers.html": {
+      "bytes": 72745,
+      "sha256": "745187b20bc216c62015cafeeff2ccbfa42414e2f298e9bf32d465b3b1519c65"
+    },
+    "raw/vta-regional-transfers.meta.yaml": {
+      "bytes": 284,
+      "sha256": "80b637656deae6a1a53c724fc3edbcc3fd0f5ab06960112cbda31fb904fcbef2"
+    },
+    "raw/vta-rtc-card.html": {
+      "bytes": 56926,
+      "sha256": "731453b17f59498bf526c7647fc5f33ebf77f11ab1d2abd965a268dd80eb3e01"
+    },
+    "raw/vta-rtc-card.meta.yaml": {
+      "bytes": 296,
+      "sha256": "6996c72883794dd419f8ab1d82549a68d35ca09aa6c681355481f4c874ebe7c1"
+    },
+    "raw/westcat-buying.html": {
+      "bytes": 27140,
+      "sha256": "600a5bf702496235cc1ea8b29d5c4a0c48d9f2e55f63e6f0f646c4c1d421fec0"
+    },
+    "raw/westcat-buying.meta.yaml": {
+      "bytes": 262,
+      "sha256": "4d0c9a82452b32e8297a5a9d18cc8fd4c569f8170171a56fa7da1ff0bfcb444f"
+    },
+    "raw/westcat-clipper.html": {
+      "bytes": 30985,
+      "sha256": "3d7a7383d92b5a2ef0550191c38a2899c90485f70039d2c8727be8b0156e27f0"
+    },
+    "raw/westcat-clipper.meta.yaml": {
+      "bytes": 265,
+      "sha256": "4ad1fb2fc5a395ab2241a9783653375a6075e880a8d3afa2cdb4af3979f3644c"
+    },
+    "raw/westcat-fares-all.html": {
+      "bytes": 37063,
+      "sha256": "1677646ae610bb2ff66e046d2ea98d499b97e0170f3cddb3ad10bf1e2af510fe"
+    },
+    "raw/westcat-fares-all.meta.yaml": {
+      "bytes": 259,
+      "sha256": "daaedc36d1af6287a4dd0df7932c333c0369506d85f0f0546b32b4305caea75f"
+    },
+    "raw/westcat-transfers.html": {
+      "bytes": 28051,
+      "sha256": "0b347ab7b3ce677f6932a60daab6c1a3f4dafc84acdfb2e8bd535f202d95f3f5"
+    },
+    "raw/westcat-transfers.meta.yaml": {
+      "bytes": 271,
+      "sha256": "5cc7fb7f651f87f22b71b2177971cbaad9ff85731679eb0b60f3ccadc5ab6512"
+    },
+    "raw/yolobus-fares.html": {
+      "bytes": 92022,
+      "sha256": "75a822622aea92d90c16af3aaf13de2112e9eb3dc946507efbe18cafa8d39c6a"
+    },
+    "raw/yolobus-fares.meta.yaml": {
+      "bytes": 233,
+      "sha256": "36c6d1cf1ffa5c6f83d26baf469473b0cfce751fa741bb9205bbbfe5488bb3a3"
+    },
+    "raw/yolobus-purchasing.html": {
+      "bytes": 81956,
+      "sha256": "4c1112f6826aa43a98bbe8cb98c0fb7bd72cb7ae9aa966da1edd4a983a9971a4"
+    },
+    "raw/yolobus-purchasing.meta.yaml": {
+      "bytes": 282,
+      "sha256": "f1b09baac3280e0866fe84fdf29842184a8fe850ac745c28bfbf7c3dc5b2a492"
+    },
+    "raw/yolobus-reduced-fare-id.html": {
+      "bytes": 74721,
+      "sha256": "71e9e58b16c22ee5f4ee0bf5d1eb753d8941cc7b2c57d65e4a1a250452ba2c9f"
+    },
+    "raw/yolobus-reduced-fare-id.meta.yaml": {
+      "bytes": 259,
+      "sha256": "813a768915025b13f88512de722936725c5ae1089df824fb1b40d635b98fab32"
+    },
+    "source-evidence.json": {
+      "bytes": 20656,
+      "sha256": "76056f291f4f641c388bbd0508af1ac2d4a675125488d956f7a04f5576f0ba7a"
+    }
+  },
+  "as_of": "2026-10-19",
+  "chunks": 302,
+  "content_version": "682fd93a350e27e313c3c4086f6b318670b48e9703889f35489cfb50d71b2c76",
+  "content_version_short": "682fd93a350e",
+  "corpus_version": "dd1b5677d084",
+  "documents": 52,
+  "evidence": "raw_and_receipts_verified",
+  "identity_schemas": {
+    "content": "fare-assistant.content.v1",
+    "snapshot": "fare-assistant.snapshot.v1"
+  },
+  "scope": "web_policy",
+  "snapshot_version": "d57147e19f48cdd83476591f7592bd0cca42053d88760258304e85bb5685ff40",
+  "snapshot_version_short": "d57147e19f48"
+}

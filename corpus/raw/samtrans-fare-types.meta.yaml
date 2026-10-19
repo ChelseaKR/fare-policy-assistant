@@ -1,8 +1,8 @@
 doc_id: samtrans-fare-types
 url: https://www.samtrans.com/fares/fare-types
 final_url: https://www.samtrans.com/fares/fare-types
-fetch_date: '2026-08-14'
+fetch_date: '2026-10-19'
 http_status: 200
 format: html
-sha256: 1ef367505cb31a37ce8c6202c25c8bac2efad2280eed8b85cbb56e80225c81dd
-bytes: 106176
+sha256: abd55978fb57603bd9acfaf961b047370a2177f80f4310ec42e8fd3f7de9a5a4
+bytes: 106323

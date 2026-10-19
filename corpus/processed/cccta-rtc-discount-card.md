@@ -1,5 +1,5 @@
 # RTC Discount Card Program — CCCTA
-Source: https://countyconnection.com/fares/rtc-discount-card-program/ (fetched 2026-08-14)
+Source: https://countyconnection.com/fares/rtc-discount-card-program/ (fetched 2026-10-19)
 
 ## (page top)
 

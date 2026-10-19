@@ -1,22 +1,23 @@
 # Purchasing a Ticket or Pass — Yolobus
-Source: https://yolobus.com/purchasing-a-ticket-or-pass/ (fetched 2026-08-21)
+Source: https://yolobus.com/purchasing-a-ticket-or-pass/ (fetched 2026-10-19)
 
 ## How to Pay
 
-Riders have many choices when paying their fares. While fares can be paid onboard the bus with cash, contactless payment is more efficient and reduces bus boarding times—getting riders to their destinations faster. Contactless fare payment options include the Connect Card and the Transit Connect mobile app.
+Riders have many choices when paying their fares. While fares can be paid onboard the bus with cash, contactless payment is more efficient and reduces bus boarding times—getting riders to their destinations faster. Contactless fare payment options include the Connect Card, the Transit Connect mobile app, and onboard tap-to-pay methods.
 
 ## Connect Card
 
-Connect Card is the Sacramento region’s electronic transit fare payment system and is accepted by most transit agencies in the Sacramento region. Connect Card readers are installed on all Yolobus and BeeLine vehicles.
-To pay, tag the Connect Card reader with your card upon boarding the bus.
+Connect Card is the Sacramento region’s electronic transit fare payment system and is accepted by most transit agencies in the Sacramento region. Connect Card readers are installed on all Yolobus and BeeLine vehicles. To pay, tag the Connect Card reader with your card upon boarding the bus.
+Passes on Connect Card can be purchased with cash at the Yolobus Customer Service Center
 
 ## Mobile / Transit Connect
 
-The Transit Connect mobile fare app allows you to pre-purchase, store and activate tickets and passes instantly on your smartphone. Accepted on Yolobus and SacRT, with Unitrans joining in summer 2026. Download the free app from the App Store or Google Play.
+The Transit Connect mobile fare app allows you to pre-purchase, store and activate tickets and passes instantly on your smartphone. Accepted on Yolobus and SacRT, with Unitrans joining in 2026. Download the free app from the App Store or Google Play.
 
-## Cash
+## Onboard Options
 
-All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required, and bus operators don’t carry change or provide refunds. Passes on Connect Card can be purchased with cash at the Yolobus Customer Service Center.
+All Yolobus vehicles have fareboxes to accept cash payments. Exact change is required as our bus operators don’t carry change or provide refunds.
+New convenient payment options available on Yolobus fixed route buses include contactless-enabled credit card or debit card, Google Pay, and Apple Pay, and wearable devices such as smartwatches.
 In-Person Ticket and Pass Sales
 The Yolobus Customer Service Center in Woodland offers transit fare sales and Connect Card services.
 Business Hours

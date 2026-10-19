@@ -1,5 +1,5 @@
 # Reduced Fare Program Instructions — FAX
-Source: https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf (fetched 2026-08-13)
+Source: https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf (fetched 2026-10-19)
 
 ## REDUCED FARE PROGRAM
 
