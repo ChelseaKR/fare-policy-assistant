@@ -110,12 +110,19 @@ jobs:
       - name: Build the redacted report
         id: report
         run: |
+          # GitHub runs this as `bash -e`, and `set -uo pipefail` does not turn
+          # -e off. The script exits 1 when it has a finding, which is the
+          # normal case this workflow exists for, so a bare call would abort
+          # the step before the exit code was recorded and every later step
+          # would be skipped. `|| rc=$?` records the code without aborting; the
+          # verdict step below decides what the code means.
           set -uo pipefail
+          rc=0
           python3 tools/alarm_relay.py \
             --alarms "${RUNNER_TEMP}/alarms.json" \
             --topic "${RUNNER_TEMP}/topic.json" \
-            --out "${RUNNER_TEMP}/report.md"
-          echo "rc=$?" >> "${GITHUB_OUTPUT}"
+            --out "${RUNNER_TEMP}/report.md" || rc=$?
+          echo "rc=${rc}" >> "${GITHUB_OUTPUT}"
 
       # The exit code alone is not trusted. A crashed script also exits
       # non-zero, and an issue opened from a crash would assert a finding on no
