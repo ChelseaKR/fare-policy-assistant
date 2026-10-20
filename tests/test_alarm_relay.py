@@ -249,3 +249,61 @@ def test_main_exits_2_on_an_unreadable_input(tmp_path: Path) -> None:
     code = main(["--alarms", str(missing), "--topic", str(missing), "--out", str(out)])
     assert code == 2
     assert not out.exists(), "a failed read must not leave a report behind"
+
+
+# --- the workflow step that runs the script -------------------------------
+
+
+def _report_step_run() -> str:
+    import yaml
+
+    from assistant import config
+
+    text = (config.REPO_ROOT / ".github" / "workflows" / "alarm-relay.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.load(text, Loader=yaml.BaseLoader)
+    steps = [s for s in workflow["jobs"]["relay"]["steps"] if s.get("id") == "report"]
+    assert len(steps) == 1
+    return steps[0]["run"]
+
+
+def test_report_step_records_the_exit_code_instead_of_aborting_on_it() -> None:
+    """GitHub runs `run:` as `bash -e {0}`, which `set -uo pipefail` leaves on.
+
+    The script exits 1 on a finding, so a bare call aborts the step before
+    `rc` is written and the verdict and issue steps are skipped (run
+    39364694693). Execute the step's own shell with a stand-in script and
+    assert the step survives a non-zero exit and records the code.
+    """
+    import os
+    import subprocess
+    import tempfile
+
+    run = _report_step_run()
+    for code in ("0", "1", "2"):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            (tmp_path / "tools").mkdir()
+            (tmp_path / "tools" / "alarm_relay.py").write_text(
+                f"import sys\nsys.exit({code})\n", encoding="utf-8"
+            )
+            out = tmp_path / "github_output"
+            out.write_text("", encoding="utf-8")
+            env = {
+                **os.environ,
+                "RUNNER_TEMP": tmp,
+                "GITHUB_OUTPUT": str(out),
+            }
+            proc = subprocess.run(
+                ["bash", "-e", "-c", run],
+                cwd=tmp,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert proc.returncode == 0, (
+                f"the report step aborted on exit {code} before recording it: {proc.stderr}"
+            )
+            assert out.read_text(encoding="utf-8").splitlines() == [f"rc={code}"]
