@@ -106,17 +106,18 @@ def test_a_failing_eval_still_saves_the_calls_it_paid_for(job, next_job):
     )
 
 
-def test_one_scheduled_full_run_a_month_is_cold():
+def test_one_scheduled_full_run_a_quarter_is_cold():
     """ADR 0022 trades most nights of provider-drift detection for cost, and buys
-    it back with one cold run a month (weekly until the 2026-10-23 amendment).
+    it back with one cold run a quarter (weekly, then briefly monthly, until the
+    2026-10-23 amendments).
     If every nightly were cache-served, nothing would ever re-measure the
     provider."""
     workflow, _ = _ci_workflow()
     crons = [line for line in workflow.splitlines() if line.strip().startswith("- cron:")]
-    assert len(crons) >= 2, "expected a cached nightly cron and a separate cold monthly cron"
+    assert len(crons) >= 2, "expected a cached nightly cron and a separate cold quarterly cron"
     full_eval = _job("full-evals-nightly", "independent-audit")
     assert "--refresh-cache" in full_eval, (
-        "the monthly schedule must run the full suite with --refresh-cache, so it both "
+        "the quarterly schedule must run the full suite with --refresh-cache, so it both "
         "re-measures the provider and leaves the cache agreeing with what it published"
     )
     cold_cron = full_eval.split("github.event.schedule == '", 1)[1].split("'", 1)[0]

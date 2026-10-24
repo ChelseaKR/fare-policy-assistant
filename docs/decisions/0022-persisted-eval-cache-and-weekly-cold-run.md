@@ -123,3 +123,18 @@ evaluation is still its own full, live, `--no-cache` run at deploy time
 (`infra/deploy.sh`; ADR 0023), so a release never relies on a cached
 scoreboard. Anyone who wants a fresh measurement sooner, for example after a
 prompt or model change, can start the cold run by hand.
+
+## Second amendment, 2026-10-23: the cold run moves from monthly to quarterly
+
+The repository is now maintenance only: no new agencies, cases, prompts or
+eligibility logic. With nothing in the suite changing, a monthly re-measure
+mostly re-confirms the last one. **The cold run now fires on the first of
+January, April, July and October** (`17 9 1 1,4,7,10 *`). The cached nightly
+covers days 2-31 (`17 9 2-31 * *`) and the first of every other month
+(`17 9 1 2,3,5,6,8,9,11,12 *`), so exactly one full run still fires each day.
+That is about $3.50/month of Bedrock instead of about $10.50.
+
+**What is given up:** provider drift on a pinned model can now go unseen by CI
+for up to a quarter instead of up to a month. Release evaluation is unchanged
+(its own live `--no-cache` run in `infra/deploy.sh`), and the cold run can
+still be started by hand at any time.
