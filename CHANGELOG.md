@@ -86,6 +86,14 @@ rather than tied to a published tag.
     moving. They are real re-rankings, not a planted defect.
 
 ### Changed
+- **The cold full eval runs monthly instead of weekly** (2026-10-23, ADR 0022
+  amendment). The cold run moved from `17 9 * * 1` (every Monday) to `17 9 1 * *`
+  (the first of the month); the cached nightly moved from `17 9 * * 0,2-6` to
+  `17 9 2-31 * *`, so one full run still fires every day. Each cold run costs
+  about $10.47 of Bedrock (Sonnet 4.6 judging, role `fare-policy-assistant-ci`),
+  so this saves about $35/month. `ci.yml` gains `workflow_dispatch`, which runs
+  the cold suite on demand. Provider drift can now go unseen by CI for up to a
+  month; release evaluation at deploy time is unchanged and still uncached.
 - **Standards pin moved from portfolio-standards v1.0.1 to v3.0.0** (2026-10-02).
   The `standards` check failed on `main` and on every pull request: at v1.0.1,
   CI/CD, Code Quality, Quality & Metrics and the Responsible-Tech Framework were

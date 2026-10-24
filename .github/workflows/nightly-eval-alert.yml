@@ -62,7 +62,7 @@ name: Nightly eval alert
 on:
   schedule:
     # ci.yml's nightly cron fires at 09:17 UTC (both its cache-backed and its
-    # weekly cold variant). This polls two hours later: comfortably past every
+    # monthly cold variant). This polls two hours later: comfortably past every
     # observed nightly duration (the slowest of the last 20 runs was ~16
     # minutes) with headroom for GitHub's own scheduling jitter, so a run
     # still legitimately in progress is never mistaken for one that never

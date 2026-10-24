@@ -283,8 +283,10 @@ Both are served from a content-keyed cache of answer and judge calls, keyed on
 the rendered prompt text, so a change that cannot alter an answer is not paid
 for twice. Only the model call is cached: the deterministic checks, the
 regression gate, and the parity gate re-execute on every run. One nightly a
-week (Monday) bypasses the cache to re-measure the provider directly. See
-`docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md`.
+month (the 1st) bypasses the cache to re-measure the provider directly, and the
+same cold run can be started by hand from the Actions tab (`workflow_dispatch`).
+See `docs/decisions/0022-persisted-eval-cache-and-weekly-cold-run.md` and its
+2026-10-23 amendment.
 
 ### Stretch language: Tagalog
 

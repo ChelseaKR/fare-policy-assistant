@@ -21,9 +21,9 @@ card notes Bedrock is *not perfectly* deterministic, so:
     runs, where repeated identical calls must actually hit the network;
   * `--refresh-cache` reads nothing but writes everything, so a run can
     re-measure the provider from cold *and* leave the stored answers agreeing
-    with the scoreboard it just published. CI uses it for the weekly cold full
+    with the scoreboard it just published. CI uses it for the monthly cold full
     run (ADR 0022); a plain `--no-cache` run would re-measure but leave the
-    stored answers a week stale, so the next cached night would report numbers
+    stored answers a month stale, so the next cached night would report numbers
     the cold run had already contradicted.
 
 The maps are persisted across CI runs (`.github/workflows/ci.yml` caches
