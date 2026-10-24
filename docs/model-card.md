@@ -161,7 +161,7 @@ Known limits found by the harness so far:
   temperature 0, so an identical prompt against an identical pinned model
   returns an identical output. What moves the count between runs is whatever
   is upstream of that determinism — a newer corpus version, a bumped prompt,
-  or, on the weekly cold run that bypasses the cache, the provider changing
+  or, on the monthly cold run that bypasses the cache, the provider changing
   what a pinned model ID actually serves, which the persisted-cache decision
   treats as a real, separately-monitored risk rather than an assumption
   (`docs/decisions/0022`). The deterministic safety checks — no determination
