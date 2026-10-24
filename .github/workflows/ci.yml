@@ -6,16 +6,21 @@ on:
   pull_request:
   schedule:
     # Nightly full suite, served from the persisted answer/judge cache: an
-    # unchanged corpus and prompt set cost nothing to re-score. Monday's run is
-    # deliberately cold (--refresh-cache), so provider drift is still measured
-    # once a week against real model calls. See ADR 0022.
+    # unchanged corpus and prompt set cost nothing to re-score. The run on the
+    # first of each month is deliberately cold (--refresh-cache), so provider
+    # drift is still measured against real model calls once a month. It was
+    # weekly (Mondays) until 2026-10-23; each cold run costs about $10.47 of
+    # Bedrock, so monthly saves about $35/month. See ADR 0022 and its amendment.
     #
-    # GitHub's schedule cron only accepts day-of-week 0-6 (Sunday=0); "7" is
-    # out of range and fails workflow schema validation before any job runs
-    # (silent startup_failure, all required checks stay unreported). "Every
-    # day except Monday" is Sunday plus Tuesday-Saturday: 0,2-6.
-    - cron: "17 9 * * 0,2-6"  # nightly full suite (cache-backed)
-    - cron: "17 9 * * 1"      # weekly cold full suite (cache refreshed)
+    # The two entries split the month by day-of-month so exactly one fires on
+    # any day. Do not restrict both day-of-month and day-of-week in one entry
+    # (e.g. "1-7 * 1" for "first Monday"): POSIX cron ORs the two fields, so
+    # that fires on days 1-7 and on every Monday.
+    - cron: "17 9 2-31 * *"  # nightly full suite (cache-backed)
+    - cron: "17 9 1 * *"     # monthly cold full suite (cache refreshed)
+  # Manual trigger: runs the cold full suite on demand (for example before a
+  # release, or after a model or prompt change), plus the ordinary PR checks.
+  workflow_dispatch:
     #
     # A red run here used to be visible only in this tab: fourteen straight
     # nights of `failure` (2026-08-22 through 2026-09-04) went unnoticed
@@ -315,7 +320,7 @@ jobs:
           path: evals/runs/
 
   full-evals-nightly:
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -345,16 +350,17 @@ jobs:
           key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: eval-model-cache-
       - name: Full eval run
-        # Monday's schedule re-measures the provider for real and rewrites the
-        # stored answers; the other six nights re-score from cache. A plain
-        # --no-cache Monday would re-measure but leave the cache holding last
-        # week's answers, so Tuesday would publish numbers Monday contradicted.
+        # The first-of-month schedule (and any manual dispatch) re-measures the
+        # provider for real and rewrites the stored answers; every other night
+        # re-scores from cache. A plain --no-cache cold run would re-measure but
+        # leave the cache holding stale answers, so the next night would publish
+        # numbers the cold run had contradicted.
         #
         # This report is a comparison/research artifact (committed EVALS.md),
         # not promotion evidence: exact release evaluation is its own full,
         # live, --no-cache run at deploy time (infra/deploy.sh; ADR 0023).
         env:
-          CACHE_MODE: ${{ github.event.schedule == '17 9 * * 1' && '--refresh-cache' || '' }}
+          CACHE_MODE: ${{ (github.event.schedule == '17 9 1 * *' || github.event_name == 'workflow_dispatch') && '--refresh-cache' || '' }}
         run: uv run python -m evals.runner --full $CACHE_MODE
       - name: Save the answer/judge model cache
         # A red regression gate still paid for every call in the run. Saving on

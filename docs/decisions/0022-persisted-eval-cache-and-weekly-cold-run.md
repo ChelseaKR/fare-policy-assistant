@@ -94,3 +94,32 @@ Cache scope is per-ref. A pull request restores from its own branch and falls
 back to the default branch, so it inherits `main`'s warm cache; it can only
 write to its own scope, so no branch can poison `main`'s. Fork pull requests
 never receive AWS credentials and run the suite offline, unchanged.
+
+## Amendment, 2026-10-23: the cold run moves from weekly to monthly
+
+The cached nightlies worked as intended: on the other six days they cost about
+$0. The weekly cold run became the whole of the remaining bill. AWS Cost
+Explorer from 2026-09-01 to 2026-10-22 shows a flat $10.47-10.50 of Bedrock
+spend every Monday and almost nothing else, and CloudTrail for 2026-10-19
+attributes those calls to the `fare-policy-assistant-ci` role (session
+`GitHubActions`, model `us.anthropic.claude-sonnet-4-6`). That is about
+$45/month for a repository with no revenue.
+
+**The cold run now fires on the first of each month** (`17 9 1 * *`), and the
+cached nightly covers days 2-31 (`17 9 2-31 * *`), so exactly one full run
+fires each day. That is about $10.50/month instead of about $45, a saving of
+about $35/month. `ci.yml` also gains a `workflow_dispatch` trigger, which runs
+the same cold `--refresh-cache` suite on demand.
+
+The "first Monday" spelling `17 9 1-7 * 1` was rejected: when both
+day-of-month and day-of-week are restricted, POSIX cron fires when either
+matches, so that entry would run on days 1-7 and on every Monday. A test in
+`tests/test_workflow_safety.py` now fails on that shape.
+
+**What is given up:** provider drift on a pinned model can now go unseen by
+CI for up to a month instead of up to a week. Nothing else changes. The suite,
+cases, models, judge, thresholds and gates are untouched, and release
+evaluation is still its own full, live, `--no-cache` run at deploy time
+(`infra/deploy.sh`; ADR 0023), so a release never relies on a cached
+scoreboard. Anyone who wants a fresh measurement sooner, for example after a
+prompt or model change, can start the cold run by hand.
