@@ -9,6 +9,12 @@ public evaluation framework that measures whether it behaves. The eval harness
 is the point of this repo; the chatbot exists so the harness has something to
 evaluate.
 
+**Status: maintenance only (since 2026-10-23).** This repository is no longer
+under active development. It receives security, dependency and cost fixes only;
+no new features, agencies or eligibility logic will be added. The hosted rider
+assistant is being taken offline. The evaluation harness and the offline quick
+start below remain available.
+
 ## Quick start
 
 Requires [uv](https://docs.astral.sh/uv/). Snapshots of the corpus are
