@@ -1,5 +1,5 @@
 # Elk Grove Transit Fares — E-tran
-Source: https://www.sacrt.com/elk-grove-transit-fares/ (fetched 2026-08-13)
+Source: https://www.sacrt.com/elk-grove-transit-fares/ (fetched 2026-10-26)
 
 ## Elk Grove Transit Fares
 

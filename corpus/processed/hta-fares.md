@@ -1,5 +1,5 @@
 # Fares — HTA
-Source: https://hta.org/fares/ (fetched 2026-08-10)
+Source: https://hta.org/fares/ (fetched 2026-10-26)
 
 ## Fares & Passes
 
@@ -24,7 +24,7 @@ Stored Value passes ($10 or $20) are accepted on all Ride Humboldt Fixed Route S
 
 ## Contactless Tap-to-Pay System
 
-Pay for fares with your contactless credit or debit (Visa or Mastercard) card, or payment enabled device.
+Pay for fares with your contactless credit or debit (Visa, Mastercard, Discover, or Amex) card, or payment enabled device. Tap to pay is limited to one person per card.
 No bus ticket needed!
 When using the same payment card, enjoy automatic fare capping equal to our Day, Week, and Month Pass rates.
 Reduced fares are not eligible with this payment method.
@@ -55,7 +55,7 @@ Reduced fares are not eligible with these passes.
 Insert the pass when you board and the value of each ride will be deducted. The amount deducted will be either:
 $2 (all rides unless eligible for a reduced fare)
 $1 (all rides if eligible for a reduced fare)
-This is the only pass eligible for reduced fares. Let your driver know if you are entitled to a reduced fare before your insert your pass.
+This is the only pass eligible for reduced fares. Let your driver know if you are entitled to a reduced fare before you pay.
 Reduced Fare Eligibility Requirements:
 Seniors Aged 62+
 Youth Aged 3-17

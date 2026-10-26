@@ -1,5 +1,5 @@
 # LINK Fares (paratransit) — CCCTA
-Source: https://countyconnection.com/paratransit/fares/ (fetched 2026-08-14)
+Source: https://countyconnection.com/paratransit/fares/ (fetched 2026-10-26)
 
 ## Regular Fare
 

@@ -1,5 +1,5 @@
 # Elk Grove Senior Pass — E-tran
-Source: https://www.sacrt.com/egsenior/ (fetched 2026-08-13)
+Source: https://www.sacrt.com/egsenior/ (fetched 2026-10-26)
 
 ## Introducing the New Elk Grove Senior Transit Pass!
 

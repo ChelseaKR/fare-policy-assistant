@@ -1,0 +1,8 @@
+doc_id: slorta-contactless
+url: https://www.slorta.org/fares/contactless/
+final_url: https://www.slorta.org/fares/contactless/
+fetch_date: '2026-10-26'
+http_status: 200
+format: html
+sha256: e49d422b6fe5e5f6e2d9b05f11a75f31683d731f7d663c465f8297c3fa18fedd
+bytes: 112928

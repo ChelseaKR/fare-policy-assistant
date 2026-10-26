@@ -1,8 +1,8 @@
 doc_id: soltrans-clipper-card
 url: https://www.soltrans.org/fares/clipper-card
 final_url: https://www.soltrans.org/fares/clipper-card
-fetch_date: '2026-08-13'
+fetch_date: '2026-10-26'
 http_status: 200
 format: html
-sha256: ab374b9d1c90904a05b30be78932e5f7bb830e0c6406fd9bd072c0c8f90a8818
-bytes: 35806
+sha256: ad171c93b489e693b6233229fa52e2a759192ca3c23f89c7ef55c075bbccbc67
+bytes: 40459

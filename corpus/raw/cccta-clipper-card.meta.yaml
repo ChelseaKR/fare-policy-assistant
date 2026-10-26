@@ -1,8 +1,8 @@
 doc_id: cccta-clipper-card
 url: https://countyconnection.com/fares/clipper-card/
 final_url: https://countyconnection.com/fares/clipper-card/
-fetch_date: '2026-08-14'
+fetch_date: '2026-10-26'
 http_status: 200
 format: html
-sha256: da6b6abec3b815cd2b90b09b7336c23643457f5a46fe5fb59f2441e57e063180
-bytes: 68637
+sha256: b40362a80ac18a86fef5226579f8b48e4d482972703e3c049618b73f7d5ea02f
+bytes: 69443

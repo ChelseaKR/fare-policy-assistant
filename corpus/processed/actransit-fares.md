@@ -1,5 +1,5 @@
 # Fares — AC Transit
-Source: https://www.actransit.org/fares (fetched 2026-08-14)
+Source: https://www.actransit.org/fares (fetched 2026-10-26)
 
 ## (page top)
 
@@ -38,7 +38,7 @@ Unlimited free local transfers within two hours of your first ride when using Ne
 
 ## Interagency Transfers
 
-When transferring to another regional system using Next-Generation Clipper or contactless payments, riders receive a credit equal in value to the last fare paid, up to $3.
+When transferring to another regional system using Next-Generation Clipper or contactless payments, riders receive a credit equal in value to the last fare paid, up to $2.85.
 NOTE: Riders must use the same card/account for all trips.
 Learn more at Transfers .
 Local Single Ride
@@ -84,6 +84,6 @@ At AC Transit our purpose is to keep the East Bay moving. If your travel has bee
 
 ## Token Transit
 
-Token Transit users may continue to use the app to purchase single rides and calendar-based passes through fare maximums. Token Transit users will not receive transfer benefits available through Next-Generation Clipper and contactless bank cards. If you have questions about refunds or experience technical issues while purchasing mobile fare, please contact Token Transit at help@tokentransit.com .
-AC Transit will discontinue support for Token Transit in the future. Users are encouraged to switch to Next-Generation Clipper or contactless bank cards, both available in a mobile wallet.
+AC Transit tickets and passes will not be available through Token Transit after October 30, 2026. You can purchase a Clipper card through Apple Wallet or Google Wallet. Set up your new card now.
+Tickets purchased by October 31 will be accepted until January 30, 2027.
 Questions about fares? We know you might still have questions about what fare is best for you. If you don’t find the help you are looking for, Contact Us .

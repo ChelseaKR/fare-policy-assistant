@@ -1,0 +1,8 @@
+doc_id: actransit-fares-es
+url: https://www.actransit.org/es/fares
+final_url: https://www.actransit.org/es/fares
+fetch_date: '2026-10-26'
+http_status: 200
+format: html
+sha256: bfa7d938cd55fe0a16fd42215536e9becc37eee17668dbefdda3ed3b5f3a0fc7
+bytes: 59087

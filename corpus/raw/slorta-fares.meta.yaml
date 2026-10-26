@@ -1,8 +1,8 @@
 doc_id: slorta-fares
 url: https://www.slorta.org/fares/
 final_url: https://www.slorta.org/fares/
-fetch_date: '2026-08-14'
+fetch_date: '2026-10-26'
 http_status: 200
 format: html
-sha256: b92e3be48819deebce6d9ececb1056903c4614f4f256b80255cef2bdf810c24a
-bytes: 99099
+sha256: 4bb5fbf8d550bc31c3c3e5423d8879e775f07e854a98dd610fe997d6098cf0f1
+bytes: 100284

@@ -1,0 +1,8 @@
+doc_id: fax-fares
+url: https://www.fresno.gov/transportation/fares-passes/
+final_url: https://www.fresno.gov/transportation/fares-passes/
+fetch_date: '2026-10-26'
+http_status: 200
+format: html
+sha256: ec3f52f1bd69835189e9698194e99fe4b01cd9794be76484ef9599b5b5adcb18
+bytes: 94546

@@ -1,5 +1,5 @@
 # Fares — VTA
-Source: https://www.vta.org/go/fares (fetched 2026-08-14)
+Source: https://www.vta.org/go/fares (fetched 2026-10-26)
 
 ## VTA Accepts Contactless Bank Card For Payment For Adult Fares
 
@@ -169,6 +169,8 @@ and more
 
 The Regional Transit Connection Discount Card is a version of the Clipper card issued to persons with disabilities.
 With the card you can buy discounted VTA Senior/Disabled monthly passes using Clipper or load cash value onto the card.
+How do I use the farebox on VTA buses?
+Boarding with a Clipper Card Tag Clipper cards on the Clipper reader located next to the farebox. Coins You can use any U.S. coin up to $1.00 in value. Insert them one at a time. Foreign coins and...
 How do I use a Ticket Vending Machine?
 Beginning 12/10/25, to add value on your Clipper card, please press the “ Add Value to my Clipper Card” button and place your Clipper card on the Clipper reader labeled “ Place Card Here.” You can...
 Does VTA require and enforce proof of payment on light rail?
@@ -179,7 +181,5 @@ What are VTA's regional transfer rules?
 VTA has agreements with the following regional transit operators to provide convenient transfers - find the details on our Regional Transfers page: Highway 17 Express Caltrain BART ACE AC Transit...
 What are the age limits for discounted fares?
 To qualify for discounted fares, Seniors must be age 65 or older and Youth must be age 5-18. Visit VTA's Fares page for more information.
-How do I use the farebox on VTA buses?
-Boarding with a Clipper Card Tag Clipper cards on the Clipper reader located next to the farebox. Coins You can use any U.S. coin up to $1.00 in value. Insert them one at a time. Foreign coins and...
 Can I get a refund for lost or stolen passes?
 No refunds will be made for purchased passes, based on VTA Board approved Fare Policy. Lost or stolen Day Passes or Monthly Passes will not be replaced.

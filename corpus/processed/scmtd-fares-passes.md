@@ -1,5 +1,5 @@
 # Fares & Passes — SCMTD
-Source: https://scmetro.org/rider-info/fares-passes/ (fetched 2026-08-13)
+Source: https://scmetro.org/rider-info/fares-passes/ (fetched 2026-10-26)
 
 ## CASH FARES
 
@@ -29,10 +29,25 @@ Carry exact change. Driver’s do not provide change for larger bills.
 
 ## TAP2CRUZ FARES
 
-Santa Cruz METRO will launch Tap2Cruz, an onboard, contactless fare payment technology for riders, in Summer 2026 .
-Contactless-enabled bank cards & mobile wallets will be accepted.
-Contactless payments are safe and secure by using a one-time code for every transaction.
+Santa Cruz METRO has launched Tap2Cruz, an onboard, contactless fare payment technology for riders. Contactless-enabled bank cards & mobile wallets will be accepted. Contactless payments are safe and secure by using a one-time code for every transaction.
 Local Service in Santa Cruz County
+Adult (age 18 and over)
+$2.00 Debit or Credit /1 Ride
+Day Cap
+$5
+31-Day Cap
+$65
+Discount Fare (adults age 65 and over, people with disabilities)
+$1.00 Debit or Credit /1 Ride
+$2.5
+$32
+View Discount Fare Eligibility & Apply
+Amtrak/Highway 17 Express
+Children and Adults (age 64 and under)
+$7.00 Debit or Credit /1 Ride
+$14
+$145
+$3.50 Debit or Credit /1 Ride
 K-12 Students (Youth Cruz Free Program)
 FREE on all routes within Santa Cruz County
 College Students
@@ -144,5 +159,5 @@ To show our appreciation to our customers and community, we offer several free f
 2026 Free Fare Days
 Transit Equity Day: February 4, 2026
 Earth Day: April 22, 2026
-Santa Cruz County Fair: TBD (September 2026) (Only Applies to Routes 79 & 79F servicing the Fairgrounds)
-CA Clean Air Day: TBD (October 2026)
+Santa Cruz County Fair: September 16-20, 2026 (Only Applies to Routes 79 & 79F servicing the Fairgrounds)
+CA Clean Air Day: October 7, 2026

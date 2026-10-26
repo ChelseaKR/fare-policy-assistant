@@ -1,5 +1,5 @@
 # Tarifas (Spanish fares page) — AC Transit
-Source: https://www.actransit.org/es/fares (fetched 2026-08-14)
+Source: https://www.actransit.org/es/fares (fetched 2026-10-26)
 
 ## (page top)
 
@@ -37,7 +37,7 @@ Transbordos locales gratuitos e ilimitados durante las dos horas posteriores a s
 
 ## Transbordos entre agencias
 
-Cuando transborda a otro sistema regional usando Clipper de última generación o pagos sin contacto, los pasajeros reciben un crédito, hasta $3, por el valor de la última tarifa pagada.
+Cuando transborda a otro sistema regional usando Clipper de última generación o pagos sin contacto, los pasajeros reciben un crédito, hasta $2.85, por el valor de la última tarifa pagada.
 NOTA: los pasajeros deben utilizar la misma tarjeta/cuenta para todos los viajes.
 Obtenga más información en Transbordos .
 Viaje único local
@@ -83,6 +83,6 @@ En AC Transit, nuestro objetivo es que el Este de la Bahía siga en movimiento. 
 
 ## Token Transit
 
-Los usuarios de Token Transit pueden seguir utilizando la aplicación para comprar viajes únicos y pases basados en el calendario mediante las tarifas máximas. Los usuarios de Token Transit no disfrutarán de las ventajas de transbordo disponibles a través de Clipper de última generación y las tarjetas bancarias sin contacto. Si tiene preguntas sobre reembolsos o tiene problemas técnicos durante la compra de tarifas móviles, comuníquese con Token Transit en help@tokentransit.com .
-AC Transit dejará de ofrecer soporte para Token Transit en el futuro. Se recomienda a los usuarios que cambien a Clipper de última generación o a las tarjetas bancarias sin contacto, ambas disponibles en una billetera móvil.
+A partir del 30 de octubre, los boletos y pases de AC Transit ya no estarán disponibles a través de Token Transit. Puedes adquirir una tarjeta Clipper mediante Apple Wallet o Google Wallet. Configure su nueva tarjeta ahora.
+Los boletos comprados antes del 31 de octubre serán aceptados hasta el 30 de enero de 2027.
 ¿Tiene preguntas sobre las tarifas? Sabemos que aún podría tener preguntas sobre qué tarifa es la mejor para usted. Si no encuentra la ayuda que busca, Comuníquese con nosotros .

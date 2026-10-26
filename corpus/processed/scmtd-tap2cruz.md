@@ -1,12 +1,15 @@
 # Tap2Cruz (contactless payment and fare capping) — SCMTD
-Source: https://scmetro.org/tap2cruz/ (fetched 2026-08-13)
+Source: https://scmetro.org/tap2cruz/ (fetched 2026-10-26)
 
-## onboard credit card payments are almost here!
+## credit card payments are here!
 
-Santa Cruz METRO will launch Tap2Cruz, a contactless fare payment technology for riders, in Summer 2026 .
-Contactless-enabled bank cards (Visa, Mastercard, Discover, and American Express) and mobile wallets (Apple Pay, Google Pay, Samsung Pay, and Fitbit Pay) are accepted.
-Cash and Splash Pass are still accepted, as well.
-To use Tap2Cruz, use the same method of contactless payment on each trip and tap the payment reader as you board the bus. If traveling in a group, each rider must pay separately. Don’t use the same contactless payment for multiple riders.
+Santa Cruz METRO has launched launch Tap2Cruz, a contactless fare payment technology for riders, enabling credit/debit card payments via contactless-enabled cards, mobile wallets, and wearables.
+
+## Program Information
+
+Santa Cruz METRO received $1.726M from the State of California’s Integrated Travel Project (Cal-ITP) to usher in a new era of contactless fare payments. This grant allowed METRO to purchase credit/debit card acceptance equipment for its entire fixed-route bus fleet and the back-end software intelligence to accurately calculate and process fares.
+Contactless-enabled bank cards (Visa, Mastercard, Discover, and American Express) and mobile wallets (Apple Pay, Google Pay, Samsung Pay, and Fitbit Pay) are accepted. Cash and Splash Pass are still accepted, as well.
+To use Tap2Cruz, use the same method of contactless payment on each trip and tap the payment reader as you board the bus. If traveling in a group, each rider must pay separately . Don’t use the same contactless payment for multiple riders.
 Contactless payments are safe and secure by using a one-time code for every transaction.
 
 ## Frequently asked questions
@@ -44,6 +47,10 @@ The 31-day period starts with the first tap.
 How do charges appear on my card statement?
 The fare is charged to your card’s account and will include the description: “Santa Cruz METRO”
 To view your recent METRO rides and see what fare you were charged, visit our Traveler Portal (or check your bank card statement).
+What is fare aggregation, and when will I be charged?
+Fare aggregation means that your eligible Tap2Cruz fares are added together and charged as a combined total at the end of the day , rather than as a separate charge for each trip.
+Each time your tap your contactless bank card, phone, or smartwatch when boarding, your tap is recorded so we can calculate the correct fare. The system applies eligible transfer fares and fare caps before calculating your total.
+For example: If you take two $2 regular local trips in one day, you may see each trip listed in your Tap2Cruz travel history, but you will receive a combined charge of $4 for your fares, for that day.
 Is paying via a contactless-enabled bank card or payment-enabled device secure?
 Yes. Tap2Cruz transactions are processed through the same secure networks used for all other Visa, Mastercard, Discover, and American Express transactions. Contactless cards are built on secure EMV® Chip technology, which has proven effective at reducing counterfeit fraud. Just like inserting your card, each EMV® Contactless transaction delivers a one-time code to the payment reader that protects payment information and authorizes the transaction with a single tap.
 Will my information be kept private?
@@ -66,6 +73,7 @@ Yes, you must tap on a contactless payment reader on each bus you board. The far
 Are discounted fares available with contactless payment?
 Discounted contactless fares are now available for older adults (ages 65+), Veterans, and Medicare cardholders via a simple, digitized verification program that enables riders to apply for and receive fare discounts.
 Utilizing CalITP Benefits, you can link your benefits eligibility to your preferred Tap2Cruz payment card, ensuring you always receive discount fare when tapping!
+NOTE: Benefits only works with contactless debit or credit cards. Mobile wallets or digital cards, such as Apple Pay, Google Wallet, or Samsung Wallet, are not currently supported for discount fare at this time.
 Riders who are eligible for a discount fare can still pay the existing discount fare with cash or SmartCard when boarding a bus; you’ll pay at the farebox instead of using the contactless payment reader.
 
 ## Troubleshooting Issues

@@ -1,5 +1,5 @@
 # Fares & Passes — VINE
-Source: https://vinetransit.com/fares/ (fetched 2026-08-14)
+Source: https://vinetransit.com/fares/ (fetched 2026-10-26)
 
 ## (page top)
 

@@ -1,5 +1,5 @@
 # Transfers — CCCTA
-Source: https://countyconnection.com/fares/transfers/ (fetched 2026-08-14)
+Source: https://countyconnection.com/fares/transfers/ (fetched 2026-10-26)
 
 ## Bus-to-Bus Transfer
 
