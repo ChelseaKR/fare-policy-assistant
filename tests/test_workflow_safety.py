@@ -106,31 +106,28 @@ def test_a_failing_eval_still_saves_the_calls_it_paid_for(job, next_job):
     )
 
 
-def test_one_scheduled_full_run_a_quarter_is_cold():
-    """ADR 0022 trades most nights of provider-drift detection for cost, and buys
-    it back with one cold run a quarter (weekly, then briefly monthly, until the
-    2026-10-23 amendments).
-    If every nightly were cache-served, nothing would ever re-measure the
-    provider."""
-    workflow, _ = _ci_workflow()
+def test_the_cold_run_is_manual_only_and_every_scheduled_night_is_cached():
+    """ADR 0022 trades provider-drift detection for cost. Since the 2026-10-30
+    amendment no scheduled run is cold: the one cron is the cache-backed
+    nightly, and only a manual dispatch passes --refresh-cache (so it both
+    re-measures the provider and leaves the cache agreeing with what it
+    published)."""
+    workflow, parsed = _ci_workflow()
     crons = [line for line in workflow.splitlines() if line.strip().startswith("- cron:")]
-    assert len(crons) >= 2, "expected a cached nightly cron and a separate cold quarterly cron"
+    assert len(crons) == 1, f"expected exactly one (cache-backed) nightly cron, got {crons}"
+    _minute, _hour, day_of_month, _month, day_of_week = crons[0].split('"', 2)[1].split()
+    assert day_of_month == "*" or day_of_week == "*", (
+        "POSIX cron ORs day-of-month and day-of-week when both are restricted"
+    )
+    assert "workflow_dispatch" in parsed["on"], "the cold run must stay startable by hand"
     full_eval = _job("full-evals-nightly", "independent-audit")
     assert "--refresh-cache" in full_eval, (
-        "the quarterly schedule must run the full suite with --refresh-cache, so it both "
-        "re-measures the provider and leaves the cache agreeing with what it published"
+        "a manual dispatch must run the full suite with --refresh-cache"
     )
-    cold_cron = full_eval.split("github.event.schedule == '", 1)[1].split("'", 1)[0]
-    assert any(cold_cron in line for line in crons), (
-        f"the cold-run schedule guard names {cold_cron!r}, which is not one of this "
-        "workflow's cron entries — a renamed cron would silently make every nightly cached"
+    assert "github.event.schedule" not in full_eval, (
+        "no scheduled run may be cold; --refresh-cache is for workflow_dispatch only"
     )
-    _minute, _hour, day_of_month, _month, day_of_week = cold_cron.split()
-    assert day_of_month != "*" and day_of_week == "*", (
-        f"the cold run {cold_cron!r} must pin a day of the month and leave day-of-week "
-        "open: POSIX cron ORs the two fields, so a 'first Monday' spelling such as "
-        "'1-7 * 1' would fire on days 1-7 and on every Monday (about ten paid runs a month)"
-    )
+    assert "github.event_name == 'workflow_dispatch' && '--refresh-cache'" in full_eval
 
 
 def test_paid_eval_jobs_are_never_promotion_evidence():
