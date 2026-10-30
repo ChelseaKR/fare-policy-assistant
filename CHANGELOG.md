@@ -86,6 +86,11 @@ rather than tied to a published tag.
     moving. They are real re-rankings, not a planted defect.
 
 ### Changed
+- **The cold full eval is manual-only** (2026-10-30, ADR 0022 third amendment).
+  The quarterly cold cron (`17 9 1 1,4,7,10 *`) is removed and the cached
+  nightly is a single `17 9 * * *` entry. `--refresh-cache` now runs only on
+  `workflow_dispatch`. This saves about $3.50/month of Bedrock averaged (about
+  $10.47 per cold run). Release evaluation at deploy time is unchanged.
 - **The cold full eval runs monthly instead of weekly** (2026-10-23, ADR 0022
   amendment). The cold run moved from `17 9 * * 1` (every Monday) to `17 9 1 * *`
   (the first of the month); the cached nightly moved from `17 9 * * 0,2-6` to

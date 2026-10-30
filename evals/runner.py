@@ -33,7 +33,7 @@ Answer and judge model calls are served from a content-keyed on-disk cache
 one-corpus change only pays for the cases that actually changed; `--no-cache`
 disables this for runs that need to measure real model variance (FIX-04). CI
 persists that cache across runs, so the cost of an unchanged suite is paid once
-rather than once per pull request; `--refresh-cache` is the quarterly cold run
+rather than once per pull request; `--refresh-cache` is the manual cold run
 that re-measures the provider and rewrites the stored answers (ADR 0022).
 
 Variance runs (`--replicates N`, N > 1) score every case N times — a case's

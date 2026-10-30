@@ -6,22 +6,19 @@ on:
   pull_request:
   schedule:
     # Nightly full suite, served from the persisted answer/judge cache: an
-    # unchanged corpus and prompt set cost nothing to re-score. The run on the
-    # first of each quarter (January, April, July, October) is deliberately
-    # cold (--refresh-cache), so provider drift is still measured against real
-    # model calls four times a year. It was weekly (Mondays), then briefly
-    # monthly, until 2026-10-23; each cold run costs about $10.47 of Bedrock.
+    # unchanged corpus and prompt set cost nothing to re-score. No scheduled
+    # run is cold any more: the cold (--refresh-cache) suite runs only when
+    # started by hand (workflow_dispatch, below). It was weekly (Mondays), then
+    # briefly monthly, then quarterly until 2026-10-30; each cold run costs
+    # about $10.47 of Bedrock and the repository is maintenance only.
     # See ADR 0022 and its amendments.
     #
-    # The three entries split the year by day-of-month and month so exactly
-    # one fires on any day. Do not restrict both day-of-month and day-of-week
-    # in one entry (e.g. "1-7 * 1" for "first Monday"): POSIX cron ORs the two
-    # fields, so that fires on days 1-7 and on every Monday.
-    - cron: "17 9 2-31 * *"                  # nightly full suite (cache-backed)
-    - cron: "17 9 1 2,3,5,6,8,9,11,12 *"     # nightly on the 1st outside a quarter start (cache-backed)
-    - cron: "17 9 1 1,4,7,10 *"              # quarterly cold full suite (cache refreshed)
-  # Manual trigger: runs the cold full suite on demand (for example before a
-  # release, or after a model or prompt change), plus the ordinary PR checks.
+    # Do not restrict both day-of-month and day-of-week in one entry (e.g.
+    # "1-7 * 1" for "first Monday"): POSIX cron ORs the two fields, so that
+    # fires on days 1-7 and on every Monday.
+    - cron: "17 9 * * *"                     # nightly full suite (cache-backed)
+  # Manual trigger: the only way the cold full suite runs (for example before
+  # a release, or after a model or prompt change), plus the ordinary PR checks.
   workflow_dispatch:
     #
     # A red run here used to be visible only in this tab: fourteen straight
@@ -352,9 +349,8 @@ jobs:
           key: eval-model-cache-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: eval-model-cache-
       - name: Full eval run
-        # The first-of-month schedule (and any manual dispatch) re-measures the
-        # provider for real and rewrites the stored answers; every other night
-        # re-scores from cache. A plain --no-cache cold run would re-measure but
+        # A manual dispatch re-measures the provider for real and rewrites the
+        # stored answers; every scheduled night re-scores from cache. A plain --no-cache cold run would re-measure but
         # leave the cache holding stale answers, so the next night would publish
         # numbers the cold run had contradicted.
         #
@@ -362,7 +358,7 @@ jobs:
         # not promotion evidence: exact release evaluation is its own full,
         # live, --no-cache run at deploy time (infra/deploy.sh; ADR 0023).
         env:
-          CACHE_MODE: ${{ (github.event.schedule == '17 9 1 1,4,7,10 *' || github.event_name == 'workflow_dispatch') && '--refresh-cache' || '' }}
+          CACHE_MODE: ${{ github.event_name == 'workflow_dispatch' && '--refresh-cache' || '' }}
         run: uv run python -m evals.runner --full $CACHE_MODE
       - name: Save the answer/judge model cache
         # A red regression gate still paid for every call in the run. Saving on

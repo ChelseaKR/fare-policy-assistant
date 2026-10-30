@@ -138,3 +138,16 @@ That is about $3.50/month of Bedrock instead of about $10.50.
 for up to a quarter instead of up to a month. Release evaluation is unchanged
 (its own live `--no-cache` run in `infra/deploy.sh`), and the cold run can
 still be started by hand at any time.
+
+## Third amendment, 2026-10-30: the cold run is manual-only
+
+The owner approved removing the last scheduled cold run to save its cost:
+about $3.50/month of Bedrock averaged (about $10.47 per run). `ci.yml` now has
+a single cache-backed nightly cron (`17 9 * * *`), and `--refresh-cache` is
+passed only on `workflow_dispatch`. The cold suite is unchanged and can still
+be started by hand from the Actions tab at any time.
+
+**What is given up:** CI no longer re-measures the provider on its own, so
+drift on a pinned model goes unseen until someone starts the cold run by hand
+or a release runs its own live `--no-cache` evaluation (`infra/deploy.sh`;
+ADR 0023), which is unchanged.
