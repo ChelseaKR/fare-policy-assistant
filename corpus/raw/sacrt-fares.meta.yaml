@@ -1,8 +1,8 @@
 doc_id: sacrt-fares
 url: https://www.sacrt.com/fares/
 final_url: https://www.sacrt.com/fares/
-fetch_date: '2026-06-12'
+fetch_date: '2026-11-02'
 http_status: 200
 format: html
-sha256: 6f18d522baacec211bfabe6074d07d5149ea77274d65465fd61a5555eaaae404
-bytes: 285037
+sha256: d553b28f124f185b52787a807b709642b4e9621a0793c1337048bf8cbceeb5b3
+bytes: 285150

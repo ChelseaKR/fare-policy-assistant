@@ -1,8 +1,8 @@
 doc_id: cccta-link-fares
 url: https://countyconnection.com/paratransit/fares/
 final_url: https://countyconnection.com/paratransit/fares/
-fetch_date: '2026-08-14'
+fetch_date: '2026-11-02'
 http_status: 200
 format: html
-sha256: ae4004ffd1a2fc1b904514d3e46b74a6cfd07074ff33ee96a4477c1a6c2c1b7a
-bytes: 49958
+sha256: e61822b1ad9b65b499de674d90994417ad6fc9d6002298420f3d10248fa7f543
+bytes: 50913

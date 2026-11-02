@@ -1,5 +1,5 @@
 # Fares & Passes — FAX
-Source: https://www.fresno.gov/transportation/fares-passes/ (fetched 2026-08-13)
+Source: https://www.fresno.gov/transportation/fares-passes/ (fetched 2026-11-02)
 
 ## Free fares for Reduced Fare Riders
 

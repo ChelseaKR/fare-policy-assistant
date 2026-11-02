@@ -1,0 +1,8 @@
+doc_id: marin-clipper
+url: https://marintransit.gov/future-fares-clipper
+final_url: https://marintransit.gov/future-fares-clipper
+fetch_date: '2026-11-02'
+http_status: 200
+format: html
+sha256: 95073b4a65912287c87b013e7e4ba466079d7aaa910b500637420fa94b56d6eb
+bytes: 45056

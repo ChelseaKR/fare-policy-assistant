@@ -1,0 +1,8 @@
+doc_id: soltrans-fare-table
+url: https://www.soltrans.org/fares/fare-table
+final_url: https://www.soltrans.org/fares/fare-table
+fetch_date: '2026-11-02'
+http_status: 200
+format: html
+sha256: f7f99e71027e086e2c6a1d11caef0c0e5b492985704a4b37583f32cb41fd6a8a
+bytes: 57463

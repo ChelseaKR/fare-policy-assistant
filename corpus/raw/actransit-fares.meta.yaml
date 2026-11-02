@@ -1,8 +1,8 @@
 doc_id: actransit-fares
 url: https://www.actransit.org/fares
 final_url: https://www.actransit.org/fares
-fetch_date: '2026-08-14'
+fetch_date: '2026-11-02'
 http_status: 200
 format: html
-sha256: e11f1bd1ed1dffb7a0519d6f50323b7cb1cdc8184b4ac8f861c24b94863b4cb0
-bytes: 58755
+sha256: fd03bba1bdd4adfae583ac744962e82920c01b03aa6e23e830b82c5164b4d857
+bytes: 58324

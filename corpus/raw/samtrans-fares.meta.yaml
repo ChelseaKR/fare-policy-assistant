@@ -1,8 +1,8 @@
 doc_id: samtrans-fares
 url: https://www.samtrans.com/fares
 final_url: https://www.samtrans.com/fares
-fetch_date: '2026-08-14'
+fetch_date: '2026-11-02'
 http_status: 200
 format: html
-sha256: a992fff49bbf763095e54678d76a57d2b3ec47479c2a9f6d916e50367db9e184
-bytes: 102019
+sha256: f1c70bd642e92d9285eb0e6f7ac81d71b4557134763b57f07cf580e90bec586c
+bytes: 100280

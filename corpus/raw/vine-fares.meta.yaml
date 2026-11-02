@@ -1,8 +1,8 @@
 doc_id: vine-fares
 url: https://vinetransit.com/fares/
 final_url: https://vinetransit.com/fares/
-fetch_date: '2026-08-14'
+fetch_date: '2026-11-02'
 http_status: 200
 format: html
-sha256: 4d63afd47bbbc7f499f22b256a46794299346dd417087fc8a1422a324f00912f
-bytes: 48037
+sha256: fdfbadd516a3e1a3a71287b784b86119b845a8ab7345f4bb20776e7f82e6df6f
+bytes: 49609

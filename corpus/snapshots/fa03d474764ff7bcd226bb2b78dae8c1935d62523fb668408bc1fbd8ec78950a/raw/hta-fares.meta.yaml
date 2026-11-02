@@ -1,0 +1,8 @@
+doc_id: hta-fares
+url: https://hta.org/fares/
+final_url: https://hta.org/fares/
+fetch_date: '2026-11-02'
+http_status: 200
+format: html
+sha256: 98e9030dc4c6b745b2404f338ba876e96e160577c72cb6c1f430582899e7a9db
+bytes: 137984

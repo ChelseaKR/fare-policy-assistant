@@ -1,0 +1,8 @@
+doc_id: etran-fares
+url: https://www.sacrt.com/elk-grove-transit-fares/
+final_url: https://www.sacrt.com/elk-grove-transit-fares/
+fetch_date: '2026-11-02'
+http_status: 200
+format: html
+sha256: 9efb9b12915fb08915ed5957474912408056d835e74b6414341ef6b7784c1468
+bytes: 157798

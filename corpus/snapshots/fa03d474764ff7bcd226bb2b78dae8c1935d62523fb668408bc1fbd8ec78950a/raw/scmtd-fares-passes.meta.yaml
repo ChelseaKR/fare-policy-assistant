@@ -1,0 +1,8 @@
+doc_id: scmtd-fares-passes
+url: https://scmetro.org/rider-info/fares-passes/
+final_url: https://scmetro.org/rider-info/fares-passes/
+fetch_date: '2026-11-02'
+http_status: 200
+format: html
+sha256: 1f6729682de633c63db628e8315a9bf6c555192e1233e3a4163b80840b53ba7e
+bytes: 141218

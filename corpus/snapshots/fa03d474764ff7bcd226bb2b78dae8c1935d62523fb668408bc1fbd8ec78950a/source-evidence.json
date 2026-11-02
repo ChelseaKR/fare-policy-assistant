@@ -1,0 +1,525 @@
+{
+  "observations": [
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "actransit-discounts",
+      "effective_format": "html",
+      "final_url": "https://www.actransit.org/discounts",
+      "http_status": 200,
+      "raw_bytes": 45727,
+      "raw_sha256": "019da9ab927ebb37ea8df256258533407bf3f030b36e5831883bc1f213334090",
+      "requested_url": "https://www.actransit.org/discounts"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "actransit-fares",
+      "effective_format": "html",
+      "final_url": "https://www.actransit.org/fares",
+      "http_status": 200,
+      "raw_bytes": 58324,
+      "raw_sha256": "fd03bba1bdd4adfae583ac744962e82920c01b03aa6e23e830b82c5164b4d857",
+      "requested_url": "https://www.actransit.org/fares"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "actransit-fares-es",
+      "effective_format": "html",
+      "final_url": "https://www.actransit.org/es/fares",
+      "http_status": 200,
+      "raw_bytes": 59087,
+      "raw_sha256": "702f7c648df8b190a7138953c6c3117399f13d71ee721e5678346897cb1b4462",
+      "requested_url": "https://www.actransit.org/es/fares"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "cccta-clipper-card",
+      "effective_format": "html",
+      "final_url": "https://countyconnection.com/fares/clipper-card/",
+      "http_status": 200,
+      "raw_bytes": 69619,
+      "raw_sha256": "e9e89f3efc8a7f16a1340533d842e2dd126f289fca4d78f46c00198e7d89cd9d",
+      "requested_url": "https://countyconnection.com/fares/clipper-card/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "cccta-fare-types-prices",
+      "effective_format": "html",
+      "final_url": "https://countyconnection.com/fares/fare-types-prices/",
+      "http_status": 200,
+      "raw_bytes": 61168,
+      "raw_sha256": "500e32b1265605522a7bbb18b1921f106aaeed2821444e24d8cf951ca7e38a96",
+      "requested_url": "https://countyconnection.com/fares/fare-types-prices/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "cccta-link-fares",
+      "effective_format": "html",
+      "final_url": "https://countyconnection.com/paratransit/fares/",
+      "http_status": 200,
+      "raw_bytes": 50913,
+      "raw_sha256": "e61822b1ad9b65b499de674d90994417ad6fc9d6002298420f3d10248fa7f543",
+      "requested_url": "https://countyconnection.com/paratransit/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "cccta-rtc-discount-card",
+      "effective_format": "html",
+      "final_url": "https://countyconnection.com/fares/rtc-discount-card-program/",
+      "http_status": 200,
+      "raw_bytes": 60201,
+      "raw_sha256": "7a0b6ff31d87640d4db3cfc10089bbb66adcd6afd53d4c67f2046834be50ef52",
+      "requested_url": "https://countyconnection.com/fares/rtc-discount-card-program/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "cccta-transfers",
+      "effective_format": "html",
+      "final_url": "https://countyconnection.com/fares/transfers/",
+      "http_status": 200,
+      "raw_bytes": 47654,
+      "raw_sha256": "c2c82b678a8fbc3492bf58db1083a9be95ad5bd19c57b7c8bf154e61df9a58b4",
+      "requested_url": "https://countyconnection.com/fares/transfers/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "etran-fares",
+      "effective_format": "html",
+      "final_url": "https://www.sacrt.com/elk-grove-transit-fares/",
+      "http_status": 200,
+      "raw_bytes": 157798,
+      "raw_sha256": "9efb9b12915fb08915ed5957474912408056d835e74b6414341ef6b7784c1468",
+      "requested_url": "https://www.sacrt.com/elk-grove-transit-fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "etran-senior-pass",
+      "effective_format": "html",
+      "final_url": "https://www.sacrt.com/egsenior/",
+      "http_status": 200,
+      "raw_bytes": 160473,
+      "raw_sha256": "e505f5c4a2841abf8566dac6c6df86ba040cb8672b9ae07a18ea1c7f7115dd16",
+      "requested_url": "https://www.sacrt.com/egsenior/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "fax-fares",
+      "effective_format": "html",
+      "final_url": "https://www.fresno.gov/transportation/fares-passes/",
+      "http_status": 200,
+      "raw_bytes": 94618,
+      "raw_sha256": "819f087d8150c40ade1969c1d4d9cb1bd00a495697dc7b65095a2ee41d533416",
+      "requested_url": "https://www.fresno.gov/transportation/fares-passes/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "fax-reduced-fare-program",
+      "effective_format": "pdf",
+      "final_url": "https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf",
+      "http_status": 200,
+      "raw_bytes": 413028,
+      "raw_sha256": "0fc1a59a8db4a46415ffb1f63435326b0698c1004286049fda7db096a17699e5",
+      "requested_url": "https://www.fresno.gov/wp-content/uploads/2026/03/Reduced-Fare-Program-Instructions-English-03-2026-Free-10w1429.pdf"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "fax-reduced-fare-program-es",
+      "effective_format": "pdf",
+      "final_url": "https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf",
+      "http_status": 200,
+      "raw_bytes": 427991,
+      "raw_sha256": "5f22de21d7a7d1dffabd3bc434ec3631fbe34ea47595e7d0afc4b6351f952573",
+      "requested_url": "https://www.fresno.gov/wp-content/uploads/2026/03/Programa-de-Tarifas-Reducidas-Espanol-03-2026-Gratis-10w1429.pdf"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "hta-fares",
+      "effective_format": "html",
+      "final_url": "https://hta.org/fares/",
+      "http_status": 200,
+      "raw_bytes": 137984,
+      "raw_sha256": "98e9030dc4c6b745b2404f338ba876e96e160577c72cb6c1f430582899e7a9db",
+      "requested_url": "https://hta.org/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "marin-31day-transition",
+      "effective_format": "html",
+      "final_url": "https://marintransit.gov/marin-local-31-day-pass",
+      "http_status": 200,
+      "raw_bytes": 35551,
+      "raw_sha256": "a097eb9e0fd07ed6a01f8896f08e12e90acc4fa6e14a42a468f8e7e171d4e10b",
+      "requested_url": "https://marintransit.gov/marin-local-31-day-pass"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "marin-clipper",
+      "effective_format": "html",
+      "final_url": "https://marintransit.gov/future-fares-clipper",
+      "http_status": 200,
+      "raw_bytes": 45056,
+      "raw_sha256": "95073b4a65912287c87b013e7e4ba466079d7aaa910b500637420fa94b56d6eb",
+      "requested_url": "https://marintransit.gov/future-fares-clipper"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "marin-fares",
+      "effective_format": "html",
+      "final_url": "https://marintransit.gov/fares",
+      "http_status": 200,
+      "raw_bytes": 41311,
+      "raw_sha256": "175d4dfd7de74959bc4e27ef18a90d4284dab6f0a695fc0ea00e7b7b6a1033ae",
+      "requested_url": "https://marintransit.gov/fares"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "mst-fares",
+      "effective_format": "html",
+      "final_url": "https://mst.org/fares/",
+      "http_status": 200,
+      "raw_bytes": 147130,
+      "raw_sha256": "4df8b59997c3b41671ca6099b7e15ff5e7a94dc531437fd69eee673fa2d48321",
+      "requested_url": "https://mst.org/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "mst-fares-benefits",
+      "effective_format": "html",
+      "final_url": "https://mst.org/fares/benefits/",
+      "http_status": 200,
+      "raw_bytes": 117310,
+      "raw_sha256": "9df614b5ce9b2e83831efc33d3d01e961a3a395a2f8d4d9ca6c68a44c86f9135",
+      "requested_url": "https://mst.org/fares/benefits/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "mst-fares-es",
+      "effective_format": "html",
+      "final_url": "https://mst.org/es/fares/",
+      "http_status": 200,
+      "raw_bytes": 146608,
+      "raw_sha256": "f4824ddfb2f7aeda03c57bb4571dbb696d964abe592331d2aa7fd1eb12def445",
+      "requested_url": "https://mst.org/es/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "mst-veterans-resource",
+      "effective_format": "html",
+      "final_url": "https://mst.org/mobility/veterans-resource/",
+      "http_status": 200,
+      "raw_bytes": 121525,
+      "raw_sha256": "f42ef26ef5a4c61ce351dba4546463dc1ffb0fcbefef9c4f9d3e4df02fe1eb74",
+      "requested_url": "https://mst.org/mobility/veterans-resource/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "sacrt-fares",
+      "effective_format": "html",
+      "final_url": "https://www.sacrt.com/fares/",
+      "http_status": 200,
+      "raw_bytes": 285150,
+      "raw_sha256": "d553b28f124f185b52787a807b709642b4e9621a0793c1337048bf8cbceeb5b3",
+      "requested_url": "https://www.sacrt.com/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "samtrans-clipper",
+      "effective_format": "html",
+      "final_url": "https://www.samtrans.com/fares/clipper",
+      "http_status": 200,
+      "raw_bytes": 130335,
+      "raw_sha256": "fcb29a56aaf7fd64b7130359e6b6025190960f61e8df805c7360171366360715",
+      "requested_url": "https://www.samtrans.com/fares/clipper"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "samtrans-fare-types",
+      "effective_format": "html",
+      "final_url": "https://www.samtrans.com/fares/fare-types",
+      "http_status": 200,
+      "raw_bytes": 106452,
+      "raw_sha256": "49c4192eba42d68a91a74e54724c0ea90c3bfd5851f7e27b752bf0c8a987458f",
+      "requested_url": "https://www.samtrans.com/fares/fare-types"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "samtrans-fares",
+      "effective_format": "html",
+      "final_url": "https://www.samtrans.com/fares",
+      "http_status": 200,
+      "raw_bytes": 100280,
+      "raw_sha256": "f1c70bd642e92d9285eb0e6f7ac81d71b4557134763b57f07cf580e90bec586c",
+      "requested_url": "https://www.samtrans.com/fares"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "sbmtd-farechange",
+      "effective_format": "html",
+      "final_url": "https://sbmtd.gov/farechange/",
+      "http_status": 200,
+      "raw_bytes": 185014,
+      "raw_sha256": "45bf4c40a666f1002c6c0deec02a9e21e7ac2802c37adc1713014330d54c4698",
+      "requested_url": "https://sbmtd.gov/farechange/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "sbmtd-fares-passes",
+      "effective_format": "html",
+      "final_url": "https://sbmtd.gov/fares-passes/",
+      "http_status": 200,
+      "raw_bytes": 124200,
+      "raw_sha256": "9d6d86b88730af4db50d2868c1e92ea41755728eebe7c1bbac6a516f11ccd353",
+      "requested_url": "https://sbmtd.gov/fares-passes/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "scmtd-accessibility",
+      "effective_format": "html",
+      "final_url": "https://scmetro.org/rider-info/accessibility/",
+      "http_status": 200,
+      "raw_bytes": 128358,
+      "raw_sha256": "28dcfe6a4b52003730321ee26ecccc248868cc116357afae91f4ce0ec08eb328",
+      "requested_url": "https://scmetro.org/rider-info/accessibility/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "scmtd-fares-passes",
+      "effective_format": "html",
+      "final_url": "https://scmetro.org/rider-info/fares-passes/",
+      "http_status": 200,
+      "raw_bytes": 141218,
+      "raw_sha256": "1f6729682de633c63db628e8315a9bf6c555192e1233e3a4163b80840b53ba7e",
+      "requested_url": "https://scmetro.org/rider-info/fares-passes/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "scmtd-tap2cruz",
+      "effective_format": "html",
+      "final_url": "https://scmetro.org/tap2cruz/",
+      "http_status": 200,
+      "raw_bytes": 88777,
+      "raw_sha256": "a0d663749afe551e3865949f02127d84547164018cceaf47400e429a4770d9ed",
+      "requested_url": "https://scmetro.org/tap2cruz/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "sjrtd-dfc",
+      "effective_format": "html",
+      "final_url": "https://sanjoaquinrtd.com/access-sj/dfc/",
+      "http_status": 200,
+      "raw_bytes": 114907,
+      "raw_sha256": "2ece5d0887cb94168726978b18ac159b22580cfb1809dece0948886cfc735ceb",
+      "requested_url": "https://sanjoaquinrtd.com/access-sj/dfc/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "sjrtd-fares",
+      "effective_format": "html",
+      "final_url": "https://sanjoaquinrtd.com/fares/",
+      "http_status": 200,
+      "raw_bytes": 143817,
+      "raw_sha256": "7a434116f95892e1029fe01031fef12d8f1aa283d804a0bcfe3c1b489a1128db",
+      "requested_url": "https://sanjoaquinrtd.com/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "slorta-contactless",
+      "effective_format": "html",
+      "final_url": "https://www.slorta.org/fares/contactless/",
+      "http_status": 200,
+      "raw_bytes": 112928,
+      "raw_sha256": "e7c1336b7ea4b79ef4f43e634c17e9e109cce31ce0bbe8cdf842be192dcff230",
+      "requested_url": "https://www.slorta.org/fares/contactless/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "slorta-discounts",
+      "effective_format": "html",
+      "final_url": "https://www.slorta.org/fares/discounts/",
+      "http_status": 200,
+      "raw_bytes": 105231,
+      "raw_sha256": "c4eac8ab14547c631cc5733c3a43c2d8f9caa8eefa7b4846dd388ff5c1cd52a5",
+      "requested_url": "https://www.slorta.org/fares/discounts/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "slorta-fares",
+      "effective_format": "html",
+      "final_url": "https://www.slorta.org/fares/",
+      "http_status": 200,
+      "raw_bytes": 100284,
+      "raw_sha256": "aa1290d9f2a6ea9d43a259d84b70936f629e4faf7612cbaf5da952e22c71f51e",
+      "requested_url": "https://www.slorta.org/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "slorta-passes",
+      "effective_format": "html",
+      "final_url": "https://www.slorta.org/fares/passes/",
+      "http_status": 200,
+      "raw_bytes": 108012,
+      "raw_sha256": "5a24d8fa1b0c33257259a9dafdb382da7c6fcf0785501714fa52a383e4f42388",
+      "requested_url": "https://www.slorta.org/fares/passes/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "soltrans-clipper-card",
+      "effective_format": "html",
+      "final_url": "https://www.soltrans.org/fares/clipper-card",
+      "http_status": 200,
+      "raw_bytes": 40826,
+      "raw_sha256": "9c3103ad355a64fcc8f8e9b32ce8a27a502fe767c870e81fdf5e8aa025a4f3e4",
+      "requested_url": "https://www.soltrans.org/fares/clipper-card"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "soltrans-fare-table",
+      "effective_format": "html",
+      "final_url": "https://www.soltrans.org/fares/fare-table",
+      "http_status": 200,
+      "raw_bytes": 57463,
+      "raw_sha256": "f7f99e71027e086e2c6a1d11caef0c0e5b492985704a4b37583f32cb41fd6a8a",
+      "requested_url": "https://www.soltrans.org/fares/fare-table"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "soltrans-paperless-fares",
+      "effective_format": "html",
+      "final_url": "https://www.soltrans.org/news/service-alert-paper-pass-elimination",
+      "http_status": 200,
+      "raw_bytes": 38947,
+      "raw_sha256": "cf9858845caf00f0739316383f79a4a0ee4deba4f59ec5f53dc0d839fc309fa3",
+      "requested_url": "https://www.soltrans.org/news/service-alert-paper-pass-elimination"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "soltrans-ways-to-pay",
+      "effective_format": "html",
+      "final_url": "https://www.soltrans.org/fares/ways-to-pay",
+      "http_status": 200,
+      "raw_bytes": 38831,
+      "raw_sha256": "c1fca9b6999b05f5d5b38d3666b44c691cd3b7cb432e8c142d119da62b294049",
+      "requested_url": "https://www.soltrans.org/fares/ways-to-pay"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "vine-fares",
+      "effective_format": "html",
+      "final_url": "https://vinetransit.com/fares/",
+      "http_status": 200,
+      "raw_bytes": 49609,
+      "raw_sha256": "fdfbadd516a3e1a3a71287b784b86119b845a8ab7345f4bb20776e7f82e6df6f",
+      "requested_url": "https://vinetransit.com/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "vine-go",
+      "effective_format": "html",
+      "final_url": "https://vinetransit.com/vine-go/",
+      "http_status": 200,
+      "raw_bytes": 59861,
+      "raw_sha256": "d6a19b7574cff887b6186ab77c3cbfb135e7593f2e59ff4ba2a7d35d7498817c",
+      "requested_url": "https://vinetransit.com/vine-go/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "vta-fares",
+      "effective_format": "html",
+      "final_url": "https://www.vta.org/go/fares",
+      "http_status": 200,
+      "raw_bytes": 111702,
+      "raw_sha256": "65d8b414f62ca8baacc4ab6f805f527007dc78e2060d02058705f4f6574d24a2",
+      "requested_url": "https://www.vta.org/go/fares"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "vta-regional-transfers",
+      "effective_format": "html",
+      "final_url": "https://www.vta.org/go/fares/regional-transfers",
+      "http_status": 200,
+      "raw_bytes": 75456,
+      "raw_sha256": "976eaa5103b9132e73667fa575700ff06ac423ce9fa7c7236932a963a825b1a8",
+      "requested_url": "https://www.vta.org/go/fares/regional-transfers"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "vta-rtc-card",
+      "effective_format": "html",
+      "final_url": "https://www.vta.org/fares/regional-transit-connection-card",
+      "http_status": 200,
+      "raw_bytes": 57868,
+      "raw_sha256": "1680a9c0962f9f613a01a51f63ae060dc21989fe58961cade0d09abdff43e279",
+      "requested_url": "https://www.vta.org/fares/regional-transit-connection-card"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "westcat-buying",
+      "effective_format": "html",
+      "final_url": "https://www.westcat.org/home/FaresBuying",
+      "http_status": 200,
+      "raw_bytes": 27140,
+      "raw_sha256": "600a5bf702496235cc1ea8b29d5c4a0c48d9f2e55f63e6f0f646c4c1d421fec0",
+      "requested_url": "https://www.westcat.org/home/FaresBuying"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "westcat-clipper",
+      "effective_format": "html",
+      "final_url": "https://www.westcat.org/home/FaresClipper",
+      "http_status": 200,
+      "raw_bytes": 30985,
+      "raw_sha256": "3d7a7383d92b5a2ef0550191c38a2899c90485f70039d2c8727be8b0156e27f0",
+      "requested_url": "https://www.westcat.org/home/FaresClipper"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "westcat-fares-all",
+      "effective_format": "html",
+      "final_url": "https://www.westcat.org/home/FaresAll",
+      "http_status": 200,
+      "raw_bytes": 37063,
+      "raw_sha256": "1677646ae610bb2ff66e046d2ea98d499b97e0170f3cddb3ad10bf1e2af510fe",
+      "requested_url": "https://www.westcat.org/home/FaresAll"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "westcat-transfers",
+      "effective_format": "html",
+      "final_url": "https://www.westcat.org/home/FaresTransfers",
+      "http_status": 200,
+      "raw_bytes": 28051,
+      "raw_sha256": "0b347ab7b3ce677f6932a60daab6c1a3f4dafc84acdfb2e8bd535f202d95f3f5",
+      "requested_url": "https://www.westcat.org/home/FaresTransfers"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "yolobus-fares",
+      "effective_format": "html",
+      "final_url": "https://yolobus.com/fares/",
+      "http_status": 200,
+      "raw_bytes": 92863,
+      "raw_sha256": "3cc5ef6783893f7be7fd61d0df7a51d26bb157a50a6d681b57c318d96ed17220",
+      "requested_url": "https://yolobus.com/fares/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "yolobus-purchasing",
+      "effective_format": "html",
+      "final_url": "https://yolobus.com/purchasing-a-ticket-or-pass/",
+      "http_status": 200,
+      "raw_bytes": 82813,
+      "raw_sha256": "e45aa871425bcfb27f1b5d18fe614992d76fcbe1c4489528bcfd08b3e2a82d4b",
+      "requested_url": "https://yolobus.com/purchasing-a-ticket-or-pass/"
+    },
+    {
+      "chunk_fetch_date": "2026-11-02",
+      "doc_id": "yolobus-reduced-fare-id",
+      "effective_format": "html",
+      "final_url": "https://yolobus.com/reducedfareid/",
+      "http_status": 200,
+      "raw_bytes": 75580,
+      "raw_sha256": "6b70c8b91873e6a4bba06543912cd9254fb08fdd366ddd49bbc819cf32dbe30a",
+      "requested_url": "https://yolobus.com/reducedfareid/"
+    }
+  ],
+  "schema": "fare-assistant.source-evidence.v1"
+}
